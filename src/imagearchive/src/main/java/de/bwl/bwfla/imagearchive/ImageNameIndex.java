@@ -41,7 +41,7 @@ import java.util.logging.Logger;
 /** A simple index, containing mappings from symbolic names to image descriptions. */
 public class ImageNameIndex
 {
-	private final Logger log = Logger.getLogger(this.getClass().getName());
+	private final Logger log;
 
 	/** Symbolic image-name index: name --> image's description */
 	private final Map<String, Entry> entries = new HashMap<String, Entry>();
@@ -49,12 +49,11 @@ public class ImageNameIndex
 	private static final String VERSION_SEPARATOR = "|";
 
 
-	public ImageNameIndex() throws BWFLAException
+	public ImageNameIndex(String indexConfigPath, Logger log) throws BWFLAException
 	{
-		final Configuration config = ConfigurationProvider.getConfiguration();
+		this.log = log;
 
 		// Load configuration for imagename-index, if possible...
-		final String indexConfigPath = config.get("imagearchive.nameindex_config_path");
 		if (indexConfigPath == null) {
 			log.info("Disabling imagename-index! No configuration found.");
 			return;

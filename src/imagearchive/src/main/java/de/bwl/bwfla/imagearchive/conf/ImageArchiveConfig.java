@@ -19,61 +19,85 @@
 
 package de.bwl.bwfla.imagearchive.conf;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+import de.bwl.bwfla.common.utils.ConfigHelpers;
+import org.apache.tamaya.ConfigException;
+import org.apache.tamaya.Configuration;
+import org.apache.tamaya.inject.api.Config;
 
-import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.logging.Logger;
 
-public class ImageArchiveConfig 
+
+public class ImageArchiveConfig extends BaseConfig
 {
-	public final File imagePath;
-	public final File metaDataPath;
-	public final File recordingsPath;
-	
-	public final String nbdPrefix;
-	public final String httpPrefix;
-	public final String handlePrefix;
+	private String defaultBackendName;
+
+	private List<ImageArchiveBackendConfig> backends = new ArrayList<ImageArchiveBackendConfig>();
 
 
-	public ImageArchiveConfig(String base, String nbdExport, String httpExport, String handlePrefix) throws BWFLAException {
-		imagePath = new File(base + "/images");
-		if(!imagePath.exists()) {
-			if(!imagePath.mkdirs())
-				throw new BWFLAException("failed creating " + imagePath);
-		}
-		for(ImageType t : ImageType.values())
-		{
-			File subdir = new File(imagePath, t.name());
-			if(subdir.exists())
-				continue;
-			if(!subdir.mkdirs())
-				throw new BWFLAException("failed creating subdir " + subdir);
-		}
+	/* ========== Getters and Setters ========== */
 
-		metaDataPath = new File(base + "/meta-data");
-
-		if(!metaDataPath.exists()) {
-			metaDataPath.mkdirs();
-		}
-
-		for(ImageType t : ImageType.values())
-		{
-			File subdir = new File(metaDataPath, t.name());
-			if(subdir.exists())
-				continue;
-			if(!subdir.mkdirs())
-				throw new BWFLAException("failed creating subdir " + subdir);
-		}
-
-		recordingsPath = new File(base + "/recordings");
-		
-		this.nbdPrefix = nbdExport;
-		this.httpPrefix = httpExport;
-		this.handlePrefix = handlePrefix;
+	public String getDefaultBackendName()
+	{
+		return defaultBackendName;
 	}
 
-	public boolean isHandleConfigured()
+	@Config("imagearchive.default_backend_name")
+	public void setDefaultBackendName(String name)
 	{
-		return (handlePrefix != null);
+		ConfigHelpers.check(name, "Default backend-name is invalid!");
+		this.defaultBackendName = name;
+	}
+
+	public List<ImageArchiveBackendConfig> getBackendConfigs()
+	{
+		return backends;
+	}
+
+	public void setBackendConfigs(List<ImageArchiveBackendConfig> backends)
+	{
+		ConfigHelpers.check(backends, "List of image-archive backends is invalid!");
+		this.backends = backends;
+	}
+
+
+	/* ========== Initialization ========== */
+
+	@Override
+	public void load(Configuration config) throws ConfigException
+	{
+		final Logger log = Logger.getLogger(this.getClass().getName());
+		log.info("Loading image-archive's configuration...");
+
+		// Configure annotated members of this instance
+		ConfigHelpers.configure(this, config);
+
+		// Configure backends for this instance
+		{
+			backends.clear();
+
+			while (true) {
+				// Find out the type of configured provider
+				final String userPrefix = ConfigHelpers.toListKey("imagearchive.backends", backends.size(), ".");
+				final Configuration userConfig = ConfigHelpers.filter(config, userPrefix);
+				final String type = userConfig.get("type");
+				if (type == null)
+					break;  // No more backends found!
+
+				// Compute the combined view from user and default configurations
+				final String defaultPrefix = "imagearchive.backends.defaults.";
+				final Configuration defaultAllConfig = ConfigHelpers.filter(config, defaultPrefix + "all.");
+				final Configuration defaultTypeConfig = ConfigHelpers.filter(config, defaultPrefix + type + ".");
+				final Configuration combinedConfig = ConfigHelpers.combine(defaultAllConfig, defaultTypeConfig, userConfig);
+
+				// Configure next backend
+				ImageArchiveBackendConfig backend = new ImageArchiveBackendConfig();
+				backend.load(combinedConfig);
+				backends.add(backend);
+			}
+
+			log.info("Loaded " + backends.size() + " backend configuration(s)");
+		}
 	}
 }

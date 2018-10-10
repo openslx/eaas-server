@@ -8,14 +8,18 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.bwl.bwfla.common.services.net.HttpExportServlet;
-import de.bwl.bwfla.imagearchive.conf.ImageArchiveSingleton;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+
+import javax.inject.Inject;
 
 
 public class ExportObject extends HttpExportServlet
 {
 	private static HashMap<String, File> exportCache = new HashMap<String, File>();
-	Logger log = Logger.getLogger("ImageArchive Export Object");
+	private Logger log = Logger.getLogger("ImageArchive Export Object");
+
+	@Inject
+	private ImageArchiveRegistry backends = null;
 
 	@Override
 	public File resolveRequest(String reqStr) 
@@ -27,24 +31,27 @@ public class ExportObject extends HttpExportServlet
 			}
 		}
 
-		String filename = null;
 		if(!reqStr.startsWith("/"))
 		{
-			System.out.println("wrong req str: " + reqStr);
+			log.warning("wrong req str: " + reqStr);
 			return null;
 		}
-		filename = reqStr;
-		
+
+
+		String imageArchiveName = ExportObject.parseImageArchiveName(reqStr);
+		String filename = reqStr.substring(imageArchiveName.length() + 1);
 		try {
+			imageArchiveName = URLDecoder.decode(imageArchiveName, "UTF-8");
 			filename = URLDecoder.decode(filename, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			log.log(Level.WARNING, e.getMessage(), e);
 			return null;
 		}
-		
+
+		final ImageArchiveBackend backend = backends.lookup(imageArchiveName);
 		for(ImageType type : ImageType.values())
 		{
-			File f = new File(ImageArchiveSingleton.iaConfig.imagePath + "/" + type.name() + filename);
+			File f = new File(backend.getConfig().getImagePath() + "/" + type.name() + filename);
 			if(f.exists()) {
 				exportCache.put(reqStr, f);
 				return f;
@@ -54,4 +61,10 @@ public class ExportObject extends HttpExportServlet
 		return null;
 	}
 
+	private static String parseImageArchiveName(String url)
+	{
+		// Expected URL:  /{archive-name}/{image-id}
+		final int pos = url.indexOf("/", 1);
+		return url.substring(1, pos);
+	}
 }

@@ -30,7 +30,6 @@ import javax.xml.ws.soap.SOAPBinding;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveWS;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveWSService;
-//import de.bwl.bwfla.common.datatypes.NetworkEnvironment;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 abstract class ImageArchiveWSClient implements Serializable
@@ -40,8 +39,9 @@ abstract class ImageArchiveWSClient implements Serializable
 	
 	protected ImageArchiveWS archive = null;
 	protected String wsHost;
-	
-	private String exportPrefix = null;
+
+	private String defaultBackendName = null;
+	private String defaultExportPrefix = null;
 	
 	public String toString()
 	{
@@ -61,18 +61,34 @@ abstract class ImageArchiveWSClient implements Serializable
 		archive = getImageArchiveCon(wsHost);
 		if(archive == null)
 			throw new BWFLAException("could not connect to image archive @" + wsHost);
-		
 	}
-	
+
+	public String getDefaultBackendName() throws BWFLAException
+	{
+		if (defaultBackendName != null)
+			return defaultBackendName;
+
+		this.connectArchive();
+
+		this.defaultBackendName = archive.getDefaultBackendName();
+		return defaultBackendName;
+	}
+
 	protected String getExportPrefix() throws BWFLAException
 	{
-		if(exportPrefix != null)
-			return exportPrefix;
-		
-		connectArchive();
-		exportPrefix = archive.getExportPrefix();
-		
-		return exportPrefix;
+		if (defaultExportPrefix != null)
+			return defaultExportPrefix;
+
+		this.connectArchive();
+
+		this.defaultExportPrefix = archive.getExportPrefix(this.getDefaultBackendName());
+		return defaultExportPrefix;
+	}
+
+	protected String getExportPrefix(String imageArchiveName) throws BWFLAException
+	{
+		this.connectArchive();
+		return archive.getExportPrefix(imageArchiveName);
 	}
 	
 	private static ImageArchiveWS getImageArchiveCon(String host)

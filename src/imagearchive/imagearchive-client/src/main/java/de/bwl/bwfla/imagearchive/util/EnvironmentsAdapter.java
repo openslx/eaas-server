@@ -4,9 +4,7 @@ import java.io.File;
 
 import java.net.URL;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -26,9 +24,13 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public List<Environment> getEnvironments(String type) throws BWFLAException, JAXBException {
+		return this.getEnvironments(this.getDefaultBackendName(), type);
+	}
+
+	public List<Environment> getEnvironments(String backend, String type) throws BWFLAException, JAXBException {
 		connectArchive();
 
-		List<String> envs = archive.getEnvironments(type);
+		List<String> envs = archive.getEnvironments(backend, type);
 
 		List<Environment> out = new ArrayList<Environment>();
 		for (String envStr : envs) {
@@ -36,7 +38,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 			if (emuEnv == null)
 				continue;
 
-			updateUrlPrefix(emuEnv);
+			this.updateUrlPrefix(backend, emuEnv);
 			out.add(emuEnv);
 		}
 
@@ -44,7 +46,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
-		List<MachineConfigurationTemplate> envs = getTemplates();
+		return this.getTemplate(this.getDefaultBackendName(), id);
+	}
+
+	public MachineConfigurationTemplate getTemplate(String backend, String id) throws BWFLAException {
+		List<MachineConfigurationTemplate> envs = this.getTemplates(backend);
 		for (MachineConfigurationTemplate e : envs) {
 			if (e.getId().equals(id))
 				return e;
@@ -53,14 +59,14 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return null;
 	}
 
-	private void updateUrlPrefix(Environment env) throws BWFLAException
+	private void updateUrlPrefix(String backend, Environment env) throws BWFLAException
 	{
 		if (env instanceof MachineConfiguration) {
 			final MachineConfiguration config = (MachineConfiguration) env;
 			for (AbstractDataResource r : config.getAbstractDataResource()) {
 				if (r instanceof ImageArchiveBinding) {
 					ImageArchiveBinding iaBinding = (ImageArchiveBinding) r;
-					iaBinding.setUrlPrefix(this.getExportPrefix());
+					iaBinding.setUrlPrefix(this.getExportPrefix(backend));
 				}
 			}
 		}
@@ -69,23 +75,30 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 			for (AbstractDataResource r : config.getDataResources()) {
 				if (r instanceof ImageArchiveBinding) {
 					ImageArchiveBinding iaBinding = (ImageArchiveBinding) r;
-					iaBinding.setUrlPrefix(this.getExportPrefix());
+					iaBinding.setUrlPrefix(this.getExportPrefix(backend));
 				}
 			}
 		}
 	}
 
 	public void sync() throws BWFLAException {
-		connectArchive();
-		archive.reload();
+		this.sync(this.getDefaultBackendName());
 	}
 
+	public void sync(String backend) throws BWFLAException {
+		connectArchive();
+		archive.reload(backend);
+	}
 
 	public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException {
+		return this.getTemplates(this.getDefaultBackendName());
+	}
+
+	public List<MachineConfigurationTemplate> getTemplates(String backend) throws BWFLAException {
 		connectArchive();
 
 		List<MachineConfigurationTemplate> _templates = new ArrayList<MachineConfigurationTemplate>();
-		List<String> envlist = archive.getEnvironments("template");
+		List<String> envlist = archive.getEnvironments(backend, "template");
 
 		for (String env : envlist) {
 			try {
@@ -102,7 +115,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 					log.info("DescriptionTag is mandatory: " + emuEnv.getId());
 					continue;
 				}
-				updateUrlPrefix(emuEnv);
+				updateUrlPrefix(backend, emuEnv);
 				_templates.add(emuEnv);
 			} catch (Throwable t) {
 				log.info("loadTemplates2: failed to parse environment: " + t.getMessage());
@@ -116,9 +129,13 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public Environment getEnvironmentById(String id) throws BWFLAException {
+		return this.getEnvironmentById(this.getDefaultBackendName(), id);
+	}
+
+	public Environment getEnvironmentById(String backend, String id) throws BWFLAException {
 		connectArchive();
 		Environment env = null;
-		String imageConf = archive.getEnvironmentById(id);
+		String imageConf = archive.getEnvironmentById(backend, id);
 		if (imageConf == null)
 			throw new BWFLAException("image with the following id cannot be located in the image archive: " + id);
 
@@ -127,15 +144,19 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		} catch (Exception e) {
 			throw new BWFLAException("can't load image with id " + id + ": " + e.getMessage());
 		}
-		updateUrlPrefix(env);
+		updateUrlPrefix(backend, env);
 		return env;
 	}
 
 	public void delete(String envId, boolean deleteMetadata, boolean deleteImage) throws BWFLAException {
+		this.delete(this.getDefaultBackendName(), envId, deleteMetadata, deleteImage);
+	}
+
+	public void delete(String backend, String envId, boolean deleteMetadata, boolean deleteImage) throws BWFLAException {
 		connectArchive();
-		Environment environment = getEnvironmentById(envId);
+		Environment environment = this.getEnvironmentById(backend, envId);
 		if(deleteMetadata)
-			deleteMetaData(envId);
+			this.deleteMetaData(backend, envId);
 
 		if(deleteMetadata || deleteImage) // if we delete metadata we have to delete the image too!
 		{
@@ -146,7 +167,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 					if (b.getId().equals("main_hdd")) {
 						ImageArchiveBinding iab = (ImageArchiveBinding) b;
 						log.info("deleting image: " + iab.getImageId());
-						deleteImage(iab.getImageId(), iab.getType());
+						this.deleteImage(backend, iab.getImageId(), iab.getType());
 					}
 				}
 			}
@@ -158,7 +179,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 					if (b.getId().equals("main_hdd")) {
 						ImageArchiveBinding iab = (ImageArchiveBinding) b;
 						log.info("deleting image: " + iab.getImageId());
-						deleteImage(iab.getImageId(), iab.getType());
+						this.deleteImage(backend, iab.getImageId(), iab.getType());
 					}
 				}
 			}
@@ -166,50 +187,80 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public boolean deleteMetaData(String envId) throws BWFLAException {
+		return this.deleteMetaData(this.getDefaultBackendName(), envId);
+	}
+
+	public boolean deleteMetaData(String backend, String envId) throws BWFLAException {
 		connectArchive();
-		return archive.deleteMetadata(envId);
+		return archive.deleteMetadata(backend, envId);
 	}
 
 	public boolean deleteImage(String imageId, String type) throws BWFLAException {
+		return this.deleteImage(this.getDefaultBackendName(), imageId, type);
+	}
+
+	public boolean deleteImage(String backend, String imageId, String type) throws BWFLAException {
 		connectArchive();
-		return archive.deleteImage(imageId, type);
+		return archive.deleteImage(backend, imageId, type);
 	}
 
 	public ImportImageHandle importImage(URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
+		return this.importImage(this.getDefaultBackendName(), ref, iaMd, deleteIfExists);
+	}
+
+	public ImportImageHandle importImage(String backend, URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
 		connectArchive();
 		if (ref == null)
 			throw new BWFLAException("URL was null");
 
-		String sessionId = archive.importImageFromUrl(ref.toString(), iaMd);
-		return new ImportImageHandle(archive, iaMd.getType(), sessionId);
+		String sessionId = archive.importImageFromUrl(backend, ref.toString(), iaMd);
+		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
 	}
 
 	public ImageArchiveBinding generalizedImport(String imageId, ImageType type, String templateId) throws BWFLAException {
+		return this.generalizedImport(this.getDefaultBackendName(), imageId, type, templateId);
+	}
+
+	public ImageArchiveBinding generalizedImport(String backend, String imageId, ImageType type, String templateId) throws BWFLAException {
 		connectArchive();
-		String id = archive.generalizedImport(imageId, type, templateId);
-		return new ImageArchiveBinding(this.getExportPrefix(), id, type.value());
+		String id = archive.generalizedImport(backend, imageId, type, templateId);
+		return new ImageArchiveBinding(backend, this.getExportPrefix(), id, type.value());
 	}
 
 	public String getDefaultEnvironment(String osId) throws BWFLAException {
-		connectArchive();
-		return archive.getDefaultEnvironment(osId);
+		return this.getDefaultEnvironment(this.getDefaultBackendName(), osId);
 	}
 
-	public void setDefaultEnvironment(String osId, String envId) throws BWFLAException
-	{
+	public String getDefaultEnvironment(String backend, String osId) throws BWFLAException {
 		connectArchive();
-		archive.setDefaultEnvironment(osId, envId);
+		return archive.getDefaultEnvironment(backend, osId);
+	}
+
+	public void setDefaultEnvironment(String osId, String envId) throws BWFLAException {
+		this.setDefaultEnvironment(this.getDefaultBackendName(), osId, envId);
+	}
+
+	public void setDefaultEnvironment(String backend, String osId, String envId) throws BWFLAException {
+		connectArchive();
+		archive.setDefaultEnvironment(backend, osId, envId);
 	}
 
 	public ImportImageHandle importImage(DataHandler handler, ImageArchiveMetadata iaMd) throws BWFLAException {
-		connectArchive();
-
-		String sessionId = archive.importImageAsStream(handler, iaMd);
-		return new ImportImageHandle(archive, iaMd.getType(), sessionId);
+		return this.importImage(this.getDefaultBackendName(), handler, iaMd);
 	}
 
+	public ImportImageHandle importImage(String backend, DataHandler handler, ImageArchiveMetadata iaMd) throws BWFLAException {
+		connectArchive();
+
+		String sessionId = archive.importImageAsStream(backend, handler, iaMd);
+		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
+	}
 
 	public ImportImageHandle importImage(File image, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
+		return this.importImage(this.getDefaultBackendName(), image, iaMd, deleteIfExists);
+	}
+
+	public ImportImageHandle importImage(String backend, File image, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
 		connectArchive();
 
 		if (image == null)
@@ -220,57 +271,77 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 
 		DataHandler dataHandler = new DataHandler(new FileDataSource(image));
-		String sessionId = archive.importImageAsStream(dataHandler, iaMd);
-		return new ImportImageHandle(archive, iaMd.getType(), sessionId);
+		String sessionId = archive.importImageAsStream(backend, dataHandler, iaMd);
+		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
 	}
 
 	public String importMachineEnvironment(MachineConfiguration env, DataHandler dataHandler, ImageArchiveMetadata iaMd) throws BWFLAException {
+		return this.importMachineEnvironment(this.getDefaultBackendName(), env, dataHandler, iaMd);
+	}
+
+	public String importMachineEnvironment(String backend, MachineConfiguration env, DataHandler dataHandler, ImageArchiveMetadata iaMd) throws BWFLAException {
 		if(dataHandler != null) {
-			ImportImageHandle handle = importImage(dataHandler, iaMd);
+			ImportImageHandle handle = this.importImage(backend, dataHandler, iaMd);
 			ImageArchiveBinding binding = handle.getBinding(60 * 60 * 60); // wait an hour
 			EmulationEnvironmentHelper.setMainHdd(env, binding);
 		}
-		String id = importMetadata(env.toString(), iaMd, false);
-		return id;
+
+		return this.importMetadata(backend, env.toString(), iaMd, false);
 	}
 
-	public String importMachineEnvironment(MachineConfiguration env, List<BindingDataHandler> data, ImageArchiveMetadata iaMd)
+	public String importMachineEnvironment(MachineConfiguration env, List<BindingDataHandler> data, ImageArchiveMetadata iaMd) throws BWFLAException {
+		return this.importMachineEnvironment(this.getDefaultBackendName(), env, data, iaMd);
+	}
+
+	public String importMachineEnvironment(String backend, MachineConfiguration env, List<BindingDataHandler> data, ImageArchiveMetadata iaMd)
 			throws BWFLAException
 	{
 		if (data != null) {
 			for (BindingDataHandler bdh : data) {
-				ImportImageHandle handle = this.importImage(bdh.getData(), iaMd);
+				ImportImageHandle handle = this.importImage(backend, bdh.getData(), iaMd);
 				ImageArchiveBinding binding = handle.getBinding(60 * 60 * 60); // wait an hour
 				binding.setId(bdh.getId());
 				EmulationEnvironmentHelper.replace(env, binding);
 			}
 		}
 
-		return this.importMetadata(env.toString(), iaMd, false);
+		return this.importMetadata(backend, env.toString(), iaMd, false);
 	}
 
 	@Deprecated
 	public String createEnvironment(MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
+		return this.createEnvironment(this.getDefaultBackendName(), emuEnv, size, iaMd);
+	}
+
+	@Deprecated
+	public String createEnvironment(String backend, MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
 		connectArchive();
 
-		String id = archive.createImage(size, iaMd.getType().value());
+		String id = archive.createImage(backend, size, iaMd.getType().value());
 		if (id == null)
 			throw new BWFLAException("image creation failed");
-		ImageArchiveBinding b = new ImageArchiveBinding(this.getExportPrefix(), id, iaMd.getType().value());
+		ImageArchiveBinding b = new ImageArchiveBinding(backend, this.getExportPrefix(), id, iaMd.getType().value());
 		b.setId("main_hdd");
 		emuEnv.getAbstractDataResource().add(b);
 
-		String envId = importMetadata(emuEnv.toString(), iaMd, false);
-		return envId;
+		return this.importMetadata(backend, emuEnv.toString(), iaMd, false);
 	}
 
 	public void updateMetadata(String conf) throws BWFLAException {
+		this.updateMetadata(this.getDefaultBackendName(), conf);
+	}
+
+	public void updateMetadata(String backend, String conf) throws BWFLAException {
 		connectArchive();
 
-		archive.updateConfiguration(conf);
+		archive.updateConfiguration(backend, conf);
 	}
 
 	public String importMetadata(String conf, ImageArchiveMetadata iaMd, boolean preserveId) throws BWFLAException {
+		return this.importMetadata(this.getDefaultBackendName(), conf, iaMd, preserveId);
+	}
+
+	public String importMetadata(String backend, String conf, ImageArchiveMetadata iaMd, boolean preserveId) throws BWFLAException {
 		connectArchive();
 
 		Environment emuEnv = null;
@@ -288,47 +359,61 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		if (!preserveId)
 			emuEnv.setId(getRandomId());
 
-		archive.importConfiguration(emuEnv.toString(), iaMd, preserveId);
+		archive.importConfiguration(backend, emuEnv.toString(), iaMd, preserveId);
 		log.info("Successfully registered image at " + wsHost + "id: " + emuEnv.getId());
 		return emuEnv.getId();
 	}
 
 	private static String getRandomId() {
-		String id = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-		return id;
+		return UUID.randomUUID().toString();
 	}
 
 	public void commitTempEnvironment(String id) throws BWFLAException {
-		connectArchive();
-		archive.commitTempEnvironment(id);
+		this.commitTempEnvironment(this.getDefaultBackendName(), id);
 	}
-	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException {
+
+	public void commitTempEnvironment(String backend, String id) throws BWFLAException {
 		connectArchive();
-		archive.commitTempEnvironmentWithCustomType(id, type);
+		archive.commitTempEnvironment(backend, id);
+	}
+
+	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException {
+		this.commitTempEnvironmentWithCustomType(this.getDefaultBackendName(), id, type);
+	}
+
+	public void commitTempEnvironmentWithCustomType(String backend, String id, String type) throws BWFLAException {
+		connectArchive();
+		archive.commitTempEnvironmentWithCustomType(backend, id, type);
 	}
 
 	public void cleanTempEnvironments() throws BWFLAException {
+		this.cleanTempEnvironments(this.getDefaultBackendName());
+	}
+
+	public void cleanTempEnvironments(String backend) throws BWFLAException {
 		connectArchive();
-		archive.deleteTempEnvironments();
+		archive.deleteTempEnvironments(backend);
 	}
 
 	public class ImportImageHandle {
 		private final String sessionId;
 		private final ImageType type;
 		private final ImageArchiveWS archive;
+		private final String backend;
 
-		ImportImageHandle(ImageArchiveWS archive, ImageType type, String sessionId) {
+		ImportImageHandle(ImageArchiveWS archive, String backend, ImageType type, String sessionId) {
 			this.sessionId = sessionId;
 			this.type = type;
 			this.archive = archive;
+			this.backend = backend;
 		}
 
 		public ImageArchiveBinding getBinding() throws ImportNoFinishedException, BWFLAException {
-			final ImageImportResult result = archive.getImageImportResult(sessionId);
+			final ImageImportResult result = archive.getImageImportResult(backend, sessionId);
 			if (result == null)
 				throw new ImportNoFinishedException();
 
-			return new ImageArchiveBinding(result.getUrlPrefix(), result.getImageId(), type.value());
+			return new ImageArchiveBinding(backend, result.getUrlPrefix(), result.getImageId(), type.value());
 		}
 
 		public ImageArchiveBinding getBinding(long timeout /* seconds */ ) throws BWFLAException {
@@ -355,13 +440,21 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public ImageExport getImageDependecies(String envId) throws BWFLAException {
+		return this.getImageDependecies(this.getDefaultBackendName(), envId);
+	}
+
+	public ImageExport getImageDependecies(String backend, String envId) throws BWFLAException {
 		connectArchive();
-		return archive.getImageDependencies(envId);
+		return archive.getImageDependencies(backend, envId);
 	}
 
 	public ImageArchiveBinding getImageBinding(String name, String version) throws BWFLAException {
+		return this.getImageBinding(this.getDefaultBackendName(), name, version);
+	}
+
+	public ImageArchiveBinding getImageBinding(String backend, String name, String version) throws BWFLAException {
 		connectArchive();
-		final String binding = archive.getImageBinding(name, version);
+		final String binding = archive.getImageBinding(backend, name, version);
 		try {
 			return (binding != null) ? ImageArchiveBinding.fromValue(binding) : null;
 		}
@@ -371,11 +464,19 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public ImageImportResult getImageImportResult(String sessionId) throws BWFLAException {
-		return archive.getImageImportResult(sessionId);
+		return this.getImageImportResult(this.getDefaultBackendName(), sessionId);
 	}
 
-	public List<String> replicateImages(List<String> images) {
-		return archive.replicateImages(images);
+	public ImageImportResult getImageImportResult(String backend, String sessionId) throws BWFLAException {
+		return archive.getImageImportResult(backend, sessionId);
+	}
+
+	public List<String> replicateImages(List<String> images) throws BWFLAException {
+		return this.replicateImages(this.getDefaultBackendName(), images);
+	}
+
+	public List<String> replicateImages(String backend, List<String> images) throws BWFLAException {
+		return archive.replicateImages(backend, images);
 	}
 
 	public static class ImportNoFinishedException extends Exception {  }
