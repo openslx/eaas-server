@@ -21,7 +21,7 @@ components:
             macplus:  /usr/bin/pce-macplus
         vdeswitch:  /usr/bin/vde_switch
         vdeslirp: /usr/bin/slirpvde
-        nodetcprunner: /libexec/vdenode
+        nodetcprunner: /libexec/picotcp/webemulator/webemulator/webnode
         nodetcpscript: /libexec/picotcp/webemulator/webemulator/vdenode.js
 
         runc: runc
