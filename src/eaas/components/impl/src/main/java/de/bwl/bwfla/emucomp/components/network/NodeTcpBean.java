@@ -77,7 +77,7 @@ public class NodeTcpBean extends EaasComponentBean {
         vdeProcesses.add(process);
 
         runner.setCommand(nodeTcpRunner);
-     //   runner.addArgument(nodeTcpScript);
+        runner.addArgument(nodeTcpScript);
         runner.addArgument(extPort + "");
         runner.addArgument(this.getWorkingDir().resolve(switchName).toString());
         runner.addArgument(NetworkUtils.getRandomHWAddress());
