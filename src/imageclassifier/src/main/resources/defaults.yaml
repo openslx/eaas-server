@@ -1,0 +1,9 @@
+imageclassifier:
+    fitshome: /home/bwfla/fits
+    num_tasks_per_request: 4
+    num_cached_fits_processors: 8
+    pronom_file_path: /eaas/pronom/DROID_SignatureFile.xml
+    always_download: false
+
+    # FITS or Siegfried
+    identification_tool: "Siegfried"

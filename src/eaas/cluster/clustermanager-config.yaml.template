@@ -1,0 +1,79 @@
+# Example configuration
+clustermanager:
+    name: default
+    admin_api_access_token: very-secret-token
+    providers:
+      # Example config for BladeCluster provider
+      - name: blades-provider
+        type: blades
+
+        labels:
+            rank: 2
+
+        node_allocator:
+            node_capacity: { cpu: 2, memory: 2GB }
+            node_addresses:
+              - localhost
+              - remote-01
+
+        poolscaler:
+            min_poolsize: 2
+            max_poolsize: 8
+
+      # Example config for Google Compute Engine provider            
+      - name: gce-provider
+        type: gce
+        
+        labels:
+            rank: 1
+            # Uncomment for GPU support
+            #accelerator: gpu
+        
+        node_allocator:
+            project_id: example-01-id
+            zone_name: europe-west1-d
+            network_name: eaas-network
+            credentials_file: /path/to/credentials.json
+
+            vm:
+                machine_type: n1-standard-4
+                persistent_disk:
+                    type: pd-standard
+                    size: 10  # in GB
+                    image_url: some/path/to/cloud/image
+
+                # Uncomment for GPU support
+                #accelerators:
+                #  - type: nvidia-tesla-k80
+                #    count: 1
+
+        poolscaler:
+            min_poolsize: 0
+            max_poolsize: 4
+
+      # Example config for JClouds provider
+      - name: bwcloud
+        type: jclouds
+
+        labels:
+            rank: 0
+        
+        node_allocator:
+            provider:
+                name: openstack-nova
+                endpoint: https://<PROVIDER_URL>:5000/v2.0/
+                identity: <PROJECT>:<USER>
+                credential: <PASSWORD>
+
+            security_group_name: default
+            node_group_name: eaas-nodes
+            node_name_prefix: os-testing-
+
+            vm:
+                network_id: <NETWORK_ID>
+                hardware_id: <REGION>/<HARDWARE_ID>
+                image_id: <REGION>/<IMAGE_ID>
+
+        poolscaler:
+            min_poolsize: 0
+            max_poolsize: 2

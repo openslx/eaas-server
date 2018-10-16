@@ -1,0 +1,20 @@
+helpers:
+    hddfat16create: /usr/bin/hdd_create.sh
+    hddfat16io: /usr/bin/hdd_io.sh
+    hddhfscreate: /usr/bin/hdd_create_hfs.sh
+    hddhfsio: /usr/bin/hdd_io_hfs.sh
+    floppyfat12create:  /usr/bin/floppy_create.sh
+runners:
+    tmpdirprefix: eaas-pr-
+    stdoutfilename: stdout.log
+    stderrfilename: stderr.log
+commonconf:
+    serverdatadir: /home/bwfla/server-data
+
+handle:
+    prefix: 11270
+    url_record_index: 1
+    authentication:
+        private_key_file: /home/bwfla/server-data/hdl-keys/admpriv.bin
+        handle: 0.NA/11270
+        index: 300

@@ -1,0 +1,3 @@
+<webservices xmlns="http://www.jboss.com/xml/ns/javaee">
+  <context-root>eaas</context-root>
+</webservices>

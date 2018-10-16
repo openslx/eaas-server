@@ -1,0 +1,65 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>softwarearchive</artifactId>
+	<name>softwarearchive</name>
+	<description>An EJB project representing a WS front-end for the software archive.</description>
+	<packaging>war</packaging>
+	<parent>
+		<groupId>de.bwl.bwfla</groupId>
+		<artifactId>root</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+
+	<build>
+		<plugins>
+                        <plugin>
+                                <groupId>org.apache.maven.plugins</groupId>
+                                <artifactId>maven-war-plugin</artifactId>
+                                <configuration>
+                                        <webResources>
+                                                <webResource>
+                                                        <directory>${project.build.directory}/generated/</directory>
+                                                        <includes><include>wsdl/*.wsdl</include></includes>
+                                                        <targetPath>WEB-INF</targetPath>
+                                                </webResource>
+                                        </webResources>
+                                </configuration>
+                        </plugin>
+			<plugin>
+				<groupId>org.apache.cxf</groupId>
+				<artifactId>cxf-java2ws-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>wsdl-eaascomponent</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>java2ws</goal>
+						</goals>
+						<configuration>
+							<className>de.bwl.bwfla.softwarearchive.SoftwareArchiveWS</className>
+							<address>http://localhost:8080/softwarearchive/SoftwareArchiveWS</address>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>ReadWikidata</artifactId>
+		</dependency>
+
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
+		</dependency>
+	</dependencies>
+</project>

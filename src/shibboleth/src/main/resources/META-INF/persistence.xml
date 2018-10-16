@@ -1,0 +1,40 @@
+<persistence xmlns="http://java.sun.com/xml/ns/persistence"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_2_0.xsd"
+	version="2.0">
+	
+	<persistence-unit name="shib" transaction-type="JTA">
+		<provider>org.hibernate.ejb.HibernatePersistence</provider>
+		<jta-data-source>java:jboss/datasources/shibDS</jta-data-source>
+
+		<class>edu.kit.scc.webreg.entity.AdminRoleEntity</class>
+		<class>edu.kit.scc.webreg.entity.AgreementTextEntity</class>
+		<class>edu.kit.scc.webreg.entity.ApproverRoleEntity</class>
+		<class>edu.kit.scc.webreg.entity.BusinessRuleEntity</class>
+		<class>edu.kit.scc.webreg.entity.FederationEntity</class>
+		<class>edu.kit.scc.webreg.entity.ImageDataEntity</class>
+		<class>edu.kit.scc.webreg.entity.ImageEntity</class>
+		<class>edu.kit.scc.webreg.entity.PolicyEntity</class>
+		<class>edu.kit.scc.webreg.entity.RegistryEntity</class>
+		<class>edu.kit.scc.webreg.entity.RoleEntity</class>
+		<class>edu.kit.scc.webreg.entity.SamlIdpMetadataEntity</class>
+		<class>edu.kit.scc.webreg.entity.SamlIdpScopeEntity</class>
+		<class>edu.kit.scc.webreg.entity.SamlMetadataEntity</class>
+		<class>edu.kit.scc.webreg.entity.SamlSpConfigurationEntity</class>
+		<class>edu.kit.scc.webreg.entity.SamlSpMetadataEntity</class>
+		<class>edu.kit.scc.webreg.entity.SerialEntity</class>
+		<class>edu.kit.scc.webreg.entity.ServiceEntity</class>
+		<class>edu.kit.scc.webreg.entity.UserEntity</class>
+
+		<properties>
+			<property name="hibernate.dialect" value="org.hibernate.dialect.DerbyDialect" />
+			<property name="hibernate.show_sql" value="false" />
+			<property name="hibernate.format_sql" value="false" />
+			<property name="hibernate.use_sql_comments" value="false" />
+			<property name="hibernate.cache.use_query_cache" value="false" />
+			<property name="hibernate.cache.use_second_level_cache"
+				value="false" />
+			<property name="hibernate.hbm2ddl.auto" value="update" />
+		</properties>
+	</persistence-unit>
+</persistence>

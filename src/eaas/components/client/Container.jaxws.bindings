@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<jaxws:bindings xmlns:jaxb="http://java.sun.com/xml/ns/jaxb"
+	xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+	xmlns:jaxws="http://java.sun.com/xml/ns/jaxws"
+	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
+	xmlns:tns="http://bwfla.bwl.de/api/emucomp"
+	version="2.1"
+	wsdlLocation="target/dependency/WEB-INF/wsdl/Container.wsdl">
+
+	<jaxws:bindings node="wsdl:definitions//wsdl:fault[@name='BWFLAException']">
+		<jaxws:class name="de.bwl.bwfla.common.exceptions.BWFLAException" />
+	</jaxws:bindings>
+
+	<jaxb:bindings scd="x-schema::tns" xmlns:tns="http://bwfla.bwl.de/api/emucomp">
+		<jaxb:bindings scd="//type::tns:BWFLAException">
+			<jaxb:class ref="de.bwl.bwfla.common.exceptions.BWFLAException" />
+		</jaxb:bindings>
+	</jaxb:bindings>
+</jaxws:bindings>

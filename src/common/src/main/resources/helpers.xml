@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- Configuration of file system helper scripts -->
+<helpersConf>
+	<hddFat16Create>/usr/bin/hdd_create.sh
+	</hddFat16Create>
+	<hddFat16Io>/usr/bin/hdd_io.sh
+	</hddFat16Io>
+	<hddHfsCreate>/usr/bin/hdd_create_hfs.sh
+	</hddHfsCreate>
+	<hddHfsIo>/usr/bin/hdd_io_hfs.sh
+	</hddHfsIo>
+	<floppyFat12Create>/usr/bin/floppy_create.sh
+	</floppyFat12Create>
+	<floppyFat12Io>/usr/bin/floppy_io.sh
+	</floppyFat12Io>
+</helpersConf>

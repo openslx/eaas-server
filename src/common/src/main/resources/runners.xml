@@ -1,0 +1,6 @@
+<!-- Configuration of external process runner - don't change unless you know what your doing! -->
+    <runnerConf>
+        <tmpdirPrefix>bwfla-pr-</tmpdirPrefix>
+        <stdoutFilename>stdout.log</stdoutFilename>
+        <stderrFilename>stderr.log</stderrFilename>
+    </runnerConf>

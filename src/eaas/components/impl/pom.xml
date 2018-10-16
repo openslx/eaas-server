@@ -1,0 +1,156 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>eaas-components-impl</artifactId>
+	<name>EaaS components SOAP service and backend implementation</name>
+	<description>An EJB module containing emulation component and its web-service API.</description>
+	<packaging>war</packaging>
+	<parent>
+		<groupId>de.bwl.bwfla.eaas</groupId>
+		<artifactId>eaas-components-all</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<webResources>
+						<webResource>
+							<directory>${project.build.directory}/generated/</directory>
+							<includes><include>wsdl/*.wsdl</include></includes>
+							<targetPath>WEB-INF</targetPath>
+						</webResource>
+					</webResources>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.cxf</groupId>
+				<artifactId>cxf-java2ws-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>wsdl-eaascomponent</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>java2ws</goal>
+						</goals>
+						<configuration>
+							<className>de.bwl.bwfla.emucomp.ws.Component</className>
+							<address>http://localhost:8080/emucomp/ComponentService/Component</address>
+						</configuration>
+					</execution>
+					<execution>
+						<id>wsdl-container</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>java2ws</goal>
+						</goals>
+						<configuration>
+							<className>de.bwl.bwfla.emucomp.ws.Container</className>
+							<address>http://localhost:8080/emucomp/ComponentService/Container</address>
+						</configuration>
+					</execution>
+					<execution>
+						<id>wsdl-emulator</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>java2ws</goal>
+						</goals>
+						<configuration>
+							<className>de.bwl.bwfla.emucomp.ws.Machine</className>
+							<address>http://localhost:8080/emucomp/ComponentService/Machine</address>
+						</configuration>
+					</execution>
+					<execution>
+						<id>wsdl-networkswitch</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>java2ws</goal>
+						</goals>
+						<configuration>
+							<className>de.bwl.bwfla.emucomp.ws.NetworkSwitch</className>
+							<address>http://localhost:8080/emucomp/ComponentService/NetworkSwitch</address>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-antrun-plugin</artifactId>
+				<executions>
+					<execution>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>run</goal>
+						</goals>
+						<configuration>
+							<target>
+								<replaceregexp replace="" flags="g">
+									<fileset dir="${project.build.directory}/generated/wsdl" includes="*.wsdl">
+										<exclude name="Combine.wsdl" />
+									</fileset>
+									<regexp pattern="&lt;xs:element name=&quot;BWFLAException&quot; type=&quot;tns:BWFLAException&quot;/&gt;"/>
+								</replaceregexp>
+								<replaceregexp replace="" flags="gs">
+									<fileset dir="${project.build.directory}/generated/wsdl" includes="*.wsdl">
+										<exclude name="Combine.wsdl" />
+									</fileset>
+									<regexp pattern="&lt;xs:complexType name=&quot;BWFLAException&quot;&gt;.*&lt;/xs:complexType&gt;"/>
+								</replaceregexp>
+							</target>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla.eaas</groupId>
+			<artifactId>eaas-components-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>blobstore-client</artifactId>
+			<type>jar</type>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>objectarchive-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>imagearchive-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.glyptodon.guacamole</groupId>
+			<artifactId>guacamole-common</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>net.java.dev.jna</groupId>
+			<artifactId>jna</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>javax.activation</groupId>
+			<artifactId>activation</artifactId>
+		</dependency>
+<dependency>
+            <groupId>io.undertow</groupId>
+            <artifactId>undertow-websockets-jsr</artifactId>
+            <type>jar</type>
+</dependency>
+	</dependencies>
+</project>

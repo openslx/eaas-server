@@ -1,0 +1,38 @@
+emailnotifier:
+    sender: sender@something.com
+    emailnotifier:  recepient=reciever@something.com
+    smtphost: somesmtphost
+objectarchive:  
+    objedir:  /home/objarchive
+    httpexport: http://132.230.4.15:8080/object-archive/
+commonconf:
+    keyfile:  /home/bwfla/demo/bw-fla/ext/hdl-keys/admpriv.bin
+    authindex:  300
+    authhandle: 0.NA/11270
+imagearchive:
+    basepath: /home/bwfla/image-archive
+    httpprefix: http://132.230.4.15
+    ndbprefix:  nbd:132.230.4.15:10809:exportname=
+imageclassifier:
+    fitshome: /home/rigby/bw-fla/ext/fits
+    verbosemode:  false
+    numtasksperrequest: 4
+imageproposer:  
+    rebuildinterval:  60
+emil:
+    imageproposerservice: http://localhost:8080
+    classificationservice:  http://localhost:8080
+    cachedclassificationpath: /home/bwfla/classification-cache/
+    emilenvironmentspath: /home/bwfla/emil-environments/
+    exportpath: /home/bwfla/export/
+emucomp:
+    inactivitytimeout:  60s
+    localmode:  false
+softwarearchive:
+    basedir:  /home/bwfla/software-archive/
+ws:
+    imagearchive: http://localhost:8080/
+    objectarchive:  http://localhost:8080
+    softwarearchive:  http://localhost:8080
+    embedgw:  http://localhost:8080/
+    eaasgw: http://localhost:8080 

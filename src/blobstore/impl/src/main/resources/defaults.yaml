@@ -1,0 +1,6 @@
+blobstore:
+    gc_interval: 30 min
+    max_entry_age: 1 hour
+    backend:
+        type: fs
+        base_dir: /tmp/blobstore

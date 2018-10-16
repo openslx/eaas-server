@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XMLTooling xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.opensaml.org/xmltooling-config ../../src/schema/xmltooling-config.xsd"
+ xmlns:paos="urn:liberty:paos:2003-08"
+ xmlns="http://www.opensaml.org/xmltooling-config">
+ 
+    <!-- Liberty PAOS Object providers -->
+    <ObjectProviders>
+        
+        <!-- Request -->
+        <ObjectProvider qualifiedName="paos:Request">
+            <BuilderClass className="edu.kit.scc.paos.impl.RequestBuilder" />
+            <MarshallingClass className="edu.kit.scc.paos.impl.RequestMarshaller" />
+            <UnmarshallingClass className="edu.kit.scc.paos.impl.RequestUnmarshaller" />
+        </ObjectProvider>
+        
+        <!-- Response -->
+        <ObjectProvider qualifiedName="paos:Response">
+            <BuilderClass className="edu.kit.scc.paos.impl.ResponseBuilder" />
+            <MarshallingClass className="edu.kit.scc.paos.impl.ResponseMarshaller" />
+            <UnmarshallingClass className="edu.kit.scc.paos.impl.ResponseUnmarshaller" />
+        </ObjectProvider>
+ 
+    </ObjectProviders>
+ </XMLTooling>

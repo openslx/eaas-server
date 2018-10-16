@@ -1,0 +1,48 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>imageclassifier</artifactId>
+	<packaging>war</packaging>
+	<name>imageclassifier</name>
+	<description>A WAR module for ImageClassifier REST API</description>
+	<parent>
+		<groupId>de.bwl.bwfla</groupId>
+		<artifactId>root</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+	<properties>
+		<resteasy.version>3.0.18.Final</resteasy.version>
+	</properties>
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>imageclassifier-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla.eaas</groupId>
+			<artifactId>eaas-components-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>edu.harvard.hul.ois</groupId>
+			<artifactId>fits</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jackson2-provider</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>ReadWikidata</artifactId>
+		</dependency>
+		<!-- These dependencies should be removed from the sourcecode if
+		     you find the time. -->
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+		</dependency>
+	</dependencies>
+</project>

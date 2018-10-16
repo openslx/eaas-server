@@ -1,0 +1,226 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>ear</artifactId>
+	<name>ear</name>
+	<description>A bwFLA Java Enterprise Application project.</description>
+	<packaging>ear</packaging>
+
+	<parent>
+		<groupId>de.bwl.bwfla</groupId>
+		<artifactId>root</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+
+	<properties>
+		<wildfly.jbosshome>${basedir}/../../ext/appserver</wildfly.jbosshome>
+	</properties>
+	
+	<build>
+		<plugins>
+			<plugin>
+				<!-- Don't install the ear to the local maven repository -->
+				<artifactId>maven-install-plugin</artifactId>
+				<configuration>
+					<skip>true</skip>
+				</configuration>
+			</plugin>
+			<plugin>
+				<artifactId>maven-clean-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>auto-clean</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>clean</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>org.wildfly.plugins</groupId>
+				<artifactId>wildfly-maven-plugin</artifactId>
+				<configuration>
+					<skip>false</skip>
+				</configuration>
+			</plugin>
+		</plugins>
+		<finalName>eaas-server</finalName>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+			<scope>compile</scope>
+		</dependency>
+	</dependencies>
+
+	<!-- The individual project modules are all in their separate projects
+	     here to allow for packaging only parts of the project, e.g. only
+	     the emucomp module -->
+	<profiles>
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>blobstore</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>blobstore-impl</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>imagebuilder</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imagebuilder-impl</artifactId>
+					<type>war</type>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>blobstore-impl</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>emucomp</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla.eaas</groupId>
+					<artifactId>eaas-components-impl</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>imageclassifier</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imageclassifier</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>imageproposer</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imageproposer</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>imagearchive</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imagearchive</artifactId>
+					<type>war</type>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>nbd-server-impl</artifactId>
+					<scope>compile</scope>
+					<type>war</type>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>nbd-server-resource-api</artifactId>
+					<scope>compile</scope>
+				</dependency>	
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>nbd-server-resource-rar</artifactId>
+					<scope>compile</scope>
+					<type>rar</type>
+				</dependency>			
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>objectarchive</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>objectarchive</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>softwarearchive</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>softwarearchive</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>eaas</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla.eaas</groupId>
+					<artifactId>eaas-proxy-impl</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>emil</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>emil</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
+	</profiles>
+</project>

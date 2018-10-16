@@ -1,0 +1,65 @@
+components:
+    client_timeout: 30s
+    timeout: 60s
+    binary:
+        qemu: /usr/bin/qemu-system-
+        basilisk: /usr/bin/BasiliskII
+        sheepshaver:  /usr/bin/SheepShaver
+        dosbox: /usr/bin/dosbox
+        hatari: /usr/bin/hatari
+        kegs: /usr/bin/kegs
+        beebem: /usr/bin/beebem
+        vbox:
+            headlessexec: /usr/bin/VBoxSDL
+            manageexec:  /usr/bin/VBoxManage
+        vice:
+            c64:  /usr/bin/x64
+            c128: /usr/bin/x128
+        pce:
+            atarist:  /usr/bin/pce-atarist
+            ibmpc:  /usr/bin/pce-ibmpc
+            macplus:  /usr/bin/pce-macplus
+        vdeswitch:  /usr/bin/vde_switch
+        vdeslirp: /usr/bin/slirpvde
+        nodetcprunner: /libexec/vdenode
+        nodetcpscript: /libexec/picotcp/webemulator/webemulator/vdenode.js
+
+        runc: runc
+        vdeplug: /usr/bin/vde_plug
+        vdesocks: lklsocks
+    socks.ports: 1080-1090
+    socks.listenaddress: 0.0.0.0
+    xpra:
+        ports: 7000-7100
+        enable_gpu: false
+
+    vice_defaults_dir: /home/bwfla/server-data/vice-defaults
+
+    emulator_containers:
+        enabled: false
+        uid: 100000
+        gid: 100000
+
+    containers:
+        blobstore: http://localhost:8080
+        usernamespace:
+            enabled: false
+            user: bwfla
+            group: bwfla
+
+    session_statistics:
+        flush_delay: 30s
+    tcpNode:
+        ports: 10000-10010
+
+emucomp:
+    blobstore_soap: http://localhost:8080
+    blobstore_rest: http://localhost:8080/blobstore/api/v1/blobs
+    inactivitytimeout:  0
+    enable_screenshooter: false
+    debug_bean_enabled: false
+    libfaketime: /usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
+    rompath: /eaas/roms
+    alsa_card: PCH
+
+ws.imagearchive: http://localhost:8080

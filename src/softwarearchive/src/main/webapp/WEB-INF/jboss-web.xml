@@ -1,0 +1,3 @@
+<jboss-web>
+  <context-root>softwarearchive</context-root>
+</jboss-web>

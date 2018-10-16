@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<commonConf>
+    <hdlConf>
+        <keyfile>/home/iv1004/Workspace/bw-fla/ext/hdl-keys/admpriv.bin</keyfile>
+        <authIndex>300</authIndex>
+        <authHandle>0.NA/11270</authHandle>
+    </hdlConf>
+
+    <helpersConf>
+        <hddFat16Create>/home/iv1004/Workspace/bw-fla/ext/hdd_scripts/hdd_create.sh</hddFat16Create>
+        <hddFat16Io>/home/iv1004/Workspace/bw-fla/ext/hdd_scripts/hdd_io.sh</hddFat16Io>
+        <hddHfsCreate>/home/iv1004/Workspace/bw-fla/ext/hdd_scripts/hdd_create_hfs.sh</hddHfsCreate>
+        <hddHfsIo>/home/iv1004/Workspace/bw-fla/ext/hdd_scripts/hdd_io_hfs.sh</hddHfs16Io>
+        <floppyFat12Create>/home/iv1004/Workspace/bw-fla/ext/floppy_scripts/floppy_create.sh</floppyFat12Create>
+        <floppyFat12Io>/home/iv1004/Workspace/bw-fla/ext/floppy_scripts/floppy_io.sh</floppyFat12Io>
+    </helpersConf>
+
+    <processRunner>
+        <tmpdirPrefix>bwfla-pr-</tmpdirPrefix>
+        <stdoutFilename>stdout.log</stdoutFilename>
+        <stderrFilename>stderr.log</stderrFilename>
+    </processRunner>
+</commonConf>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<spconfig>
+	<enabled>true</enabled>
+	<id>333</id>
+	<federation_id>14</federation_id>
+	<entity_id>https://myserver/sp</entity_id>
+	<acs>https://myserver/Shibboleth.sso/SAML2/POST</acs>
+	<ecp>https://myserver/Shibboleth.sso/SAML2/ECP</ecp>
+	<certificate>-----BEGIN CERTIFICATE-----
+		...
+		-----END CERTIFICATE-----
+	</certificate>
+	<private_key>-----BEGIN RSA PRIVATE KEY-----
+		...
+		-----END RSA PRIVATE KEY-----
+	</private_key>
+	<hostnames>
+		<hostname>myserver.uni-freiburg.de</hostname>
+		<hostname>127.0.0.1</hostname>
+		<hostname>localhost</hostname>
+	</hostnames>
+</spconfig>
