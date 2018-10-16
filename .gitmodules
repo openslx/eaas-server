@@ -1,9 +1,0 @@
-[submodule "docker/eaas-dev/picotcp"]
-	path = docker/eaas-dev/picotcp
-	url = https://git.eaas.uni-freiburg.de/rafaelgieschke/picotcp.git
-[submodule "docker/eaas-snapshots/emucon-tools"]
-	path = docker/eaas-snapshots/emucon-tools
-	url = https://git.eaas.uni-freiburg.de/eaas/emucon-tools.git
-[submodule "docker/eaas-dev/emucon-tools"]
-	path = docker/eaas-dev/emucon-tools
-	url = https://git.eaas.uni-freiburg.de/eaas/emucon-tools.git
