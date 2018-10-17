@@ -30,7 +30,8 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(name = "blobStoreBinding", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
 		"fileSystemType",
 		"offset",
-		"resourceType"
+		"resourceType",
+		"mountFS"
 })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class BlobStoreBinding extends Binding
@@ -43,6 +44,10 @@ public class BlobStoreBinding extends Binding
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
 	private ResourceType resourceType;
+
+	//FIXME. Workaround to differentiate between emulators and containers in BindingsManager
+	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
+	private boolean mountFS = false;
 
 
 	public BlobStoreBinding()
@@ -85,6 +90,14 @@ public class BlobStoreBinding extends Binding
 	public void setPartitionOffset(int offset)
 	{
 		this.offset = offset;
+	}
+
+	public boolean getMountFS() {
+		return mountFS;
+	}
+
+	public void setMountFS(boolean mountFS) {
+		this.mountFS = mountFS;
 	}
 
 	public ResourceType getResourceType() {

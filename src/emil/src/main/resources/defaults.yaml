@@ -20,7 +20,7 @@ emil:
     authSecret: ''
 
 ws:
-    blobstore: http://localhost:8080
+    blobstore: http://132.230.8.103:8080/
     imagebuilder: http://localhost:8080/
     imagearchive: http://localhost:8080/
     eaasgw:  http://localhost:8080/
@@ -28,4 +28,4 @@ ws:
     objectarchive: http://localhost:8080/
     softwarearchive: http://localhost:8080/
 rest:
-    blobstore: http://localhost:8080/blobstore/api/v1/blobs
+    blobstore: http://132.230.8.103:8080/blobstore/api/v1/blobs

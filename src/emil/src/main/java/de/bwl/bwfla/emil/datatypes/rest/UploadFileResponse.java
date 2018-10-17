@@ -13,7 +13,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class UploadFileResponse extends EmilResponseType {
 
     @XmlElement(required = true)
-    String absolutePath;
+    String userDataUrl;
 
     public UploadFileResponse(BWFLAException e) {
         super(e);
@@ -21,11 +21,11 @@ public class UploadFileResponse extends EmilResponseType {
 
     public UploadFileResponse() {}
 
-    public String getAbsolutePath() {
-        return absolutePath;
+    public String getUserDataUrl() {
+        return userDataUrl;
     }
 
-    public void setAbsolutePath(String absolutePath) {
-        this.absolutePath = absolutePath;
+    public void setUserDataUrl(String userDataUrl) {
+        this.userDataUrl = userDataUrl;
     }
 }

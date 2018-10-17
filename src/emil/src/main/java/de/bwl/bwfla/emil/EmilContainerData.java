@@ -12,7 +12,6 @@ import java.util.logging.Logger;
 
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
-import javax.activation.URLDataSource;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -23,14 +22,16 @@ import javax.ws.rs.core.*;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
-import de.bwl.bwfla.blobstore.api.Blob;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
+import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
+import de.bwl.bwfla.common.utils.InputStreamDataSource;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
@@ -43,7 +44,6 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
-import org.apache.commons.io.IOUtils;
 import org.apache.tamaya.inject.api.Config;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
@@ -524,58 +524,60 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    //TODO remove this method and change UI to save file in user's filesystem
     @POST
     @Path("/uploadUserInput")
     @Consumes("multipart/form-data")
     @Produces(MediaType.APPLICATION_JSON)
-    public UploadFileResponse upload(MultipartFormDataInput input)
-    {
-        File userPath = null;
+    public UploadFileResponse upload(MultipartFormDataInput input) {
+        String fileName = null;
+        String objectId = null;
+        String mediaType = null;
+        InputStream inputStream = null;
+
         try {
-            userPath = EaasFileUtils.createTempDirectory(Paths.get(inputPathToDelete), "toDelete-").toFile();
-        } catch (IOException e) {
+            Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
+            List<InputPart> inputPartsFiles = uploadForm.get("file");
+            List<InputPart> metadataPart = uploadForm.get("mediaType");
+            List<InputPart> objectIdPart = uploadForm.get("objectId");
+
+            if (inputPartsFiles == null)
+                return new UploadFileResponse(new BWFLAException("invalid form data"));
+
+            if (inputPartsFiles.size() > 1) {
+                return new UploadFileResponse(new BWFLAException("we currently support only one file at the time"));
+            }
+
+            for (InputPart inputPart : inputPartsFiles) {
+                try {
+                    MultivaluedMap<String, String> header = inputPart.getHeaders();
+                    fileName = getFileName(header);
+                    inputStream = inputPart.getBody(InputStream.class, null);
+                } catch (IOException e) {
+                    return new UploadFileResponse(new BWFLAException(e));
+                }
+            }
+
+            final BlobDescription blob = new BlobDescription()
+                    .setDescription("ImageBuilder image")
+                    .setNamespace("imagebuilder-outputs")
+                    .setData(new DataHandler(new InputStreamDataSource(inputStream)))
+                    .setName("userTempFile")
+                    .setType(".temp");
+
+
+            BlobHandle handle = BlobStoreClient.get()
+                    .getBlobStorePort(blobStoreWsAddress)
+                    .put(blob);
+
+
+            UploadFileResponse response = new UploadFileResponse();
+            response.setUserDataUrl(handle.toRestUrl(blobStoreRestAddress));
+            return response;
+        } catch (BWFLAException e) {
             e.printStackTrace();
             return new UploadFileResponse(new BWFLAException(e));
         }
 
-        String fileName = null;
-        String objectId = null;
-        String mediaType = null;
-        InputStream inputFile =  null;
-
-        Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
-        List<InputPart> inputPartsFiles = uploadForm.get("file");
-        List<InputPart> metadataPart = uploadForm.get("mediaType");
-        List<InputPart> objectIdPart = uploadForm.get("objectId");
-
-        if(inputPartsFiles == null)
-            return new UploadFileResponse(new BWFLAException("invalid form data"));
-
-        for (InputPart inputPart : inputPartsFiles) {
-
-            try {
-                MultivaluedMap<String, String> header = inputPart.getHeaders();
-                fileName = getFileName(header);
-                inputFile = inputPart.getBody(InputStream.class,null);
-            } catch (IOException e) {
-                return new UploadFileResponse(new BWFLAException(e));
-            }
-        }
-
-        File target = new File(userPath, fileName);
-        try {
-            OutputStream outputStream = new FileOutputStream(target);
-            IOUtils.copy(inputFile, outputStream);
-        }
-        catch (Exception e)
-        {
-            return new UploadFileResponse(new BWFLAException(e));
-        }
-
-        UploadFileResponse response = new UploadFileResponse();
-        response.setAbsolutePath(target.getAbsolutePath());
-        return response;
     }
 
     private static String partToString(List<InputPart> partList) throws BWFLAException, IOException {

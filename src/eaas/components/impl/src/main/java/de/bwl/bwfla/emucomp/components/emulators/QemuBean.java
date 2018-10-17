@@ -151,9 +151,10 @@ public class QemuBean extends EmulatorBean
 
 		Path imagePath = null;
 		try {
-			imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
+			imagePath = Paths.get(this.lookupResourceRaw(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
 		} catch (Exception e) {
 			LOG.warning("Drive doesn't reference a valid binding, attach canceled.");
+			e.printStackTrace();
 			return false;
 		}
 

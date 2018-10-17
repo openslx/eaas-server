@@ -880,9 +880,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		final BlobStoreBinding binding = (BlobStoreBinding) bindings.get(bindingId);
 		final FileSystemType fsType = binding.getFileSystemType();
 
-		// HACK: Compute the name of the binding's qcow-file
-		final String mountpoint = bindings.lookup(bindingId);
-		final String qcow = mountpoint.substring(0, mountpoint.indexOf(".fuse"));
+		final String qcow = bindings.lookup(BindingsManager.toBindingId(bindingId, BindingsManager.EntryType.IMAGE));
 
 		this.unmountBindings();
 
@@ -1992,6 +1990,24 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			mountpoint = bindings.mount(binding, this.getBindingsDir(), outputFormat);
 
 		return mountpoint;
+	}
+
+	/**
+	 * Resolves a binding location of either the form
+	 * binding://binding_id[/path/to/subres] or binding_id[/path/to/subres]. The
+	 * binding_id is replaced with the actual filesystem location of the
+	 * binding's mountpoint. The possible reference to the subresource is
+	 * preserved in the returned string.
+	 *
+	 * @param binding
+	 *            A binding location
+	 * @return The resolved path or null, if the binding cannot
+	 *         be found
+	 */
+	protected String lookupResourceRaw(String binding, XmountOutputFormat outputFormat)
+			throws BWFLAException, IOException
+	{ this.lookupResource(binding, outputFormat);
+		return this.lookupResource(BindingsManager.toBindingId(binding, BindingsManager.EntryType.RAW_MOUNT), outputFormat);
 	}
 
 	protected String lookupResource(String binding, DriveType driveType)

@@ -97,15 +97,9 @@ public abstract class MediumBuilder
 	public static void copy(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
 		for (ImageContentDescription entry : entries) {
 			DataHandler handler;
-			boolean isImportedLocalFile = false;
 
 			if (entry.getURL() != null) {
 				handler = new DataHandler(new URLDataSource(entry.getURL()));
-
-				// FIXME: remove this!
-				if (entry.getURL().getHost().equals("") && entry.getURL().toString().contains("toDelete-"))
-					isImportedLocalFile = true;
-
 			} else {
 				handler = entry.getData();
 			}
@@ -115,6 +109,7 @@ public abstract class MediumBuilder
 
 					if (entry.getName() == null || entry.getName().isEmpty())
 						throw new BWFLAException("entry with action COPY must have a valid name");
+
 					Path outpath = dstdir.resolve(entry.getName());
 					// FIXME: file names must be unique!
 					if (outpath.toFile().exists())
@@ -127,10 +122,6 @@ public abstract class MediumBuilder
 					FilesExtractor.extract(handler, dstdir, entry.getArchiveFormat(), workdir, log);
 					break;
 			}
-
-			// FIXME: remove this!
-			if (isImportedLocalFile)
-				FileUtils.deleteDirectory(Paths.get(entry.getURL().getPath()).getParent().toFile());
 		}
 	}
 
