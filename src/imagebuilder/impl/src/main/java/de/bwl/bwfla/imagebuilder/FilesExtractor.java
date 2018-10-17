@@ -75,7 +75,7 @@ class FilesExtractor {
 		try {
 			Files.copy(handler.getInputStream(), image);
 
-			final String command = "sudo /usr/local/bin/singularity image.export " + image.toString()
+			final String command = "sudo --non-interactive /usr/local/bin/singularity image.export " + image.toString()
 					+ " | tar -C " + dstdir.toString() + " -v -xf -";
 
 			final DeprecatedProcessRunner process = new DeprecatedProcessRunner();

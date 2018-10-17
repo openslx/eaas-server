@@ -393,12 +393,7 @@ public class Components {
                     final ImageContentDescription entry = new ImageContentDescription()
                             .setAction(extfile.getAction())
                             .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                            .setDataFromUrl(new URL(extfile.getUrl()));
-                    // TODO remove hardcoded String
-                    if (!new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("toDelete-"))
-                        entry.setURL(null);
-                    else
-                        entry.setURL(new URL(extfile.getUrl()));
+                            .setURL(new URL(extfile.getUrl()));
 
 
                     if (extfile.getName() == null || extfile.getName().isEmpty())
@@ -408,8 +403,6 @@ public class Components {
 
                     description.addContentEntry(entry);
                 }
-
-
 
                 // Build input image
                 final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay);
@@ -440,6 +433,7 @@ public class Components {
                 binding.setPartitionOffset(description.getPartitionOffset());
                 binding.setFileSystemType(fileSystemType);
                 binding.setId(bindingId);
+                binding.setMountFS(true);
 
                 config.getDataResources().add(binding);
             }
@@ -524,13 +518,13 @@ public class Components {
                 for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
                     final ImageContentDescription entry = new ImageContentDescription()
                             .setAction(extfile.getAction())
-                            .setArchiveFormat(extfile.getCompressionFormat())
-                            .setDataFromUrl(new URL(extfile.getUrl()));
+                            .setArchiveFormat(extfile.getCompressionFormat());
+//                            .setDataFromUrl(new URL(extfile.getUrl()));
 
-                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
-                        entry.setURL(new URL(extfile.getUrl()));
-                    else
-                        entry.setURL(null);
+//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
+                    entry.setURL(new URL(extfile.getUrl()));
+//                    else
+//                        entry.setURL(null);
 
                     if (extfile.getName() == null || extfile.getName().isEmpty())
                         entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
@@ -558,7 +552,8 @@ public class Components {
 
                 final BlobStoreBinding binding = new BlobStoreBinding();
                 binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
-                binding.setPartitionOffset(description.getPartitionOffset());
+                if (description.getMediumType() != MediumType.CDROM)
+                    binding.setPartitionOffset(description.getPartitionOffset());
                 binding.setFileSystemType(description.getFileSystemType());
                 binding.setId("input-" + numInputImages);
 

@@ -224,11 +224,6 @@ public class BindingsManager
 			if (resource.getFileSize() > 0)
 				xmountOpts.setSize(resource.getFileSize());
 
-			if (resource instanceof BlobStoreBinding) {
-				final BlobStoreBinding blob = (BlobStoreBinding) resource;
-				xmountOpts.setOffset(blob.getPartitionOffset());
-			}
-
 			if(resource instanceof ImageArchiveBinding) {
 				if (imageProxy != null)
 					xmountOpts.setProxyUrl(imageProxy);
@@ -409,7 +404,7 @@ public class BindingsManager
 		}
 		else if (resource instanceof BlobStoreBinding) {
 			final BlobStoreBinding image = (BlobStoreBinding) resource;
-			if (image.getFileSystemType() != null)
+			if (image.getFileSystemType() != null && image.getMountFS())
 				fstype = image.getFileSystemType().toString();
 		}
 
