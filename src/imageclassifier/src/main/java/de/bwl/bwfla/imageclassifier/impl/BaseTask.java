@@ -1,0 +1,408 @@
+/*
+ * This file is part of the Emulation-as-a-Service framework.
+ *
+ * The Emulation-as-a-Service framework is free software: you can
+ * redistribute it and/or modify it under the terms of the GNU General
+ * Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * The Emulation-as-a-Service framework is distributed in the hope that
+ * it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Emulation-as-a-Software framework.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package de.bwl.bwfla.imageclassifier.impl;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.net.URLConnection;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.FileAttribute;
+import java.nio.file.attribute.PosixFilePermission;
+import java.nio.file.attribute.PosixFilePermissions;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
+import java.security.cert.X509Certificate;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+
+import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imageclassifier.datatypes.*;
+import de.bwl.bwfla.common.datatypes.identification.DiskType;
+import org.apache.commons.io.FileUtils;
+import org.apache.tamaya.Configuration;
+import org.apache.tamaya.ConfigurationProvider;
+
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
+
+
+public abstract class BaseTask extends AbstractTask<Object>
+{
+	protected final IdentificationRequest request;
+	protected final ExecutorService executor;
+	protected Configuration cfg = ConfigurationProvider.getConfiguration();
+
+	private static final FileAttribute<?> BASEDIR_ATTRIBUTES;
+	static {
+		Set<PosixFilePermission> permissions = new HashSet<>();
+		permissions.add(PosixFilePermission.OWNER_READ);
+		permissions.add(PosixFilePermission.OWNER_WRITE);
+		permissions.add(PosixFilePermission.OWNER_EXECUTE);
+		permissions.add(PosixFilePermission.GROUP_READ);
+		permissions.add(PosixFilePermission.GROUP_WRITE);
+		permissions.add(PosixFilePermission.GROUP_EXECUTE);
+		BASEDIR_ATTRIBUTES = PosixFilePermissions.asFileAttribute(permissions);
+	}
+	
+	protected BaseTask(IdentificationRequest request, ExecutorService executor)
+	{
+		this.request = request;
+		this.executor = executor;
+	}
+
+	private IdentificationData<?> indentifyImage(FileCollectionEntry fce) {
+		Path subresFilePath = null;
+		Path cowMountpoint = null;
+		Path isoMountpoint = null;
+		Path hfsMountpoint = null;
+		IdentificationOutputIndex<?> index = null;
+		DiskType type = null;
+
+		final String baseName = "data";
+		Path basePath = null;
+		try {
+			basePath = BaseTask.newBaseDir();
+		} catch (IdentificationTaskException e) {
+			e.printStackTrace();
+		}
+		final File baseDir = basePath.toFile();
+
+		try {
+			final boolean isAlwaysDownload = ConfigurationProvider.getConfiguration().get("imageclassifier.always_download", Boolean.class);
+
+			if (BaseTask.checkRangeRequestSupport(fce.getUrl(), log) && !isAlwaysDownload) {
+				log.info("Object host supports range-requests, creating COW file...");
+				final Path cowFilePath = basePath.resolve(baseName + ".cow");
+				cowMountpoint = basePath.resolve(cowFilePath.getFileName() + ".fuse");
+				EmulatorUtils.createCowFile(fce.getUrl(), cowFilePath, null, log);
+				subresFilePath = EmulatorUtils.mountCowFile(cowFilePath, cowMountpoint, log);
+			} else {
+				subresFilePath = basePath.resolve("object.img");
+				EmulatorUtils.copyRemoteUrl(fce, subresFilePath, new XmountOptions(), log);
+				log.info("Downloading object finished.");
+			}
+
+			type = runDiskType(subresFilePath, log);
+			if(type == null)
+				throw new BWFLAException("cannot identify disk image");
+			type.setLocalAlias(fce.getLocalAlias());
+
+			if (type.hasContentType("Q55336682"))
+				isoMountpoint = BaseTask.mountAsIso(subresFilePath, log);
+			if (type.hasContentType("Q375944"))
+				hfsMountpoint = BaseTask.mountAsHfs(subresFilePath, log);
+
+			log.info("Begin identification...");
+			String tool = cfg.get("imageclassifier.identification_tool");
+			Classifier classifier = null;
+			if(tool != null && tool.equals("FITS"))
+				classifier =  new FitsClassifier(executor, log);
+			else
+				classifier = new SiegfriedClassifier();
+
+			boolean verbosemode = Boolean.parseBoolean(cfg.get("imageclassifier.verbosemode"));
+			if (isoMountpoint != null) {
+				classifier.addDirectory(isoMountpoint);
+			}
+
+			if (hfsMountpoint != null) {
+				classifier.addDirectory(hfsMountpoint);
+			}
+			index = classifier.runIdentification(verbosemode);
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			log.info("Cleaning up...");
+
+			if (isoMountpoint != null && Files.exists(isoMountpoint))
+				BaseTask.unmount(isoMountpoint, log);
+
+			if (hfsMountpoint != null && Files.exists(hfsMountpoint))
+				BaseTask.unmount(hfsMountpoint, log);
+
+			if (cowMountpoint != null && Files.exists(cowMountpoint))
+				BaseTask.unmount(cowMountpoint, log);
+
+			try {
+				FileUtils.deleteDirectory(baseDir);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			log.info("Cleanup finished.");
+			return new IdentificationData<>(index, type);
+		}
+	}
+
+
+	protected IdentificationResult identify() throws Exception
+	{
+		final Map<String, String> policy = new HashMap<String, String>();
+
+
+		final String policyUrl = request.getPolicyUrl();
+		if (policyUrl != null && !policyUrl.isEmpty()) {
+			log.info("Reading policy file...");
+			this.readPolicyFile(policyUrl, policy);
+		}
+
+		FileCollection fc = request.getFileCollection();
+		if(fc == null)
+			throw new BWFLAException("invalid object");
+
+		IdentificationResult<?> result = new IdentificationResult<>(fc, policy);
+
+		for(FileCollectionEntry fce : fc.files)
+		{
+			String objectUrl = fce.getUrl();
+			IdentificationData<?> data = indentifyImage(fce);
+			result.addResult(fce.getId(), data);
+		}
+		return result;
+	}
+
+	/* =============== Internal Helpers =============== */
+	
+	private static Path newBaseDir() throws IdentificationTaskException
+	{
+		try {
+			return Files.createTempDirectory("", BASEDIR_ATTRIBUTES);
+		}
+		catch (IOException exception) {
+			throw new IdentificationTaskException("Creating new temp dir failed!", exception);
+		}
+	}
+	
+	private static void enableInsecureSSL() throws NoSuchAlgorithmException, KeyManagementException
+	{
+		// Try to get 2. byte of the specified object from its server
+		TrustManager[] trustAllCerts = new TrustManager[]{new X509TrustManager(){
+		    public X509Certificate[] getAcceptedIssuers(){return null;}
+		    public void checkClientTrusted(X509Certificate[] certs, String authType){}
+		    public void checkServerTrusted(X509Certificate[] certs, String authType){}
+		}};
+
+		HostnameVerifier hv = new HostnameVerifier() {
+		      public boolean verify(String hostname, SSLSession session) { return true; }
+		    };
+		
+		SSLContext sc = SSLContext.getInstance("TLS");
+	    sc.init(null, trustAllCerts, new SecureRandom());
+	    HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+	    HttpsURLConnection.setDefaultHostnameVerifier(hv);
+	}
+
+	private static boolean checkRangeRequestSupport(String objectUrl, Logger log)
+	{
+		try {
+			
+			URL url = new URL(objectUrl);
+			URLConnection connection; 
+			
+			if(url.getProtocol().equalsIgnoreCase("https"))
+			{
+				enableInsecureSSL();
+			}
+			connection = url.openConnection();
+			if(url.getProtocol().equalsIgnoreCase("https"))
+			{
+				((HttpsURLConnection)connection).setRequestMethod("HEAD");
+				((HttpsURLConnection)connection).connect();
+			}
+			else
+			{
+				((HttpURLConnection)connection).setRequestMethod("HEAD");
+				((HttpURLConnection)connection).connect();
+			}
+			
+			// Check server's response
+		    String ranges = connection.getHeaderField("Accept-Ranges");
+		    if (ranges != null && ranges.equals("bytes"))
+		    	return true;
+		}
+		catch (IOException | NoSuchAlgorithmException | KeyManagementException exception) 
+		{
+			log.warning("Checking support for accepted range-requests for '" + objectUrl + "' failed!");
+			log.log(Level.WARNING, exception.getMessage(), exception);
+		}
+		
+		return false;
+	}
+
+
+
+	private DiskType runDiskType(Path isopath, Logger log)
+	{
+		log.info("running disktype");
+		try {
+			DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+			process.setLogger(log);
+			process.setCommand("disktype");
+			process.addArgument(isopath.toString());
+
+			process.execute(false, false);
+			String res = process.getStdOutString();
+
+			DiskType type = DiskType.fromJsonValue(res, DiskType.class);
+			process.cleanup();
+			log.warning(res);
+			return type;
+		}
+		catch(Exception exception) {
+			log.log(Level.WARNING, exception.getMessage(), exception);
+			return null;
+		}
+	}
+
+	private static Path mountAsIso(Path iso, Logger log)
+	{
+		Path dest = null;
+		try {
+			dest = EmulatorUtils.lklMount(iso, "iso9660", log);
+			log.info("ISO file mounted to: " + dest.toString());
+		}
+		catch (Exception exception) {
+			log.warning("Mounting '" + iso.toString() + "' as ISO failed!");
+			log.log(Level.WARNING, exception.getMessage(), exception);
+		}
+		
+		return dest;
+	}
+	
+	private static Path mountAsHfs(Path iso, Logger log)
+	{
+		Path dest = null;
+		try {
+			dest = EmulatorUtils.lklMount(iso, "hfs", log);
+			log.info("HFS file mounted to: " + dest.toString());
+		}
+		catch (Exception exception) {
+			log.warning("Mounting '" + iso.toString() + "' as HFS failed!");
+			log.log(Level.WARNING, exception.getMessage(), exception);
+		}
+		
+		return dest;
+	}
+	
+	private static void unmount(Path mountpoint, Logger log)
+	{
+		try {
+			EmulatorUtils.unmountFuse(mountpoint, log);
+		}
+		catch (BWFLAException | IOException exception) {
+			log.warning("Unmounting '" + mountpoint.toString() + "' failed!");
+			log.log(Level.WARNING, exception.getMessage(), exception);
+		}
+	}
+
+	private boolean readPolicyFile(String url, Map<String, String> policy)
+	{
+		final char delimiter = ' ';
+		final char space = ' ';
+		
+		try (InputStream input = new URL(url).openConnection().getInputStream();
+		     BufferedReader reader = new BufferedReader(new InputStreamReader(input))) {
+			
+			// Policy file is expected to contain:
+			//     <TYPE's ID> <VALUES>
+			//     ...
+			//     <TYPE's ID> <VALUES>
+			
+			String type, value;
+			String line = null;
+			int linenum = 1;
+			
+			while ((line = reader.readLine()) != null) {
+				if (line.isEmpty())
+					continue;
+				
+				final int length = line.length();
+				int offset = 0;
+				
+				// Find type's start index, skipping all spaces
+				while ((offset < length) && (line.charAt(offset) == space))
+					++offset;
+				
+				// Find type's end index, skipping all spaces
+				int delpos = line.indexOf(delimiter, offset);
+				if (delpos <= offset) {
+					log.warning("Parsing line " + linenum + " in '" + url  + "' failed! Skipping it.");
+					continue;
+				}
+				
+				type = line.substring(offset, delpos);
+				offset = delpos;
+				
+				// Find value's start index, skipping all spaces
+				while ((offset < length) && (line.charAt(offset) == space))
+					++offset;
+				
+				// No value?
+				if (offset == length) {
+					log.warning("Parsing policy value from line " + linenum + " in '" + url  + "' failed! Skipping it.");
+					continue;
+				}
+				
+				value = line.substring(offset);
+				policy.put(type, value);
+				++linenum;
+			}
+			
+			return true;
+		}
+		catch (Exception exception) {
+			log.warning("Parsing policy from '" + url + "' failed!");
+			log.log(Level.WARNING, exception.getMessage(), exception);
+			return false;
+		}
+	}
+	
+	
+	private static class IdentificationTaskException extends Exception
+	{
+		private static final long serialVersionUID = -7167395621475291292L;
+
+		public IdentificationTaskException(String message, Throwable cause)
+		{
+			super(message, cause);
+		}
+	}
+}

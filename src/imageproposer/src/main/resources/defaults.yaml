@@ -1,0 +1,5 @@
+imageproposer:
+    rebuildinterval:  300000
+ws:
+    imagearchive: http://localhost:8080
+    softwarearchive:  http://localhost:8080

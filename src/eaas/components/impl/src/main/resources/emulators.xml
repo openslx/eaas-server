@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<emulatorsConf>
+	<qemuBean>/usr/bin/qemu-system-</qemuBean>
+	<basiliskBean>/usr/bin/BasiliskII.real</basiliskBean>
+	<sheepShaverBean>/usr/bin/SheepShaver</sheepShaverBean>
+	<dosBoxBean>/usr/bin/dosbox</dosBoxBean>
+	<vboxBean>
+		<vboxHeadlessExec>/usr/bin/VBoxSDL</vboxHeadlessExec>
+	    <vboxManageExec>/usr/bin/VBoxManage</vboxManageExec>
+	</vboxBean>
+	<hatariBean>/usr/bin/hatari</hatariBean>
+	<vdeSwitchBean>/usr/bin/vde_switch</vdeSwitchBean>
+	<viceBean>
+		<c64>/usr/bin/x64</c64>
+	    <c128>/usr/bin/x128</c128>
+	    </viceBean>
+	<pceBean>
+		<atarist>/usr/bin/pce-atarist</atarist>
+	    <ibmpc>/usr/bin/pce-ibmpc</ibmpc>
+	    <macplus>/usr/bin/pce-macplus</macplus>
+	</pceBean>
+	<kegsBean>/usr/bin/kegs</kegsBean>
+	<beebemBean>/usr/bin/beebem</beebemBean>
+</emulatorsConf>

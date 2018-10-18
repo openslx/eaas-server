@@ -1,0 +1,55 @@
+{
+	"operatingSystemInformations" :
+	[
+		{"id":"Q11248", "label" : "Microsoft Windows XP",
+			"puids" : [ "x-fmt/411",  "fmt/899"],
+			"extensions" : []
+		},
+		{"id":"Q6072277", "label" : "Microsoft Windows XP 64bit",
+			"puids" : [ "x-fmt/411",  "fmt/899",  "fmt/900"],
+			"extensions" : ["bin", "img"]
+		},
+		{"id":"Q609733", "label" : "Microsoft Windows 9x",
+			"puids": ["x-fmt/410", "x-fmt/409", "x-fmt/411", "fmt/899"],
+			"extensions" : ["bin", "img"]
+		},
+		{"id":"Q420384", "label" : "Apple System 7",
+			"puids": [ "x-fmt/416"],
+			"extensions" : []
+		},
+		{"id":"Q1343889", "label" : "Apple System 8",
+			"puids": [ "x-fmt/416"],
+			"extensions" : []
+		},
+		{"id":"Q904519", "label" : "Apple System 9",
+			"puids": ["x-fmt/416"],
+			"extensions" : []
+		},
+		{"id":"Q737508", "label" : "Microsoft Windows 3.x",
+			"puids": [ "x-fmt/410",  "x-fmt/409"],
+			"extensions" : ["bin", "img", "imz"]
+		},
+		{"id":"Q47604", "label" : "MS DOS",
+			"puids": [ "x-fmt/409"],
+			"extensions" : ["bin", "img", "imz"]
+		},
+		{"id":"Q388", "label" : "Linux",
+			"puids": ["fmt/689",  "fmt/795", "fmt/794", "fmt/793"],
+			"extensions" : ["bin", "img"]
+		},
+		{"id":"eaas-c64", "label" : "Comodore C64",
+			"puids" : [],
+			"extensions" : ["d64", "d71", "d80"]
+		},
+		{"id":"Q627302", "label" : "Atari ST",
+			"puids" : [],
+			"extensions" : ["st"]
+		},
+		{
+			"id":"Q100047", "label" : "Amiga",
+			"puids" : [],
+			"extensions" : ["adf"]
+		}
+
+	]
+}

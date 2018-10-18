@@ -1,0 +1,75 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<parent>
+		<groupId>de.bwl.bwfla</groupId>
+		<artifactId>root</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+	<artifactId>imagearchive</artifactId>
+	<name>imagearchive</name>
+	<description>An EJB project representing a WS front-end for the image archive.</description>
+	<packaging>war</packaging>
+
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<webResources>
+						<webResource>
+							<directory>${project.build.directory}/generated/</directory>
+							<includes><include>wsdl/*.wsdl</include></includes>
+							<targetPath>WEB-INF</targetPath>
+						</webResource>
+					</webResources>
+				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.apache.cxf</groupId>
+				<artifactId>cxf-java2ws-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>wsdl-eaascomponent</id>
+						<phase>process-classes</phase>
+						<goals>
+							<goal>java2ws</goal>
+						</goals>
+						<configuration>
+							<className>de.bwl.bwfla.imagearchive.ImageArchiveWS</className>
+							<address>http://localhost:8080/imagearchive/ImageArchiveWS</address>
+						</configuration>
+
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
+
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla.eaas</groupId>
+			<artifactId>eaas-components-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>commons-io</groupId>
+			<artifactId>commons-io</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>javax.activation</groupId>
+			<artifactId>activation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.ejb3</groupId>
+			<artifactId>jboss-ejb3-ext-api</artifactId>
+			<version>2.2.0.Final</version>
+			<scope>provided</scope>
+		</dependency>
+	</dependencies>
+</project>

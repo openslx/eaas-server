@@ -1,0 +1,42 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>eaas-configuration</artifactId>
+	<name>eaas-configuration</name>
+	<parent>
+		<groupId>de.bwl.bwfla</groupId>
+		<artifactId>root</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>../..</relativePath>
+	</parent>
+	<dependencies>
+		<dependency>
+			<groupId>org.apache.tamaya</groupId>
+			<artifactId>tamaya-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tamaya</groupId>
+			<artifactId>tamaya-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tamaya.ext</groupId>
+			<artifactId>tamaya-formats</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tamaya.ext</groupId>
+			<artifactId>tamaya-injection-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tamaya.ext</groupId>
+			<artifactId>tamaya-injection</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tamaya.ext</groupId>
+			<artifactId>tamaya-cdi</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.apache.tamaya.ext</groupId>
+			<artifactId>tamaya-yaml</artifactId>
+		</dependency>
+	</dependencies>
+</project>

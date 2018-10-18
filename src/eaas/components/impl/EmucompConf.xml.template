@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+
+<emucompConf>
+ <inactivityTimeout>0</inactivityTimeout>
+ <localmode>false</localmode>    
+</emucompConf>

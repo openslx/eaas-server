@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<web-app xmlns="http://xmlns.jcp.org/xml/ns/javaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://xmlns.jcp.org/xml/ns/javaee http://xmlns.jcp.org/xml/ns/javaee/web-app_3_1.xsd"
+         version="3.1">
+ <display-name>emucomp</display-name>
+ <servlet-mapping>
+  <servlet-name>javax.ws.rs.core.Application</servlet-name>
+  <url-pattern>/*</url-pattern>
+ </servlet-mapping>
+ <mime-mapping>
+  <extension>mp3</extension>
+  <mime-type>audio/mpeg</mime-type>
+ </mime-mapping>
+ <mime-mapping>
+  <extension>xhtml</extension>
+  <mime-type>text/html</mime-type>
+ </mime-mapping>
+ <mime-mapping>
+  <extension>ogg</extension>
+  <mime-type>audio/ogg</mime-type>
+ </mime-mapping>
+ <mime-mapping>
+  <extension>otf</extension>
+  <mime-type>font/opentype</mime-type>
+ </mime-mapping>
+</web-app>

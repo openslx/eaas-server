@@ -1,0 +1,31 @@
+emil:
+    cachedclassificationpath: /home/bwfla/classification-cache/
+    exportpath: /home/bwfla/export/
+    emilenvironmentspath: /home/bwfla/emil-environments/
+    inputpathtodelete: /tmp/toDelete/
+    dockerTmpBuildFiles: /tmp/docker-tmp-build-files/
+    classificationservice: http://localhost:8080/
+    imageproposerservice: http://localhost:8080
+    emilobjectenvironmentspaths: /home/bwfla/emil-object-environments/
+    usersessionretention: 10080
+    mongodbadress: localhost
+    mongodbport: 27017
+    mongodbname: eaas
+    emildbcollectionname: emilEnv
+    containerdata:
+        imagebuilder:
+            timeout: 15 mins
+            delay: 3 secs
+    authEnabled: false
+    authSecret: ''
+
+ws:
+    blobstore: http://localhost:8080/
+    imagebuilder: http://localhost:8080/
+    imagearchive: http://localhost:8080/
+    eaasgw:  http://localhost:8080/
+    embedgw: http://localhost:8080/
+    objectarchive: http://localhost:8080/
+    softwarearchive: http://localhost:8080/
+rest:
+    blobstore: http://localhost:8080/blobstore/api/v1/blobs

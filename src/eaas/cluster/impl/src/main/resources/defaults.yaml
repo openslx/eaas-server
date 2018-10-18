@@ -1,0 +1,101 @@
+# Defaults for ClusterManager
+clustermanager:
+    name: "default"
+    providers.defaults:
+        all:
+            # Parameters for all provider types
+            deferred_allocations_gc_interval: 30 secs
+            request_history:
+                update_interval: 30 secs
+                max_request_age: 5 mins
+                max_number_requests: 128
+
+            node_allocator:
+                healthcheck:
+                    num_parallel_requests: 4
+                    connect_timeout: 10 secs
+                    read_timeout: 5 secs
+                    failure_timeout: 2 min
+                    interval: 30 secs
+
+            poolscaler:
+                pool_scaling_interval: 1 min
+                min_poolsize: 1
+                max_poolsize: 2000
+                scaledown:
+                    node_warmup_period: 10 mins
+                    node_cooldown_period: 5 mins
+
+            preallocation:
+                min_bound: { cpu: 0, memory: 0 }
+                max_bound: { cpu: +inf, memory: +inf }
+                request_history_multiplier: 0.5
+
+        blades:
+            # Parameters for the BladeCluster provider
+            node_allocator:
+                healthcheck:
+                    url_template: "{{address}}/emucomp/health"
+
+            poolscaler:
+                scaleup:
+                    max_poolsize_adjustment: 100
+
+                scaledown:
+                    max_poolsize_adjustment: 100
+
+
+        gce:
+            # Parameters for the Google Compute Engine provider
+            node_allocator:
+                application_name: eaas
+                node_name_prefix: eaas-node-
+
+                vm:
+                    boot_poll_interval: 3 secs
+                    boot_poll_interval_delta: 2 secs
+                    max_num_boot_polls: 50
+                    machine_type: n1-standard-4
+                    persistent_disk:
+                        type: pd-standard
+                        size: 10  # in GB
+
+                api:
+                    poll_interval: 2 secs
+                    poll_interval_delta: 1 secs
+                    retry_interval: 1 secs
+                    retry_interval_delta: 2 secs
+                    max_num_retries: 3
+
+                healthcheck:
+                    url_template: "{{address}}/emucomp/health"
+
+            poolscaler:
+                scaleup:
+                    max_poolsize_adjustment: 10
+
+                scaledown:
+                    max_poolsize_adjustment: 20
+
+
+        jclouds:
+            # Parameters for the JClouds provider
+            node_allocator:
+                node_group_name: eaas-nodes
+                node_name_prefix: eaas-node-
+
+                vm:
+                    boot_poll_interval: 3 secs
+                    boot_poll_interval_delta: 2 secs
+                    max_num_boot_polls: 50
+
+                healthcheck:
+                    url_template: "{{address}}/emucomp/health"
+
+            poolscaler:
+                scaleup:
+                    max_poolsize_adjustment: 10
+
+                scaledown:
+                    max_poolsize_adjustment: 20
+

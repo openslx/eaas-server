@@ -1,0 +1,382 @@
+package de.bwl.bwfla.imagearchive.util;
+
+import java.io.File;
+
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
+import java.util.UUID;
+import java.util.logging.Level;
+
+import javax.activation.DataHandler;
+import javax.activation.FileDataSource;
+import javax.xml.bind.JAXBException;
+
+import de.bwl.bwfla.api.imagearchive.*;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emucomp.api.*;
+
+
+public class EnvironmentsAdapter extends ImageArchiveWSClient {
+
+	public EnvironmentsAdapter(String wsHost) {
+		super(wsHost);
+	}
+
+	public List<Environment> getEnvironments(String type) throws BWFLAException, JAXBException {
+		connectArchive();
+
+		List<String> envs = archive.getEnvironments(type);
+
+		List<Environment> out = new ArrayList<Environment>();
+		for (String envStr : envs) {
+			Environment emuEnv = Environment.fromValue(envStr);
+			if (emuEnv == null)
+				continue;
+
+			updateUrlPrefix(emuEnv);
+			out.add(emuEnv);
+		}
+
+		return out;
+	}
+
+	public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
+		List<MachineConfigurationTemplate> envs = getTemplates();
+		for (MachineConfigurationTemplate e : envs) {
+			if (e.getId().equals(id))
+				return e;
+		}
+
+		return null;
+	}
+
+	private void updateUrlPrefix(Environment env) throws BWFLAException
+	{
+		if (env instanceof MachineConfiguration) {
+			final MachineConfiguration config = (MachineConfiguration) env;
+			for (AbstractDataResource r : config.getAbstractDataResource()) {
+				if (r instanceof ImageArchiveBinding) {
+					ImageArchiveBinding iaBinding = (ImageArchiveBinding) r;
+					iaBinding.setUrlPrefix(this.getExportPrefix());
+				}
+			}
+		}
+		else if (env instanceof ContainerConfiguration) {
+			final ContainerConfiguration config = (ContainerConfiguration) env;
+			for (AbstractDataResource r : config.getDataResources()) {
+				if (r instanceof ImageArchiveBinding) {
+					ImageArchiveBinding iaBinding = (ImageArchiveBinding) r;
+					iaBinding.setUrlPrefix(this.getExportPrefix());
+				}
+			}
+		}
+	}
+
+	public void sync() throws BWFLAException {
+		connectArchive();
+		archive.reload();
+	}
+
+
+	public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException {
+		connectArchive();
+
+		List<MachineConfigurationTemplate> _templates = new ArrayList<MachineConfigurationTemplate>();
+		List<String> envlist = archive.getEnvironments("template");
+
+		for (String env : envlist) {
+			try {
+				MachineConfigurationTemplate emuEnv = MachineConfigurationTemplate.fromValue(env);
+				if (emuEnv == null)
+					continue;
+
+				if (emuEnv.getEmulator() == null) {
+					log.info("no emu " + emuEnv.getDescription().getTitle());
+					continue;
+				}
+
+				if (emuEnv.getDescription() == null) {
+					log.info("DescriptionTag is mandatory: " + emuEnv.getId());
+					continue;
+				}
+				updateUrlPrefix(emuEnv);
+				_templates.add(emuEnv);
+			} catch (Throwable t) {
+				log.info("loadTemplates2: failed to parse environment: " + t.getMessage());
+				log.info(env);
+				log.log(Level.SEVERE, t.getMessage(), t);
+			}
+		}
+
+		log.info("found " + _templates.size() + " templates");
+		return _templates;
+	}
+
+	public Environment getEnvironmentById(String id) throws BWFLAException {
+		connectArchive();
+		Environment env = null;
+		String imageConf = archive.getEnvironmentById(id);
+		if (imageConf == null)
+			throw new BWFLAException("image with the following id cannot be located in the image archive: " + id);
+
+		try {
+			env = Environment.fromValue(imageConf);
+		} catch (Exception e) {
+			throw new BWFLAException("can't load image with id " + id + ": " + e.getMessage());
+		}
+		updateUrlPrefix(env);
+		return env;
+	}
+
+	public void delete(String envId, boolean deleteMetadata, boolean deleteImage) throws BWFLAException {
+		connectArchive();
+		Environment environment = getEnvironmentById(envId);
+		if(deleteMetadata)
+			deleteMetaData(envId);
+
+		if(deleteMetadata || deleteImage) // if we delete metadata we have to delete the image too!
+		{
+			if(environment instanceof MachineConfiguration) {
+				for (AbstractDataResource b : ((MachineConfiguration) environment).getAbstractDataResource()) {
+					if (!(b instanceof ImageArchiveBinding))
+						continue;
+					if (b.getId().equals("main_hdd")) {
+						ImageArchiveBinding iab = (ImageArchiveBinding) b;
+						log.info("deleting image: " + iab.getImageId());
+						deleteImage(iab.getImageId(), iab.getType());
+					}
+				}
+			}
+			else if (environment instanceof OciContainerConfiguration)
+			{
+				for (AbstractDataResource b : ((OciContainerConfiguration) environment).getDataResources()) {
+					if (!(b instanceof ImageArchiveBinding))
+						continue;
+					if (b.getId().equals("main_hdd")) {
+						ImageArchiveBinding iab = (ImageArchiveBinding) b;
+						log.info("deleting image: " + iab.getImageId());
+						deleteImage(iab.getImageId(), iab.getType());
+					}
+				}
+			}
+		}
+	}
+
+	public boolean deleteMetaData(String envId) throws BWFLAException {
+		connectArchive();
+		return archive.deleteMetadata(envId);
+	}
+
+	public boolean deleteImage(String imageId, String type) throws BWFLAException {
+		connectArchive();
+		return archive.deleteImage(imageId, type);
+	}
+
+	public ImportImageHandle importImage(URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
+		connectArchive();
+		if (ref == null)
+			throw new BWFLAException("URL was null");
+
+		String sessionId = archive.importImageFromUrl(ref.toString(), iaMd);
+		return new ImportImageHandle(archive, iaMd.getType(), sessionId);
+	}
+
+	public ImageArchiveBinding generalizedImport(String imageId, ImageType type, String templateId) throws BWFLAException {
+		connectArchive();
+		String id = archive.generalizedImport(imageId, type, templateId);
+		return new ImageArchiveBinding(this.getExportPrefix(), id, type.value());
+	}
+
+	public String getDefaultEnvironment(String osId) throws BWFLAException {
+		connectArchive();
+		return archive.getDefaultEnvironment(osId);
+	}
+
+	public void setDefaultEnvironment(String osId, String envId) throws BWFLAException
+	{
+		connectArchive();
+		archive.setDefaultEnvironment(osId, envId);
+	}
+
+	public ImportImageHandle importImage(DataHandler handler, ImageArchiveMetadata iaMd) throws BWFLAException {
+		connectArchive();
+
+		String sessionId = archive.importImageAsStream(handler, iaMd);
+		return new ImportImageHandle(archive, iaMd.getType(), sessionId);
+	}
+
+
+	public ImportImageHandle importImage(File image, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
+		connectArchive();
+
+		if (image == null)
+			throw new BWFLAException("image file was null");
+
+		if (!image.exists()) {
+			throw new BWFLAException("importImage: file not found: " + image);
+		}
+
+		DataHandler dataHandler = new DataHandler(new FileDataSource(image));
+		String sessionId = archive.importImageAsStream(dataHandler, iaMd);
+		return new ImportImageHandle(archive, iaMd.getType(), sessionId);
+	}
+
+	public String importMachineEnvironment(MachineConfiguration env, DataHandler dataHandler, ImageArchiveMetadata iaMd) throws BWFLAException {
+		if(dataHandler != null) {
+			ImportImageHandle handle = importImage(dataHandler, iaMd);
+			ImageArchiveBinding binding = handle.getBinding(60 * 60 * 60); // wait an hour
+			EmulationEnvironmentHelper.setMainHdd(env, binding);
+		}
+		String id = importMetadata(env.toString(), iaMd, false);
+		return id;
+	}
+
+	public String importMachineEnvironment(MachineConfiguration env, List<BindingDataHandler> data, ImageArchiveMetadata iaMd)
+			throws BWFLAException
+	{
+		if (data != null) {
+			for (BindingDataHandler bdh : data) {
+				ImportImageHandle handle = this.importImage(bdh.getData(), iaMd);
+				ImageArchiveBinding binding = handle.getBinding(60 * 60 * 60); // wait an hour
+				binding.setId(bdh.getId());
+				EmulationEnvironmentHelper.replace(env, binding);
+			}
+		}
+
+		return this.importMetadata(env.toString(), iaMd, false);
+	}
+
+	@Deprecated
+	public String createEnvironment(MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
+		connectArchive();
+
+		String id = archive.createImage(size, iaMd.getType().value());
+		if (id == null)
+			throw new BWFLAException("image creation failed");
+		ImageArchiveBinding b = new ImageArchiveBinding(this.getExportPrefix(), id, iaMd.getType().value());
+		b.setId("main_hdd");
+		emuEnv.getAbstractDataResource().add(b);
+
+		String envId = importMetadata(emuEnv.toString(), iaMd, false);
+		return envId;
+	}
+
+	public void updateMetadata(String conf) throws BWFLAException {
+		connectArchive();
+
+		archive.updateConfiguration(conf);
+	}
+
+	public String importMetadata(String conf, ImageArchiveMetadata iaMd, boolean preserveId) throws BWFLAException {
+		connectArchive();
+
+		Environment emuEnv = null;
+		try {
+			emuEnv = Environment.fromValue(conf);
+		} catch (Throwable t) {
+			log.info("loadTemplates4: failed to parse environment: " + t.getMessage());
+			log.info(conf);
+			throw new BWFLAException(t);
+		}
+
+		if (emuEnv == null)
+			throw new BWFLAException("emuEnv is null");
+
+		if (!preserveId)
+			emuEnv.setId(getRandomId());
+
+		archive.importConfiguration(emuEnv.toString(), iaMd, preserveId);
+		log.info("Successfully registered image at " + wsHost + "id: " + emuEnv.getId());
+		return emuEnv.getId();
+	}
+
+	private static String getRandomId() {
+		String id = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
+		return id;
+	}
+
+	public void commitTempEnvironment(String id) throws BWFLAException {
+		connectArchive();
+		archive.commitTempEnvironment(id);
+	}
+	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException {
+		connectArchive();
+		archive.commitTempEnvironmentWithCustomType(id, type);
+	}
+
+	public void cleanTempEnvironments() throws BWFLAException {
+		connectArchive();
+		archive.deleteTempEnvironments();
+	}
+
+	public class ImportImageHandle {
+		private final String sessionId;
+		private final ImageType type;
+		private final ImageArchiveWS archive;
+
+		ImportImageHandle(ImageArchiveWS archive, ImageType type, String sessionId) {
+			this.sessionId = sessionId;
+			this.type = type;
+			this.archive = archive;
+		}
+
+		public ImageArchiveBinding getBinding() throws ImportNoFinishedException, BWFLAException {
+			final ImageImportResult result = archive.getImageImportResult(sessionId);
+			if (result == null)
+				throw new ImportNoFinishedException();
+
+			return new ImageArchiveBinding(result.getUrlPrefix(), result.getImageId(), type.value());
+		}
+
+		public ImageArchiveBinding getBinding(long timeout /* seconds */ ) throws BWFLAException {
+
+			ImageArchiveBinding binding = null;
+
+			while (binding == null) { // will throw a BWFLAException in case of an error
+				try {
+					if (timeout < 0)
+						throw new BWFLAException("getBinding: timeout exceeded");
+					binding = getBinding();
+					timeout--;
+				} catch (EnvironmentsAdapter.ImportNoFinishedException e) {
+					try {
+						Thread.sleep(1000);
+					} catch (InterruptedException e1) {
+						throw new BWFLAException(e1);
+					}
+				}
+			}
+
+			return binding;
+		}
+	}
+
+	public ImageExport getImageDependecies(String envId) throws BWFLAException {
+		connectArchive();
+		return archive.getImageDependencies(envId);
+	}
+
+	public ImageArchiveBinding getImageBinding(String name, String version) throws BWFLAException {
+		connectArchive();
+		final String binding = archive.getImageBinding(name, version);
+		try {
+			return (binding != null) ? ImageArchiveBinding.fromValue(binding) : null;
+		}
+		catch (Exception error) {
+			throw new BWFLAException(error);
+		}
+	}
+
+	public ImageImportResult getImageImportResult(String sessionId) throws BWFLAException {
+		return archive.getImageImportResult(sessionId);
+	}
+
+	public List<String> replicateImages(List<String> images) {
+		return archive.replicateImages(images);
+	}
+
+	public static class ImportNoFinishedException extends Exception {  }
+}
