@@ -25,24 +25,27 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
+
+import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import org.apache.commons.io.FileUtils;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
-import de.bwl.bwfla.imagearchive.conf.ImageArchiveConfig;
 
-public class IWDArchive {
 
+public class IWDArchive
+{
 	protected final Logger	log	= Logger.getLogger(this.getClass().getName());
-	private ImageArchiveConfig iaConfig;
+
+	private final ImageArchiveBackendConfig iaConfig;
 	
-	public IWDArchive(ImageArchiveConfig conf)
+	public IWDArchive(ImageArchiveBackendConfig config)
 	{
-		iaConfig = conf;
+		this.iaConfig = config;
 	}
 	
 	protected List<IWDMetaData> getRecordings(String envId)
 	{
 		List<IWDMetaData> recs = new ArrayList<IWDMetaData>();
-		File recordingsDir = iaConfig.recordingsPath;
+		File recordingsDir = iaConfig.getRecordingsPath();
 		if(!recordingsDir.exists() || !recordingsDir.isDirectory())
 		{
 			log.severe("make sure that the repository directory exists and user has sufficient permissions: " 
@@ -69,7 +72,7 @@ public class IWDArchive {
 	
 	protected boolean addRecordingFile(String envId, String traceId, String data)
 	{
-		File recordingsDir = iaConfig.recordingsPath;
+		File recordingsDir = iaConfig.getRecordingsPath();
 		if(!recordingsDir.exists() || !recordingsDir.isDirectory())
 		{
 			log.severe("make sure that the repository directory exists and user has sufficient permissions: " 
@@ -100,7 +103,7 @@ public class IWDArchive {
 	
 	protected String getRecording(String envId, String traceId)
 	{	
-		File recordingsDir = iaConfig.recordingsPath;
+		File recordingsDir = iaConfig.getRecordingsPath();
 		if(!recordingsDir.exists() || !recordingsDir.isDirectory())
 		{
 			log.severe("make sure that the repository directory exists and user has sufficient permissions: " 
@@ -124,5 +127,4 @@ public class IWDArchive {
 			return null;
 		}
 	}
-	
 }

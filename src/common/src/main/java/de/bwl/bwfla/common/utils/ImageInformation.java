@@ -3,6 +3,8 @@ package de.bwl.bwfla.common.utils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import java.io.IOException;
+import java.util.logging.Logger;
+
 
 /**
  * Created by klaus on 29.08.17.
@@ -34,13 +36,13 @@ public class ImageInformation {
         }
     }
 
-    public ImageInformation(String imageFile) throws IOException, BWFLAException {
+    public ImageInformation(String imageFile, Logger log) throws IOException, BWFLAException {
         DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 
         process.setCommand("qemu-img");
         process.addArguments("info");
         process.addArgument(imageFile);
-
+        process.setLogger(log);
         try {
             if (!process.execute(false, false)) {
                 throw new BWFLAException("qemu-img info " + imageFile.toString() + " failed");

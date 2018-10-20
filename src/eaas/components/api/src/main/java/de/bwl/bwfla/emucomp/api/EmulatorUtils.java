@@ -530,7 +530,7 @@ public class EmulatorUtils {
 
 	@Deprecated
 	public static ImageInformation.QemuImageFormat getImageFormat(Path inFile, Logger log) throws BWFLAException, IOException {
-		ImageInformation info = new ImageInformation(inFile.toString());
+		ImageInformation info = new ImageInformation(inFile.toString(), log);
 		return info.getFileFormat();
 
 //		DeprecatedProcessRunner process = new DeprecatedProcessRunner();

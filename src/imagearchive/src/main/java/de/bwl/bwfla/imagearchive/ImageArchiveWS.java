@@ -19,372 +19,198 @@
 
 package de.bwl.bwfla.imagearchive;
 
-import java.io.*;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 import javax.activation.DataHandler;
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import javax.ejb.Stateless;
-import javax.jws.WebMethod;
+import javax.inject.Inject;
 import javax.jws.WebService;
-import javax.servlet.http.HttpServletRequest;
 import javax.xml.bind.annotation.XmlMimeType;
-import javax.xml.ws.WebServiceContext;
-import javax.xml.ws.handler.MessageContext;
 import javax.xml.ws.soap.MTOM;
 
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
-import de.bwl.bwfla.emucomp.api.Environment;
-import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
-import de.bwl.bwfla.imagearchive.conf.ImageArchiveConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
-import de.bwl.bwfla.imagearchive.conf.ImageArchiveSingleton;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageExport;
 
 
-/**
- * @author Isgandar Valizada, bwFLA project, University of Freiburg, Germany
- * 
- */
 @Stateless
 @MTOM
 @WebService(targetNamespace = "http://bwfla.bwl.de/api/imagearchive")
-public class ImageArchiveWS {
-	protected static final Logger LOG = Logger.getLogger(ImageArchiveWS.class.getName());
-	private boolean configured = false;
-
-	private ImageArchiveConfig iaConfig = null;
-	private IWDArchive iwdArchive = null;
-	private ImageHandler imageHandler = null;
-
-	@Resource
-	private WebServiceContext context;
+public class ImageArchiveWS
+{
+	@Inject
+	private ImageArchiveRegistry backends = null;
 
 
-	@PostConstruct
-	private void initialize() {
-		this.reloadProperties();
+	/* ========================= Public API ========================= */
+
+	public void deleteTempEnvironments(String backend) throws BWFLAException
+	{
+		this.lookup(backend)
+			.deleteTempEnvironments();
 	}
 
-	synchronized private void reloadProperties() {
-
-		iaConfig = ImageArchiveSingleton.iaConfig;
-		iwdArchive = ImageArchiveSingleton.iwdArchive;
-		imageHandler = ImageArchiveSingleton.imageHandler;
-		configured = true;
-	}
-	
-	synchronized public void deleteTempEnvironments() throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-		imageHandler.cleanTmpFiles();
-	}
-	
-	synchronized public void reload() {
-		for (ImageType t : ImageType.values()) {
-			ImageArchiveSingleton.imagesCache.put(t, imageHandler.loadMetaData(t));
-		}
+	public void reload(String backend) throws BWFLAException
+	{
+		this.lookup(backend)
+				.reload();
 	}
 
-	public String getExportPrefix() {
-		return this.imageHandler.getExportPrefix();
+	public String getExportPrefix(String backend) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getExportPrefix();
 	}
 
-	public String getEnvironmentById(String id) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-		Environment env = imageHandler.getEnvById(id);
-		return env == null ? null : env.toString();
+	public String getEnvironmentById(String backend, String id) throws BWFLAException
+	{
+
+		return this.lookup(backend)
+				.getEnvironmentById(id);
 	}
 
-	public List<String> getEnvironments(String type) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		MessageContext messageContext = context.getMessageContext(); //IllegalStateException thrown
-		HttpServletRequest request = (HttpServletRequest) messageContext.get(MessageContext.SERVLET_REQUEST);
-
-		LOG.info("request: " + request.getRequestURI());
-
-		List<String> images = new ArrayList<String>();
-
-		if (type == null) // get all environments
-		{
-			for (ImageType t : ImageType.values()) {
-				if (t.equals(ImageType.template))
-					continue;
-				
-				if (t.equals(ImageType.tmp))
-					continue;
-
-				if (t.equals(ImageType.sessions))
-					continue;
-
-				Map<String, Environment> iMap = ImageArchiveSingleton.imagesCache.get(t);
-				if (iMap == null)
-					continue;
-				for (Environment env : iMap.values())
-					images.add(env.toString());
-			}
-			return images;
-		}
-		// type not null...
-		try {
-			Map<String, Environment> iMap = ImageArchiveSingleton.imagesCache.get(ImageType.valueOf(type));
-			if (iMap == null)
-				return images;
-
-			for (Environment env : iMap.values()) {
-				images.add(env.toString());
-			}
-		} catch (IllegalArgumentException e) {
-			throw new BWFLAException("client has specified an illegal argument as an image type: " + type, e);
-		}
-		return images;
+	public List<String> getEnvironments(String backend, String type) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getEnvironments(type);
 	}
 
-	public boolean deleteImage(String imageId, String type) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-		
-		return imageHandler.deleteImage(imageId, type);
+	public boolean deleteImage(String backend, String imageId, String type) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.deleteImage(imageId, type);
 	}
 	
-	public boolean deleteMetadata(String envId) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		return imageHandler.deleteMetaData(envId);
+	public boolean deleteMetadata(String backend, String envId) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.deleteMetadata(envId);
 	}
 
-	public String  importImageFromUrl(URL url, ImageArchiveMetadata request) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		if (url == null) {
-			throw new BWFLAException("image data handler is null, aborting");
-		}
-
-		try {
-			return imageHandler.importImageUrl(url, request, true);
-		} catch (IOException e) {
-			throw new BWFLAException(e);
-		}
+	public String importImageFromUrl(String backend, URL url, ImageArchiveMetadata request) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.importImageFromUrl(url, request);
 	}
 
 	@TransactionTimeout(value = 1, unit = TimeUnit.DAYS)
-	public String importImageAsStream(@XmlMimeType("application/octet-stream") DataHandler image, ImageArchiveMetadata iaMd) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		if (image == null) {
-			throw new BWFLAException("image data handler is null, aborting");
-		}
-
-		return imageHandler.importImageStream(image, iaMd);
-	}
-
-	public ImageImportResult getImageImportResult(String sessionId) throws BWFLAException {
-		return imageHandler.getImageImportResult(sessionId);
-	}
-
-	public String generalizedImport(String imageId, ImageType type, String templateId) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		if (imageId == null) {
-			throw new BWFLAException("imageID is null, aborting");
-		}
-
-		// check if template requires generalization
-		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) imageHandler.getEnvById(templateId);
-		if(tempEnv == null)
-			throw new BWFLAException("invalid template");
-
-		if(tempEnv.getImageGeneralization() == null || tempEnv.getImageGeneralization().getModificationScript() == null)
-			return imageId;
-
-		try {
-			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-			imageHandler.createPatchedCow(imageId, cowId, templateId, type.name());
-			return cowId;
-		}
-		catch (IOException e) {
-			throw new BWFLAException(e);
-		}
-	}
-
-	public String createImage(String size, String type) throws BWFLAException {
-
-		String id = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-
-		File target = imageHandler.getImageTargetPath(type);
-
-		File destImgFile = new File(target, id);
-
-		EmulatorUtils.createNewCowFile(destImgFile.toPath(), size);
-		return id;
-
-	}
-
-	public void updateConfiguration(String conf) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		if (conf == null) {
-			throw new BWFLAException("image configuration data is null, aborting");
-		}
-
-		Environment emuEnv = null;
-		try {
-			emuEnv = Environment.fromValue(conf);
-		} catch (Throwable t) {
-			LOG.info(conf);
-			throw new BWFLAException("updateConfiguration: failed to parse environment", t);
-		}
-		ImageType t = ImageHandler.getImageType(emuEnv.getId());
-		if(t == null)
-			throw new BWFLAException("updateConfiguration: unknown environment : " + emuEnv.getId() + "\n" + conf);
-
-		if(ImageHandler.writeMetaData(conf, emuEnv.getId(), t.name(), true))
-		{
-			ImageHandler.addCachedEnvironment(t, emuEnv.getId(), emuEnv);
-		}
-	}
-
-	public void importConfiguration(String conf, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		if (conf == null) {
-			throw new BWFLAException("image configuration data is null, aborting");
-		}
-
-		Environment emuEnv = null;
-		try {
-			emuEnv = Environment.fromValue(conf);
-		} catch (Throwable t) {
-			LOG.info(conf);
-			throw new BWFLAException("importConfiguration: failed to parse environment", t);
-		}
-
-		if (ImageHandler.writeMetaData(conf, emuEnv.getId(), iaMd.getType().name(), deleteIfExists)) {
-			ImageHandler.addCachedEnvironment(iaMd.getType(), emuEnv.getId(), emuEnv);
-		}
-	}
-    public void commitTempEnvironment(String id) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		try {
-			imageHandler.commitTempEnvironment(id);
-		} catch (IOException e) {
-			throw new BWFLAException("commit tmp image: ", e);
-		}
-	}
-	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-
-		try {
-			imageHandler.commitTempEnvironment(id, type);
-		} catch (IOException e) {
-			throw new BWFLAException("commit tmp image: ", e);
-		}
-	}
-
-	public String getRecording(String envId, String traceId) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-		return iwdArchive.getRecording(envId, traceId);
-	}
-
-	public List<IWDMetaData> getRecordings(String envId) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-
-		}
-		return iwdArchive.getRecordings(envId);
-	}
-
-	public boolean addRecordingFile(String envId, String traceId, String data) throws BWFLAException {
-		if (!configured) {
-			throw new BWFLAException("ImageArchive is not configured");
-		}
-		return iwdArchive.addRecordingFile(envId, traceId, data);
-	}
-
-	public synchronized String getDefaultEnvironment(String osId)
+	public String importImageAsStream(String backend, @XmlMimeType("application/octet-stream") DataHandler image, ImageArchiveMetadata iaMd) throws BWFLAException
 	{
-		Properties defaults = ImageArchiveSingleton.defaultEnvironments;
-		return defaults.getProperty(osId);
+		return this.lookup(backend)
+				.importImageAsStream(image, iaMd);
 	}
 
-	public synchronized void setDefaultEnvironment(String osId, String envId) throws BWFLAException {
-		Properties defaults = ImageArchiveSingleton.defaultEnvironments;
-		defaults.setProperty(osId, envId);
-		LOG.info("set default env");
-		if(ImageArchiveSingleton.defaultEnvironmentsFile == null) {
-
-			LOG.warning("default environments File not found");
-			return;
-		}
-		try {
-			defaults.store(new FileOutputStream(ImageArchiveSingleton.defaultEnvironmentsFile), null);
-			LOG.info("stored to " + ImageArchiveSingleton.defaultEnvironmentsFile);
-		} catch (IOException e) {
-			throw new BWFLAException(e);
-		}
-	}
-
-	public ImageExport getImageDependencies(String envId) throws BWFLAException
+	public ImageImportResult getImageImportResult(String backend, String sessionId) throws BWFLAException
 	{
-		try {
-			return imageHandler.getImageExportData(envId);
-		} catch (IOException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			throw new BWFLAException(e);
-		}
+		return this.lookup(backend)
+				.getImageImportResult(sessionId);
 	}
 
-	public String getImageBinding(String name, String version) throws BWFLAException
+	public String generalizedImport(String backend, String imageId, ImageType type, String templateId) throws BWFLAException
 	{
-		final ImageArchiveBinding binding = imageHandler.getImageBinding(name, version);
-		try {
-			return (binding != null) ? binding.value() : null;
-		}
-		catch (Exception error) {
-			throw new BWFLAException(error);
-		}
+		return this.lookup(backend)
+				.generalizedImport(imageId, type, templateId);
 	}
 
-	public List<String> replicateImages(List<String> images)
+	public String createImage(String backend, String size, String type) throws BWFLAException
 	{
-		return imageHandler.replicateImages(images);
+		return this.lookup(backend)
+				.createImage(size, type);
+	}
+
+	public void updateConfiguration(String backend, String conf) throws BWFLAException
+	{
+		this.lookup(backend)
+				.updateConfiguration(conf);
+	}
+
+	public void importConfiguration(String backend, String conf, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException
+	{
+		this.lookup(backend)
+				.importConfiguration(conf, iaMd, deleteIfExists);
+	}
+
+    public void commitTempEnvironment(String backend, String id) throws BWFLAException
+	{
+		this.lookup(backend)
+				.commitTempEnvironment(id);
+	}
+
+	public void commitTempEnvironmentWithCustomType(String backend, String id, String type) throws BWFLAException
+	{
+		this.lookup(backend)
+				.commitTempEnvironmentWithCustomType(id, type);
+	}
+
+	public String getRecording(String backend, String envId, String traceId) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getRecording(envId, traceId);
+	}
+
+	public List<IWDMetaData> getRecordings(String backend, String envId) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getRecordings(envId);
+	}
+
+	public boolean addRecordingFile(String backend, String envId, String traceId, String data) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.addRecordingFile(envId, traceId, data);
+	}
+
+	public String getDefaultEnvironment(String backend, String osId) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getDefaultEnvironment(osId);
+	}
+
+	public void setDefaultEnvironment(String backend, String osId, String envId) throws BWFLAException
+	{
+		this.lookup(backend)
+				.setDefaultEnvironment(osId, envId);
+	}
+
+	public ImageExport getImageDependencies(String backend, String envId) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getImageDependencies(envId);
+	}
+
+	public String getImageBinding(String backend, String name, String version) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.getImageBinding(name, version);
+	}
+
+	public List<String> replicateImages(String backend, List<String> images) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.replicateImages(images);
+	}
+
+	public String getDefaultBackendName()
+	{
+		return backends.getImageArchiveConfig().getDefaultBackendName();
+	}
+
+
+	/* ========================= Internal Helpers ========================= */
+
+	private ImageArchiveBackend lookup(String name) throws BWFLAException
+	{
+		final ImageArchiveBackend backend = backends.lookup(name);
+		if (backend == null)
+			throw new BWFLAException("ImageArchive's backend not found: " + name);
+
+		return backend;
 	}
 }
