@@ -285,8 +285,10 @@ public class EmulatorUtils {
 		process.addArgument("backing_file=", imgUrl);
 		process.addArgument(cowPath.toString());
 
-		if(proxyUrl != null)
+		if(proxyUrl != null) {
+			process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			process.addEnvVariable("http_proxy", proxyUrl);
+		}
 
 		if (!process.execute()) {
 			try {
