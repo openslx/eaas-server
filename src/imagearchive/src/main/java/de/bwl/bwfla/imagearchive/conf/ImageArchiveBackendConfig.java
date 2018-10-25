@@ -89,7 +89,7 @@ public class ImageArchiveBackendConfig extends BaseConfig
 
 	public void setHandlePrefix(String prefix)
 	{
-		ConfigHelpers.check(prefix, "Handle.net prefix is invalid!");
+		ConfigHelpers.check(prefix, "Handle.net prefix is invalid!" );
 		this.handlePrefix = prefix;
 	}
 
@@ -158,7 +158,7 @@ public class ImageArchiveBackendConfig extends BaseConfig
 	{
 		this.setName(config.get("name"));
 		if (config.get("export_handles", Boolean.class))
-			this.setHandlePrefix(HandleUtils.getHandlePrefix(config));
+			this.setHandlePrefix(HandleUtils.getHandlePrefix());
 
 		// Configure annotated members of this instance
 		ConfigHelpers.configure(this, config);
