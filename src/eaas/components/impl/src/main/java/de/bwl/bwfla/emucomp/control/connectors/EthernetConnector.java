@@ -61,7 +61,10 @@ public class EthernetConnector implements IConnector {
         return getProtocolForHwaddress(this.hwAddress);
     }
 
-    public void plug() throws IOException {
+    public synchronized void plug() throws IOException {
+        if(this.runner != null)
+            return;
+        
         // Start a new VDE plug instance that connects to the emulator's switch
         this.runner = new ProcessRunner();
         if (emubean != null && emubean.isContainerModeEnabled()) {
