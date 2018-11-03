@@ -22,7 +22,7 @@ components:
         vdeswitch:  /usr/bin/vde_switch
         vdeslirp: /usr/bin/slirpvde
         nodetcprunner: /libexec/vdenode
-#        nodetcpscript: /libexec/picotcp/webemulator/webemulator/vdenode.js
+        nodetcpscript: /libexec/picotcp/webemulator/webemulator/vdenode.js
 
         runc: runc
         vdeplug: /usr/bin/vde_plug
