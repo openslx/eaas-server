@@ -197,6 +197,23 @@ public class Networks {
     }
 
     @GET
+    @Path("/{groupId}/wsConnection")
+    public String wsConnection(@PathParam("groupId") String groupId)
+    {
+        try {
+            String switchId = findSwitchId(groupId);
+            return componentClient.getNetworkSwitchPort(eaasGw).wsConnect(switchId);
+        } catch (BWFLAException e) {
+            e.printStackTrace();
+            throw new ServerErrorException(Response
+                    .status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorInformation(
+                            "Could not find switch for group: " + groupId , e.getMessage()))
+                    .build());
+        }
+    }
+
+    @GET
     @Path("/{groupId}")
     public Collection<GroupComponent> listComponents(@PathParam("groupId") String groupId) {
         try {
