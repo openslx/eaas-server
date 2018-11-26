@@ -31,6 +31,7 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean enableInternet;
 	private boolean connectEnvs;
 	private boolean serverMode;
+	private boolean localServerMode;
 	private boolean enableSocks;
 	private boolean canProcessAdditionalFiles;
 
@@ -139,6 +140,14 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setServerMode(boolean serverMode) {
 		this.serverMode = serverMode;
+	}
+
+	public boolean isLocalServerMode() {
+		return localServerMode;
+	}
+
+	public void setLocalServerMode(boolean localServerMode) {
+		this.localServerMode = localServerMode;
 	}
 
 	public boolean isEnableSocks() {

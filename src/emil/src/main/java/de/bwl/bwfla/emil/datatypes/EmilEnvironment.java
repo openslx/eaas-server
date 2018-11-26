@@ -59,6 +59,8 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	@XmlElement(required = false)
 	private boolean serverMode;
 	@XmlElement(required = false)
+	private boolean localServerMode;
+	@XmlElement(required = false)
 	private boolean enableSocks;
 
 	@XmlElement(required = false)
@@ -93,6 +95,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		shutdownByOs = template.shutdownByOs;
 		enableInternet = template.enableInternet;
 		serverMode = template.serverMode;
+		localServerMode = template.localServerMode;
 		enableSocks = template.enableSocks;
 		serverPort = template.serverPort;
 		serverIp = template.serverIp;
@@ -234,6 +237,14 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public boolean isServerMode() {
 		return serverMode;
+	}
+
+	public boolean isLocalServerMode() {
+		return localServerMode;
+	}
+
+	public void setLocalServerMode(boolean localServerMode) {
+		this.localServerMode = localServerMode;
 	}
 
 	public void setServerMode(boolean serverMode) {

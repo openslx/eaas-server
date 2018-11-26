@@ -421,6 +421,7 @@ public class EmilEnvironmentData extends EmilRest {
 				json.add("shutdownByOs", emilenv.isShutdownByOs());
 				json.add("timeContext", emilenv.getTimeContext());
 				json.add("serverMode", emilenv.isServerMode());
+				json.add("localServerMode", emilenv.isLocalServerMode());
 				json.add("enableSocks", emilenv.isEnableSocks());
 				json.add("serverPort", emilenv.getServerPort());
 				json.add("serverIp", emilenv.getServerIp());
@@ -684,6 +685,10 @@ public class EmilEnvironmentData extends EmilRest {
 				}
 				else
 					machineConfiguration.getUiOptions().setForwarding_system(null);
+				if(machineConfiguration.getUiOptions().getHtml5() == null)
+					machineConfiguration.getUiOptions().setHtml5(new Html5Options());
+
+				machineConfiguration.getUiOptions().getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 			}
 
 			environment.setUserTag(desc.getUserTag());
@@ -705,6 +710,7 @@ public class EmilEnvironmentData extends EmilRest {
 		newEmilEnv.setEnableInternet(desc.isEnableInternet());
 		newEmilEnv.setConnectEnvs(desc.canConnectEnvs());
 		newEmilEnv.setServerMode(desc.isServerMode());
+		newEmilEnv.setLocalServerMode(desc.isServerMode());
 		newEmilEnv.setEnableSocks(desc.isEnableSocks());
 		newEmilEnv.setGwPrivateIp(desc.getGwPrivateIp());
 		newEmilEnv.setGwPrivateMask(desc.getGwPrivateMask());
