@@ -710,7 +710,7 @@ public class EmilEnvironmentData extends EmilRest {
 		newEmilEnv.setEnableInternet(desc.isEnableInternet());
 		newEmilEnv.setConnectEnvs(desc.canConnectEnvs());
 		newEmilEnv.setServerMode(desc.isServerMode());
-		newEmilEnv.setLocalServerMode(desc.isServerMode());
+		newEmilEnv.setLocalServerMode(desc.isLocalServerMode());
 		newEmilEnv.setEnableSocks(desc.isEnableSocks());
 		newEmilEnv.setGwPrivateIp(desc.getGwPrivateIp());
 		newEmilEnv.setGwPrivateMask(desc.getGwPrivateMask());
