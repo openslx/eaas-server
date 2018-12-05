@@ -30,7 +30,9 @@ import javax.activation.URLDataSource;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -73,19 +75,62 @@ class FilesExtractor {
 	{
 		final Path image = workdir.resolve("image-" + UUID.randomUUID().toString() + ".simg");
 		try {
-			Files.copy(handler.getInputStream(), image);
+            Files.copy(handler.getInputStream(), image);
+            // Singularity3 build --sandbox removes target directory first, does not work with fuse
+            // Therefore extract to dstdir/rootfs and them move everything from dstdir/rootfs to dstir, followed by removing dstdir/rootfs
+            Path rootfsDir = Paths.get(dstdir.toString() + "/rootfs");
 
-			final String command = "sudo --non-interactive /usr/local/bin/singularity image.export " + image.toString()
-					+ " | tar -C " + dstdir.toString() + " -v -xf -";
+            final String command = "sudo --non-interactive /usr/local/bin/singularity --debug -v build --sandbox " + rootfsDir.toString()
+                    + " " + image.toString();
 
-			final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-			process.setCommand("/bin/bash");
-			process.addArguments("-c");
-			process.addArgument(command);
-			process.setLogger(log);
-			if (!process.execute())
-				throw new IOException("Running image export failed!");
-		}
+            log.info("singularity build");
+
+            final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+            process.setCommand("/bin/bash");
+            process.addArguments("-c");
+            process.addArgument(command);
+            process.setLogger(log);
+            if (!process.execute()) {
+                log.info("wait ...");
+                TimeUnit.MINUTES.sleep(30);
+                throw new IOException("Running image export failed!");
+            }
+
+            // Move file tree
+            /*final Path source = rootfsDir;
+            final Path target = dstdir;
+
+            log.info("Move file tree");
+
+            Files.walkFileTree(source, EnumSet.of(FileVisitOption.FOLLOW_LINKS), Integer.MAX_VALUE,
+                new SimpleFileVisitor<Path>() {
+                    @Override
+                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs)
+                        throws IOException
+                    {
+                        Path targetdir = target.resolve(source.relativize(dir));
+                        try {
+                            Files.copy(dir, targetdir);
+                        } catch (FileAlreadyExistsException e) {
+                             if (!Files.isDirectory(targetdir))
+                                 throw e;
+                        }
+                        return CONTINUE;
+                    }
+                    @Override
+                        public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                            throws IOException
+                        {
+                            Files.copy(file, target.resolve(source.relativize(file)));
+                            return CONTINUE;
+                        }
+            });
+
+            log.info("Remove old rootfsdir");
+
+            // Remove old rootfs
+            Files.delete(rootfsDir);*/
+        }
 		catch (Exception error) {
 			throw new BWFLAException("Extracting singularity image failed!", error);
 		}
