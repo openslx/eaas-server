@@ -27,6 +27,17 @@ public abstract class SnapshotRequest  extends EmilRequestType {
     @XmlElement(required = false)
     private String author;
 
+    @XmlElement(required = false)
+    private boolean isRelativeMouse;
+
+    public boolean isRelativeMouse() {
+        return isRelativeMouse;
+    }
+
+    public void setRelativeMouse(boolean relativeMouse) {
+        isRelativeMouse = relativeMouse;
+    }
+
     public String getAuthor() {
         return author;
     }

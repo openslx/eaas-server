@@ -18,7 +18,7 @@ import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 
 
-@ServerEndpoint(value = "/components/{componentId}/xpra/", subprotocols = {"binary"})
+@ServerEndpoint(value = "/components/{componentId}/xpra", subprotocols = {"binary"})
 public class XpraWebsocketProxy
 {
     private final Logger log = Logger.getLogger(this.getClass().getName());

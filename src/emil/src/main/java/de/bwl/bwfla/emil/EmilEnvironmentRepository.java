@@ -540,6 +540,7 @@ public class EmilEnvironmentRepository {
 		newEmilEnv.setTitle(request.getTitle());
 		newEmilEnv.setEnvId(request.getEnvId());
 		newEmilEnv.setAuthor(request.getAuthor());
+		newEmilEnv.setEnableRelativeMouse(request.isRelativeMouse());
 
 
 		newEmilEnv.setDescription(request.getMessage());

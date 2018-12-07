@@ -1129,7 +1129,7 @@ public class EmilEnvironmentData extends EmilRest {
 				ImageArchiveBinding binding = importState.getBinding(60 * 60 * 60); // wait an hour
 				LOG.warning("binding id" + binding.getImageId());
 				if (binding == null)
-					return new BWFLAException("ImportImageTask: import image failed. Clould not create binding");
+					return new BWFLAException("ImportImageTask: import image failed. Could not create binding");
 
 				binding = envHelper.generalizedImport(binding.getImageId(), iaMd.getType(), imageReq.getTemplateId());
 
