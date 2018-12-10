@@ -71,7 +71,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private String gwPrivateMask;
 
 	@XmlElement(required = false)
-	private boolean canProcessAdditionalFiles = true;
+	private boolean canProcessAdditionalFiles = false;
 
 	public EmilEnvironment() {}
 
