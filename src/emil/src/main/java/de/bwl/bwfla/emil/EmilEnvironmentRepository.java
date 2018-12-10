@@ -341,8 +341,10 @@ public class EmilEnvironmentRepository {
 					delete(session.getParentEnvId(), true, true);
 				}
 			}
+
 			emilEnvironments.remove(envId);
 		}
+		dbConnector.deleteDoc(ClassificationData.collectionName, envId, ClassificationData.parentElement + ".environmentList.id", false);
 	}
 
 	public  <T extends JaxbType> ArrayList<T> getDatabaseContent(String type, Class<T> klass ) throws JAXBException {
