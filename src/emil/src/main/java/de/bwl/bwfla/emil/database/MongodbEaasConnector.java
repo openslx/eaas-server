@@ -81,13 +81,24 @@ public class MongodbEaasConnector {
 	 * @param key
 	 */
 	public void deleteDoc(String collectionName, String value, String key) {
+		deleteDoc(collectionName, value, key , true);
+	}
+
+	/**
+	 * Delete a document (json), which has particular key and value (e.g. "EmilEnvironment.envId" : "123456789")
+	 * @param collectionName
+	 * @param value
+	 * @param key
+	 */
+	public void deleteDoc(String collectionName, String value, String key, boolean mustExist) {
 		DBCollection classificationCacheCollection = databaseInstance.getCollection(collectionName);
 		BasicDBObject query = new BasicDBObject();
 		query.put(key, value);
 		WriteResult result = classificationCacheCollection.remove(query);
 
-		if (result.getN() <= 0)
-			throw new NoSuchElementException();
+		if (mustExist)
+			if (result.getN() <= 0)
+				throw new NoSuchElementException();
 	}
 
 	/**

@@ -17,29 +17,16 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.imagearchive.conf;
+package de.bwl.bwfla.imagearchive;
 
-import java.nio.file.Path;
-import java.nio.file.WatchEvent.Kind;
+import de.bwl.bwfla.emucomp.api.Environment;
+import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 
-import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
-public class MetadataWatchTriplet
+
+public class ImageMetadataCache extends HashMap<ImageArchiveMetadata.ImageType, ConcurrentHashMap<String, Environment>>
 {
-	public final Path 		metadataFile;
-	public final Kind<Path> eventKind;
-	public final ImageType 	imageType; 
-	
-	public MetadataWatchTriplet(Path metadataFile, Kind<Path> eventKind, ImageType imageType)
-	{
-		this.metadataFile = metadataFile;
-		this.eventKind = eventKind;
-		this.imageType = imageType;
-	}
-
-	@Override
-	public String toString()
-	{
-		return "MetadataWatchTriplet [metadataFile=" + metadataFile + ", eventKind=" + eventKind + ", imageType=" + imageType + "]";
-	}
+	// This class acts as an alias
 }

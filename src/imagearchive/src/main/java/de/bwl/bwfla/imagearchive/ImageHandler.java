@@ -17,9 +17,9 @@ import javax.activation.FileDataSource;
 
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
-import de.bwl.bwfla.common.services.handle.HandleUtils;
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageExport;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
@@ -28,18 +28,17 @@ import org.apache.commons.io.FileUtils;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ImageInformation.QemuImageFormat;
-import de.bwl.bwfla.imagearchive.conf.ImageArchiveConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
-import de.bwl.bwfla.imagearchive.conf.ImageArchiveSingleton;
 
 
-public class ImageHandler {
+public class ImageHandler
+{
+	protected final Logger log; // = Logger.getLogger(ImageHandler.class.getName());
 
-	protected static final Logger log = Logger.getLogger(ImageHandler.class.getName());
-	static ImageArchiveConfig iaConfig;
+	private HashMap<String, FutureTask<ImageLoaderResult>> importTasks = new HashMap<>();
 
-	HashMap<String, FutureTask<ImageLoaderResult>> importTasks = new HashMap<>();
-
+	private final ImageArchiveBackendConfig iaConfig;
+	private final ImageMetadataCache cache;
 	private final HandleClient handleClient;
 	private final ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
@@ -48,11 +47,13 @@ public class ImageHandler {
 		NBD, HTTP
 	}
 
-	public ImageHandler(ImageArchiveConfig conf) throws BWFLAException {
-		iaConfig = conf;
+	public ImageHandler(ImageArchiveBackendConfig config, ImageMetadataCache cache, Logger log) throws BWFLAException {
+		this.log = log;
+		this.iaConfig = config;
+		this.cache = cache;
 		pool = Executors.newFixedThreadPool(20);
-		this.imageNameIndex = new ImageNameIndex();
-		this.handleClient = (conf.isHandleConfigured()) ? new HandleClient() : null;
+		this.imageNameIndex = new ImageNameIndex(config.getNameIndexConfigPath(), log);
+		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
 		cleanTmpFiles();
 		resolveLocalBackingFiles();
@@ -70,37 +71,32 @@ public class ImageHandler {
 		else return null;
 	}
 
-	private static String getArchivePrefix()
+	private String getArchivePrefix()
 	{
-		String prefix = null;
-		if (iaConfig.nbdPrefix != null && !iaConfig.nbdPrefix.isEmpty()) {
-			prefix = iaConfig.nbdPrefix;
-
-		} else if (iaConfig.httpPrefix != null && !iaConfig.httpPrefix.isEmpty()) {
-			prefix = iaConfig.httpPrefix;
-			// make sure there's a trailing slash in the URL base
-			if (!prefix.endsWith("/")) {
-				prefix += "/";
-			}
+		String prefix = iaConfig.getHttpPrefix();
+		// make sure there's a trailing slash in the URL base
+		if (!prefix.endsWith("/")) {
+			prefix += "/";
 		}
+
 		return prefix;
 	}
 
-	public static String getExportPrefix()
+	public String getExportPrefix()
 	{
 		if (iaConfig.isHandleConfigured())
-			return "http://hdl.handle.net/" + iaConfig.handlePrefix + "/";
+			return "http://hdl.handle.net/" + iaConfig.getHandlePrefix() + "/";
 
-		return ImageHandler.getArchivePrefix();
+		return this.getArchivePrefix();
 	}
 
-	private static ImageExport.ImageFileInfo getDependency(ImageType parentType, String parentId) throws IOException, BWFLAException {
+	private ImageExport.ImageFileInfo getDependency(ImageType parentType, String parentId) throws IOException, BWFLAException {
 
-		File f = new File(ImageArchiveSingleton.iaConfig.imagePath + "/" + parentType.name() + "/" + parentId);
+		File f = new File(iaConfig.getImagePath() + "/" + parentType.name() + "/" + parentId);
 		if(!f.exists())
 			throw new BWFLAException("parent file not found. broken parameters");
 
-		ImageInformation info = new ImageInformation(f.getAbsolutePath());
+		ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
 		if (info.getBackingFile() == null)
 			return null;
 
@@ -111,7 +107,7 @@ public class ImageHandler {
 		File file = null;
 		ImageType type = null;
 		for(ImageType _type : ImageType.values()) {
-			File backing = new File(ImageArchiveSingleton.iaConfig.imagePath + "/" + _type.name() + "/" + id);
+			File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
 
 			if(backing.exists()) {
 				file = backing;
@@ -125,10 +121,10 @@ public class ImageHandler {
 		return new ImageExport.ImageFileInfo(fileHandle, id, type);
 	}
 
-	private static void resolveLocalBackingFile(File f)
+	private void resolveLocalBackingFile(File f)
 	{
 		try {
-			ImageInformation info = new ImageInformation(f.getAbsolutePath());
+			ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
 			if (info.getBackingFile() == null)
 				return;
 
@@ -151,7 +147,7 @@ public class ImageHandler {
 
 			boolean hasLocalBackingfile = false;
 			for(ImageType _type : ImageType.values()) {
-				File backing = new File(ImageArchiveSingleton.iaConfig.imagePath + "/" + _type.name() + "/" + id);
+				File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
 
 				if(backing.exists()) {
 					hasLocalBackingfile = true;
@@ -174,7 +170,7 @@ public class ImageHandler {
 	private void resolveLocalBackingFiles()
 	{
 		for(ImageType type : ImageType.values()) {
-			File dir = new File(ImageArchiveSingleton.iaConfig.imagePath + "/" + type.name());
+			File dir = new File(iaConfig.getImagePath() + "/" + type.name());
 			if(!dir.exists())
 				continue;
 
@@ -203,7 +199,7 @@ public class ImageHandler {
 		}
 	}
 
-	private static List<ImageExport.ImageFileInfo> processBindingForExport(ImageArchiveBinding iab) throws BWFLAException, IOException {
+	private List<ImageExport.ImageFileInfo> processBindingForExport(ImageArchiveBinding iab) throws BWFLAException, IOException {
 		List<ImageExport.ImageFileInfo> fileInfos = new ArrayList<>();
 
 		File target = getImageTargetPath(iab.getType());
@@ -264,7 +260,7 @@ public class ImageHandler {
 
 	public void cleanTmpFiles()
 	{
-		File tmpEnvFile = new File(iaConfig.metaDataPath, "tmp");
+		File tmpEnvFile = new File(iaConfig.getMetaDataPath(), "tmp");
 		try {
 			deleteDirectory(tmpEnvFile);
 		} catch (IOException e) {
@@ -273,7 +269,7 @@ public class ImageHandler {
 		}
 		tmpEnvFile.mkdir();
 		
-		File tmpImgFile = new File(iaConfig.imagePath, "tmp");
+		File tmpImgFile = new File(iaConfig.getImagePath(), "tmp");
 		try {
 			deleteDirectory(tmpImgFile);
 		} catch (IOException e) {
@@ -282,44 +278,44 @@ public class ImageHandler {
 		}
 		tmpImgFile.mkdir();
 	
-		ConcurrentHashMap<String, Environment> map = ImageArchiveSingleton.imagesCache.get(ImageType.valueOf("tmp"));
+		ConcurrentHashMap<String, Environment> map = cache.get(ImageType.valueOf("tmp"));
 		if(map == null)
-			ImageArchiveSingleton.imagesCache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<String, Environment>());
+			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<String, Environment>());
 		else
 			map.clear();
 	}
 	
-	protected static File getImageTargetPath(String type) {
+	protected File getImageTargetPath(String type) {
 		if(type == null)
 			return  null;
 		
-		File target = new File(iaConfig.imagePath, type);
+		File target = new File(iaConfig.getImagePath(), type);
 		if (target.isDirectory())
 			return target;
 		else
 			return null;
 	}
 
-	public static File getMetaDataTargetPath(String type) {
-		File target = new File(iaConfig.metaDataPath, type);
+	public File getMetaDataTargetPath(String type) {
+		File target = new File(iaConfig.getMetaDataPath(), type);
 		if (target.isDirectory())
 			return target;
 		else
 			return null;
 	}
 	
-	synchronized static void removeCachedEnv(ImageType type, String id) throws BWFLAException
+	synchronized void removeCachedEnv(ImageType type, String id) throws BWFLAException
 	{
-		ConcurrentHashMap<String, Environment> map = ImageArchiveSingleton.imagesCache.get(type);
+		ConcurrentHashMap<String, Environment> map = cache.get(type);
 		if(map == null)
 			throw new BWFLAException("map for image type :" + type + " not found");
 		
 		map.remove(id);		
 	}
 	
-	synchronized static void addCachedEnvironment(ImageType type, String id, Environment env) throws BWFLAException
+	synchronized void addCachedEnvironment(ImageType type, String id, Environment env) throws BWFLAException
 	{
-		ConcurrentHashMap<String, Environment> map = ImageArchiveSingleton.imagesCache.get(type);
+		ConcurrentHashMap<String, Environment> map = cache.get(type);
 		if(map == null)
 		{
 			throw new BWFLAException("map for image type : -" + type + "- not found");
@@ -371,7 +367,7 @@ public class ImageHandler {
 		{
 			InputStream inputStream = image.getInputStream();
 			DataUtil.writeData(inputStream, destImgFile);
-			ImageHandler.resolveLocalBackingFile(destImgFile);
+			this.resolveLocalBackingFile(destImgFile);
 
 			FutureTask<ImageLoaderResult> ft =  new FutureTask<ImageLoaderResult>(new ImageLoader(inputStream, target, importId, this));
 			importTasks.put(taskId, ft);
@@ -394,7 +390,7 @@ public class ImageHandler {
 				ImageLoaderResult res = ft.get();
 				if(!res.success)
 					throw new BWFLAException(res.message);
-				return new ImageImportResult(ImageHandler.getExportPrefix(), res.id);
+				return new ImageImportResult(this.getExportPrefix(), res.id);
 			} catch (InterruptedException|ExecutionException e) {
 				throw new BWFLAException(e);
 			}
@@ -414,8 +410,8 @@ public class ImageHandler {
 		return destImgFile.delete();
 	}
 
-	static boolean writeMetaData(String conf, String id, String type, boolean delete) {
-		File metaDataDir = new File(iaConfig.metaDataPath, type);
+	public boolean writeMetaData(String conf, String id, String type, boolean delete) {
+		File metaDataDir = new File(iaConfig.getMetaDataPath(), type);
 		if (!metaDataDir.isDirectory())
 			return false;
 
@@ -432,7 +428,7 @@ public class ImageHandler {
 		return DataUtil.writeString(conf, destConfFile);
 	}
 
-	static boolean deleteMetaData(String id) throws BWFLAException
+	public boolean deleteMetaData(String id) throws BWFLAException
 	{
 		log.info("deleting: " + id);
 		for(ImageType imageType : ImageType.values())
@@ -470,7 +466,7 @@ public class ImageHandler {
 		return false;
 	}
 
-	public static String loadMetaDataFile(File mf) {
+	public String loadMetaDataFile(File mf) {
 		
 		if(mf.getName().startsWith(".fuse"))
 		{
@@ -516,7 +512,7 @@ public class ImageHandler {
 			}
 	
 			if (uri.isOpaque() && uri.getScheme().equalsIgnoreCase(IA_URI_SCHEME)) {
-				ImageArchiveBinding iaBinding = new ImageArchiveBinding("", uri.getSchemeSpecificPart(), t.toString());
+				ImageArchiveBinding iaBinding = new ImageArchiveBinding(iaConfig.getName(), "", uri.getSchemeSpecificPart(), t.toString());
 				iaBinding.setId(b.getId());
 				addList.add(iaBinding);
 				iter.remove();	
@@ -569,11 +565,11 @@ public class ImageHandler {
 		return md;
 	}
 
-	protected static Environment getEnvById(String id) {
+	protected Environment getEnvById(String id) {
 		if(id == null)
 			return null;
 		for (ImageType t : ImageType.values()) {
-			ConcurrentHashMap<String, Environment> map = ImageArchiveSingleton.imagesCache.get(t);
+			ConcurrentHashMap<String, Environment> map = cache.get(t);
 			if (map == null)
 				continue;
 			// log.info("map " + t.toString() + " entries # " + map.size());
@@ -587,12 +583,12 @@ public class ImageHandler {
 		return null;
 	}
 
-	public static ImageType getImageType(String id)
+	public ImageType getImageType(String id)
 	{
 		if(id == null)
 			return null;
 		for (ImageType t : ImageType.values()) {
-			ConcurrentHashMap<String, Environment> map = ImageArchiveSingleton.imagesCache.get(t);
+			ConcurrentHashMap<String, Environment> map = cache.get(t);
 			if (map == null)
 				continue;
 
@@ -618,7 +614,8 @@ public class ImageHandler {
 
 		final ImageNameIndex.ImageDescription image = entry.image();
 		final ImageArchiveBinding binding = new ImageArchiveBinding();
-		binding.setUrlPrefix((image.url() != null) ? image.url() : ImageHandler.getExportPrefix());
+		binding.setUrlPrefix((image.url() != null) ? image.url() : this.getExportPrefix());
+		binding.setBackendName(iaConfig.getName());
 		binding.setAccess(Binding.AccessType.COW);
 		binding.setFileSystemType(image.fstype());
 		binding.setType(image.type());
@@ -627,9 +624,9 @@ public class ImageHandler {
 		return binding;
 	}
 
-	private static MachineConfiguration getEnvByImageId(ImageType t, String id)
+	private MachineConfiguration getEnvByImageId(ImageType t, String id)
 	{
-		ConcurrentHashMap<String, Environment> map = ImageArchiveSingleton.imagesCache.get(t);
+		ConcurrentHashMap<String, Environment> map = cache.get(t);
 		for(String key : map.keySet()) {
 			Environment env = map.get(key);
 			if (!(env instanceof MachineConfiguration))
@@ -648,9 +645,8 @@ public class ImageHandler {
 		return null;
 	}
 
-	static String commitTempEnvironment(String id, String type, ImageArchiveMetadata.ImageType imageType ) throws IOException, BWFLAException {
-
-
+	private String commitTempEnvironment(String id, String type, ImageArchiveMetadata.ImageType imageType ) throws IOException, BWFLAException
+	{
 		Environment env = getEnvById(id);
 		List<AbstractDataResource> abstractDataResources = null;
 
@@ -712,16 +708,16 @@ public class ImageHandler {
 		return newImageId;
 	}
 
-	static String commitTempEnvironment(String id ) throws IOException, BWFLAException {
+	public String commitTempEnvironment(String id ) throws IOException, BWFLAException {
 		return commitTempEnvironment(id, "user", ImageType.user);
 	}
 
-	static String commitTempEnvironment(String id, String type) throws IOException, BWFLAException {
+	public String commitTempEnvironment(String id, String type) throws IOException, BWFLAException {
 		return commitTempEnvironment(id, type, ImageType.valueOf(type));
 	}
 
-	private static void updateTmpBackingFiles(String image, File target) throws IOException, BWFLAException {
-		ImageInformation info = new ImageInformation(image);
+	private void updateTmpBackingFiles(String image, File target) throws IOException, BWFLAException {
+		ImageInformation info = new ImageInformation(image, log);
 
 		if(info.getBackingFile() == null)
 			return;
@@ -734,7 +730,7 @@ public class ImageHandler {
 		File backing = null;
 
 		for(ImageType _type : ImageType.values()) {
-			backing = new File(ImageArchiveSingleton.iaConfig.imagePath + "/" + _type.name() + "/" + id);
+			backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
 			if(backing.exists()) {
 				break;
 			}
@@ -759,7 +755,7 @@ public class ImageHandler {
 	public ConcurrentHashMap<String, Environment> getImages(String type) {
 		try {
 			ImageType t = ImageType.valueOf(type);
-			File dir = new File(iaConfig.metaDataPath, t.name());
+			File dir = new File(iaConfig.getMetaDataPath(), t.name());
 			if (!dir.exists()) {
 				log.info("dir not found: " + dir);
 				return new ConcurrentHashMap<String, Environment>();
@@ -805,12 +801,12 @@ public class ImageHandler {
 
 		EmulatorUtils.createCowFile(newBackingFile, destImgFile.toPath());
 		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) getEnvById(templateId);
-		ImageGeneralizer.applyScriptIfCompatible(destImgFile, tempEnv.copy());
+		ImageGeneralizer.applyScriptIfCompatible(this, destImgFile, tempEnv.copy());
 	}
 
 	private void createOrUpdateHandle(String imageId) throws BWFLAException
 	{
-		final String url = ImageHandler.getArchivePrefix() + imageId;
+		final String url = this.getArchivePrefix() + imageId;
 		try {
 			log.info("Trying to create new handle for image '" + imageId + "'...");
 			handleClient.create(imageId, url);
@@ -872,6 +868,7 @@ public class ImageHandler {
 		private InputStream inputStream;
 
 		private final ImageHandler imageHandler;
+		private final Logger log;
 
 		private enum ImportType {
 			URL,
@@ -884,6 +881,7 @@ public class ImageHandler {
 
 			this.imageHandler = imageHandler;
 			this.inputStream = inputStream;
+			this.log = imageHandler.log;
 
 			this.importId = importId;
 			this.target = target;
@@ -898,6 +896,7 @@ public class ImageHandler {
 
 			this.url = url;
 			this.imageHandler = imageHandler;
+			this.log = imageHandler.log;
 			this.target = target;
 			this.importId = importId;
 			destImgFile = new File(target, importId);
@@ -937,7 +936,7 @@ public class ImageHandler {
 						EmulatorUtils.convertImage(convertedImgFile.toPath(), outFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
 						convertedImgFile.delete();
 					default:
-						ImageHandler.resolveLocalBackingFile(destImgFile);
+						imageHandler.resolveLocalBackingFile(destImgFile);
 						if (imageHandler.handleClient != null)
 							imageHandler.createOrUpdateHandle(importId);
 

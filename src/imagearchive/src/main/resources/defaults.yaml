@@ -1,6 +1,14 @@
 imagearchive:
-    export_handles: false
-    basepath: /home/bwfla/image-archive/
-    httpprefix: http://localhost:8080/imagearchive/
-    nameindex_config_path: /home/bwfla/.bwFLA/emulators/
+    default_backend_name: default
+    backends:
+        defaults:
+            all:
+                export_handles: false
 
+# Default image-archive
+imagearchive.backends:
+  - name: default
+    type: filesystem
+    basepath: /home/bwfla/image-archive/
+    http_prefix: http://localhost:8080/imagearchive/default
+    nameindex_config_path: /home/bwfla/.bwFLA/nameindices/default/

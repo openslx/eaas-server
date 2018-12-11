@@ -4,14 +4,14 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.DiskPartitionDescription;
 import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imagearchive.ImageArchiveBackend;
+import de.bwl.bwfla.imagearchive.ImageHandler;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
-
-import static de.bwl.bwfla.imagearchive.ImageHandler.getMetaDataTargetPath;
 
 public class ImageGeneralizer {
 
@@ -26,7 +26,7 @@ public class ImageGeneralizer {
      * @throws BWFLAException
      * @throws IOException
      */
-    public static void  applyScriptIfCompatible(File imgFile, MachineConfigurationTemplate templateEnv) throws BWFLAException, IOException {
+    public static void  applyScriptIfCompatible(ImageHandler handler, File imgFile, MachineConfigurationTemplate templateEnv) throws BWFLAException, IOException {
         ImageMounter image = null;
         try {
             image = new ImageMounter(imgFile.toPath());
@@ -46,7 +46,7 @@ public class ImageGeneralizer {
                 image.remountDDWithOffset(partition.getBegin(), partition.getSize());
                 image.mountFileSystem(FileSystemType.fromString(partition.getFsType()));
 
-                File target = getMetaDataTargetPath("template");
+                File target = handler.getMetaDataTargetPath("template");
                 String patchPath = target.getAbsoluteFile().toString() + "/" + templateEnv.getId() + "/" + templateEnv.getImageGeneralization().getModificationScript();
                 File[] fsList = image.getFsDir().toFile().listFiles();
                 if (fsList == null)

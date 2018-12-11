@@ -285,8 +285,10 @@ public class EmulatorUtils {
 		process.addArgument("backing_file=", imgUrl);
 		process.addArgument(cowPath.toString());
 
-		if(proxyUrl != null)
+		if(proxyUrl != null) {
+			process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			process.addEnvVariable("http_proxy", proxyUrl);
+		}
 
 		if (!process.execute()) {
 			try {
@@ -530,7 +532,7 @@ public class EmulatorUtils {
 
 	@Deprecated
 	public static ImageInformation.QemuImageFormat getImageFormat(Path inFile, Logger log) throws BWFLAException, IOException {
-		ImageInformation info = new ImageInformation(inFile.toString());
+		ImageInformation info = new ImageInformation(inFile.toString(), log);
 		return info.getFileFormat();
 
 //		DeprecatedProcessRunner process = new DeprecatedProcessRunner();

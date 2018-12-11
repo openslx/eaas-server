@@ -11,12 +11,15 @@ import javax.xml.bind.annotation.XmlType;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "imageArchiveBinding", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = { "urlPrefix",
-		"imageId", "type", "fileSystemType" })
+		"imageId", "type", "fileSystemType", "backendName" })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class ImageArchiveBinding extends Binding
 {
 	// transient
 	protected String urlPrefix = null;
+
+	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
+	protected String backendName;
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
 	protected String imageId;
@@ -29,19 +32,21 @@ public class ImageArchiveBinding extends Binding
 
 	public ImageArchiveBinding()
 	{
+		backendName = null;
 		urlPrefix = null;
 		imageId = null;
 		type = null;
 		fileSystemType = null;
 	}
 	
-	public ImageArchiveBinding(String urlPrefix, String imageId, String type)
+	public ImageArchiveBinding(String backend, String urlPrefix, String imageId, String type)
 	{
-		this(urlPrefix, imageId, type,null);
+		this(backend, urlPrefix, imageId, type,null);
 	}
 
-	public ImageArchiveBinding(String urlPrefix, String imageId, String type, String fileSystemType)
+	public ImageArchiveBinding(String backend, String urlPrefix, String imageId, String type, String fileSystemType)
 	{
+		this.backendName = backend;
 		this.urlPrefix = urlPrefix;
 		this.imageId = imageId;
 		this.type = type;
@@ -50,6 +55,7 @@ public class ImageArchiveBinding extends Binding
 	
 	public void copy(ImageArchiveBinding b)
 	{
+		this.backendName = b.backendName;
 		this.urlPrefix = b.urlPrefix;
 		this.imageId = b.imageId;
 		this.type = b.type;
@@ -59,6 +65,9 @@ public class ImageArchiveBinding extends Binding
 	/** Replaces this with all non-null fields from other */
 	public void update(ImageArchiveBinding other)
 	{
+		if (other.backendName != null)
+			this.backendName = other.backendName;
+
 		if (other.urlPrefix != null)
 			this.urlPrefix = other.urlPrefix;
 
@@ -71,7 +80,15 @@ public class ImageArchiveBinding extends Binding
 		if (other.fileSystemType != null)
 			this.fileSystemType = other.fileSystemType;
 	}
-	
+
+	public String getBackendName() {
+		return backendName;
+	}
+
+	public void setBackendName(String name) {
+		this.backendName = name;
+	}
+
 	public String getUrlPrefix() {
 		return urlPrefix;
 	}
