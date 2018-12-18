@@ -16,8 +16,6 @@ public class EmilContainerEnvironment extends EmilEnvironment {
 
     @XmlElement
     private String output;
-    @XmlElement
-    private String title;
 
     @XmlElement
     private List<String> args;
@@ -48,16 +46,6 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     public void setArgs(List<String> args) {
         this.args = new ArrayList<>();
         this.args.addAll(args);
-    }
-
-    @Override
-    public String getTitle() {
-        return title;
-    }
-
-    @Override
-    public void setTitle(String title) {
-        this.title = title;
     }
 
     public List<String> getEnv() {

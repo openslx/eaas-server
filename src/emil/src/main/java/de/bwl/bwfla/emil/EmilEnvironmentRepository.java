@@ -51,6 +51,7 @@ public class EmilEnvironmentRepository {
 	private Path emilEnvPath;
 	private Path objEnvPath;
 	private Path sessionEnvPath;
+	private Path containersEnvPath;
 
 	protected final static Logger LOG = Logger.getLogger(EmilEnvironmentRepository.class.getName());
 
@@ -188,6 +189,9 @@ public class EmilEnvironmentRepository {
 			this.sessionEnvPath = exportDir.resolve("emil-session-environments");
 			if (!Files.exists(this.sessionEnvPath))
 				Files.createDirectory(this.sessionEnvPath);
+			this.containersEnvPath = exportDir.resolve("emil-container-environments");
+			if (!Files.exists(this.containersEnvPath))
+				Files.createDirectory(this.containersEnvPath);
 		} catch (IOException e) {
 			LOG.warning("creation of emil dirs failed! \n" + e.getMessage());
 		}
@@ -260,11 +264,13 @@ public class EmilEnvironmentRepository {
 		Path emilEnvPath = Paths.get(serverdatadir).resolve("emil-environments");
 		Path objEnvPath = Paths.get(serverdatadir).resolve("emil-object-environments");
 		Path sessionEnvPath = Paths.get(serverdatadir).resolve("emil-session-environments");
+		Path containerEnvs = Paths.get(serverdatadir).resolve("emil-container-environments");
 
 		// ensure the absence of null elements
 		Optional.ofNullable(importEnvByPath(EmilEnvironment.class, Paths.get(emilEnvironmentsPath), emilEnvPath));
 		Optional.ofNullable(importEnvByPath(EmilObjectEnvironment.class, Paths.get(emilObjectEnvironmentsPath), objEnvPath));
 		Optional.ofNullable(importEnvByPath(EmilSessionEnvironment.class, Paths.get(emilEnvironmentsPath), sessionEnvPath));
+		Optional.ofNullable(importEnvByPath(EmilContainerEnvironment.class, Paths.get(emilEnvironmentsPath), containerEnvs));
 	}
 
 	private <T> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JsonIOException {
@@ -420,6 +426,9 @@ public class EmilEnvironmentRepository {
 		} else if (env instanceof EmilObjectEnvironment) {
 			envpath = objEnvPath.resolve(env.getEnvId());
 			json = GSON.toJson((EmilObjectEnvironment) env);
+		} else if (env instanceof EmilContainerEnvironment) {
+			envpath = containersEnvPath.resolve(env.getEnvId());
+			json = GSON.toJson((EmilContainerEnvironment) env);
 		} else {
 			envpath = emilEnvPath.resolve(env.getEnvId());
 			json = GSON.toJson(env);
