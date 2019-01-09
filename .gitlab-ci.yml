@@ -12,5 +12,8 @@ build:
   artifacts:
     paths:
     - src/ear/target/eaas-server.ear
-    
 
+ cache:
+   key: ${CI_COMMIT_REF_SLUG}
+   paths:
+   - ${HOME}/.m2/
