@@ -13,7 +13,6 @@ build:
     paths:
     - src/ear/target/eaas-server.ear
 
- cache:
-   key: citar-release
+cache:
    paths:
    - /root/.m2/
