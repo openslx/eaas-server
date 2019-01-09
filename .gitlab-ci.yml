@@ -14,7 +14,7 @@ build:
  
  cache:
   paths:
-  - /src/.m2
+  - src/.m2
 
  artifacts:
    paths:
