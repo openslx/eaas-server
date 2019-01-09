@@ -1,8 +1,7 @@
 image: maven:3-jdk-8
 
 
-before_script:
-  - apt-get update -qq && apt-get install -y rsync sshpass
+
 
 build:
  stage: build
@@ -17,6 +16,8 @@ build:
 
 deploy:
  stage: deploy
+ before_script:
+  - apt-get update -qq && apt-get install -y rsync sshpass
  script:
  - sshpass -p $gitlab rsync -e "ssh -o StrictHostKeyChecking=no" -rltvz -O ear/target/eaas-server.ear gitlab@192.52.33.121:/mnt/data/citar-demo/deployments/eaas-server.ear
 
