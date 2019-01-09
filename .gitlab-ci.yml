@@ -4,7 +4,7 @@ build:
  stage: build
  script:
  - cd src
- -find / -type d -name ".m2"
+ - find / -type d -name ".m2"
 
  - mvn clean install
 
