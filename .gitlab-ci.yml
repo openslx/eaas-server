@@ -1,11 +1,14 @@
 image: maven:3-jdk-8
 
+
+before_script:
+  - apt-get update -qq && apt-get install -y rsync sshpass
+
 build:
  stage: build
  script:
  - cd src
  - find / -type d -name ".m2"
-
  - mvn clean install
 
  artifacts:
