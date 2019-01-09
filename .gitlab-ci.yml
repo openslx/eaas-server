@@ -7,9 +7,13 @@ build:
  stage: build
  script:
  - cd src
+ - mv .m2 /root/ || :
  - find / -type d -name ".m2"
  - mvn clean install
- - ls -la /root/.m2
+ - mv /root/.m2 .
+ cache:
+  paths:
+  - /src/.m2
 
  artifacts:
    paths:
@@ -20,9 +24,7 @@ deploy:
  before_script:
   - apt-get update -qq && apt-get install -y rsync sshpass
  script:
- - sshpass -p $gitlab rsync -e "ssh -o StrictHostKeyChecking=no" -rltvz -O ear/target/eaas-server.ear gitlab@192.52.32.102:/mnt/data/citar-demo/deployments/eaas-server.ear
+ - sshpass -p $gitlab rsync -e "ssh -o StrictHostKeyChecking=no" -rltvz -O src/ear/target/eaas-server.ear gitlab@192.52.32.102:/mnt/data/citar-demo/deployments/eaas-server.ear
 
-cache:
-  paths:
-  - /root/.m2
+
   
