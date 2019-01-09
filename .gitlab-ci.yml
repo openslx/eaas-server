@@ -7,7 +7,7 @@ build:
  stage: build
  script:
  - cd src
- - mv .m2 /root/ || true
+ - cp -r .m2 /root/ || true
  - find / -type d -name ".m2"
  - mvn clean install
  - mv /root/.m2 .
