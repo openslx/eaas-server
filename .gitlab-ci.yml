@@ -8,7 +8,6 @@ build:
  script:
  - cd src
  - cp -r .m2 /root/ || true
- - find / -type d -name ".m2"
  - mvn clean install
  - cp -r /root/.m2 .
  
