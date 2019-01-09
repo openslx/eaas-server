@@ -16,4 +16,4 @@ build:
  cache:
    key: ${CI_COMMIT_REF_SLUG}
    paths:
-   - ${HOME}/.m2/
+   - /root/.m2/
