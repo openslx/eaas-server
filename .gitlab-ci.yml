@@ -9,6 +9,7 @@ build:
  - cd src
  - find / -type d -name ".m2"
  - mvn clean install
+ - ls -lA /root/.m2
 
  artifacts:
    paths:
