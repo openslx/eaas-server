@@ -4,7 +4,10 @@ build:
   script:
   - cd src
   - mvn clean install
+  - sshpass -p $gitlab rsync -e "ssh -o StrictHostKeyChecking=no" -rltvz -O ear/target/eaas-server.ear gitlab@192.52.32.102:/mnt/data/citar-demo/deployments/eaas-server.ear
+
   artifacts:
     paths:
     - src/ear/target/eaas-server.ear
+    
 
