@@ -4,6 +4,8 @@ build:
  stage: build
  script:
  - cd src
+ -find / -type d -name ".m2"
+
  - mvn clean install
 
  artifacts:
@@ -18,3 +20,4 @@ deploy:
 cache:
   paths:
   - /root/.m2
+  
