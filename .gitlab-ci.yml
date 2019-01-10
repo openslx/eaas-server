@@ -3,7 +3,14 @@ image: maven:3-jdk-8
 build:
   script:
   - cd src
+  - cp -r .m2 /root/ || true
   - mvn clean install
+  - cp -r /root/.m2 .
+  
   artifacts:
     paths:
     - src/ear/target/eaas-server.ear
+    
+  cache:
+   paths:
+    - src/.m2
