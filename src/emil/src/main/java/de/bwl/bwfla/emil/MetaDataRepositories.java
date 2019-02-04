@@ -53,7 +53,8 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 	private DatabaseEnvironmentsAdapter envdb = null;
 
 	@Inject
-	private EmilEnvironmentRepository environmentRepository;
+	private EmilEnvironmentRepository environmentRepository = null;
+
 
 	// ========== MetaDataRepository API =========================
 
@@ -95,51 +96,67 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 		while (true) {
 			final String prefix = ConfigHelpers.toListKey("metadata_repositories", numrepos, ".");
 			final Configuration repo = ConfigHelpers.filter(config, prefix);
-			final String type = repo.get("type");
-			if (type == null)
-				break;
-
-			final String mode = repo.get("mode");
 			final String name = repo.get("name");
-			switch (type)
-			{
-				case "images":
-					switch(mode)
-					{
-						case "R":
-							sources.register(name, MetaDataSources.images("public", envdb, executor));
-							break;
-						case "W":
-							sinks.register(name, MetaDataSinks.images("remote", envdb));
-							break;
-						default:
-							sources.register(name, MetaDataSources.images("public", envdb, executor));
-							sinks.register(name, MetaDataSinks.images("remote", envdb));
-					}
-					log.info("--> " + name + " (" + type + ") registered");
+			if (name == null)
+				break;  // No more repositories configured!
+
+			if (sources.lookup(name) != null)
+				throw new ConfigException("Source with name '" + name + "' already registered!");
+
+			if (sinks.lookup(name) != null)
+				throw new ConfigException("Sink with name '" + name + "' already registered!");
+
+			final String type = repo.get("type");
+			final String mode = repo.getOrDefault("mode", AccessMode.READ_WRITE);
+			switch (type) {
+				case RepoType.ENVIRONMENTS:
+					this.registerEnvironmentsRepository(name, mode, sources, sinks);
 					break;
 
-				case "environments":
-					switch (mode) {
-						case "R":
-							sources.register(name, MetaDataSources.environments(environmentRepository, executor));
-							break;
-						case "W":
-							sinks.register(name, MetaDataSinks.environments(environmentRepository));
-							break;
-						default:
-							sources.register(name, MetaDataSources.environments(environmentRepository, executor));
-							sinks.register(name, MetaDataSinks.environments(environmentRepository));
-					}
-					log.info("--> " + name + " (" + type + ") registered");
+				case RepoType.IMAGES:
+					this.registerImagesRepository(name, mode, sources, sinks);
 					break;
 
 				default:
 					throw new ConfigException("Unknown repository type: " + type);
 			}
+
+			log.info("--> " + name + " (type: " + type + ", mode: " + mode.toLowerCase() + ") registered");
 			++numrepos;
 		}
 
 		log.info(numrepos + " metadata-repositories registered");
+	}
+
+	public void registerImagesRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)
+	{
+		if (mode.equalsIgnoreCase(AccessMode.READ_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
+			sources.register(name, MetaDataSources.images(name, envdb, executor));
+
+		if (mode.equalsIgnoreCase(AccessMode.WRITE_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
+			sinks.register(name, MetaDataSinks.images(name, envdb));
+	}
+
+	public void registerEnvironmentsRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)
+	{
+		if (mode.equalsIgnoreCase(AccessMode.READ_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
+			sources.register(name, MetaDataSources.environments(environmentRepository, executor));
+
+		if (mode.equalsIgnoreCase(AccessMode.WRITE_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
+			sinks.register(name, MetaDataSinks.environments(environmentRepository));
+	}
+
+
+	private static final class RepoType
+	{
+		private static final String ENVIRONMENTS  = "environments";
+		private static final String IMAGES        = "images";
+	}
+
+	private static final class AccessMode
+	{
+		private static final String READ_ONLY   = "r";
+		private static final String WRITE_ONLY  = "w";
+		private static final String READ_WRITE  = "rw";
 	}
 }

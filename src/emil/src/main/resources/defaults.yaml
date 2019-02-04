@@ -30,11 +30,11 @@ rest:
     blobstore: http://localhost:8080/blobstore/api/v1/blobs
 
 metadata_repositories:
-  - name: public-images  # Archive's name
-    type: images   # Archive's type
+  - name: public-images
+    type: images
     mode: R
-  - name: public-environments  # Archive's name
-    type: environments   # Archive's type
+  - name: public-environments
+    type: environments
     mode: R
   - name: remote-images
     type: images
