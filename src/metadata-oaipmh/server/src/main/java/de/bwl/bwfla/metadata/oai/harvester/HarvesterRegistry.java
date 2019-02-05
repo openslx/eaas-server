@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.oai.harvester;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
@@ -37,48 +38,24 @@ import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 
 @Singleton
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
-public class HarvesterRegistry
+public class HarvesterRegistry extends ObjectRegistry<HarvesterBackend>
 {
 	private final Logger log = Logger.getLogger(this.getClass().getName());
 
 	private Client http;
-	private HarvesterConfig config;
-	private Map<String, HarvesterBackend> harvesters;
+
 
 	public void add(BackendConfig backend)
 	{
-		final String name = backend.getName();
-		if (harvesters.put(name, new HarvesterBackend(backend, http)) == null)
-			log.info("Harvester backend '" + name + "' added");
-		else log.info("Harvester backend '" + name + "' updated");
-	}
-
-	public HarvesterBackend lookup(String name)
-	{
-		return harvesters.get(name);
-	}
-
-	public boolean remove(String name)
-	{
-		if (harvesters.remove(name) == null)
-			return false;
-
-		log.info("Harvester backend '" + name + "' removed");
-		return true;
-	}
-
-	public Collection<String> list()
-	{
-		return harvesters.keySet();
+		this.add(new HarvesterBackend(backend, http));
 	}
 
 
@@ -88,10 +65,9 @@ public class HarvesterRegistry
 	private void initialize()
 	{
 		this.http = ClientBuilder.newClient();
-		this.config = new HarvesterConfig();
-		this.harvesters = new ConcurrentHashMap<>();
 
 		try {
+			final HarvesterConfig config = new HarvesterConfig();
 			config.load(ConfigurationProvider.getConfiguration());
 			for (BackendConfig backend : config.getBackendConfigs())
 				this.add(backend);
@@ -110,20 +86,28 @@ public class HarvesterRegistry
 		this.save();
 	}
 
+	private void add(HarvesterBackend backend)
+	{
+		final String name = backend.getName();
+		if (this.put(name, backend))
+			log.info("Harvester backend '" + name + "' added");
+		else log.info("Harvester backend '" + name + "' updated");
+	}
+
 	private void save()
 	{
 		final Path statepath = this.getStateDumpPath();
 
 		log.info("Saving harvester's state to file...");
 		try (final Writer writer = Files.newBufferedWriter(statepath)) {
-			final Collection<HarvesterDescription> descriptions = harvesters.values().stream()
-					.map((harvester) -> new HarvesterDescription(harvester))
+			final Collection<HarvesterBackend.StateDescription> backends = this.values().stream()
+					.map(HarvesterBackend::getStateDescription)
 					.collect(Collectors.toList());
 
 			final ObjectMapper mapper = new ObjectMapper()
 					.enable(SerializationFeature.INDENT_OUTPUT);
 
-			mapper.writeValue(writer, descriptions);
+			mapper.writeValue(writer, new StateDescription(backends));
 		}
 		catch (Exception error) {
 			throw new IllegalStateException("Saving harvester's state failed!", error);
@@ -140,15 +124,14 @@ public class HarvesterRegistry
 
 		log.info("Restoring harvester's state from: " + statepath.toString());
 		try (final Reader input = Files.newBufferedReader(statepath)) {
-			final ObjectMapper mapper = new ObjectMapper();
-			mapper.reader(HarvesterDescription.class)
-					.readValues(input)
-					.forEachRemaining((object) -> {
-						final HarvesterDescription description = (HarvesterDescription) object;
-						final HarvesterBackend backend = new HarvesterBackend(description, http);
-						harvesters.put(backend.getName(), backend);
+			final StateDescription description = new ObjectMapper()
+					.readValue(input, StateDescription.class);
 
-						log.info("Harvester's backend state restored: " + backend.getName());
+			description.getBackends()
+					.forEach((bd) -> {
+						final String name = bd.getBackendConfig().getName();
+						this.add(new HarvesterBackend(bd, http));
+						log.info("Harvester's backend state restored: " + name);
 					});
 		}
 		catch (Exception error) {
@@ -164,5 +147,33 @@ public class HarvesterRegistry
 				.get("commonconf.serverdatadir");
 
 		return Paths.get(datadir, "harvesters.json");
+	}
+
+
+	private static class StateDescription
+	{
+		private Collection<HarvesterBackend.StateDescription> backends;
+
+
+		public StateDescription()
+		{
+			this.backends = new ArrayList<>();
+		}
+
+		public StateDescription(Collection<HarvesterBackend.StateDescription> backends)
+		{
+			this.backends = backends;
+		}
+
+		@JsonProperty("backends")
+		public Collection<HarvesterBackend.StateDescription> getBackends()
+		{
+			return backends;
+		}
+
+		public void setBackends(Collection<HarvesterBackend.StateDescription> backends)
+		{
+			this.backends = backends;
+		}
 	}
 }

@@ -95,7 +95,7 @@ public class HarvesterAPI
 		if (harvester == null)
 			throw new NotFoundException("Harvester not found: " + name);
 
-		final Instant fromts = HarvesterAPI.getFromTimestamp(request, harvester.getStatus().getLatestItemTimestamp());
+		final Instant fromts = HarvesterAPI.getFromTimestamp(request);
 		final Instant untilts = HarvesterAPI.getUntilTimestamp(request);
 
 		final Supplier<Response> responder = () -> {
@@ -137,13 +137,13 @@ public class HarvesterAPI
 		return Instant.parse(value);
 	}
 
-	private static Instant getFromTimestamp(HttpServletRequest request, Instant latestItemTimestamp)
+	private static Instant getFromTimestamp(HttpServletRequest request)
 	{
-		return HarvesterAPI.getTimestampParam(request, "from", latestItemTimestamp);
+		return HarvesterAPI.getTimestampParam(request, "from", null);
 	}
 
 	private static Instant getUntilTimestamp(HttpServletRequest request)
 	{
-		return HarvesterAPI.getTimestampParam(request, "until", HarvesterBackend.getDefaultUntilTimestamp());
+		return HarvesterAPI.getTimestampParam(request, "until", null);
 	}
 }

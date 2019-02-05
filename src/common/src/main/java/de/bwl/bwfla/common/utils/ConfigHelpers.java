@@ -120,6 +120,12 @@ public class ConfigHelpers
 		return config.getProperties().isEmpty();
 	}
 
+	public static void check(Object arg, String message)
+	{
+		if (arg == null)
+			throw new ConfigException(message);
+	}
+
 	public static void check(String arg, String message)
 	{
 		if (arg == null || arg.isEmpty())

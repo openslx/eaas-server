@@ -26,7 +26,7 @@ import org.apache.tamaya.Configuration;
 import org.apache.tamaya.inject.api.Config;
 
 import java.util.ArrayList;
-import java.util.List;
+import java.util.Collection;
 import java.util.logging.Logger;
 
 
@@ -36,7 +36,7 @@ public class HarvesterConfig extends BaseConfig
 
 	private String baseurl;
 
-	private List<BackendConfig> backends = new ArrayList<BackendConfig>();
+	private Collection<BackendConfig> backends = new ArrayList<>();
 
 
 	// ========== Getters and Setters ==============================
@@ -53,12 +53,12 @@ public class HarvesterConfig extends BaseConfig
 		this.baseurl = url;
 	}
 
-	public List<BackendConfig> getBackendConfigs()
+	public Collection<BackendConfig> getBackendConfigs()
 	{
 		return backends;
 	}
 
-	public void setBackendConfigs(List<BackendConfig> configs)
+	public void setBackendConfigs(Collection<BackendConfig> configs)
 	{
 		ConfigHelpers.check(configs, "List of metadata-harvester backends is invalid!");
 		this.backends = configs;
@@ -83,7 +83,6 @@ public class HarvesterConfig extends BaseConfig
 			backends.clear();
 
 			while (true) {
-				// Find out the type of configured backend
 				final String fprefix = ConfigHelpers.toListKey("backends", backends.size(), ".");
 				final Configuration backendConfig = ConfigHelpers.filter(config, fprefix);
 				final String name = backendConfig.get("name");

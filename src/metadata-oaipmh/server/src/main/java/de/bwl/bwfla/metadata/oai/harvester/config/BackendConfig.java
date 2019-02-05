@@ -19,19 +19,24 @@
 
 package de.bwl.bwfla.metadata.oai.harvester.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.metadata.oai.common.config.BaseConfig;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.inject.api.Config;
+
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.Collection;
 
 
 public class BackendConfig extends BaseConfig
 {
 	private String name;
 
-	private SourceConfig source = new SourceConfig();
-	private SinkConfig sink = new SinkConfig();
+	private Collection<StreamConfig> streams = new ArrayList<>();
 
 
 	// ========== Getters and Setters ==============================
@@ -49,26 +54,15 @@ public class BackendConfig extends BaseConfig
 		this.name = name;
 	}
 
-	@JsonProperty(Fields.SINK)
-	public SinkConfig getSinkConfig()
+	@JsonProperty(Fields.STREAMS)
+	public Collection<StreamConfig> getStreamConfigs()
 	{
-		return sink;
+		return streams;
 	}
 
-	public void setSinkConfig(SinkConfig sink)
+	public void setStreamConfigs(Collection<StreamConfig> streams)
 	{
-		this.sink = sink;
-	}
-
-	@JsonProperty(Fields.SOURCE)
-	public SourceConfig getSourceConfig()
-	{
-		return source;
-	}
-
-	public void setSourceConfig(SourceConfig source)
-	{
-		this.source = source;
+		this.streams = streams;
 	}
 
 
@@ -108,6 +102,67 @@ public class BackendConfig extends BaseConfig
 		}
 	}
 
+	public static class StreamConfig
+	{
+		private Instant latestItemTimestamp = Instant.EPOCH;
+		private SourceConfig source = new SourceConfig();
+		private SinkConfig sink = new SinkConfig();
+
+		@JsonIgnore
+		public Instant getLatestItemTimestamp()
+		{
+			return latestItemTimestamp;
+		}
+
+		public void setLatestItemTimestamp(Instant timestamp)
+		{
+			this.latestItemTimestamp = timestamp;
+		}
+
+		@JsonProperty("latest_item_timestamp")
+		public String getLatestItemTimestampAsString()
+		{
+			return latestItemTimestamp.toString();
+		}
+
+		@JsonSetter("latest_item_timestamp")
+		public void setLatestItemTimestamp(String timestamp)
+		{
+			this.latestItemTimestamp = Instant.parse(timestamp);
+		}
+
+		@JsonProperty(Fields.SOURCE)
+		public SourceConfig getSourceConfig()
+		{
+			return source;
+		}
+
+		public void setSourceConfig(SourceConfig source)
+		{
+			ConfigHelpers.check(source, "Source config is invalid!");
+			this.source = source;
+		}
+
+		@JsonProperty(Fields.SINK)
+		public SinkConfig getSinkConfig()
+		{
+			return sink;
+		}
+
+		public void setSinkConfig(SinkConfig sink)
+		{
+			ConfigHelpers.check(sink, "Sink config is invalid!");
+			this.sink = sink;
+		}
+
+		public void load(Configuration config)
+		{
+			// Configure annotated members of this instance
+			ConfigHelpers.configure(source, ConfigHelpers.filter(config, Fields.SOURCE + "."));
+			ConfigHelpers.configure(sink, ConfigHelpers.filter(config, Fields.SINK + "."));
+		}
+	}
+
 
 	// ========== Initialization ==============================
 
@@ -115,8 +170,22 @@ public class BackendConfig extends BaseConfig
 	{
 		// Configure annotated members of this instance
 		ConfigHelpers.configure(this, config);
-		ConfigHelpers.configure(source, ConfigHelpers.filter(config, "source."));
-		ConfigHelpers.configure(sink, ConfigHelpers.filter(config, "sink."));
+
+		// Configure streams for this instance
+		{
+			streams.clear();
+
+			while (true) {
+				final String prefix = ConfigHelpers.toListKey(Fields.STREAMS, streams.size(), ".");
+				final Configuration sconfig = ConfigHelpers.filter(config, prefix);
+				if (ConfigHelpers.isEmpty(sconfig))
+					break;  // No more streams found!
+
+				StreamConfig stream = new StreamConfig();
+				stream.load(sconfig);
+				streams.add(stream);
+			}
+		}
 	}
 
 
@@ -125,6 +194,7 @@ public class BackendConfig extends BaseConfig
 	private static class Fields
 	{
 		private static final String NAME     = "name";
+		private static final String STREAMS  = "streams";
 		private static final String SOURCE   = "source";
 		private static final String SINK     = "sink";
 		private static final String URL      = "url";

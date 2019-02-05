@@ -28,19 +28,32 @@ import java.time.Instant;
 
 public class HarvesterStatus
 {
+	private String name;
 	private Instant lastRunTimestamp;
-	private Instant latestItemTimestamp;
 
 
-	private HarvesterStatus()
+	public HarvesterStatus(String name, Instant timestamp)
 	{
-		// Default constructor
+		this.name = name;
+		this.lastRunTimestamp = Instant.from(timestamp);
 	}
 
-	public HarvesterStatus(Instant timestamp)
+	public HarvesterStatus(HarvesterBackend backend)
 	{
-		this.lastRunTimestamp = Instant.from(timestamp);
-		this.latestItemTimestamp = timestamp;
+		this.name = backend.getName();
+		this.lastRunTimestamp = backend.getStateDescription()
+				.getLastRunTimestamp();
+	}
+
+	@JsonProperty("name")
+	public String getName()
+	{
+		return name;
+	}
+
+	public void setName(String name)
+	{
+		this.name = name;
 	}
 
 	@JsonIgnore
@@ -64,28 +77,5 @@ public class HarvesterStatus
 	public void setLastRunTimestamp(String timestamp)
 	{
 		this.lastRunTimestamp = Instant.parse(timestamp);
-	}
-
-	@JsonIgnore
-	public Instant getLatestItemTimestamp()
-	{
-		return latestItemTimestamp;
-	}
-
-	public void setLatestItemTimestamp(Instant timestamp)
-	{
-		this.latestItemTimestamp = timestamp;
-	}
-
-	@JsonProperty("latest_item_timestamp")
-	public String getLatestItemTimestampAsString()
-	{
-		return latestItemTimestamp.toString();
-	}
-
-	@JsonSetter("latest_item_timestamp")
-	public void setLatestItemTimestamp(String timestamp)
-	{
-		this.latestItemTimestamp = Instant.parse(timestamp);
 	}
 }

@@ -19,46 +19,37 @@
 
 package de.bwl.bwfla.metadata.oai.harvester;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
-import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
+import java.util.Collection;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 
-public class HarvesterDescription
+public class ObjectRegistry<T>
 {
-	private BackendConfig config;
-	private HarvesterStatus status;
+	private final Map<String, T> entries = new ConcurrentHashMap<>();
 
-
-	private HarvesterDescription()
+	public boolean put(String name, T entry)
 	{
-		// Default constructor
+		return entries.put(name, entry) == null;
 	}
 
-	public HarvesterDescription(HarvesterBackend backend)
+	public T lookup(String name)
 	{
-		this.config = backend.getConfig();
-		this.status = backend.getStatus();
+		return entries.get(name);
 	}
 
-	@JsonProperty("config")
-	public BackendConfig getBackendConfig()
+	public boolean remove(String name)
 	{
-		return config;
+		return entries.remove(name) != null;
 	}
 
-	public void setBackendConfig(BackendConfig config)
+	public Collection<String> list()
 	{
-		this.config = config;
+		return entries.keySet();
 	}
 
-	@JsonProperty("status")
-	public HarvesterStatus getStatus()
+	public Collection<T> values()
 	{
-		return status;
-	}
-
-	public void setStatus(HarvesterStatus status)
-	{
-		this.status = status;
+		return entries.values();
 	}
 }

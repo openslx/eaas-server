@@ -27,28 +27,14 @@ import java.time.Instant;
 public class HarvestingResult
 {
 	private final String startTimestamp;
-	private final String fromTimestamp;
-	private final String untilTimestamp;
 	private int numRecordsDownloaded;
 	private int durationInSeconds;
 
-	public HarvestingResult(Instant startts, Instant fromts, Instant untilts)
+	public HarvestingResult(Instant startts)
 	{
 		this.startTimestamp = startts.toString();
-		this.fromTimestamp = fromts.toString();
-		this.untilTimestamp = untilts.toString();
 		this.numRecordsDownloaded = 0;
 		this.durationInSeconds = 0;
-	}
-
-	public String getFromTimestamp()
-	{
-		return fromTimestamp;
-	}
-
-	public String getUntilTimestamp()
-	{
-		return untilTimestamp;
 	}
 
 	public int getNumRecordsDownloaded()
@@ -67,6 +53,12 @@ public class HarvestingResult
 		return this;
 	}
 
+	public HarvestingResult onRecordsDownloaded(int number)
+	{
+		numRecordsDownloaded += number;
+		return this;
+	}
+
 	public HarvestingResult setDurationInSeconds(long duration)
 	{
 		this.durationInSeconds = (int) duration;
@@ -75,16 +67,10 @@ public class HarvestingResult
 
 	public String toJsonString()
 	{
-		final JsonObject timerange = Json.createObjectBuilder()
-				.add("from", fromTimestamp)
-				.add("until", untilTimestamp)
-				.build();
-
 		final JsonObject json = Json.createObjectBuilder()
 				.add("num_records_downloaded", numRecordsDownloaded)
 				.add("duration_seconds", durationInSeconds)
 				.add("start_timestamp", startTimestamp)
-				.add("timerange", timerange)
 				.build();
 
 		return json.toString();
