@@ -194,6 +194,35 @@ public class HandleTests extends BaseTest
 			// Add new URLs to created handle
 			for (int i = 1; i < URLS.length; ++i) {
 				final int index = 1 + i;
+				client.add(name, URLS[i]);
+
+				// Check resolved URLs
+				final List<String> urls = client.resolve(name);
+				Assert.assertEquals(index, urls.size());
+				for (int j = 0; j < index; ++j)
+					Assert.assertEquals(URLS[j], urls.get(j));
+			}
+		}
+		finally {
+			client.delete(name);
+		}
+
+		this.markAsPassed();
+	}
+
+	@Test
+	public void testAddingHandleValuesByIndex() throws BWFLAException
+	{
+		log.info("Testing adding values to handle using indices...");
+
+		// Create new handle
+		final String name = NAMES[0];
+		final HandleClient client = new HandleClient(PREFIX, AUTHINFO);
+		client.create(name, URLS[0]);
+		try {
+			// Add new URLs to created handle
+			for (int i = 1; i < URLS.length; ++i) {
+				final int index = 1 + i;
 				client.add(name, index, URLS[i]);
 
 				// Check resolved URLs

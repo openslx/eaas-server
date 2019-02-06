@@ -402,4 +402,9 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 		}
 	}
 
+	@Override
+	public void delete(String id) throws BWFLAException {
+		throw new BWFLAException("not supported");
+	}
+
 }

@@ -112,7 +112,9 @@ public abstract class BaseTask extends AbstractTask<Object>
 				log.info("Object host supports range-requests, creating COW file...");
 				final Path cowFilePath = basePath.resolve(baseName + ".cow");
 				cowMountpoint = basePath.resolve(cowFilePath.getFileName() + ".fuse");
-				EmulatorUtils.createCowFile(fce.getUrl(), cowFilePath, null, log);
+				QcowOptions options = new QcowOptions();
+				options.setBackingFile(fce.getUrl());
+				EmulatorUtils.createCowFile(cowFilePath, options, log);
 				subresFilePath = EmulatorUtils.mountCowFile(cowFilePath, cowMountpoint, log);
 			} else {
 				subresFilePath = basePath.resolve("object.img");
@@ -148,7 +150,7 @@ public abstract class BaseTask extends AbstractTask<Object>
 			}
 			index = classifier.runIdentification(verbosemode);
 
-		} catch (Exception e) {
+		} catch (Throwable e) {
 			e.printStackTrace();
 		} finally {
 			log.info("Cleaning up...");

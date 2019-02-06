@@ -19,6 +19,7 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 
 import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveName;
 
@@ -39,14 +40,19 @@ public class ObjectArchiveFacadeWS
 	 * @return list of object IDs
 	 */
 
-	public List<String> getObjectList(String archive)
-	{
+	public List<String> getObjectList(String archive) throws BWFLAException {
 		if(!ObjectArchiveSingleton.confValid)
 		{
 			LOG.severe("ObjectArchive not configured");
 			return null;
 		}
+
+		if(archive == null)
+			archive = "default";
+
 		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
+		if(a == null)
+			throw new BWFLAException("Object archive " + archive + " not found");
 		return a.getObjectList();
 	}
 
@@ -71,8 +77,7 @@ public class ObjectArchiveFacadeWS
 	 * @param id object-id
 	 * @return object reference as PID / PURL
 	 */
-	public String getObjectReference(String archive, String id)
-	{
+	public String getObjectReference(String archive, String id) throws BWFLAException {
 		if(!ObjectArchiveSingleton.confValid)
 		{
 			LOG.severe("ObjectArchive not configured");
@@ -90,6 +95,8 @@ public class ObjectArchiveFacadeWS
 
 		LOG.info("archive: " + archive);
 		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
+		if(a == null)
+			throw new BWFLAException("archive " + archive + " not found!");
 		try {
 			FileCollection fc = a.getObjectReference(id);
 			if(fc == null)
@@ -129,7 +136,23 @@ public class ObjectArchiveFacadeWS
 
 		return true;
 	}
-	
+
+	public void delete(String archive, String id) throws BWFLAException {
+		if(!ObjectArchiveSingleton.confValid)
+		{
+			throw new BWFLAException("ObjectArchive not configured");
+		}
+
+		if(archive == null)
+			archive = "default";
+
+		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
+		if(a == null)
+			throw new BWFLAException("archive " + archive + " not found");
+
+		a.delete(id);
+	}
+
 	public DigitalObjectMetadata getObjectMetadata(String archive, String id)
 	{
 		if(!ObjectArchiveSingleton.confValid)
@@ -234,5 +257,9 @@ public class ObjectArchiveFacadeWS
 			result.add(key);
 		}
 		return result;
+	}
+
+	public void registerUserArchive(String userId) throws BWFLAException {
+		ObjectArchiveSingleton.archiveMap.put(userId, new DigitalObjectUserArchive(userId));
 	}
 }

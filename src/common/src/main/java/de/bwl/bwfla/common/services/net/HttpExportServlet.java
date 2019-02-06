@@ -89,6 +89,7 @@ public abstract class HttpExportServlet extends HttpServlet
 	{
 		final File file = this.doResolveRequest(request.getPathInfo());
 		if (file == null || !file.exists()) {
+			log.severe("looking for :" + request.getPathInfo());
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
 		}

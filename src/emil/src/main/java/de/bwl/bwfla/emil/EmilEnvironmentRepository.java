@@ -2,36 +2,32 @@ package de.bwl.bwfla.emil;
 
 
 import java.io.IOException;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
+import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.emil.database.MongodbEaasConnector;
+import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.*;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
+import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.inject.api.Config;
 
@@ -40,6 +36,8 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.util.*;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -47,29 +45,22 @@ public class EmilEnvironmentRepository {
 
 	@Inject
 	private MongodbEaasConnector dbConnector;
+	private MongodbEaasConnector.DatabaseInstance db;
 
-	private Path emilEnvPath;
-	private Path objEnvPath;
-	private Path sessionEnvPath;
-	private Path containersEnvPath;
+	@Inject
+	private DatabaseEnvironmentsAdapter environmentsAdapter;
+
+	@Inject
+	@Config("emil.emilDatabase")
+	private String dbName;
 
 	protected final static Logger LOG = Logger.getLogger(EmilEnvironmentRepository.class.getName());
 
-	@Inject
-	@Config(value = "emil.emildbcollectionname")
-	private String emilDbCollectionName;
+	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
 	@Inject
 	@Config(value = "commonconf.serverdatadir")
 	protected String serverdatadir;
-
-	@Inject
-	@Config(value = "emil.emilobjectenvironmentspaths")
-	protected String emilObjectEnvironmentsPath;
-
-	@Inject
-	@Config(value = "emil.emilenvironmentspath")
-	protected String emilEnvironmentsPath;
 
 	@Inject
 	@Config(value = "ws.objectarchive")
@@ -83,31 +74,158 @@ public class EmilEnvironmentRepository {
 	@Config(value = "emil.usersessionretention")
 	protected long retention;
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext authenticatedUser;
 
-	private EnvironmentsAdapter environmentsAdapter;
+	@Inject
+	private EmilDataImport importHelper;
+
+	private String emilDbCollectionName = "eaasEnv";
+
 	private ObjectArchiveHelper objectArchiveHelper;
 
-
-	private static final Gson GSON = new GsonBuilder().create();
-
 	private UserSessions sessions;
-	private ConcurrentHashMap<String, EmilEnvironment> emilEnvironments;
-
 
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
-	private <T extends EmilEnvironment> List<T> loadEmilEnvironments(final Class<T> klass) throws JAXBException {
-		// fixme
-		// need to remove this hack. see more in EmilEnvironment.getDatabaseKey()
-		char c[] = klass.getSimpleName().toCharArray();
-		c[0] = Character.toLowerCase(c[0]);
-
-		if (klass.equals(EmilEnvironment.class) || klass.equals(EmilObjectEnvironment.class) || klass.equals(EmilContainerEnvironment.class)) {
-			return dbConnector.getJaxbObjects(emilDbCollectionName, new String(c), klass);
-		}
-		return dbConnector.getJaxbObjects(emilDbCollectionName, new String(c), klass);
+	public final class MetadataCollection
+	{
+		public static final String PUBLIC = "public";
+		public static final String REMOTE  = "remote";
+		public static final String DEFAULT  = "default";
 	}
 
+	private boolean checkPermissions(String envId, EmilEnvironmentPermissions.Permissions wanted) throws BWFLAException {
+		EmilEnvironment env = getEmilEnvironmentById(envId);
+		return checkPermissions(env, wanted);
+	}
+
+	private String getCollectionCtx(String username) {
+		if(username == null)
+			return emilDbCollectionName;
+		return username;
+	}
+
+	private String getCollectionCtx() {
+		if (authenticatedUser == null || authenticatedUser.getUsername() == null)
+			return emilDbCollectionName;
+
+		return authenticatedUser.getUsername();
+	}
+
+	private String getUserCtx()
+	{
+		if(authenticatedUser == null)
+			return null;
+
+		return authenticatedUser.getUsername();
+	}
+
+	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted) {
+		if (env == null)
+			return true;
+
+		EmilEnvironmentPermissions permissions = env.getPermissions();
+		if (permissions == null) // nothing to be done
+		{
+			// LOG.info("no permissions set");
+			return true;
+		}
+
+		EmilEnvironmentOwner owner = env.getOwner();
+		if (owner != null && owner.getUsername() != null) {
+			if (authenticatedUser == null || authenticatedUser.getUsername() == null) {
+				LOG.severe("environment " + env.getEnvId() + " access denied to unknown user " + owner.getUsername());
+				return false;
+			}
+
+			String username = authenticatedUser.getUsername();
+			if (!username.equals(owner.getUsername())) {
+				LOG.warning("access denied to environment " + env.getEnvId()
+						+ ". Reason username mismatch: owner " + owner.getUsername() + " ctx " + username);
+				return false;
+			}
+		}
+		else {
+			// we have a user context, but the user tries to delete a shared resource
+			if (authenticatedUser != null && authenticatedUser.getUsername() == null && wanted.equals(EmilEnvironmentPermissions.Permissions.WRITE))
+				return false;
+		}
+
+		if (wanted.getValue() > permissions.getUser().getValue()) {
+			LOG.info("permission missmatch: got " + permissions.getUser().getValue() + " wanted: " + wanted.getValue());
+			return false;
+		}
+
+		//LOG.warning("Access denied to environment " +  env.getEnvId());
+		return true;
+	}
+
+	private boolean sameOwner(EmilEnvironment env) {
+		if (env == null)
+			return false;
+
+		String username = null;
+		if (authenticatedUser != null) {
+			username = authenticatedUser.getUsername();
+		}
+
+		EmilEnvironmentOwner owner = env.getOwner();
+		if (owner == null || owner.getUsername() == null) {
+			LOG.severe("environment " + env.getEnvId() + " has but no owner data.");
+			return (username == null);
+		}
+
+		if (username != null && username.equals(owner.getUsername()))
+			return true;
+
+		LOG.warning("username mismatch");
+		return false;
+	}
+
+	public Stream<EmilEnvironment> listPublicEnvironments(int offset, int maxcount, MongodbEaasConnector.FilterBuilder filter)
+	{
+		return db.find(MetadataCollection.PUBLIC, offset, maxcount, filter, "type");
+	}
+
+	public long countPublicEnvironments(MongodbEaasConnector.FilterBuilder filter)
+	{
+		return db.count(MetadataCollection.PUBLIC, filter);
+	}
+
+	private Stream<EmilEnvironment> loadEmilEnvironments() {
+		Stream<EmilEnvironment> all = db.find(getCollectionCtx(), new MongodbEaasConnector.FilterBuilder(), "type");
+		all = Stream.concat(all, db.find(MetadataCollection.PUBLIC, new MongodbEaasConnector.FilterBuilder(), "type"));
+		all = Stream.concat(all,  db.find(MetadataCollection.REMOTE, new MongodbEaasConnector.FilterBuilder(), "type"));
+		return all;
+	}
+
+	private List<EmilObjectEnvironment> loadEmilObjectEnvironments() throws BWFLAException {
+		//TODO: refactor to stream
+		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(getCollectionCtx(),
+				EmilObjectEnvironment.class.getCanonicalName(), "type");
+
+		result.addAll(db.getRootlessJaxbObjects(MetadataCollection.PUBLIC,
+				EmilObjectEnvironment.class.getCanonicalName(), "type"));
+
+		result.addAll(db.getRootlessJaxbObjects(MetadataCollection.REMOTE,
+				EmilObjectEnvironment.class.getCanonicalName(), "type"));
+
+		return result;
+	}
+
+	private void setPermissions(EmilEnvironment ee) {
+		if (authenticatedUser != null && authenticatedUser.getUsername() != null) {
+			EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
+			owner.setUsername(authenticatedUser.getUsername());
+			ee.setOwner(owner);
+
+			EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
+			permissions.setUser(EmilEnvironmentPermissions.Permissions.WRITE);
+			ee.setPermissions(permissions);
+		}
+	}
 
 //	synchronized private void migrateDirs()
 //	{
@@ -140,30 +258,18 @@ public class EmilEnvironmentRepository {
 //		}
 //	}
 
-
-	private void load() throws JAXBException {
-		emilEnvironments = new ConcurrentHashMap<>();
-
-		List<EmilEnvironment> _envs = loadEmilEnvironments(EmilEnvironment.class);
-		for (EmilEnvironment _e : _envs)
-			emilEnvironments.put(_e.getEnvId(), _e);
-
-		List<EmilObjectEnvironment> _oEnvs = loadEmilEnvironments(EmilObjectEnvironment.class);
-		for (EmilObjectEnvironment _e : _oEnvs)
-			emilEnvironments.put(_e.getEnvId(), _e);
-
-		List<EmilContainerEnvironment> _cEnvs = loadEmilEnvironments(EmilContainerEnvironment.class);
-		for (EmilContainerEnvironment _e : _cEnvs)
-			emilEnvironments.put(_e.getEnvId(), _e);
-
-		List<EmilSessionEnvironment> _sEnvs = loadEmilEnvironments(EmilSessionEnvironment.class);
-		sessions = new UserSessions(_sEnvs);
-		for (EmilSessionEnvironment _e : _sEnvs)
-			emilEnvironments.put(_e.getEnvId(), _e);
-	}
-
 	@PostConstruct
 	public void init() {
+
+		db = dbConnector.getInstance(dbName);
+		try {
+			db.createIndex(emilDbCollectionName, "envId");
+			db.ensureTimestamp(emilDbCollectionName);
+		} catch (Exception e)
+		{
+			e.printStackTrace();
+		}
+
 		if (serverdatadir != null) {
 			Path cache = Paths.get(serverdatadir);
 			if (!cache.toFile().exists()) // new style configuratioen
@@ -176,287 +282,293 @@ public class EmilEnvironmentRepository {
 			}
 		}
 
-		try {
-			Path exportDir = Paths.get(serverdatadir).resolve("export");
-			if (!Files.exists(exportDir))
-				Files.createDirectory(exportDir);
-			this.emilEnvPath = exportDir.resolve("emil-environments");
-			if (!Files.exists(this.emilEnvPath))
-				Files.createDirectory(this.emilEnvPath);
-			this.objEnvPath = exportDir.resolve("emil-object-environments");
-			if (!Files.exists(this.objEnvPath))
-				Files.createDirectory(this.objEnvPath);
-			this.sessionEnvPath = exportDir.resolve("emil-session-environments");
-			if (!Files.exists(this.sessionEnvPath))
-				Files.createDirectory(this.sessionEnvPath);
-			this.containersEnvPath = exportDir.resolve("emil-container-environments");
-			if (!Files.exists(this.containersEnvPath))
-				Files.createDirectory(this.containersEnvPath);
-		} catch (IOException e) {
-			LOG.warning("creation of emil dirs failed! \n" + e.getMessage());
-		}
-		environmentsAdapter = new EnvironmentsAdapter(imageArchive);
 		objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
 
-		try {
-			try {
-				importExistentEnv();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
-			load();
-		} catch (JAXBException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			throw new IllegalStateException();
-		}
+//		try {
+//			try {
+//				 importExistentEnv();
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+//		} catch (BWFLAException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			throw new IllegalStateException();
+//		}
+
+		// removeMissingEnvironments();
 
 		LOG.info("Setting user retention time to: " + retention);
 		scheduledExecutorService.scheduleAtFixedRate(new Monitor(retention), 1, 1, TimeUnit.MINUTES);
 	}
 
+	private EmilEnvironment getSharedEmilEnvironmentById(String envid)
+	{
+		try {
+			return db.getObjectWithClassFromDatabaseKey(MetadataCollection.PUBLIC, "type", envid, "envId");
+		}
+		catch(BWFLAException | NoSuchElementException e)
+		{
+			try {
+				return db.getObjectWithClassFromDatabaseKey(MetadataCollection.REMOTE, "type", envid, "envId");
+			} catch (BWFLAException | NoSuchElementException e1) {
+				return null;
+			}
+		}
+	}
+
 	public EmilEnvironment getEmilEnvironmentById(String envid) {
 		if (envid == null)
 			return null;
-		return emilEnvironments.get(envid);
-	}
 
-	private <T extends EmilEnvironment> List<T> importEnvByPath(final Class<T> klass, Path... paths) throws IOException {
-		final List<T> environments = new ArrayList<>();
-		for (Path path : paths) {
-			if (!Files.exists(path)) {
-				continue;
-			}
-			DirectoryStream<Path> files = Files.newDirectoryStream(path);
+		try {
+			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(), "type", envid, "envId");
+			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ))
+				return getSharedEmilEnvironmentById(envid);
 
-			for (java.nio.file.Path fpath : files) {
-				if (Files.isDirectory(fpath))
-					continue;
-
-				if (fpath.toString().contains(".fuse_hidden"))
-					continue;
-
-				if (fpath.getFileName().startsWith("."))
-					continue;
-
-				try {
-					T env = getEmilEnvironmentByPath(fpath, klass);
-					if (env != null) {
-						environments.add(env);
-						dbConnector.saveDoc(emilDbCollectionName, env.getEnvId(), env.getDatabaseKey(), env.JSONvalue(false));
-					}
-				} catch (Exception e) {
-					LOG.warning("import might be broken! \n " + e.getMessage());
-				}
-			}
-
-			Path obsoleteEnvsDir = Paths.get(path.getParent() + "/." + path.getFileName());
-			if (obsoleteEnvsDir.toFile().exists()) {
-				obsoleteEnvsDir = Paths.get(obsoleteEnvsDir + UUID.randomUUID().toString());
-			}
-			Files.move(path, obsoleteEnvsDir);
+			return env;
+		} catch (BWFLAException | NoSuchElementException e) {
+			return getSharedEmilEnvironmentById(envid);
 		}
-		return environments;
-
 	}
 
-	public synchronized void importExistentEnv() throws IOException {
 
-		Path emilEnvPath = Paths.get(serverdatadir).resolve("emil-environments");
-		Path objEnvPath = Paths.get(serverdatadir).resolve("emil-object-environments");
-		Path sessionEnvPath = Paths.get(serverdatadir).resolve("emil-session-environments");
-		Path containerEnvs = Paths.get(serverdatadir).resolve("emil-container-environments");
-
-		// ensure the absence of null elements
-		Optional.ofNullable(importEnvByPath(EmilEnvironment.class, Paths.get(emilEnvironmentsPath), emilEnvPath));
-		Optional.ofNullable(importEnvByPath(EmilObjectEnvironment.class, Paths.get(emilObjectEnvironmentsPath), objEnvPath));
-		Optional.ofNullable(importEnvByPath(EmilSessionEnvironment.class, Paths.get(emilEnvironmentsPath), sessionEnvPath));
-		Optional.ofNullable(importEnvByPath(EmilContainerEnvironment.class, Paths.get(emilEnvironmentsPath), containerEnvs));
-	}
-
-	private <T> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JsonIOException {
-		if (!Files.exists(envpath))
-			throw new IOException("file not found");
-
-		Reader reader = Files.newBufferedReader(envpath, StandardCharsets.UTF_8);
-		return GSON.fromJson(reader, klass);
-	}
-
-	public List<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId) {
+	//TODO: refactor
+	public List<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId) throws BWFLAException {
 		List<EmilObjectEnvironment> result = new ArrayList<>();
-		for (EmilEnvironment env : emilEnvironments.values()) {
-			if (!(env instanceof EmilObjectEnvironment) || env instanceof EmilSessionEnvironment)
-				continue;
+		if (objectId == null)
+			return result;
 
-			EmilObjectEnvironment objEnv = (EmilObjectEnvironment) env;
-
-			if (objEnv.getObjectId().equals(objectId) && objEnv.isVisible())
+		List<EmilObjectEnvironment> all = loadEmilObjectEnvironments();
+		for (EmilObjectEnvironment objEnv : all) {
+			if (objEnv.getObjectId().equals(objectId) && objEnv.isVisible()
+					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ))
 				result.add(objEnv);
 		}
 		return result;
 	}
 
-	public void save(EmilEnvironment env) throws IOException, JAXBException, BWFLAException {
-		dbConnector.saveDoc(emilDbCollectionName, env.getEnvId(), env.getDatabaseIdKey(), env.JSONvalue(false));
-		emilEnvironments.put(env.getEnvId(), env);
+	public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
+		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
+			if(userctx == null)
+				throw new BWFLAException("no user context in publish image context");
+			db.deleteDoc(userctx, env.getEnvId(), env.getIdDBkey());
+		}
+		env.setArchive(destArchive);
+		save(env, false);
 	}
 
-	public <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws IOException, BWFLAException, JAXBException {
+	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
+
+		if(env.getArchive() == null)
+			env.setArchive(MetadataCollection.DEFAULT);
+
+		if(env.getArchive().equals(MetadataCollection.PUBLIC) || env.getArchive().equals(MetadataCollection.REMOTE))
+		{
+			env.setOwner(null);
+			EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
+			permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
+			env.setPermissions(permissions);
+		}
+		else {
+			if(setPermission)
+				setPermissions(env);
+		}
+
+		switch (env.getArchive())
+		{
+			case MetadataCollection.PUBLIC:
+				db.saveDoc(MetadataCollection.PUBLIC, env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
+				break;
+			case MetadataCollection.REMOTE:
+				db.saveDoc(MetadataCollection.REMOTE, env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
+				break;
+			default:
+				db.saveDoc(getCollectionCtx(), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
+		}
+		// LOG.severe(env.toString());
+	}
+
+	public ImageNameIndex getNameIndexes() throws BWFLAException, JAXBException {
+		for (String a : environmentsAdapter.listBackendNames()) {
+			if (a.equals(EMULATOR_DEFAULT_ARCHIVE))
+				return environmentsAdapter.getNameIndexes(a);
+		}
+		throw new BWFLAException("emulators archive is not found");
+	}
+
+	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException, JAXBException {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
+		// if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
+		//	throw new BWFLAException("permission denied");
+
 		if (!(env instanceof EmilSessionEnvironment)) {
-
-			// If environment doesn't have children, we delete it. Otherwise we make it not visible
-			if (env.getChildrenEnvIds().size() < 1) {
-				LOG.info("deleting env " + env.getEnvId());
-				dbConnector.deleteDoc(emilDbCollectionName, envId, env.getDatabaseIdKey());
-				environmentsAdapter.delete(envId, deleteMetadata, deleteImages);
-
-				// After we deleted environment, we need to remove childId from parent environment
-				if (env.getParentEnvId() != null) {
-
-					EmilEnvironment parentEnv = getEmilEnvironmentById(env.getParentEnvId());
+			if (env.getParentEnvId() != null) {
+				EmilEnvironment parentEnv = getEmilEnvironmentById(env.getParentEnvId());
+				if(true || checkPermissions(parentEnv, EmilEnvironmentPermissions.Permissions.WRITE)) {
 					parentEnv.removeChildEnvId(envId);
-
-					// update: we should not delete all the parents, to avoid deleting the base environment.
-					// instead we only delete the top environment (for now). this requires a better UI solution
-
-					// if (!parentEnv.isVisible() && parentEnv.getChildrenEnvIds().size() < 2) {
-					parentEnv.setVisible(true);
-						// Finally, if parent doesn't have children and not visible, we delete it (means we delete env including revisions)
-						// delete(parentEnv.getEnvId());
-					// }
-					save(parentEnv);
+					parentEnv.removeBranchEnvId(envId);
+					save(parentEnv, false);
 				}
-				else {
-					LOG.info("no parent found");
-				}
-				emilEnvironments.remove(envId);
+			}
 
-			} else {
-				LOG.info("making env " + env.getEnvId() + " invisible");
-				env.setVisible(false);
-				save(env);
+			if (env.getChildrenEnvIds().size() == 0 && env.getBranches().size() == 0) {
+				LOG.info("deleting env " + env.getEnvId());
+				try {
+					environmentsAdapter.delete(env.getArchive(), envId, deleteMetadata, deleteImages);
+				} catch (NoSuchElementException e) {
+					e.printStackTrace();
+				}
+				db.deleteDoc(getCollectionCtx(), envId, env.getIdDBkey());
+				db.deleteDoc(ClassificationData.collectionName, envId, ClassificationData.parentElement + ".environmentList.id", false);
 			}
 		} else {
 			EmilSessionEnvironment session = (EmilSessionEnvironment) env;
 			sessions.remove(session);
-			environmentsAdapter.delete(envId, true, true);
-			dbConnector.deleteDoc(emilDbCollectionName, envId, env.getDatabaseIdKey());
+			environmentsAdapter.delete(env.getArchive(), envId, true, true);
+			db.deleteDoc(getCollectionCtx(), envId, env.getIdDBkey());
 			if (session.getParentEnvId() != null) {
 				EmilEnvironment parentEnv = getEmilEnvironmentById(session.getParentEnvId());
 				if (parentEnv instanceof EmilSessionEnvironment && !(parentEnv.getChildrenEnvIds().size() > 1)) {
 					delete(session.getParentEnvId(), true, true);
 				}
 			}
-
-			emilEnvironments.remove(envId);
 		}
-		dbConnector.deleteDoc(ClassificationData.collectionName, envId, ClassificationData.parentElement + ".environmentList.id", false);
 	}
 
-	public  <T extends JaxbType> ArrayList<T> getDatabaseContent(String type, Class<T> klass ) throws JAXBException {
-		return dbConnector.getJaxbObjects(emilDbCollectionName, type, klass);
+	public  <T extends JaxbType> ArrayList<T> getDatabaseContent(String type, Class<T> klass ) throws BWFLAException {
+		return db.getRootlessJaxbObjects(getCollectionCtx(), type, "type");
 	}
 
 	public List<EmilSessionEnvironment> getEmilSessionEnvironments() {
 		return sessions.toList();
 	}
 
-	public int initialize() throws JAXBException, IOException, BWFLAException {
+	public int initialize() throws JAXBException, BWFLAException {
 		int counter = 0;
-		List<Environment> envs = environmentsAdapter.getEnvironments(null);
-		for (Environment env : envs) {
-			EmilEnvironment emilEnv = getEmilEnvironmentById(env.getId());
-			if (emilEnv == null && env instanceof MachineConfiguration) {
-				counter++;
-				EmilEnvironment ee;
-				String objectId = EmulationEnvironmentHelper.isObjectEnvironment((MachineConfiguration) env);
-				if (objectId != null) {
-					ee = new EmilObjectEnvironment();
-					((EmilObjectEnvironment) ee).setObjectId(objectId);
-				} else
-					ee = new EmilEnvironment();
-				// since you have to initialize object with correct instance, save function could not be moved out of if-else scope
-				save(env, ee);
-			} else if (emilEnv == null && env instanceof ContainerConfiguration) {
-				EmilContainerEnvironment ee = new EmilContainerEnvironment();
-				save(env, ee);
+
+//		List<EmilEnvironment> oldEnvs = null;
+//		try {
+//			 oldEnvs = importHelper.importExistentEnv(dbConnector.getInstance("eaas"), "emilEnv");
+//		} catch (IOException e) {
+//			e.printStackTrace();
+//		}
+//
+//		for(EmilEnvironment env : oldEnvs)
+//		{
+//			Environment e = environmentsAdapter.getEnvironmentById("default", env.getEnvId());
+//			if(e == null)
+//			{
+//				LOG.warning("old env import failed. env not found: " + env.getEnvId());
+//				continue;
+//			}
+//
+//			LOG.warning("importing " + env.getEnvId());
+//			LOG.warning(env.toString());
+//			LOG.warning(env.isVisible() + " xxx \n");
+//
+//			env.setArchive(MetadataCollection.PUBLIC);
+//			save(env, false);
+//
+//			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
+//			LOG.warning(__env.isVisible() + "yyy");
+//		}
+
+		Collection<String> archives = environmentsAdapter.listBackendNames();
+		for(String a : archives) {
+			List<Environment> envs;
+			if(a.equals("default"))
+				continue;
+			else
+				envs = environmentsAdapter.getEnvironments(a);
+
+			for (Environment env : envs) {
+				// LOG.warning("found env " + env.getId()	 + " in archive " + a);
+				EmilEnvironment emilEnv = getEmilEnvironmentById(env.getId());
+
+				if(emilEnv != null && (emilEnv.getArchive() == null || !emilEnv.getArchive().equals(a)))
+				{
+					EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
+					permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
+					emilEnv.setPermissions(permissions);
+
+					emilEnv.setArchive(a);
+					save(emilEnv, false);
+				}
+
+				if ((emilEnv == null && env instanceof ContainerConfiguration)) {
+					EmilContainerEnvironment ee = new EmilContainerEnvironment();
+					saveImport(env, ee);
+				} else if (emilEnv == null && env instanceof MachineConfiguration) {
+					counter++;
+					EmilEnvironment ee;
+					String objectId = EmulationEnvironmentHelper.isObjectEnvironment((MachineConfiguration) env);
+					if (objectId != null) {
+						ee = new EmilObjectEnvironment();
+						((EmilObjectEnvironment) ee).setObjectId(objectId);
+					} else
+						ee = new EmilEnvironment();
+					// since you have to initialize object with correct instance, save function could not be moved out of if-else scope
+					ee.setArchive(a);
+					ee.setEnvId(env.getId());
+					ee.setTitle(env.getDescription().getTitle());
+					ee.setEmulator(((MachineConfiguration) env).getEmulator().getBean());
+					ee.setOs("n.a.");
+					ee.setDescription("imported base environment");
+
+					if(authenticatedUser != null && authenticatedUser.getUsername() != null)
+					{
+						EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
+						owner.setUsername(authenticatedUser.getUsername());
+
+						EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
+						permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
+
+						if(a.equals("default"))
+							ee.setOwner(owner);
+						ee.setPermissions(permissions);
+					}
+					save(ee, false);
+				}
 			}
 		}
 		return counter;
 	}
 
-	private void save(Environment env, EmilEnvironment ee) throws JAXBException, IOException, BWFLAException {
+	private void saveImport(Environment env, EmilEnvironment ee) throws JAXBException, BWFLAException {
 		ee.setEnvId(env.getId());
 		ee.setTitle(env.getDescription().getTitle());
 		ee.setAuthor("n.a.");
 		if (env instanceof ContainerConfiguration) {
 			((EmilContainerEnvironment) ee).setInput(((ContainerConfiguration) env).getInput());
 			((EmilContainerEnvironment) ee).setOutput(((ContainerConfiguration) env).getOutputPath());
+			if(env instanceof  OciContainerConfiguration){
+				((EmilContainerEnvironment) ee).setArgs(((OciContainerConfiguration) env).getProcess().getArguments());
+				((EmilContainerEnvironment) ee).setEnv(((OciContainerConfiguration) env).getProcess().getEnvironmentVariables());
+			}
 		}
+		if (env instanceof MachineConfiguration)
+			ee.setEmulator(((MachineConfiguration) env).getEmulator().getBean());
+		else
+			ee.setEmulator("n.a.");
+
 		ee.setTitle(env.getDescription().getTitle());
-		ee.setEmulator("n.a.");
 		ee.setOs("n.a.");
 		ee.setDescription("n.a.");
-		save(ee);
+		save(ee, true);
 	}
 
-	public List<EmilEnvironment> getEmilEnvironments() throws IOException
-	{
-		final List<EmilEnvironment> environments = new ArrayList<>();
+	public List<EmilEnvironment> getEmilEnvironments() {
 
-		for(EmilEnvironment _e : emilEnvironments.values()) {
-			if (!(_e instanceof EmilSessionEnvironment) && !(_e instanceof EmilObjectEnvironment) && !(_e instanceof EmilContainerEnvironment))
-				environments.add(_e);
-		}
+		final Stream<EmilEnvironment> all = loadEmilEnvironments();
+		final HashSet<String> known = new HashSet<>();
 
-		Collections.sort(environments);
-		return environments;
-	}
-
-	public List<EmilEnvironment> getAllEnvironments() throws IOException {
-		return new ArrayList<>(emilEnvironments.values());
-	}
-
-	public void saveEnvToPath(EmilEnvironment env) throws IOException {
-		String json;
-		Path envpath;
-		if (env instanceof EmilSessionEnvironment) {
-			envpath = sessionEnvPath.resolve(env.getEnvId());
-			json = GSON.toJson((EmilSessionEnvironment) env);
-		} else if (env instanceof EmilObjectEnvironment) {
-			envpath = objEnvPath.resolve(env.getEnvId());
-			json = GSON.toJson((EmilObjectEnvironment) env);
-		} else if (env instanceof EmilContainerEnvironment) {
-			envpath = containersEnvPath.resolve(env.getEnvId());
-			json = GSON.toJson((EmilContainerEnvironment) env);
-		} else {
-			envpath = emilEnvPath.resolve(env.getEnvId());
-			json = GSON.toJson(env);
-		}
-		Files.write(envpath, json.getBytes());
-	}
-
-
-	public List<EmilObjectEnvironment> getEmilObjectEnvironments() {
-		final List<EmilObjectEnvironment> environments = new ArrayList<>();
-
-		for (EmilEnvironment _e : emilEnvironments.values())
-			if (!(_e instanceof EmilSessionEnvironment) && (_e instanceof EmilObjectEnvironment))
-				environments.add((EmilObjectEnvironment) _e);
-
-		Collections.sort(environments);
-		return environments;
-	}
-
-	public List<EmilContainerEnvironment> getEmilContainerEnvironments() {
-		final List<EmilContainerEnvironment> environments = new ArrayList<>();
-
-		for (EmilEnvironment _e : emilEnvironments.values())
-			if (_e instanceof EmilContainerEnvironment)
-				environments.add((EmilContainerEnvironment) _e);
-
-		Collections.sort(environments);
-		return environments;
+		return all.filter(e -> {
+			if(known.contains(e.getEnvId()))
+				return false;
+			return known.add(e.getEnvId());
+		      }).filter( e -> (e.isVisible()))
+				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ)))
+				.collect(Collectors.toList());
 	}
 
 	public List<EmilEnvironment> getChildren(String envId, List<EmilEnvironment> envs) throws BWFLAException {
@@ -488,7 +600,6 @@ public class EmilEnvironmentRepository {
 		sessionEnv.setObjectId(request.getObjectId());
 		sessionEnv.setCreationDate((new Date()).getTime());
 		sessionEnv.setUserId(request.getUserId());
-		sessionEnv.setVisible(true);
 		sessionEnv.setParentEnvId(parentEnv.getEnvId());
 
 		LOG.info("adding session for user: " + request.getUserId()
@@ -496,51 +607,56 @@ public class EmilEnvironmentRepository {
 
 		sessionEnv.setEnvId(sessionEnvId);
 
-		try {
-			save(sessionEnv);
-			EmilSessionEnvironment oldEnv = sessions.get(sessionEnv.getUserId(), sessionEnv.getObjectId());
-			LOG.info("saving: " + sessionEnvId);
-			if (oldEnv != null)
-				LOG.info("found oldEnv: " + oldEnv.getEnvId());
-			LOG.info("parent env was: " + parentEnv.getParentEnvId());
+		save(sessionEnv, false);
+		EmilSessionEnvironment oldEnv = sessions.get(sessionEnv.getUserId(), sessionEnv.getObjectId());
+		LOG.info("saving: " + sessionEnvId);
+		if (oldEnv != null)
+			LOG.info("found oldEnv: " + oldEnv.getEnvId());
+		LOG.info("parent env was: " + parentEnv.getParentEnvId());
 
-			if (oldEnv != null && parentEnv.getParentEnvId() != null && !oldEnv.getEnvId().equals(parentEnv.getEnvId())) {
+		if (oldEnv != null && parentEnv.getParentEnvId() != null && !oldEnv.getEnvId().equals(parentEnv.getEnvId())) {
 
-				LOG.info("would like to delete " + oldEnv.getEnvId());
-				// delete(oldEnv.getEnvId());
-			}
-			sessions.add(sessionEnv);
-
-
-			parentEnv.addChildEnvId(sessionEnvId);
-			save(parentEnv);
-			if (parentEnv instanceof EmilSessionEnvironment) {
-				parentEnv.setVisible(false);
-			}
-		} catch (JAXBException | IOException e) {
-			throw new BWFLAException("saveNewEnvironment: " + e.getMessage(), e);
+			LOG.info("would like to delete " + oldEnv.getEnvId());
+			// delete(oldEnv.getEnvId());
 		}
+		sessions.add(sessionEnv);
+
+		parentEnv.addChildEnvId(sessionEnvId);
+		save(parentEnv, false);
 		return sessionEnv.getEnvId();
 	}
 
-	String saveAsObjectEnvironment(Snapshot snapshot, SaveObjectEnvironmentRequest request) throws BWFLAException {
-		EmilObjectEnvironment ee = snapshot.createObjectEnvironment(environmentsAdapter, objectArchiveHelper, request);
-		try {
-			save(ee);
-		} catch (JAXBException | IOException e) {
-			throw new BWFLAException("saveObjectEnvironment: " + e.getMessage(), e);
+	synchronized String saveAsObjectEnvironment(Snapshot snapshot, SaveObjectEnvironmentRequest request) throws BWFLAException {
+
+		String archiveName = request.getObjectArchiveId();
+		if (archiveName == null) {
+			if(authenticatedUser == null || authenticatedUser.getUsername() == null)
+				request.setObjectArchiveId("default");
+			else
+				request.setObjectArchiveId(authenticatedUser.getUsername());
 		}
+
+		if(request.getObjectArchiveId() == null)
+			request.setObjectArchiveId(archiveName);
+
+		EmilEnvironment parentEnv = getEmilEnvironmentById(request.getEnvId());
+		EmilObjectEnvironment ee = snapshot.createObjectEnvironment(environmentsAdapter, objectArchiveHelper, request);
+
+		parentEnv.addBranchId(ee.getEnvId());
+		save(parentEnv, false);
+		save(ee, true);
+
 		return ee.getEnvId();
 	}
 
 	String saveImport(Snapshot snapshot, SaveImportRequest request) throws BWFLAException {
-		Environment environment = environmentsAdapter.getEnvironmentById(request.getEnvId());
+		Environment environment = environmentsAdapter.getEnvironmentById(request.getArchive(), request.getEnvId());
 		EnvironmentDescription description = new EnvironmentDescription();
 		description.setTitle(request.getTitle());
 		environment.setDescription(description);
 
-		environmentsAdapter.updateMetadata(environment.toString());
-		environmentsAdapter.commitTempEnvironment(request.getEnvId());
+		environmentsAdapter.updateMetadata("default", environment);
+		environmentsAdapter.commitTempEnvironment("default", request.getEnvId());
 
 		EmilEnvironment newEmilEnv = getEmilEnvironmentById(request.getEnvId());
 
@@ -551,35 +667,30 @@ public class EmilEnvironmentRepository {
 		newEmilEnv.setTitle(request.getTitle());
 		newEmilEnv.setEnvId(request.getEnvId());
 		newEmilEnv.setAuthor(request.getAuthor());
-
+		newEmilEnv.setEnableRelativeMouse(request.isRelativeMouse());
 
 		newEmilEnv.setDescription(request.getMessage());
-		try {
-			save(newEmilEnv);
-		} catch (JAXBException | IOException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			throw new BWFLAException(e);
-		}
+		save(newEmilEnv, true);
+
 		return request.getEnvId();
 	}
 
 
 	void saveImportedContainer(String id, String title, String description, String author) throws BWFLAException {
-		environmentsAdapter.commitTempEnvironmentWithCustomType(id, "containers");
+		environmentsAdapter.commitTempEnvironmentWithCustomType("default", id, "containers");
 
 		EmilEnvironment newEmilEnv = getEmilEnvironmentById(id);
 		if (newEmilEnv != null)
 			throw new BWFLAException("import failed: environment with id: " + id + " exists.");
 
 
-		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById(id);
+		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", id);
 
 
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
 		env.setEnvId(id);
 		env.setTitle(title);
 		env.setDescription(description);
-		env.setVisible(true);
 		env.setInput(containerConfiguration.getInput());
 		env.setOutput(containerConfiguration.getOutputPath());
 		env.setArgs(containerConfiguration.getProcess().getArguments());
@@ -588,22 +699,17 @@ public class EmilEnvironmentRepository {
 
 		env.setAuthor(author);
 
-
-		try {
-			save(env);
-		} catch (IOException | JAXBException e) {
-			e.printStackTrace();
-		}
+		save(env, true);
 	}
 
-	String saveAsRevision(Snapshot snapshot, SaveDerivateRequest req) throws BWFLAException {
+	String saveAsRevision(Snapshot snapshot, SaveDerivateRequest req, boolean checkpoint) throws BWFLAException {
 
 		EmilEnvironment env = getEmilEnvironmentById(req.getEnvId());
 		if (env == null) {
 			if (req instanceof SaveCreatedEnvironmentRequest) {
 				// no emil env -> new environment has been created and committed
 				Environment _env = null;
-				_env = environmentsAdapter.getEnvironmentById(req.getEnvId());
+				_env = environmentsAdapter.getEnvironmentById(req.getArchive(), req.getEnvId());
 
 				env = new EmilEnvironment();
 				env.setTitle(_env.getDescription().getTitle());
@@ -613,40 +719,36 @@ public class EmilEnvironmentRepository {
 				throw new BWFLAException("Environment with id " + " not found");
 		}
 
-		if (!(req instanceof SaveNewEnvironmentRequest)) {
-			env.setVisible(false);
-			try {
-				save(env);
-			} catch (JAXBException | IOException e) {
-				throw new BWFLAException("saveAsRevision: " + e.getMessage(), e);
-			}
-		}
-
-		EmilEnvironment newEnv = snapshot.createEnvironment(environmentsAdapter, req, env);
+		EmilEnvironment newEnv = snapshot.createEnvironment(environmentsAdapter, req, env, checkpoint);
 		if (req instanceof SaveCreatedEnvironmentRequest)
 			newEnv.setTitle(((SaveCreatedEnvironmentRequest) req).getTitle());
-		try {
-			env.addChildEnvId(newEnv.getEnvId());
-			save(env);
-			save(newEnv);
-			if (newEnv instanceof EmilSessionEnvironment) {
-				EmilSessionEnvironment session = (EmilSessionEnvironment) newEnv;
-				EmilSessionEnvironment oldEnv = sessions.get(session.getUserId(), session.getObjectId());
-				LOG.info("update: " + session.getEnvId());
-				if (oldEnv != null)
-					LOG.info("update: found oldEnv: " + oldEnv.getEnvId());
-				LOG.info("updates parent env was: " + session.getParentEnvId());
 
-				if (oldEnv != null && session.getParentEnvId() != null && !oldEnv.getEnvId().equals(session.getParentEnvId())) {
-
-					LOG.info("would like to delete " + oldEnv.getEnvId());
-					// delete(oldEnv.getEnvId());
-				}
-				sessions.add(session);
-			}
-		} catch (JAXBException | IOException e) {
-			throw new BWFLAException("saveAsRevision: " + e.getMessage(), e);
+		if(req instanceof SaveNewEnvironmentRequest)
+		{
+			env.addBranchId(newEnv.getEnvId());
 		}
+		else
+			env.addChildEnvId(newEnv.getEnvId());
+
+
+		save(env, false);
+		save(newEnv, true);
+		if (newEnv instanceof EmilSessionEnvironment) {
+			EmilSessionEnvironment session = (EmilSessionEnvironment) newEnv;
+			EmilSessionEnvironment oldEnv = sessions.get(session.getUserId(), session.getObjectId());
+			LOG.info("update: " + session.getEnvId());
+			if (oldEnv != null)
+				LOG.info("update: found oldEnv: " + oldEnv.getEnvId());
+			LOG.info("updates parent env was: " + session.getParentEnvId());
+
+			if (oldEnv != null && session.getParentEnvId() != null && !oldEnv.getEnvId().equals(session.getParentEnvId())) {
+
+				LOG.info("would like to delete " + oldEnv.getEnvId());
+				// delete(oldEnv.getEnvId());
+			}
+			sessions.add(session);
+		}
+
 		return newEnv.getEnvId();
 	}
 
@@ -655,6 +757,25 @@ public class EmilEnvironmentRepository {
 		return sessions.get(userId, objectId);
 	}
 
+	public List<EmilEnvironment> getParents(String envId)
+	{
+		EmilEnvironment root = getEmilEnvironmentById(envId);
+		List<EmilEnvironment> result = new ArrayList<>();
+		if(root == null)
+		{
+			LOG.severe("no environment found for id: " + envId);
+			return result;
+		}
+
+		if (root.getParentEnvId() != null) {
+			EmilEnvironment parentEnv = getEmilEnvironmentById(root.getParentEnvId());
+			while (parentEnv != null) {
+				result.add(parentEnv);
+				parentEnv = getEmilEnvironmentById(parentEnv.getParentEnvId());
+			}
+		}
+		return result;
+	}
 
 	class Monitor implements Runnable {
 		long retention;
@@ -675,7 +796,7 @@ public class EmilEnvironmentRepository {
 						delete(session.getEnvId(), true, true);
 					}
 				}
-			} catch (IOException | BWFLAException | JAXBException e) {
+			} catch (BWFLAException | JAXBException e) {
 				LOG.log(Level.SEVERE, e.getMessage(), e);
 			}
 		}

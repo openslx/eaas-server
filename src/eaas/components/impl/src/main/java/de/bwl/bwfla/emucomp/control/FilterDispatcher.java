@@ -29,8 +29,6 @@ import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 
 import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
-import de.bwl.bwfla.emucomp.control.xpratunnel.XpraTunnelServlet;
 
 /*
  * This class dispatches URL requests to the correct servlet.
@@ -84,12 +82,6 @@ public class FilterDispatcher implements Filter
                     case GuacamoleConnector.PROTOCOL: {
                         // use the guacamole tunnel servlet for tunnel requests
                         servletName = BWFLAGuacamoleTunnelServlet.SERVLET_NAME;
-                        break;
-                    }
-
-                    case XpraConnector.PROTOCOL: {
-                        // use the xpra tunnel servlet for tunnel requests
-                        servletName = XpraTunnelServlet.SERVLET_NAME;
                         break;
                     }
                 }

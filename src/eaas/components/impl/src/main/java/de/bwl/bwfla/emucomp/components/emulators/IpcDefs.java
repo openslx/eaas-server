@@ -18,7 +18,7 @@ public final class IpcDefs
 		public static final byte DETACH_CLIENT  = 5;
 		public static final byte TERMINATE      = 6;
 		
-		/** Emulator specific command */
+		/** EmulatorContainer specific command */
 		public static final byte EMULATOR_COMMAND = 127;
 	}
 	

@@ -19,20 +19,24 @@
 
 package de.bwl.bwfla.imagearchive;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
+import javax.ejb.Singleton;
+import javax.ejb.Startup;
 import javax.enterprise.context.ApplicationScoped;
 
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveConfig;
 
+import static java.util.Map.Entry.comparingByValue;
 
-@ApplicationScoped
+
+@Singleton
+@Startup
 public class ImageArchiveRegistry
 {
 	private final Logger log = Logger.getLogger(this.getClass().getName());
@@ -55,6 +59,15 @@ public class ImageArchiveRegistry
 		return config;
 	}
 
+	public List<String> listBackendNames()
+	{
+		List<String> result = backends.entrySet().stream()
+				.sorted(comparingByValue())
+				.map(Map.Entry::getKey)
+				.collect(Collectors.toList());
+
+		return result;
+	}
 
 	/* ==================== Internal Helpers ==================== */
 

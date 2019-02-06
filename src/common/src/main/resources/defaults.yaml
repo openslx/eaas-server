@@ -10,6 +10,9 @@ runners:
     stderrfilename: stderr.log
 commonconf:
     serverdatadir: /home/bwfla/server-data
+    mongodb:
+        address: 'mongodb://localhost:27017'
+        dbname: eaas
 
 http_export_servlet:
     file_cache:
@@ -18,7 +21,6 @@ http_export_servlet:
 
 handle:
     prefix: 11270
-    url_record_index: 1
     authentication:
         private_key_file: /home/bwfla/server-data/hdl-keys/admpriv.bin
         handle: 0.NA/11270

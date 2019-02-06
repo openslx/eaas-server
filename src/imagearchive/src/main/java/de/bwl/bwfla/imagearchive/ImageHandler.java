@@ -7,21 +7,24 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.activation.DataHandler;
-import javax.activation.FileDataSource;
 
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
+import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
-import de.bwl.bwfla.imagearchive.datatypes.ImageExport;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizer;
 import org.apache.commons.io.FileUtils;
@@ -52,11 +55,29 @@ public class ImageHandler
 		this.iaConfig = config;
 		this.cache = cache;
 		pool = Executors.newFixedThreadPool(20);
-		this.imageNameIndex = new ImageNameIndex(config.getNameIndexConfigPath(), log);
+
+		if (new File(ImageNameIndex.getConfigPath()).exists()) {
+			try {
+				String content = new String(Files.readAllBytes(Paths.get(ImageNameIndex.getConfigPath())), "UTF-8");
+				this.imageNameIndex = ImageNameIndex.fromYamlValue(content, ImageNameIndex.class);
+			} catch (IOException e) {
+				throw new BWFLAException(e);
+			}
+		} else
+			this.imageNameIndex = new ImageNameIndex(config.getNameIndexConfigPath(), log);
+
 		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
 		cleanTmpFiles();
 		resolveLocalBackingFiles();
+	}
+
+	public ImageNameIndex getNameIndexes(){
+		return imageNameIndex;
+	}
+
+	public void addNameIndexesEntry(Entry entry, Alias alias){
+		imageNameIndex.addNameIndexesEntry(entry, alias);
 	}
 
 
@@ -84,55 +105,57 @@ public class ImageHandler
 
 	public String getExportPrefix()
 	{
+		/*
 		if (iaConfig.isHandleConfigured())
 			return "http://hdl.handle.net/" + iaConfig.getHandlePrefix() + "/";
+		*/
 
 		return this.getArchivePrefix();
 	}
 
-	private ImageExport.ImageFileInfo getDependency(ImageType parentType, String parentId) throws IOException, BWFLAException {
+//	private ImageExport.ImageFileInfo getDependency(ImageType parentType, String parentId) throws IOException, BWFLAException {
+//
+//		File f = new File(iaConfig.getImagePath() + "/" + parentType.name() + "/" + parentId);
+//		if(!f.exists())
+//			throw new BWFLAException("parent file not found. broken parameters");
+//
+//		ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
+//		if (info.getBackingFile() == null)
+//			return null;
+//
+//		String id = getBackingImageId(info.getBackingFile());
+//		if (id == null)
+//			return null;
+//
+//		File file = null;
+//		ImageType type = null;
+//		for(ImageType _type : ImageType.values()) {
+//			File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
+//
+//			if(backing.exists()) {
+//				file = backing;
+//				type = _type;
+//			}
+//		}
+//		if(file == null)
+//			return null;
+//
+//		return new ImageExport.ImageFileInfo(getArchivePrefix(), id, type);
+//	}
 
-		File f = new File(iaConfig.getImagePath() + "/" + parentType.name() + "/" + parentId);
-		if(!f.exists())
-			throw new BWFLAException("parent file not found. broken parameters");
-
-		ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
-		if (info.getBackingFile() == null)
-			return null;
-
-		String id = getBackingImageId(info.getBackingFile());
-		if (id == null)
-			return null;
-
-		File file = null;
-		ImageType type = null;
-		for(ImageType _type : ImageType.values()) {
-			File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
-
-			if(backing.exists()) {
-				file = backing;
-				type = _type;
-			}
-		}
-		if(file == null)
-			return null;
-
-		DataHandler fileHandle = new DataHandler(new FileDataSource(file));
-		return new ImageExport.ImageFileInfo(fileHandle, id, type);
-	}
-
-	private void resolveLocalBackingFile(File f)
+	// return backing file if not resolved locally
+	private String resolveLocalBackingFile(File f)
 	{
 		try {
 			ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
 			if (info.getBackingFile() == null)
-				return;
+				return null;
 
 			log.info(f.getAbsolutePath() + " got backing file: " + info.getBackingFile());
 
 			String id = getBackingImageId(info.getBackingFile());
 			if (id == null)
-				return;
+				return null;
 			log.info(" got id: " + id);
 
 			File tmpTarget = getImageTargetPath(ImageType.tmp.name());
@@ -156,14 +179,16 @@ public class ImageHandler
 			}
 
 			if(!hasLocalBackingfile)
-				return;
+				return info.getBackingFile();
 
-			String newBackingFile = getExportPrefix() + id;
+			String newBackingFile = getArchivePrefix() + id;
 			log.info("rebase " + f.getAbsolutePath() + " to: " + newBackingFile);
 			EmulatorUtils.changeBackingFile(f.toPath(), newBackingFile, log);
+			return null;
 
 		} catch (IOException|BWFLAException e) {
 			log.log(Level.SEVERE, e.getMessage(), e);
+			return null;
 		}
 	}
 
@@ -199,51 +224,52 @@ public class ImageHandler
 		}
 	}
 
-	private List<ImageExport.ImageFileInfo> processBindingForExport(ImageArchiveBinding iab) throws BWFLAException, IOException {
-		List<ImageExport.ImageFileInfo> fileInfos = new ArrayList<>();
+//	private List<ImageExport.ImageFileInfo> processBindingForExport(ImageArchiveBinding iab) throws BWFLAException, IOException {
+//		List<ImageExport.ImageFileInfo> fileInfos = new ArrayList<>();
+//
+//		File target = getImageTargetPath(iab.getType());
+//		if(target == null)
+//			throw new BWFLAException("getImageExportData: inconsistent metadata: " + target.getAbsolutePath() + " type " + iab.getType());
+//		File imageFile = new File(target, iab.getImageId());
+//		if(!imageFile.exists())
+//			throw new BWFLAException("getImageExportData: inconsistent metadata " + imageFile.getAbsolutePath() + " not found.");
+//
+//		ImageExport.ImageFileInfo info = new ImageExport.ImageFileInfo(getArchivePrefix(),
+//				iab.getImageId(), ImageType.valueOf(iab.getType().toLowerCase()));
+//
+//		fileInfos.add(info);
+//
+//		ImageExport.ImageFileInfo parent = info;
+//		while((parent = getDependency(parent.getType(), parent.getId())) != null)
+//		{
+//			fileInfos.add(parent);
+//		}
+//
+//		return fileInfos;
+//	}
 
-		File target = getImageTargetPath(iab.getType());
-		if(target == null)
-			throw new BWFLAException("getImageExportData: inconsistent metadata: " + target.getAbsolutePath() + " type " + iab.getType());
-		File imageFile = new File(target, iab.getImageId());
-		if(!imageFile.exists())
-			throw new BWFLAException("getImageExportData: inconsistent metadata " + target.getAbsolutePath() + " not found.");
-
-		DataHandler fileHandle = new DataHandler(new FileDataSource(imageFile));
-		ImageExport.ImageFileInfo info = new ImageExport.ImageFileInfo(fileHandle, iab.getImageId(), ImageType.valueOf(iab.getType().toLowerCase()));
-
-		fileInfos.add(info);
-
-		ImageExport.ImageFileInfo parent = info;
-		while((parent = getDependency(parent.getType(), parent.getId())) != null)
-		{
-			fileInfos.add(parent);
-		}
-
-		return fileInfos;
-	}
-
-	ImageExport getImageExportData(String envId) throws BWFLAException, IOException {
-		Environment env = getEnvById(envId);
-		if(env == null)
-			return null;
-
-		MachineConfiguration mc = (MachineConfiguration) env;
-
-		ImageExport export = new ImageExport();
-		List<ImageExport.ImageFileInfo> fileInfos = new ArrayList<>();
-
-		ImageArchiveBinding iab = null;
-		for (AbstractDataResource b : mc.getAbstractDataResource()) {
-			if (b instanceof ImageArchiveBinding) {
-				iab = (ImageArchiveBinding) b;
-				fileInfos.addAll(processBindingForExport(iab));
-			}
-		}
-
-		export.setImageFiles(fileInfos);
-		return export;
-	}
+//	ImageExport getImageExportData(String envId) throws BWFLAException, IOException {
+//
+//		Environment env = getEnvById(envId);
+//		if(env == null)
+//			return null;
+//
+//		MachineConfiguration mc = (MachineConfiguration) env;
+//
+//		ImageExport export = new ImageExport();
+//		List<ImageExport.ImageFileInfo> fileInfos = new ArrayList<>();
+//
+//		ImageArchiveBinding iab = null;
+//		for (AbstractDataResource b : mc.getAbstractDataResource()) {
+//			if (b instanceof ImageArchiveBinding) {
+//				iab = (ImageArchiveBinding) b;
+//				fileInfos.addAll(processBindingForExport(iab));
+//			}
+//		}
+//
+//		export.setImageFiles(fileInfos);
+//		return export;
+//	}
 	
 	private static void deleteDirectory(File dir) throws IOException
 	{
@@ -326,7 +352,11 @@ public class ImageHandler
 	String importImageUrl(URL url, ImageArchiveMetadata iaMd, boolean delete) throws BWFLAException, IOException {
 		
 		File target = getImageTargetPath(iaMd.getType().name());
-		String importId = UUID.randomUUID().toString();
+		String importId;
+		if(iaMd.getImageId() != null)
+			importId = iaMd.getImageId();
+		else
+			importId = UUID.randomUUID().toString();
 
 		File destImgFile = new File(target, importId);
 
@@ -390,7 +420,7 @@ public class ImageHandler
 				ImageLoaderResult res = ft.get();
 				if(!res.success)
 					throw new BWFLAException(res.message);
-				return new ImageImportResult(this.getExportPrefix(), res.id);
+				return new ImageImportResult(this.getArchivePrefix(), res.id);
 			} catch (InterruptedException|ExecutionException e) {
 				throw new BWFLAException(e);
 			}
@@ -526,7 +556,7 @@ public class ImageHandler
 	public ConcurrentHashMap<String, Environment> loadMetaData(ImageArchiveMetadata.ImageType imageType) {
 
 		File path = getMetaDataTargetPath(imageType.toString());
-		log.info("loading metadata for type: " + imageType);
+		// log.info("loading metadata for type: " + path + " " + imageType);
 		ConcurrentHashMap<String, Environment> md = new ConcurrentHashMap<String, Environment>();
 		if (path == null || !path.exists() || !path.isDirectory()) {
 			log.info("path " + path + " not a valid meta-data directory");
@@ -546,6 +576,7 @@ public class ImageHandler
 			if ((env = loadMetaDataFile(fileEntry)) != null) {
 				Environment emuEnv = null;
 				try {
+					// log.info("env \n" + env);
 					emuEnv = Environment.fromValue(env);
 				} catch (Throwable t) {
 					log.info("loadMetadata: failed to parse environment: " + t.getMessage());
@@ -607,13 +638,13 @@ public class ImageHandler
 		if (name == null || name.isEmpty())
 			return null;
 
-		final ImageNameIndex.Entry entry = imageNameIndex.get(name, version);
+		final Entry entry = imageNameIndex.get(name, version);
 		if (entry == null)
 			return null;
 
-		final ImageNameIndex.ImageDescription image = entry.image();
+		final ImageDescription image = entry.getImage();
 		final ImageArchiveBinding binding = new ImageArchiveBinding();
-		binding.setUrlPrefix((image.url() != null) ? image.url() : this.getExportPrefix());
+		binding.setUrlPrefix((image.url() != null && !image.url().isEmpty()) ? image.url() : this.getExportPrefix());
 		binding.setBackendName(iaConfig.getName());
 		binding.setAccess(Binding.AccessType.COW);
 		binding.setFileSystemType(image.fstype());
@@ -663,7 +694,7 @@ public class ImageHandler
 		}
 
 
-			log.info("commiting env id: " + id);
+			log.info("committing env id: " + id);
 
 		File srcImgDir = getImageTargetPath("tmp");
 		File dstImgDir = getImageTargetPath(type);
@@ -691,10 +722,11 @@ public class ImageHandler
 				log.info("move " + srcImgFile + " " + destImgFile);
 				if(!srcImgFile.renameTo(destImgFile))
 				{
-					throw new BWFLAException("cannot commit environment " + id + ": src file not found " + srcImgFile);
+					throw new BWFLAException("cannot commit environment " + id + ": dest file not found " + destImgFile);
 				}
 				iab.setImageId(newImageId);
 				iab.setType(type);
+				iab.setUrl(null);
 
 				updateTmpBackingFiles(destImgFile.getAbsolutePath(), dstImgDir);
 				break;
@@ -740,7 +772,7 @@ public class ImageHandler
 			return;
 
 		String newImageId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-		String newBackingFile = getExportPrefix() + newImageId;
+		String newBackingFile = getArchivePrefix() + newImageId;
 
 		File destImgFile = new File(target, newImageId);
 		backing.renameTo(destImgFile);
@@ -776,12 +808,14 @@ public class ImageHandler
 		final List<String> taskids = new ArrayList<String>(images.size());
 		images.forEach((urlstr) -> {
 			try {
+				log.severe("replicating " + urlstr);
 				final URL url = new URL(urlstr);
 				final String urlpath = url.getPath();
 				final String imageid = urlpath.substring(urlpath.lastIndexOf("/") + 1);
 				final ImageArchiveMetadata metadata = new ImageArchiveMetadata(ImageType.base);
-				metadata.setDeleteIfExists(false);
+				metadata.setDeleteIfExists(true);
 				metadata.setImageId(imageid);
+
 
 				taskids.add(this.importImageUrl(url, metadata, metadata.isDeleteIfExists()));
 			}
@@ -794,11 +828,13 @@ public class ImageHandler
 	}
 
 	protected void createPatchedCow(String parentId, String cowId, String templateId, String type) throws IOException, BWFLAException {
-		String newBackingFile = getExportPrefix() + parentId;
+		String newBackingFile = getArchivePrefix() + parentId;
 		File target = getImageTargetPath(type);
 		File destImgFile = new File(target, cowId);
 
-		EmulatorUtils.createCowFile(newBackingFile, destImgFile.toPath());
+		QcowOptions options = new QcowOptions();
+		options.setBackingFile(newBackingFile);
+		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
 		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) getEnvById(templateId);
 		ImageGeneralizer.applyScriptIfCompatible(this, destImgFile, tempEnv.copy());
 	}
@@ -820,21 +856,21 @@ public class ImageHandler
 		}
 
 		try {
-			log.info("Handle already exists! Trying to add new URL for image '" + imageId + "'...");
-			handleClient.add(imageId, url);
-			log.info("URL added to exisiting handle for image '" + imageId + "'");
+			log.info("Handle already exists! Trying to update previous URL for image '" + imageId + "'...");
+			handleClient.update(imageId, url);
+			log.info("URL updated in existing handle for image '" + imageId + "'");
 			return;
 		}
 		catch (HandleException error) {
 			if (error.getErrorCode() != HandleException.ErrorCode.INVALID_VALUE) {
-				log.log(Level.WARNING, "Adding new URL to exisiting handle for image '" + imageId + "' failed!", error);
+				log.log(Level.WARNING, "Updating URL in exisiting handle for image '" + imageId + "' failed!", error);
 				throw error;
 			}
 		}
 
-		log.info("URL-entry already exists! Trying to update URL for image '" + imageId + "'...");
-		handleClient.update(imageId, url);
-		log.info("URL updated in exisiting handle for image '" + imageId + "'");
+		log.info("Trying to add new URL for image '" + imageId + "'...");
+		handleClient.add(imageId, url);
+		log.info("URL added to exisiting handle for image '" + imageId + "'");
 	}
 
 	private static class ImageLoaderResult
@@ -915,13 +951,27 @@ public class ImageHandler
 			return new ImageLoaderResult(importId);
 		}
 
+		private void downloadDependencies(String url) throws BWFLAException {
+			final String imageid = url.substring(url.lastIndexOf("/") + 1);
+			Binding b = new Binding();
+			b.setUrl(url.toString());
+			File dst = new File(target, imageid);
+			EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+
+			String result = imageHandler.resolveLocalBackingFile(dst);
+			if (imageHandler.handleClient != null)
+				imageHandler.createOrUpdateHandle(imageid);
+
+			if(result != null)
+				downloadDependencies(result);
+		}
+
 		private ImageLoaderResult fromUrl()
 		{
 			try {
 				Binding b = new Binding();
 				b.setUrl(url.toString());
 				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
-
 				QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");
@@ -935,16 +985,18 @@ public class ImageHandler
 						EmulatorUtils.convertImage(convertedImgFile.toPath(), outFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
 						convertedImgFile.delete();
 					default:
-						imageHandler.resolveLocalBackingFile(destImgFile);
+						String result = imageHandler.resolveLocalBackingFile(destImgFile);
 						if (imageHandler.handleClient != null)
 							imageHandler.createOrUpdateHandle(importId);
+
+						if(result != null)
+							downloadDependencies(result);
 
 						return new ImageLoaderResult(importId);
 				}
 			} catch (Exception e1) {
 				log.log(Level.WARNING, e1.getMessage(), e1);
 				return new ImageLoaderResult(false, "failed moving incoming image to " + destImgFile + " reason " + e1.getMessage());
-
 			}
 		}
 

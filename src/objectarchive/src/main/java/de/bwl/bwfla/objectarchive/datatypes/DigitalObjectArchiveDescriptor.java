@@ -23,7 +23,7 @@ import java.io.Serializable;
 
 public class DigitalObjectArchiveDescriptor implements Serializable {
 
-	public enum ArchiveType {FILE, ROSETTA, PRESERVICA, };
+	public enum ArchiveType {FILE, ROSETTA, PRESERVICA, METS, USER,};
 
 	private String name;
 	private ArchiveType type;

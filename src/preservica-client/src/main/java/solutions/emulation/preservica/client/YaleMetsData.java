@@ -1,10 +1,7 @@
 package solutions.emulation.preservica.client;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import gov.loc.mets.DivType;
-import gov.loc.mets.MdSecType;
-import gov.loc.mets.Mets;
-import gov.loc.mets.StructMapType;
+import gov.loc.mets.*;
 import org.w3c.dom.Element;
 
 import javax.xml.bind.JAXBContext;
@@ -12,6 +9,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
 import java.math.BigInteger;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
@@ -37,6 +35,8 @@ public class YaleMetsData {
 
     private Context defaultContext = Context.INSTALLATION;
     HashMap<Context, YaleMetsContext> metsContextMap;
+    HashMap<String, ObjectFile> objectFiles;
+
     Mets metsRoot;
     private String wikiId = null;
 
@@ -56,6 +56,7 @@ public class YaleMetsData {
 
     private void init() {
         metsContextMap = new HashMap<>();
+        objectFiles = new HashMap<>();
 
         List<StructMapType> listStructMap = metsRoot.getStructMap();
         for (StructMapType struct : listStructMap) {
@@ -87,6 +88,21 @@ public class YaleMetsData {
             }
         }
 
+        if(metsRoot.getFileSec() != null) {
+            List<MetsType.FileSec.FileGrp> fileGrpList = metsRoot.getFileSec().getFileGrp();
+            for(MetsType.FileSec.FileGrp fileGrp : fileGrpList)
+            {
+                for(FileType file : fileGrp.getFile())
+                {
+                    ObjectFile of = new ObjectFile();
+                    of.fileLocations = getFileLocation(file);
+                    setTypeInfo(of, file);
+                    of.size = file.getSIZE();
+                    of.id = file.getID();
+                }
+            }
+        }
+
 
         // extracting Wikidata information
         List<MdSecType> dmdList = metsRoot.getDmdSec();
@@ -104,6 +120,27 @@ public class YaleMetsData {
 
         //    System.out.println("looking for wikidata metadata: got " + wikiId);
         }
+    }
+
+    private void setTypeInfo(ObjectFile of, FileType file) {
+
+        final List<Object> amdIds = file.getADMID();
+        for(Object amdId : amdIds)
+            System.out.println("amdId " + amdId.toString());
+    }
+
+    private static List<String> getFileLocation(FileType file) {
+        List<FileType.FLocat> locationList = file.getFLocat();
+        List<String> result = new ArrayList<>();
+        for(FileType.FLocat fLocat : locationList)
+        {
+            if(fLocat.getLOCTYPE() != null && fLocat.getLOCTYPE().equals("URL"))
+            {
+                if(fLocat.getHref() != null)
+                    result.add(fLocat.getHref());
+            }
+        }
+        return result;
     }
 
     public String getWikiId() {
@@ -209,5 +246,14 @@ public class YaleMetsData {
         public BigInteger getOrder() {
             return order;
         }
+    }
+
+    public static class ObjectFile
+    {
+        List<String> fileLocations;
+        String fileType;
+        String mediumType;
+        long size;
+        String id;
     }
 }

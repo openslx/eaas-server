@@ -39,8 +39,6 @@ import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.common.utils.ProcessMonitor;
 import de.bwl.bwfla.common.utils.Zip32Utils;
-import de.bwl.bwfla.common.utils.net.ConfigKey;
-import de.bwl.bwfla.common.utils.net.PortRangeProvider;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils.XmountOutputFormat;
@@ -52,12 +50,12 @@ import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IThrowingSupplier;
 import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
-import de.bwl.bwfla.emucomp.xpra.XpraUtils;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 import org.glyptodon.guacamole.GuacamoleException;
+import org.glyptodon.guacamole.net.GuacamoleTunnel;
 import org.glyptodon.guacamole.protocol.GuacamoleClientInformation;
 import org.glyptodon.guacamole.protocol.GuacamoleConfiguration;
 
@@ -133,8 +131,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	protected final DeprecatedProcessRunner emuRunner = new DeprecatedProcessRunner();
 	protected final ArrayList<DeprecatedProcessRunner> vdeProcesses = new ArrayList<DeprecatedProcessRunner>();
 
-	protected final DeprecatedProcessRunner xpraRunner = new DeprecatedProcessRunner();
-
 	protected final BindingsManager bindings = new BindingsManager(LOG);
 
 	protected String protocol;
@@ -183,9 +179,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	/** Binding ID for container's root filesystem */
 	private static final String EMUCON_ROOTFS_BINDING_ID = "emucon-rootfs";
 
-	@Inject
-	@ConfigKey("components.xpra.ports")
-	protected PortRangeProvider.Port listenPort;
+	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
 	@Inject
 	@Config("components.emulator_containers.enabled")
@@ -354,6 +348,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		Files.createDirectories(this.getUploadsDir());
 	}
 
+	private Path getXpraSocketPath()
+	{
+		return this.getSocketsDir().resolve("xpra-iosocket");
+	}
+
 	/** Returns emulator's runtime layer name. */
 	protected String getEmuContainerName(MachineConfiguration machineConfiguration)
 	{
@@ -361,6 +360,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				+ " does not support container-mode!";
 
 		throw new UnsupportedOperationException(message);
+	}
+
+	private String getEmulatorArchive() {
+		String archive = ConfigurationProvider.getConfiguration().get("emucomp.emulator_archive");
+		if(archive == null || archive.isEmpty())
+			return EMULATOR_DEFAULT_ARCHIVE;
+		return archive;
 	}
 
 	public void initialize(ComponentConfiguration compConfig) throws BWFLAException
@@ -375,6 +381,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			emuBeanState.set(EmuCompState.EMULATOR_BUSY);
 		}
 
+		final MachineConfiguration env = (MachineConfiguration) compConfig;
+		emuBeanMode = EmulatorBean.getEmuBeanMode(env);
 		emuRunner.setLogger(LOG);
 
 		try {
@@ -389,7 +397,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isSdlBackendEnabled()) {
 			// Create control sockets
 			try {
-				ctlSocket = IpcSocket.create(this.newCtlSocketName("srv"), true);
+				ctlSocket = IpcSocket.create(this.newCtlSocketName("srv"), IpcSocket.Type.DGRAM, true);
 				ctlMsgWriter = new IpcMessageWriter(ctlSocket);
 				ctlMsgReader = new IpcMessageReader(ctlSocket);
 				emuCtlSocketName = this.newCtlSocketName("emu");
@@ -411,7 +419,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		try
 		{
-			final MachineConfiguration env = (MachineConfiguration) compConfig;
 			if (this.isContainerModeEnabled()) {
 				// Check, that rootfs-image is specified!
 				final boolean isRootFsFound = env.getAbstractDataResource().stream()
@@ -421,7 +428,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					// Not found, try to get latest image ID as configured by the archive
 					final EnvironmentsAdapter archive = new EnvironmentsAdapter(imageArchiveAddress);
 					final String name = EMUCON_ROOTFS_BINDING_ID + "/" + this.getEmuContainerName(env);
-					final ImageArchiveBinding image = archive.getImageBinding(name, "latest");
+					final ImageArchiveBinding image;
+					if (env.getEmulator().getContainerName() != null && env.getEmulator().getContainerVersion() != null)
+						image = archive.getImageBinding(this.getEmulatorArchive(), env.getEmulator().getContainerName(), env.getEmulator().getContainerVersion());
+					else
+						image = archive.getImageBinding(this.getEmulatorArchive(), name, "latest");
+
 					if (image == null)
 						throw new BWFLAException("Emulator's rootfs-image not found!");
 
@@ -516,17 +528,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		// Cleanup emulator's runner here
-		if (this.isSdlBackendEnabled()) {
-			emuRunner.printStdOut();
-			emuRunner.printStdErr();
-			emuRunner.cleanup();
-		}
-		else if (this.isXpraBackendEnabled()) {
-			xpraRunner.printStdOut();
-			xpraRunner.printStdErr();
-			xpraRunner.cleanup();
-			listenPort.release();
-		}
+		emuRunner.printStdOut();
+		emuRunner.printStdErr();
+		emuRunner.cleanup();
 
 		LOG.info("EmulatorBean for session " + this.getComponentId() + " destroyed.");
 
@@ -548,62 +552,39 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 			emuBeanState.set(EmuCompState.EMULATOR_BUSY);
 		}
+
 		try {
-			if (this.isSdlBackendEnabled())
-				this.startWithSdlBackend();
-			else if (this.isXpraBackendEnabled())
-				this.startWithXpraBackend();
+			if (this.isSdlBackendEnabled() || this.isXpraBackendEnabled())
+				this.startBackend();
 			else {
-				emuBeanState.update(EmuCompState.EMULATOR_FAILED);
 				throw new BWFLAException("Trying to start emulator using unimplemented mode: " + this.getEmuBeanMode());
 			}
-		} catch(Throwable error){
+		}
+		catch(Throwable error) {
 			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
 			LOG.log(Level.SEVERE, error.getMessage(), error);
 			throw new BWFLAException(error);
 		}
 	}
 
-	protected void startWithXpraBackend() throws BWFLAException {
-		try {
-			final int port = listenPort.get();
-			XpraUtils.startXpraSession(xpraRunner, emuRunner.getCommandString(), port, LOG);
-			if (!XpraUtils.waitUntilReady(port, 50000)) {
-				emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-				throw new BWFLAException("Connecting to Xpra server failed!");
-			}
-
-			LOG.info("Xpra server started in process " + xpraRunner.getProcessId());
-
-			final Thread xpraObserver = workerThreadFactory.newThread(() -> {
-
-					xpraRunner.waitUntilFinished();
-
-					// cleanup will be performed later by EmulatorBean.destroy()
-					synchronized (emuBeanState) {
-						final EmuCompState curstate = emuBeanState.get();
-						if (curstate == EmuCompState.EMULATOR_RUNNING) {
-							LOG.info("Xpra server stopped unexpectedly!");
-							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
-						}
-					}
-				}
-			);
-
-			xpraObserver.start();
-
-			this.addControlConnector(new XpraConnector(port));
-			emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
-		}
-		catch (Exception error) {
-			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			throw new BWFLAException("Starting Xpra server failed!", error);
-		}
-	}
-
-	private void startWithSdlBackend() throws BWFLAException, IOException {
+	private void startBackend() throws BWFLAException, IOException
+	{
 		if (this.isLocalModeEnabled())
 			LOG.info("Local-mode enabled. Emulator will be started locally!");
+
+		if (this.isXpraBackendEnabled()) {
+			// TODO: implement this, if needed!
+			if (!this.isContainerModeEnabled())
+				throw new BWFLAException("Non-containerized XPRA sessions are not supported!");
+
+			final boolean isGpuEnabled = ConfigurationProvider.getConfiguration()
+					.get("components.xpra.enable_gpu", Boolean.class);
+
+			if (isGpuEnabled) {
+				emuRunner.getCommand()
+						.add(0, "vglrun");
+			}
+		}
 
 		if (this.isContainerModeEnabled()) {
 			LOG.info("Container-mode enabled. Emulator will be started inside of a container!");
@@ -625,10 +606,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				cgen.addArguments("--group-id", emuContainerGroupId);
 				cgen.addArguments("--rootfs", rootfsdir);
 
+				if (getEmulatorWorkdir() != null) {
+					cgen.addArguments("--workdir", getEmulatorWorkdir());
+				}
+
 				final String hostDataDir = this.getDataDir().toString();
 
 				final Function<String, String> hostPathReplacer =
-						(cmdarg) -> cmdarg.replace(hostDataDir, EMUCON_DATA_DIR);
+						(cmdarg) -> cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
 
 				// Safety check. Should never fail!
 				if (!this.getBindingsDir().startsWith(this.getDataDir())) {
@@ -656,7 +641,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					return;
 				}
 
-				final List<String> bindingIdsToSkip = new ArrayList<String>();
+				final List<String> bindingIdsToSkip = new ArrayList<>();
 				bindingIdsToSkip.add(EMUCON_ROOTFS_BINDING_ID);
 				if (emuEnvironment.hasCheckpointBindingId())
 					bindingIdsToSkip.add(emuEnvironment.getCheckpointBindingId());
@@ -690,7 +675,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				final String conNetDir = hostPathReplacer.apply(this.getNetworksDir().toString());
 
 				// Add emulator's command with replaced host data directory
-				cgen.addArguments("--", "/usr/bin/emucon-init", "--networks-dir", conNetDir, "--");
+				cgen.addArguments("--", "/usr/bin/emucon-init", "--networks-dir", conNetDir);
+				if (this.isXpraBackendEnabled()) {
+					final String xprasock = this.getXpraSocketPath().toString();
+					cgen.addArguments("--xpra-socket", hostPathReplacer.apply(xprasock));
+				}
+
+				cgen.addArgument("--");
 				emuRunner.getCommand()
 						.forEach((cmdarg) -> cgen.addArgument(hostPathReplacer.apply(cmdarg)));
 
@@ -701,8 +692,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					return;
 				}
 
-				// Replace host data directory in emulator's config
-				emuConfig.setIoSocket(hostPathReplacer.apply(emuConfig.getIoSocket()));
+				if (this.isSdlBackendEnabled()) {
+					// Replace host data directory in emulator's config
+					emuConfig.setIoSocket(hostPathReplacer.apply(emuConfig.getIoSocket()));
+				}
 			}
 
 			emuRunner.cleanup();
@@ -723,61 +716,78 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					LOG.info("Container state will be restored from checkpoint");
 				}
 				catch (Exception error) {
-					emuBeanState.update(EmuCompState.EMULATOR_FAILED);
 					throw new BWFLAException("Looking up checkpoint image failed!");
 				}
 			}
 		}
 
-		if (!emuRunner.start()) {
-			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
+		emuRunner.redirectStdErrToStdOut(true);
+
+		if (!emuRunner.start())
 			throw new BWFLAException("Starting emulator failed!");
+
+		if (this.isXpraBackendEnabled()) {
+			if (emuEnvironment.hasCheckpointBindingId()) {
+				this.waitUntilXpraReady(this.getXpraSocketPath(), EmuCompState.EMULATOR_BUSY);
+				this.waitUntilRestoreDone();
+			}
+			else {
+				final String rootfs = bindings.lookup(BindingsManager.toBindingId(EMUCON_ROOTFS_BINDING_ID, BindingsManager.EntryType.FS_MOUNT));
+				final Path path = Paths.get(rootfs, "tmp", "xpra-started");
+				this.waitUntilXpraReady(path, EmuCompState.EMULATOR_BUSY);
+			}
 		}
+		else if (this.isSdlBackendEnabled()) {
+			if (emuEnvironment.hasCheckpointBindingId()) {
+				// Wait for socket re-creation after resuming from a checkpoint
+				this.waitUntilEmulatorCtlSocketAvailable(EmuCompState.EMULATOR_BUSY);
+			}
+			else {
+				// Perform the following steps only, when starting a new emulator!
+				// Skip them, when resuming from a checkpoint.
 
-		if (emuEnvironment.hasCheckpointBindingId()) {
-			// Wait for socket re-creation after resuming from a checkpoint
-			this.waitUntilEmulatorCtlSocketAvailable(EmuCompState.EMULATOR_BUSY);
-		}
-		else {
-			// Perform the following steps only, when starting a new emulator!
-			// Skip them, when resuming from a checkpoint.
+				this.waitUntilEmulatorCtlSocketReady(EmuCompState.EMULATOR_BUSY);
 
-			this.waitUntilEmulatorCtlSocketReady(EmuCompState.EMULATOR_BUSY);
+				if (!this.sendEmulatorConfig())
+					return;
 
-			if (!this.sendEmulatorConfig())
-				return;
-
-			if (!this.waitUntilEmulatorReady(EmuCompState.EMULATOR_BUSY))
-				return;
+				if (!this.waitUntilEmulatorReady(EmuCompState.EMULATOR_BUSY))
+					return;
+			}
 		}
 
 		LOG.info("Emulator started in process " + emuRunner.getProcessId());
 
-		final Thread ctlSockObserver = workerThreadFactory.newThread(() -> {
-				while (emuBeanState.fetch() != EmuCompState.EMULATOR_UNDEFINED) {
-					try {
-						// Try to receive new message
-						if (!ctlMsgReader.read(5000))
-							continue;
+		if (this.isSdlBackendEnabled()) {
+			final Thread ctlSockObserver = workerThreadFactory.newThread(() -> {
+					while (emuBeanState.fetch() != EmuCompState.EMULATOR_UNDEFINED) {
+						try {
+							// Try to receive new message
+							if (!ctlMsgReader.read(5000))
+								continue;
 
-						// Message could be read, queue it for further processing
-						if (ctlMsgReader.isNotification())
-							ctlEvents.add(ctlMsgReader.getEventID());
-						else {
-							final byte msgtype = ctlMsgReader.getMessageType();
-							final byte[] msgdata = ctlMsgReader.getMessageData();
-							ctlMsgQueue.put(msgtype, msgdata);
+							// Message could be read, queue it for further processing
+							if (ctlMsgReader.isNotification())
+								ctlEvents.add(ctlMsgReader.getEventID());
+							else {
+								final byte msgtype = ctlMsgReader.getMessageType();
+								final byte[] msgdata = ctlMsgReader.getMessageData();
+								ctlMsgQueue.put(msgtype, msgdata);
+							}
 						}
-					} catch (Exception exception) {
-						if (emuBeanState.fetch() == EmuCompState.EMULATOR_UNDEFINED)
-							break;  // Ignore problems when destroying session!
+						catch (Exception exception) {
+							if (emuBeanState.fetch() == EmuCompState.EMULATOR_UNDEFINED)
+								break;  // Ignore problems when destroying session!
 
-						LOG.warning("An error occured while reading from control-socket!");
-						LOG.log(Level.SEVERE, exception.getMessage(), exception);
+							LOG.warning("An error occured while reading from control-socket!");
+							LOG.log(Level.SEVERE, exception.getMessage(), exception);
+						}
 					}
 				}
-			}
-		);
+			);
+
+			ctlSockObserver.start();
+		}
 
 		final Thread emuObserver = workerThreadFactory.newThread(() -> {
 
@@ -802,46 +812,50 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				}
 		});
 
-		ctlSockObserver.start();
 		emuObserver.start();
 
-		// Not in local mode?
-		if (!this.isLocalModeEnabled()) {
-			// Initialize the screenshot-tool
-			if (this.isScreenshotEnabled) {
-				scrshooter = new ScreenShooter(this.getComponentId(), 256);
-				scrshooter.prepare();
+		if (this.isSdlBackendEnabled()) {
+			// Not in local mode?
+			if (!this.isLocalModeEnabled()) {
+				// Initialize the screenshot-tool
+				if (this.isScreenshotEnabled) {
+					scrshooter = new ScreenShooter(this.getComponentId(), 256);
+					scrshooter.prepare();
 
-				// Register the screenshot-tool
-				interceptors.addInterceptor(scrshooter);
+					// Register the screenshot-tool
+					interceptors.addInterceptor(scrshooter);
+				}
+			}
+
+			// Prepare the connector for guacamole connections
+			{
+				final IThrowingSupplier<GuacTunnel> clientTunnelCtor = () -> {
+					final Runnable waitTask = () -> {
+						try {
+							EmulatorBean.this.attachClientToEmulator();
+							EmulatorBean.this.waitForAttachedClient();
+						}
+						catch (Exception exception) {
+							emuBeanState.update(EmuCompState.EMULATOR_FAILED);
+							LOG.log(Level.SEVERE, "Attaching client to emulator failed!", exception);
+						}
+					};
+
+					ioTaskExecutor.execute(waitTask);
+
+					// Construct the tunnel
+					final GuacTunnel tunnel = GuacTunnel.construct(tunnelConfig);
+					if (!this.isLocalModeEnabled() && (player != null))
+						player.start(tunnel, this.getComponentId(), emuRunner.getProcessMonitor());
+
+					return (player != null) ? player.getPlayerTunnel() : tunnel;
+				};
+
+				this.addControlConnector(new GuacamoleConnector(clientTunnelCtor, emuConfig.isRelativeMouse()));
 			}
 		}
-
-		// Prepare the connector for guacamole connections
-		{
-			final IThrowingSupplier<GuacTunnel> clientTunnelCtor = () -> {
-				final Runnable waitTask = () -> {
-					try {
-						EmulatorBean.this.attachClientToEmulator();
-						EmulatorBean.this.waitForAttachedClient();
-					}
-					catch (Exception exception) {
-						emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-						LOG.log(Level.SEVERE, "Attaching client to emulator failed!", exception);
-					}
-				};
-				
-				ioTaskExecutor.execute(waitTask);
-				
-				// Construct the tunnel
-				final GuacTunnel tunnel = GuacTunnel.construct(tunnelConfig);
-				if (!this.isLocalModeEnabled() && (player != null))
-					player.start(tunnel, this.getComponentId(), emuRunner.getProcessMonitor());
-				
-		        return (player != null) ? player.getPlayerTunnel() : tunnel;
-			};
-
-			this.addControlConnector(new GuacamoleConnector(clientTunnelCtor, emuConfig.isRelativeMouse()));
+		else if (this.isXpraBackendEnabled()) {
+			this.addControlConnector(new XpraConnector(this.getXpraSocketPath()));
 		}
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
@@ -951,31 +965,35 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if(printer != null)
 			printer.release();
 
-		final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
-		final GuacTunnel tunnel = (connector != null) ? connector.getTunnel() : null;
-		if (tunnel != null && tunnel.isOpen()) {
-			try {
-				tunnel.disconnect();
-				tunnel.close();
-			} catch (GuacamoleException e) {
-				LOG.log(Level.SEVERE, e.getMessage(), e);
+		if (this.isSdlBackendEnabled()) {
+			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
+			final GuacTunnel tunnel = (connector != null) ? connector.getTunnel() : null;
+			if (tunnel != null && tunnel.isOpen()) {
+				try {
+					tunnel.disconnect();
+					tunnel.close();
+				}
+				catch (GuacamoleException e) {
+					LOG.log(Level.SEVERE, e.getMessage(), e);
+				}
 			}
+		}
+		else if (this.isXpraBackendEnabled()) {
+			final XpraConnector connector = (XpraConnector) this.getControlConnector(XpraConnector.PROTOCOL);
+			if (connector != null)
+				connector.disconnect();
 		}
 
 		if (emuRunner.isProcessRunning())
 			this.stopProcessRunner(emuRunner);
-
-		if (xpraRunner.isProcessRunning())
-			this.stopXpraServer(xpraRunner);
 	}
 
 	private void stopProcessRunner(DeprecatedProcessRunner runner)
 	{
 		final int emuProcessId = runner.getProcessId();
 		LOG.info("Stopping emulator " + emuProcessId + "...");
-
-		if(ctlMsgWriter != null) {
-			try {
+		try {
+			if (this.isSdlBackendEnabled()) {
 				// Send termination message
 				ctlMsgWriter.begin(MessageType.TERMINATE);
 				ctlMsgWriter.send(emuCtlSocketName);
@@ -989,44 +1007,24 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 					Thread.sleep(500);
 				}
-			} catch (Exception exception) {
-				LOG.log(Level.SEVERE, exception.getMessage(), exception);
 			}
+			else if (this.isXpraBackendEnabled() && this.isContainerModeEnabled()) {
+				final DeprecatedProcessRunner killer = new DeprecatedProcessRunner("sudo");
+				killer.addArguments("runc", "kill", this.getContainerId(), "TERM");
+				killer.setLogger(LOG);
+				if (killer.execute())
+					return;
+
+				runner.waitUntilFinished(15, TimeUnit.SECONDS);
+			}
+		}
+		catch (Exception exception) {
+			LOG.log(Level.SEVERE, "Stopping emulator failed!", exception);
 		}
 
 		LOG.warning("Emulator " + emuProcessId + " failed to shutdown cleanly! Killing it...");
 		runner.stop(5, TimeUnit.SECONDS);  // Try to terminate the process
 		runner.kill();  // Try to kill the process
-	}
-
-	private void stopXpraServer(DeprecatedProcessRunner runner)
-	{
-		final int xpraProcessId = runner.getProcessId();
-		LOG.info("Stopping Xpra server " + xpraProcessId + "...");
-
-		// We need to send INT signal to gracefully stop Xpra server
-		DeprecatedProcessRunner xpraKiller = new DeprecatedProcessRunner();
-		xpraKiller.setCommand("kill");
-		xpraKiller.addArgument("-SIGINT");
-		xpraKiller.addArgument("" + xpraRunner.getProcessId());
-		xpraKiller.execute();
-
-		try {
-			// Give Xpra server a chance to shutdown cleanly
-			for (int i = 0; i < 10; ++i) {
-				if (runner.isProcessFinished()) {
-					LOG.info("Xpra server " + xpraProcessId + " stopped.");
-					return;
-				}
-
-				Thread.sleep(500);
-			}
-		}
-		catch (Exception exception) {
-			LOG.log(Level.SEVERE, exception.getMessage(), exception);
-		}
-
-		LOG.warning("Xpra server " + xpraProcessId + " failed to shutdown cleanly! Zomby processes may be left.");
 	}
 
 	@Override
@@ -1262,6 +1260,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	// Protected
 	// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+	private static EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
+	{
+		final UiOptions options = config.getUiOptions();
+		if (options != null && options.getForwarding_system() != null)
+			return EmulatorBeanMode.valueOf(options.getForwarding_system());
+		else return EmulatorBeanMode.SDLONP;
+	}
+
 	protected void setRuntimeConfiguration(MachineConfiguration environment) throws BWFLAException
 	{
 		try {
@@ -1276,10 +1282,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			UiOptions uiOptions = emuEnvironment.getUiOptions();
 			if (uiOptions != null) {
-				if (uiOptions.getForwarding_system() != null)
-					emuBeanMode = EmulatorBeanMode.valueOf(uiOptions.getForwarding_system());
-				else
-					emuBeanMode = EmulatorBeanMode.SDLONP;
 				TimeOptions timeOptions = uiOptions.getTime();
 				if (timeOptions != null) {
 					if (timeOptions.getEpoch() != null) {
@@ -1486,16 +1488,29 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (!this.isContainerModeEnabled())
 			throw new BWFLAException("Container mode disabled! Checkpointing not possible.");
 
-		try {
-			// Client must be disconnected from emulator for checkpointing to succeed!
-			LOG.info("Waiting for emulator's detach-notification...");
-			this.waitForClientDetachAck(10, TimeUnit.SECONDS);
-		}
-		catch (Exception error) {
-			final String message = "Waiting for emulator's detach-notification failed!"
-					+ " Checkpointing not possible with connected clients.";
+		if (this.isSdlBackendEnabled()) {
+			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
+			final GuacamoleTunnel tunnel = connector.getTunnel();
+			if (tunnel != null) {
+				try {
+					LOG.info("Closing guacamole-tunnel...");
+					tunnel.close();
 
-			throw new BWFLAException(message, error);
+					// Client must be disconnected from emulator for checkpointing to succeed!
+					LOG.info("Waiting for emulator's detach-notification...");
+					this.waitForClientDetachAck(10, TimeUnit.SECONDS);
+				}
+				catch (Exception error) {
+					final String message = "Waiting for emulator's detach-notification failed!"
+							+ " Checkpointing not possible with connected clients.";
+
+					throw new BWFLAException(message, error);
+				}
+			}
+		}
+		else if (this.isXpraBackendEnabled()) {
+			final XpraConnector connector = (XpraConnector) this.getControlConnector(XpraConnector.PROTOCOL);
+			connector.disconnect();
 		}
 
 		final Path imgdir = this.getStateDir();
@@ -1912,10 +1927,48 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return ok;
 	}
 
+	private void waitUntilXpraReady(Path path, EmuCompState expstate) throws BWFLAException
+	{
+		LOG.info("Waiting for emulator to become ready...");
+
+		final int timeout = 30000;  // in ms
+		final int waittime = 1000;  // in ms
+		for (int numretries = timeout / waittime; numretries > 0; --numretries) {
+			if (Files.exists(path)) {
+				LOG.info("Emulator seems to be ready now");
+				return;
+			}
+
+			try {
+				Thread.sleep(waittime);
+			}
+			catch (Exception error) {
+				// Ignore it!
+			}
+
+			if (emuBeanState.get() != expstate) {
+				final String message = "Expected state changed, abort waiting for emulator!";
+				LOG.warning(message);
+				throw new BWFLAException(message);
+			}
+		}
+
+		throw new BWFLAException("Emulator is not ready!");
+	}
+
+	private void waitUntilRestoreDone()
+	{
+		LOG.info("Waiting for CRIU restore-worker to exit...");
+
+		final DeprecatedProcessRunner waiter = new DeprecatedProcessRunner("/bin/sh");
+		waiter.addArguments("-c", "while ! sudo runc ps "  + this.getContainerId() + "; do :; done; while sudo runc ps " + this.getContainerId() + " | grep -q criu; do :; done");
+		waiter.execute();
+	}
+
 	private void attachClientToEmulator() throws IOException, InterruptedException
 	{
 		LOG.info("Attaching client to emulator...");
-
+		Thread.sleep(1000);
 		synchronized (ctlMsgWriter) {
 			ctlMsgWriter.begin(MessageType.ATTACH_CLIENT);
 			ctlMsgWriter.send(emuCtlSocketName);
@@ -1925,7 +1978,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private void waitForAttachedClient() throws IOException, InterruptedException
 	{
 		final int timeout = 1000;
-		int numretries = 15;
+		int numretries = 30;
 
 		// Wait for the attached-event from emulator
 		while (numretries > 0) {
@@ -2168,4 +2221,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			emuNativeConfig = sb.toString();
 		}
 	}
+
+	protected String getEmulatorWorkdir()
+	{
+		return null;
+	}
+
+
 }

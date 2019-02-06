@@ -19,11 +19,11 @@
 
 package de.bwl.bwfla.imagebuilder.ws;
 
-import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.imagebuilder.ImageBuilderBackend;
 import de.bwl.bwfla.imagebuilder.api.IImageBuilder;
 import de.bwl.bwfla.imagebuilder.api.ImageBuildHandle;
+import de.bwl.bwfla.imagebuilder.api.ImageBuilderResult;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 
 import javax.ejb.ConcurrencyManagement;
@@ -62,7 +62,7 @@ public class ImageBuilder implements IImageBuilder
 	}
 
 	@Override
-	public BlobHandle get(ImageBuildHandle build) throws BWFLAException
+	public ImageBuilderResult get(ImageBuildHandle build) throws BWFLAException
 	{
 		return backend.get(build);
 	}

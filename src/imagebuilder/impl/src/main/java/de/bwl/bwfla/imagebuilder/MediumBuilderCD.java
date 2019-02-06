@@ -45,7 +45,7 @@ public class MediumBuilderCD extends MediumBuilder
         log.info("Building ISO image...");
         try {
             Files.createDirectory(filesToCopy);
-            MediumBuilderCD.copy(description.getContentEntries(), filesToCopy, workdir, log);
+            MediumBuilderCD.build(description.getContentEntries(), filesToCopy, workdir, log);
             this.createCDIso(filesToCopy, outputISOFile, log);
         }
         catch (Exception error) {

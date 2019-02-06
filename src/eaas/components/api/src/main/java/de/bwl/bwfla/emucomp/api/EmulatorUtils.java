@@ -113,7 +113,10 @@ public class EmulatorUtils {
 				// safely ignore transports here and just pass the url to Qemu.
 				Path cowPath = resourceDir.resolve(resource.getId() + ".cow");
 
-				EmulatorUtils.createCowFile(resUrl, cowPath, xmountOpts.getProxyUrl());
+				QcowOptions qcowOptions = new QcowOptions();
+				qcowOptions.setBackingFile(resUrl);
+				qcowOptions.setProxyUrl(xmountOpts.getProxyUrl());
+				EmulatorUtils.createCowFile(cowPath, qcowOptions);
 
 				Path fuseMountpoint = cowPath
 						.resolveSibling(cowPath.getFileName() + ".fuse");
@@ -237,57 +240,34 @@ public class EmulatorUtils {
 		return mountpoint.resolve(cowFile.getFileName());
 	}
 
-	public static void createNewCowFile(Path imageFile, String size) throws BWFLAException {
-		EmulatorUtils.createNewCowFile(imageFile, size, log);
-	}
-
-	public static void createNewCowFile(Path imageFile, String size, Logger log) throws BWFLAException {
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-		process.setLogger(log);
-		process.setCommand("qemu-img");
-		process.addArguments("create", "-f", "qcow2");
-		process.addArgument(imageFile.toString());
-		process.addArgument(size);
-
-		if (!process.execute()) {
-			try {
-				Files.deleteIfExists(imageFile);
-			} catch (Exception e) {
-				log.severe("Created a temporary file but cannot delete it after error. This is bad.");
-			}
-			throw new BWFLAException("Could not create local COW file. See log output for more information (maybe).");
-		}
-	}
-
 	/**
 	 * Creates a copy-on-write wrapper (in qcow2 file format) for imgUrl at the
 	 * specified directory.
 	 *
 	 * @param imgUrl  The image url to be wrapped (any valid Qemu url)
 	 * @param cowPath Path where the qcow2 file will be created at.
-	 * @return true if the cow file could be created successfully, false
-	 * otherwise.
 	 */
-	public static void createCowFile(String imgUrl, Path cowPath) throws BWFLAException {
-		EmulatorUtils.createCowFile(imgUrl, cowPath, null, log);
+	public static void createCowFile(Path cowPath, QcowOptions options) throws BWFLAException {
+		EmulatorUtils.createCowFile(cowPath, options, log);
 	}
 
-	public static void createCowFile(String imgUrl, Path cowPath, String proxyUrl) throws BWFLAException {
-		EmulatorUtils.createCowFile(imgUrl, cowPath, proxyUrl, log);
-	}
-
-	public static void createCowFile(String imgUrl, Path cowPath, String proxyUrl, Logger log) throws BWFLAException {
-
+	public static void createCowFile(Path cowPath, QcowOptions options, Logger log) throws BWFLAException {
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("qemu-img");
-		process.addArguments("create", "-f", "qcow2", "-o");
-		process.addArgument("backing_file=", imgUrl);
+		process.addArguments("create", "-f", "qcow2");
+		if(options != null && options.getBackingFile() != null)
+		{
+			process.addArgument("-o", "backing_file=", options.getBackingFile());
+		}
 		process.addArgument(cowPath.toString());
+		if(options != null && options.getSize() != null) {
+			process.addArgument(options.getSize());
+		}
 
-		if(proxyUrl != null) {
+		if(options.getProxyUrl() != null && options.getProxyUrl() != null) {
 			process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
-			process.addEnvVariable("http_proxy", proxyUrl);
+			process.addEnvVariable("http_proxy", options.getProxyUrl());
 		}
 
 		if (!process.execute()) {

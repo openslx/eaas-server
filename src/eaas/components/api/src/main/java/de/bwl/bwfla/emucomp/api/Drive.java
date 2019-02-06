@@ -307,5 +307,16 @@ public class Drive
         public String value() {
             return value;
         }
+
+        public static DriveType fromQID(String qid)
+        {
+            switch(qid)
+            {
+                case "Q495265":
+                    return CDROM;
+                default:
+                    throw new IllegalArgumentException();
+            }
+        }
     }
 }

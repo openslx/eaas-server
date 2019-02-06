@@ -2,3 +2,4 @@ objectarchive:
     objectarchiveconfdir: /home/bwfla/.bwFLA
     httpexport: http://localhost:8080/objectarchive/
     default_local_file_path: /home/bwfla/objects
+    userarchive: /home/bwfla/server-data/users

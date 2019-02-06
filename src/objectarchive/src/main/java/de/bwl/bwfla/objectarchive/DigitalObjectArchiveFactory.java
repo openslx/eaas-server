@@ -27,20 +27,14 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
+import de.bwl.bwfla.objectarchive.datatypes.*;
+import de.bwl.bwfla.objectarchive.impl.*;
 import org.apache.commons.io.FileUtils;
 
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchiveDescriptor;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectFileArchiveDescriptor;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectPreservicaArchive;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectPreservicaArchiveDescriptor;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectRosettaArchive;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectRosettaArchiveDescriptor;
 import solutions.emulation.preservica.client.SDBConfiguration;
 
 
@@ -80,6 +74,18 @@ public class DigitalObjectArchiveFactory {
 					return null;
 				SDBConfiguration conf = new SDBConfiguration(p.getSdbHost(), p.getUsername(), p.getPassword());
 				return new DigitalObjectPreservicaArchive(p.getName(), conf, p.getCollectionId(), p.isDefaultArchive());
+
+			case USER:
+				DigitalObjectUserArchiveDescriptor u = gson.create().fromJson(jsonString, DigitalObjectUserArchiveDescriptor.class);
+				if(u == null)
+					return null;
+				return new DigitalObjectUserArchive(u.getUser());
+
+			case METS:
+				DigitalObjectMETSFileArchiveDescriptor m = 	gson.create().fromJson(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);
+				if(m == null)
+					return null;
+				return new DigitalObjectMETSFileArchive(m.getName(), m.getLocalPath(), m.isDefaultArchive());
 				
 			default:
 				return null;

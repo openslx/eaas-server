@@ -27,6 +27,7 @@ import java.util.concurrent.TimeUnit;
 
 import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
+import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
@@ -49,6 +50,9 @@ public class NodeManager {
     @Inject
     protected PrefixLogger log;
 
+    @Resource(lookup = "java:jboss/ee/concurrency/factory/default")
+    private ManagedThreadFactory workerThreadFactory = null;
+
     @Resource(lookup = "java:jboss/ee/concurrency/scheduler/default")
     protected ManagedScheduledExecutorService scheduler;
 
@@ -64,7 +68,12 @@ public class NodeManager {
     
     // TODO: does it make sense to do something for @PreDestroy?
     
-    
+
+    public ManagedThreadFactory getWorkerThreadFactory()
+    {
+        return workerThreadFactory;
+    }
+
     /**
      * Creates and registers a component with the given {@componentId} and
      * configuration.

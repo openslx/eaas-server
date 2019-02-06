@@ -29,8 +29,6 @@ public class LoopDeviceManager {
 			throw  new BWFLAException("out of loopdevices");
 		}
 		loopDevicesMap.put(loopNumber, Boolean.FALSE);
-
-		log.warning("!!!!!!!!!!!!!1 loopNumber " + loopNumber);
 		return loopNumber;
 	}
 

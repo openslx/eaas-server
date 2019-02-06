@@ -28,5 +28,5 @@ public interface IImageBuilder
 {
 	ImageBuildHandle build(ImageDescription description) throws BWFLAException;
 	boolean isDone(ImageBuildHandle build) throws BWFLAException;
-	BlobHandle get(ImageBuildHandle build) throws BWFLAException;
+	ImageBuilderResult get(ImageBuildHandle build) throws BWFLAException;
 }

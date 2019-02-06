@@ -19,9 +19,15 @@
 
 package de.bwl.bwfla.common.utils.jaxb;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import org.eclipse.persistence.jaxb.JAXBContextFactory;
 import org.eclipse.persistence.jaxb.JAXBContextProperties;
 
+import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
@@ -37,7 +43,7 @@ import javax.xml.transform.stream.StreamSource;
 @XmlTransient
 public abstract class JaxbType {
     public static <T extends JaxbType> T fromValue(final String value,
-            final Class<T> klass) throws JAXBException {
+                                                   final Class<T> klass) throws JAXBException {
         JAXBContext jc = JAXBContext.newInstance(klass);
         Unmarshaller unmarshaller = jc.createUnmarshaller();
         T result = klass.cast(unmarshaller
@@ -45,8 +51,18 @@ public abstract class JaxbType {
         JaxbValidator.validate(result);
         return result;
     }
+
+    /**
+     * The usage of this method is limited, must be deleted as obsolete
+     * @param value
+     * @param klass
+     * @param <T>
+     * @return
+     * @throws JAXBException
+     */
+    @Deprecated
     public static <T extends JaxbType> T fromJsonValue(final String value,
-            final Class<T> klass) throws JAXBException {
+                                                       final Class<T> klass) throws JAXBException {
 
         //Set the various properties you want
         Map<String, Object> properties = new HashMap<>();
@@ -67,16 +83,49 @@ public abstract class JaxbType {
         return result;
     }
 
+
+    //Jaxb object from Json without root element
+    private static <T extends JaxbType> T fromValueJackson(final String value,
+                                                           final Class<T> klass,
+                                                           ObjectMapper objectMapper) throws BWFLAException {
+        JaxbType result = null;
+        try {
+            result = objectMapper.readValue(value, klass);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new BWFLAException(e);
+        }
+
+        if(result == null)
+            throw new BWFLAException("jackson failed to parse json!");
+
+
+        return klass.cast(result);
+    }
+
+    //Jaxb object from Json without root element using Jackson as backend
+    public static <T extends JaxbType> T fromJsonValueWithoutRoot(final String value,
+                                                                  final Class<T> klass) throws BWFLAException {
+        return fromValueJackson(value, klass, new ObjectMapper());
+    }
+
+    //Jaxb object from Yaml using Jackson as backend
+    public static <T extends JaxbType> T fromYamlValue(final String value,
+                                                       final Class<T> klass) throws BWFLAException {
+        return fromValueJackson(value, klass, new ObjectMapper(new YAMLFactory()));
+    }
+
+
     @SuppressWarnings("unchecked")
     public static <T extends JaxbType> T fromValue(final String value,
-            final T object) throws JAXBException {
+                                                   final T object) throws JAXBException {
         return JaxbType.fromValue(value, (Class<T>) object.getClass());
     }
 
     /**
      * Returns a compact string representation, in XML text format, of this
      * instance.
-     * 
+     *
      * @return A string representation of this object.
      * @throws JAXBException if the object cannot be successfully conerted to a
      *             string representation
@@ -88,7 +137,7 @@ public abstract class JaxbType {
     /**
      * Returns a compact string representation, in XML text format, of this
      * instance.
-     * 
+     *
      * @param prettyPrint if true, the XML text output will be indented with
      *            whitespace according to the nesting level of XML elements
      * @return A string representation of this object.
@@ -106,11 +155,12 @@ public abstract class JaxbType {
 
 
     /**
-     * Reworked JSONvalue, which returns Jaxb object as JSON String
+     *  The usage of this method is limited, must be deleted as obsolete
      * @param prettyPrint
      * @return
      * @throws JAXBException
      */
+    @Deprecated
     public String JSONvalue(final boolean prettyPrint) throws JAXBException {
 
         Map<String, Object> properties = new HashMap<>();
@@ -127,6 +177,33 @@ public abstract class JaxbType {
         StringWriter w = new StringWriter();
         marshaller.marshal(this, w);
         return w.toString();
+    }
+
+    public String jsonValueWithoutRoot(final boolean prettyPrint) {
+        return jacksonValue(prettyPrint, new ObjectMapper());
+    }
+    public String yamlValue(final boolean prettyPrint) {
+        ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
+
+        return jacksonValue(prettyPrint, new ObjectMapper(new YAMLFactory()));
+    }
+
+
+    /**
+     * Json value of Jaxb object without root element
+     * @param prettyPrint
+     * @return
+     * @throws JAXBException
+     */
+    private String jacksonValue(final boolean prettyPrint, ObjectMapper objectMapper) {
+        StringWriter writer = new StringWriter();
+        try {
+            objectMapper.writeValue(writer, this);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return writer.toString();
     }
 
     @Override

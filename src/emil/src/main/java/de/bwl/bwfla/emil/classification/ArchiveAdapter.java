@@ -16,6 +16,8 @@ import de.bwl.bwfla.emil.ClassificationData;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.wikidata.reader.QIDsFinder;
 import de.bwl.bwfla.wikidata.reader.entities.RelatedQIDS;
@@ -63,7 +65,12 @@ public class ArchiveAdapter {
     @Inject
 	@Config(value = "emil.emilobjectenvironmentspaths")
 	private String emilObjectEnvironmentsPath;
-    
+
+    @Inject
+    @AuthenticatedUser
+    private UserContext authenticatedUser;
+
+
     protected ObjectArchiveHelper objHelper;
     protected EnvironmentsAdapter envHelper;
     protected ImageClassifier imageClassifier;
@@ -115,9 +122,6 @@ public class ArchiveAdapter {
                 throw new BWFLAException(e1);
             }
             return response;
-        } catch (IOException e) {
-            LOG.log(Level.SEVERE, e.getMessage(), e);
-            throw new BWFLAException(e);
         }
     }
 
@@ -131,12 +135,18 @@ public class ArchiveAdapter {
 //        }
         HashSet<String> knownEnvironments = new HashSet<>();
         for (String envId : proposedEnvironments) {
+            try {
+                envHelper.getEnvironmentById(envId);
+            } catch (BWFLAException e)
+            {
+                continue;
+            }
             List<EmilEnvironment> emilEnvironments = emilEnvRepo.getChildren(envId, environments);
             List<EmilEnvironment> resultList = new ArrayList<>();
             for(EmilEnvironment emilEnv : emilEnvironments) {
                 if(emilEnv instanceof EmilObjectEnvironment) // do this later
                     continue;
-                if (emilEnv != null && emilEnv.isVisible()) {
+                if (emilEnv != null) {
                     if(!knownEnvironments.contains(emilEnv.getEnvId())) {
                         if(!proposedEnvironments.contains(emilEnv.getEnvId())) {
                             resultList.add(emilEnv);
@@ -326,21 +336,29 @@ public class ArchiveAdapter {
             String os = null;
             try {
                 os =  ((MachineConfiguration) envHelper.getEnvironmentById(env.getId())).getOperatingSystemId();
+                // sanitze: remove ':'
+                os = os.replace(':', '_');
+                qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
             } catch (BWFLAException e) {
                 e.printStackTrace();
             }
-
-            qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
         });
 
         response.setEnvironmentList(environmentList);
-
         return response;
     }
 
 
     public String getFileCollectionForObject(String archiveId, String objectId)
             throws  BWFLAException {
+        if(archiveId == null)
+        {
+            if(authenticatedUser == null || authenticatedUser.getUsername() == null)
+                archiveId = "default";
+            else
+                archiveId = authenticatedUser.getUsername();
+        }
+
         try {
             FileCollection fc = objHelper.getObjectReference(archiveId, objectId);
             if (fc == null)
@@ -360,9 +378,6 @@ public class ArchiveAdapter {
             result = db.load(objectId);
         } catch (NoSuchElementException e) {
             result = new ClassificationResult();
-        } catch (IOException e) {
-            LOG.log(Level.SEVERE, e.getMessage(), e);
-            throw new BWFLAException(e);
         }
 
         result.setEnvironmentList(environments);

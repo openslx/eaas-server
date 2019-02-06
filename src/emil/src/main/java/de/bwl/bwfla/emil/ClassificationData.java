@@ -1,15 +1,15 @@
 package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.database.MongodbEaasConnector;
+import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
+import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
-import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -20,6 +20,11 @@ public class ClassificationData {
 
     @Inject
     private MongodbEaasConnector dbConnector;
+    private MongodbEaasConnector.DatabaseInstance db;
+
+    @Inject
+    @Config("emil.classificationDatabase")
+    private String dbName;
 
     //  name of collection in eaas database
     public static String collectionName = "classificationCache";
@@ -39,33 +44,35 @@ public class ClassificationData {
     @PostConstruct
     public void init()
     {
-
+        db = dbConnector.getInstance(dbName);
     }
 
-    public ClassificationResult load(String objectId) throws NoSuchElementException, UnknownHostException {
+    public ClassificationResult load(String objectId) throws NoSuchElementException {
         try {
-            return dbConnector.getJaxbObject(collectionName, objectId, parentElement + idDBkey, ClassificationResult.class);
-        } catch ( JAXBException e) {
+            return db.getJaxbRootbasedObject(collectionName, objectId, parentElement + idDBkey, ClassificationResult.class);
+        } catch (BWFLAException e) {
+
             e.printStackTrace();
             throw new NoSuchElementException();
         }
     }
 
+
     public void save(ClassificationResult c, String objectId) throws JAXBException, IOException, BWFLAException {
         // classification wasn't successful
         if (c.getObjectId() == null || c.getObjectId().equals(""))
             return;
-        dbConnector.saveDoc(collectionName, objectId, parentElement + idDBkey, c.JSONvalue(false));
+        db.saveDoc(collectionName, objectId, parentElement + idDBkey, c.JSONvalue(false));
     }
 
-    public List<String> getEnvironmentDependencies(String envId) throws UnknownHostException {
+    public List<String> getEnvironmentDependencies(String envId) {
         List<String> objects = new ArrayList<>();
         ArrayList<ClassificationResult> results = null;
         try {
-            results = dbConnector.getJaxbObjects(collectionName, parentElement, ClassificationResult.class);
+            results = db.getJaxbObjects(collectionName, parentElement, ClassificationResult.class);
+
         } catch (JAXBException e) {
             e.printStackTrace();
-            return objects;
         }
         if (results == null) {
             return objects;

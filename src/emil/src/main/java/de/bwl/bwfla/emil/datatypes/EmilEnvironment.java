@@ -1,24 +1,31 @@
 package de.bwl.bwfla.emil.datatypes;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
+import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
 
+import java.time.Instant;
 import java.util.HashSet;
 import java.util.Set;
 
 @XmlRootElement
+@XmlSeeAlso({
+	EmilObjectEnvironment.class,
+	EmilContainerEnvironment.class,
+	EmilSessionEnvironment.class
+})
 @XmlAccessorType(XmlAccessType.NONE)
 public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironment> {
-
 	@XmlElement(required = false)
 	private String parentEnvId;
 	@XmlElement(required = true)
 	protected String envId;
+	@XmlElement(required = false, defaultValue = "default")
+	protected String archive = "default";
 	@XmlElement(required = false)
 	private String os;
 	@XmlElement(required = false)
@@ -39,7 +46,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private String author;
 
 	@XmlElement(required = false)
+	private String type = getClass().getCanonicalName();
+
+	@XmlElement(required = false)
 	private Set<String> childrenEnvIds = new HashSet<>();
+
+	@XmlElement(required = false)
+	private Set<String> branches = new HashSet<>();
 
 	@XmlElement(required = false)
 	private boolean visible = true;
@@ -59,6 +72,8 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	@XmlElement(required = false)
 	private boolean serverMode;
 	@XmlElement(required = false)
+	private boolean localServerMode;
+	@XmlElement(required = false)
 	private boolean enableSocks;
 
 	@XmlElement(required = false)
@@ -71,14 +86,39 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private String gwPrivateMask;
 
 	@XmlElement(required = false)
-	private boolean canProcessAdditionalFiles = false;
+	private EmilEnvironmentOwner owner;
+
+	@XmlElement(required = false)
+	private EmilEnvironmentPermissions permissions;
+
+	public boolean isConnectEnvs() {
+		return connectEnvs;
+	}
+
+	public void setConnectEnvs(boolean connectEnvs) {
+		this.connectEnvs = connectEnvs;
+	}
+
+	public boolean isCanProcessAdditionalFiles() {
+		return canProcessAdditionalFiles;
+	}
+
+	public void setCanProcessAdditionalFiles(boolean canProcessAdditionalFiles) {
+		this.canProcessAdditionalFiles = canProcessAdditionalFiles;
+	}
+
+	@XmlElement(required = false)
+	private boolean canProcessAdditionalFiles;
+
+	@XmlElement
+	private String timestamp = Instant.now().toString();
 
 	public EmilEnvironment() {}
 
 	public EmilEnvironment(EmilEnvironment template)
 	{
-		parentEnvId = template.parentEnvId;
 		envId = template.envId;
+		archive = template.archive;
 		os = template.os;
 		title = template.title;
 		description = template.description;
@@ -93,13 +133,24 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		shutdownByOs = template.shutdownByOs;
 		enableInternet = template.enableInternet;
 		serverMode = template.serverMode;
+		localServerMode = template.localServerMode;
 		enableSocks = template.enableSocks;
 		serverPort = template.serverPort;
 		serverIp = template.serverIp;
 		gwPrivateIp = template.gwPrivateIp;
 		gwPrivateMask = template.gwPrivateMask;
+		owner = template.owner;
+		permissions = template.permissions;
 		connectEnvs = template.connectEnvs;
 		canProcessAdditionalFiles = template.canProcessAdditionalFiles;
+	}
+
+	public String getArchive() {
+		return archive;
+	}
+
+	public void setArchive(String archive) {
+		this.archive = archive;
 	}
 
 	public String getTimeContext() {
@@ -132,6 +183,15 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	public void setDescription(String description) {
 		this.description = description;
 	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
+	}
+
 	public String getVersion() {
 		return version;
 	}
@@ -192,11 +252,9 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	}
 	
 	public boolean isVisible() {
-		return visible;
-	}
-	
-	public void setVisible(boolean isVisible) {
-		this.visible = isVisible;
+		if(childrenEnvIds == null || childrenEnvIds.size() == 0)
+			return true;
+		return false;
 	}
 
 	public Set<String> getChildrenEnvIds() {
@@ -210,19 +268,25 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		this.childrenEnvIds.remove(envId);
 	}
 
-	public String getDatabaseIdKey() {
-		return getDatabaseKey() + idDBkey; // example: "emilSessionEnvironment.envId" : "ad14d2bc-9ace-48df-b473-397dac19b2e915",
+	public Set<String> getBranches() {
+		return branches;
 	}
 
-	// document key is the name of the Class with lowercase first letter, thus EmilEnvironment = emilEnvironment
-	public String getDatabaseKey() {
-		//TODO disable Jackson naming strategy on JSON serialization (otherwise we always need the first letter in lowercase)
-		char c[] = getClass().getSimpleName().toCharArray();
-		c[0] = Character.toLowerCase(c[0]);
-		return new String(c);
+	public void addBranchId(String envId) {
+		this.branches.add(envId);
 	}
 
-	private static final String idDBkey = ".envId";
+	public void removeBranchEnvId(String envId) {
+		this.branches.remove(envId);
+	}
+
+	@JsonIgnore
+	public String getIdDBkey() {
+		return idDBkey; // example: "envId" : "ad14d2bc-9ace-48df-b473-397dac19b2e915",
+	}
+
+    @JsonIgnore
+	private static final String idDBkey = "envId";
 
 	public boolean isEnableInternet() {
 		return enableInternet;
@@ -234,6 +298,14 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public boolean isServerMode() {
 		return serverMode;
+	}
+
+	public boolean isLocalServerMode() {
+		return localServerMode;
+	}
+
+	public void setLocalServerMode(boolean localServerMode) {
+		this.localServerMode = localServerMode;
 	}
 
 	public void setServerMode(boolean serverMode) {
@@ -280,13 +352,23 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		this.gwPrivateMask = gwPrivateMask;
 	}
 
-	public boolean canConnectEnvs() {
-		return connectEnvs;
+	public EmilEnvironmentPermissions getPermissions() {
+		return permissions;
 	}
 
-	public void setConnectEnvs(boolean connectEnvs) {
-		this.connectEnvs = connectEnvs;
+	public void setPermissions(EmilEnvironmentPermissions permissions) {
+		this.permissions = permissions;
 	}
+
+	public EmilEnvironmentOwner getOwner() {
+		return owner;
+	}
+
+	public void setOwner(EmilEnvironmentOwner owner) {
+		this.owner = owner;
+	}
+
+
 
 	public String getAuthor() {
 		return author;
@@ -296,11 +378,12 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		this.author = author;
 	}
 
-	public boolean canProcessAdditionalFiles() {
-		return canProcessAdditionalFiles;
+
+	public String getTimestamp() {
+		return timestamp;
 	}
 
-	public void setProcessAdditionalFiles(boolean canProcessAdditionalFiles) {
-		this.canProcessAdditionalFiles = canProcessAdditionalFiles;
+	public void setTimestamp(String timestamp) {
+		this.timestamp = timestamp;
 	}
 }

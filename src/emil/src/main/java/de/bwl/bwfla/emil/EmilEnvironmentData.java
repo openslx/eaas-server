@@ -4,14 +4,11 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.net.URLDecoder;
 import java.util.*;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
-import javax.activation.DataHandler;
-import javax.activation.FileDataSource;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -28,19 +25,20 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.xml.bind.JAXBException;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageExport;
-import de.bwl.bwfla.api.imagearchive.ImageFileInfo;
-import de.bwl.bwfla.api.imagearchive.ImageType;
-import de.bwl.bwfla.api.objectarchive.ObjectFileCollection;
-import de.bwl.bwfla.api.objectarchive.ObjectFileCollectionHandle;
+import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
+import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.emil.utils.tasks.ImportImageTask;
+import de.bwl.bwfla.emil.utils.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emucomp.api.*;
 
 import com.google.gson.JsonIOException;
@@ -51,17 +49,17 @@ import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
-import org.apache.commons.io.FileUtils;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
-import org.json.JSONArray;
+import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
 
 @Path("EmilEnvironmentData")
 @ApplicationScoped
 public class EmilEnvironmentData extends EmilRest {
 
-	private EnvironmentsAdapter envHelper;
+	@Inject
+	private DatabaseEnvironmentsAdapter envHelper;
 
 	@Inject
 	@Config(value = "emil.imageproposerservice")
@@ -71,16 +69,22 @@ public class EmilEnvironmentData extends EmilRest {
 	private EmilEnvironmentRepository emilEnvRepo;
 
 	@Inject
+	private EmilDataExport exportService;
+
+	@Inject
 	private ArchiveAdapter archive;
 
 	private ObjectArchiveHelper objHelper;
+
 	private AsyncIoTaskManager taskManager;
 	private ImageProposer imageProposer;
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext authenticatedUser = null;
+
 	@PostConstruct
 	private void initialize() {
-		envHelper = new EnvironmentsAdapter(imageArchive);
-
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 		} catch (IllegalArgumentException e) {}
@@ -98,6 +102,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 *
 	 * @return
 	 */
+	@Secured
 	@GET
 	@Path("/init")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -109,6 +114,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@GET
 	@Path("/objectDependencies")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -126,6 +132,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@POST
 	@Path("/delete")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -154,7 +161,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 		try {
 			emilEnvRepo.delete(desc.getEnvId(), desc.getDeleteMetaData(), desc.getDeleteImage());
-		} catch (IOException | BWFLAException e1) {
+		} catch (BWFLAException e1) {
 			return Emil.internalErrorResponse(e1);
 		}
 
@@ -189,6 +196,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @return A JSON object with supported environments when found, else an
 	 * error message.
 	 */
+	@Secured
 	@GET
 	@Path("/getAllEnvironments")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -202,8 +210,6 @@ public class EmilEnvironmentData extends EmilRest {
 			json.beginArray();
 
 			for (EmilEnvironment env : environments) {
-				if (!env.isVisible())
-					continue;
 				json.beginObject();
 				json.add("id", env.getEnvId());
 				json.add("label", env.getTitle());
@@ -226,33 +232,36 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @param id
 	 * @return
 	 */
+	@Secured
 	@GET
 	@Path("/getEnvById")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getEnvById(@QueryParam("id") String id) {
 		try {
 			EmilEnvironment env = emilEnvRepo.getEmilEnvironmentById(id);
-			return Emil.createResponse(Status.OK, env.JSONvalue(false));
+			return Emil.createResponse(Status.OK, env.jsonValueWithoutRoot(false));
 		} catch (Throwable t) {
 			return Emil.errorMessageResponse(t.getMessage());
 		}
 	}
 
-
-
+	@Secured
 	@GET
 	@Path("/exportEnvsToPath")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response export() throws IOException {
-		List<EmilEnvironment> environments = emilEnvRepo.getAllEnvironments();
+		List<EmilEnvironment> environments = null;
+
+		environments = emilEnvRepo.getEmilEnvironments();
 		if (environments != null && environments.size() == 0) {
 			emilEnvRepo.init();
-			environments = emilEnvRepo.getAllEnvironments();
+			environments = emilEnvRepo.getEmilEnvironments();
 		}
+
 		environments.forEach(env -> {
 			try {
 				LOG.info(env.value(true));
-				emilEnvRepo.saveEnvToPath(env);
+				exportService.saveEnvToPath(env);
 			} catch (JAXBException | IOException e) {
 				e.printStackTrace();
 			}
@@ -260,7 +269,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("success!");
 	}
 
-
+	@Secured
 	@GET
 	@Path("/remoteList")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -311,6 +320,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@GET
 	@Path("/getDatabaseContent")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -321,7 +331,7 @@ public class EmilEnvironmentData extends EmilRest {
 				throw new BWFLAException("Class name is incorrect!");
 			}
 			return Emil.createResponse(Status.OK, emilEnvRepo.getDatabaseContent(type, classType));
-		} catch (ClassNotFoundException | JAXBException | BWFLAException e) {
+		} catch (ClassNotFoundException | BWFLAException e) {
 			LOG.warning("getDatabaseContent failed!\n" + e.getMessage());
 			return Emil.internalErrorResponse(e);
 		}
@@ -349,41 +359,22 @@ public class EmilEnvironmentData extends EmilRest {
 	 *
 	 * @return A JSON object containing the environment descriptions.
 	 */
+	@Secured
 	@GET
 	@Path("/list")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response list(@QueryParam("type") String type) {
+	public Response list() {
 		List<EmilEnvironment> environments = null;
-		HashMap<String, EmilEnvironment> envMap = new HashMap<>();
 
-		if (type == null) // old clients
-			type = "base";
 
-		try {
-			// sanity check
-			if (type.equals("base")) {
+		try{
+			environments = emilEnvRepo.getEmilEnvironments();
+			if (environments != null && environments.size() == 0) {
+				init();
 				environments = emilEnvRepo.getEmilEnvironments();
-				if (environments != null && environments.size() == 0) {
-					init();
-					environments = emilEnvRepo.getEmilEnvironments();
-				}
-			} else if (type.equals("object")) {
-				List<EmilObjectEnvironment> oe = emilEnvRepo.getEmilObjectEnvironments();
-				environments = new ArrayList<EmilEnvironment>();
-				environments.addAll(oe);
-			}
-			else if (type.equals("container")) {
-				List<EmilContainerEnvironment> oe = emilEnvRepo.getEmilContainerEnvironments();
-				environments = new ArrayList<EmilEnvironment>();
-				for (EmilContainerEnvironment eoe : oe) // manual cast...
-					environments.add(eoe);
 			}
 		} catch (Exception exception) {
 			return Emil.internalErrorResponse(exception);
-		}
-
-		for (EmilEnvironment e : environments) {
-			envMap.put(e.getEnvId(), e);
 		}
 
 		try {
@@ -395,18 +386,20 @@ public class EmilEnvironmentData extends EmilRest {
 
 			// Add all environments to the response...
 			for (EmilEnvironment emilenv : environments) {
-
-				if (!emilenv.isVisible())
-					continue;
-
 				MachineConfiguration machineConf = null;
 				try {
-					if(envHelper.getEnvironmentById(emilenv.getEnvId()) instanceof MachineConfiguration)
-					machineConf = (MachineConfiguration) envHelper.getEnvironmentById(emilenv.getEnvId());
+					Environment env =  envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+
+					if(!(env instanceof MachineConfiguration))
+						continue;
+
+					machineConf = (MachineConfiguration)env;
 				} catch (BWFLAException e) {
+					LOG.warning("skipping env: " + emilenv.getArchive() + " " + emilenv.getEnvId() + " " + e.getMessage());
 					continue;
 				}
 
+				String envType = "base";
 				json.beginObject();
 
 				json.add("parentEnvId", emilenv.getParentEnvId());
@@ -421,26 +414,33 @@ public class EmilEnvironmentData extends EmilRest {
 				json.add("shutdownByOs", emilenv.isShutdownByOs());
 				json.add("timeContext", emilenv.getTimeContext());
 				json.add("serverMode", emilenv.isServerMode());
+				json.add("localServerMode", emilenv.isLocalServerMode());
 				json.add("enableSocks", emilenv.isEnableSocks());
 				json.add("serverPort", emilenv.getServerPort());
 				json.add("serverIp", emilenv.getServerIp());
 				json.add("gwPrivateIp", emilenv.getGwPrivateIp());
 				json.add("gwPrivateMask", emilenv.getGwPrivateMask());
 				json.add("enableInternet", emilenv.isEnableInternet());
-				json.add("connectEnvs", emilenv.canConnectEnvs());
+				json.add("connectEnvs", emilenv.isCanProcessAdditionalFiles());
 				json.add("author", emilenv.getAuthor());
-				json.add("canProcessAdditionalFiles", emilenv.canProcessAdditionalFiles());
-
+				json.add("canProcessAdditionalFiles", emilenv.isCanProcessAdditionalFiles());
+				json.add("archive", emilenv.getArchive());
+				if( emilenv.getOwner() != null)
+					json.add("owner" , emilenv.getOwner().getUsername());
+				else
+					json.add("owner", "shared");
 
 				if(emilenv instanceof EmilObjectEnvironment)
 				{
 					EmilObjectEnvironment emilObjEnv = (EmilObjectEnvironment) emilenv;
 					json.add("objectId", emilObjEnv.getObjectId());
-					json.add("archiveId", emilObjEnv.getArchiveId());
+					json.add("archiveId", emilObjEnv.getObjectArchiveId());
+					envType = "object";
 				}
 
 				if(emilenv instanceof EmilContainerEnvironment)
 				{
+					envType = "container";
 					EmilContainerEnvironment cEnv = (EmilContainerEnvironment) emilenv;
 					json.add("input", cEnv.getInput());
 					json.add("output", cEnv.getOutput());
@@ -460,20 +460,19 @@ public class EmilEnvironmentData extends EmilRest {
 					json.endArray();
 				}
 
-				if (emilenv.getParentEnvId() != null) {
-					EmilEnvironment parentEnv = envMap.get(emilenv.getParentEnvId());
-					if (parentEnv != null) {
-						json.name("revisions");
-						json.beginArray();
-						do {
-							json.beginObject();
-							json.add("id", parentEnv.getEnvId());
-							json.add("text", parentEnv.getDescription());
-							json.endObject();
-							parentEnv = envMap.get(parentEnv.getParentEnvId());
-						} while (parentEnv != null);
-						json.endArray();
+
+				List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
+				if (parents.size() > 0) {
+					json.name("revisions");
+					json.beginArray();
+					for(EmilEnvironment parentEnv : parents)
+					{
+						json.beginObject();
+						json.add("id", parentEnv.getEnvId());
+						json.add("text", parentEnv.getDescription());
+						json.endObject();
 					}
+					json.endArray();
 				}
 
 				// Add installed software IDs to the response
@@ -503,8 +502,16 @@ public class EmilEnvironmentData extends EmilRest {
 						json.add("emulator", machineConf.getEmulator().getBean());
 
 					}
-				}
 
+					if (machineConf.getEmulator().getContainerName() != null) {
+						json.add("containerName", machineConf.getEmulator().getContainerName());
+					}
+
+					if (machineConf.getEmulator().getContainerVersion() != null) {
+						json.add("containerVersion", machineConf.getEmulator().getContainerVersion());
+					}
+				}
+				json.add("envType", envType);
 				json.endObject();
 			}
 			json.endArray(); // environments array
@@ -517,6 +524,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@POST
 	@Path("/createEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -526,7 +534,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @return
 	 */
 	public Response createEnvironment(EnvironmentCreateRequest envReq) {
-		final EnvironmentsAdapter environmentHelper = envHelper;
+		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
 
 		if(envReq.getTemplateId() == null)
 			return Emil.errorMessageResponse("invalid template id");
@@ -545,7 +553,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 			ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
 			iaMd.setType(ImageType.TMP);
-			String id = environmentHelper.createEnvironment(env, envReq.getSize(), iaMd);
+			String id = environmentHelper.createEnvironment("default", env, envReq.getSize(), iaMd);
 			if (id == null) {
 				return Emil.errorMessageResponse("failed to create image");
 			}
@@ -563,6 +571,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@GET
 	@Path("/getEnvironmentTemplates")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -576,7 +585,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 *         "In 1936, the Russians made a computer that ran on water"}]}]}
 	 */
 	public Response getEnvironmentTemplates() {
-		final EnvironmentsAdapter environmentHelper = envHelper;
+		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
 		try {
 			List<MachineConfigurationTemplate> envs = environmentHelper.getTemplates();
 
@@ -607,7 +616,7 @@ public class EmilEnvironmentData extends EmilRest {
 				if (e.getEmulator() != null && e.getEmulator().getBean() != null
 						&& !e.getEmulator().getBean().isEmpty()) {
 					json.beginObject();
-					json.add("name", "Emulator");
+					json.add("name", "EmulatorContainer");
 					json.add("value", e.getEmulator().getBean());
 					json.endObject();
 				}
@@ -650,26 +659,30 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @param desc A JSON object containing description changes.
 	 * @return A JSON object containing the result message.
 	 */
+	@Secured
 	@POST
 	@Path("/updateDescription")
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response updateDescription(UpdateEnvironmentDescriptionRequest desc) {
+		boolean imported = false;
 		final String curEnvId = desc.getEnvId();
 		if(curEnvId == null)
 			return Emil.errorMessageResponse("envId was null");
 
-		EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(curEnvId);
-		if(newEmilEnv == null) {
+		EmilEnvironment currentEnv = emilEnvRepo.getEmilEnvironmentById(curEnvId);
+		EmilEnvironment newEnv;
+
+		if(currentEnv == null) {
 			return Emil.errorMessageResponse("No emil environment found with ID: " + curEnvId);
 		}
 
 		try {
-			Environment environment = envHelper.getEnvironmentById(desc.getEnvId());
+			Environment environment = envHelper.getEnvironmentById(currentEnv.getArchive(), desc.getEnvId());
 
 			if(environment instanceof MachineConfiguration)
 			{
-				MachineConfiguration machineConfiguration = (MachineConfiguration)environment;
+				MachineConfiguration machineConfiguration = (MachineConfiguration) environment;
 				machineConfiguration.setOperatingSystemId(desc.getOs());
 				if(desc.getNativeConfig() != null) {
 					if(machineConfiguration.getNativeConfig() == null)
@@ -685,49 +698,86 @@ public class EmilEnvironmentData extends EmilRest {
 				else
 					machineConfiguration.getUiOptions().setForwarding_system(null);
 
-
-				if(machineConfiguration.getUiOptions().getHtml5() == null)
+				if (machineConfiguration.getUiOptions().getHtml5() == null)
 					machineConfiguration.getUiOptions().setHtml5(new Html5Options());
 
+//				Do not check for null. EmuBean would choose latest, if value is null
+				machineConfiguration.getEmulator().setContainerName(desc.getContainerEmulatorName());
+				machineConfiguration.getEmulator().setContainerVersion(desc.getContainerEmulatorVersion());
+
 				machineConfiguration.getUiOptions().getHtml5().setPointerLock(desc.isEnableRelativeMouse());
+
+				if(desc.isEnableInternet())
+				{
+					List<Nic> nics = machineConfiguration.getNic();
+					if (nics.size() == 0) {
+						Nic nic = new Nic();
+						nic.setHwaddress(NetworkUtils.getRandomHWAddress());
+						nics.add(nic);
+					}
+				}
 			}
 
 			environment.setUserTag(desc.getUserTag());
+			if(!currentEnv.getArchive().equals("default")) {
+				// we need to import / duplicate the env
 
-			envHelper.updateMetadata(environment.toString());
+				if(currentEnv instanceof EmilObjectEnvironment)
+					newEnv = new EmilObjectEnvironment(currentEnv);
+				else
+					newEnv = new EmilEnvironment(currentEnv);
+
+				ImageArchiveMetadata md = new ImageArchiveMetadata();
+				md.setType(ImageType.USER);
+				newEnv.setArchive("default");
+				String id = envHelper.importMetadata("default", environment, md, false);
+				newEnv.setEnvId(id);
+				newEnv.setParentEnvId(currentEnv.getEnvId());
+				currentEnv.addChildEnvId(newEnv.getEnvId());
+				imported = true;
+			}
+			else {
+				envHelper.updateMetadata(currentEnv.getArchive(), environment);
+				newEnv = currentEnv;
+			}
 			imageProposer.refreshIndex();
 		} catch (BWFLAException e) {
 			LOG.log(Level.SEVERE, e.getMessage(), e);
 			return Emil.errorMessageResponse("No emulation environment found with ID: " + curEnvId);
 		}
 
-		newEmilEnv.setTitle(desc.getTitle());
-		newEmilEnv.setAuthor(desc.getAuthor());
-		newEmilEnv.setDescription(desc.getDescription());
-		newEmilEnv.setHelpText(desc.getHelpText());
-		newEmilEnv.setEnablePrinting(desc.isEnablePrinting());
-		newEmilEnv.setEnableRelativeMouse(desc.isEnableRelativeMouse());
-		newEmilEnv.setShutdownByOs(desc.isShutdownByOs());
-		newEmilEnv.setEnableInternet(desc.isEnableInternet());
-		newEmilEnv.setConnectEnvs(desc.canConnectEnvs());
-		newEmilEnv.setServerMode(desc.isServerMode());
-		newEmilEnv.setEnableSocks(desc.isEnableSocks());
-		newEmilEnv.setGwPrivateIp(desc.getGwPrivateIp());
-		newEmilEnv.setGwPrivateMask(desc.getGwPrivateMask());
-		newEmilEnv.setServerIp(desc.getServerIp());
-		newEmilEnv.setServerPort(desc.getServerPort());
-		newEmilEnv.setProcessAdditionalFiles(desc.canProcessAdditionalFiles());
+		newEnv.setTitle(desc.getTitle());
+		newEnv.setAuthor(desc.getAuthor());
+		newEnv.setDescription(desc.getDescription());
+		newEnv.setHelpText(desc.getHelpText());
+		newEnv.setEnablePrinting(desc.isEnablePrinting());
+		newEnv.setEnableRelativeMouse(desc.isEnableRelativeMouse());
+		newEnv.setShutdownByOs(desc.isShutdownByOs());
+		newEnv.setEnableInternet(desc.isEnableInternet());
+		newEnv.setConnectEnvs(desc.canConnectEnvs());
+		newEnv.setServerMode(desc.isServerMode());
+		newEnv.setLocalServerMode(desc.isLocalServerMode());
+		newEnv.setEnableSocks(desc.isEnableSocks());
+		newEnv.setGwPrivateIp(desc.getGwPrivateIp());
+		newEnv.setGwPrivateMask(desc.getGwPrivateMask());
+		newEnv.setServerIp(desc.getServerIp());
+		newEnv.setServerPort(desc.getServerPort());
+		newEnv.setCanProcessAdditionalFiles(desc.canProcessAdditionalFiles());
 
 		if (desc.getTime() != null) {
-			LOG.info("time: " + desc.getTime());
-			newEmilEnv.setTimeContext(desc.getTime());
+			newEnv.setTimeContext(desc.getTime());
 		} else {
-			newEmilEnv.setTimeContext(null);
+			newEnv.setTimeContext(null);
 		}
 
 		try {
-			emilEnvRepo.save(newEmilEnv);
-		} catch (BWFLAException | JAXBException | IOException e) {
+			if(imported) {
+				// emilEnvRepo.save(currentEnv, false);
+				emilEnvRepo.save(newEnv, true);
+			}
+			else
+				emilEnvRepo.save(newEnv, false);
+		} catch (BWFLAException e) {
 			return Emil.internalErrorResponse(e);
 		}
 
@@ -735,6 +785,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.createResponse(Status.OK, json);
 	}
 
+	@Secured
 	@GET
 	@Path("/defaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -750,6 +801,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@GET
 	@Path("/setDefaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -762,17 +814,20 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@GET
 	@Path("/environment")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response environment(@QueryParam("envId") String envId) {
 		EmilEnvironment env = emilEnvRepo.getEmilEnvironmentById(envId);
+
 		if(env == null) {
 			return Emil.errorMessageResponse("Environment ID not found or null.");
 		}
 		return Emil.createResponse(Status.OK, env);
 	}
 
+	@Secured
 	@POST
 	@Path("forkRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -786,18 +841,22 @@ public class EmilEnvironmentData extends EmilRest {
 		if(newEmilEnv == null) {
 			return Emil.internalErrorResponse("not found: " + req.getId());
 		}
-
-		newEmilEnv.setVisible(true);
-		newEmilEnv.setTitle(newEmilEnv.getTitle() + " " + newEmilEnv.getEnvId());
 		try {
-			emilEnvRepo.save(newEmilEnv);
-		} catch (BWFLAException | JAXBException | IOException e) {
+			Environment environment = envHelper.getEnvironmentById(newEmilEnv.getArchive(), req.getId());
+			ImageArchiveMetadata md = new ImageArchiveMetadata();
+			md.setType(ImageType.USER);
+			String id = envHelper.importMetadata(newEmilEnv.getArchive(), environment, md, false);
+			newEmilEnv.setEnvId(id);
+			newEmilEnv.setTitle(newEmilEnv.getTitle() + " " + newEmilEnv.getEnvId());
+			emilEnvRepo.save(newEmilEnv, true);
+		} catch (BWFLAException  e) {
 			return Emil.internalErrorResponse(e);
 		}
 
 		return Emil.successMessageResponse("forked environment: " + req.getId());
 	}
 
+	@Secured
 	@POST
 	@Path("revertRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -806,13 +865,15 @@ public class EmilEnvironmentData extends EmilRest {
 	 *
 	 * @return
 	 */
-	public Response revertRevision(RevertRevisionRequest req) {
+	public synchronized Response revertRevision(RevertRevisionRequest req) {
 		EmilEnvironment currentEnv;
 
 		if (req.getCurrentId() == null || req.getRevId() == null)
 			return Emil.errorMessageResponse("Invalid Request");
 
+		List<String> deleteList= new ArrayList<>();
 		currentEnv = emilEnvRepo.getEmilEnvironmentById(req.getCurrentId());
+
 		if(currentEnv == null) {
 			return Emil.errorMessageResponse("No emil environment found with ID: " + req.getCurrentId());
 		}
@@ -826,8 +887,8 @@ public class EmilEnvironmentData extends EmilRest {
 					if (currentEnv.getEnvId().equals(req.getRevId()))
 						break;
 
-					currentEnv.setVisible(false);
-					emilEnvRepo.save(currentEnv);
+					deleteList.add(currentEnv.getEnvId());
+					emilEnvRepo.save(currentEnv, false);
 
 					currentEnv = parentEnv;
 					parentEnv = emilEnvRepo.getEmilEnvironmentById(currentEnv.getParentEnvId());
@@ -837,15 +898,18 @@ public class EmilEnvironmentData extends EmilRest {
 			if (!currentEnv.getEnvId().equals(req.getRevId()))
 				return Emil.errorMessageResponse("could not revert to Revision: " + req.getRevId());
 
-			currentEnv.setVisible(true);
-			emilEnvRepo.save(currentEnv);
+			emilEnvRepo.save(currentEnv, false);
+			for(String id: deleteList)
+				emilEnvRepo.delete(id, true, true);
+
 			return Emil.successMessageResponse("reverted to environment: " + req.getRevId());
 
-		} catch (BWFLAException | JAXBException | JsonSyntaxException | JsonIOException | IOException  e) {
+		} catch (BWFLAException | JAXBException | JsonSyntaxException | JsonIOException e) {
 			return Emil.errorMessageResponse("No emil environment found with ID: " + currentEnv.getParentEnvId());
 		}
 	}
 
+	@Secured
 	@GET
 	@Path("operatingSystemMetadata")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -877,31 +941,28 @@ public class EmilEnvironmentData extends EmilRest {
 		return metaData;
 	}
 
+	@Secured
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response sync() {
-		try {
-			envHelper.sync();
-			init();
-		} catch (BWFLAException e) {
-			return Emil.internalErrorResponse(e);
-		}
-		return Emil.successMessageResponse("sync archives successful");
+		envHelper.sync();
+		init();
+		return Emil.successMessageResponse("syncing archives ");
 	}
 
-
+	@Secured
 	@GET
 	@Path("/environmentMetaData")
 	@Produces(MediaType.APPLICATION_JSON)
-	public EnvironmentMetaData getEnvironmentMetaData(@QueryParam("envId") String envId)
+	public EnvironmentMetaData getEnvironmentMetaData(@QueryParam("archive") String archive, @QueryParam("envId") String envId)
 	{
-		if(envId == null)
-			return new EnvironmentMetaData(new BWFLAException("environment ID was null"));
+		if(envId == null || archive == null)
+			return new EnvironmentMetaData(new BWFLAException("environment ID / archive was null"));
 
-		final EnvironmentsAdapter environmentHelper = envHelper;
+		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
 		try {
-			MachineConfiguration machineConfiguration = (MachineConfiguration)envHelper.getEnvironmentById(envId);
+			MachineConfiguration machineConfiguration = (MachineConfiguration)envHelper.getEnvironmentById(archive, envId);
 
 			if(machineConfiguration.getEmulator() == null)
 				return new EnvironmentMetaData(new BWFLAException("invalid machine metadata: " + machineConfiguration.toString()));
@@ -919,6 +980,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 	}
 
+	@Secured
 	@POST
 	@Path("/overrideObjectCharacterization")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -935,6 +997,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured
 	@POST
 	@Path("/importImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -945,35 +1008,148 @@ public class EmilEnvironmentData extends EmilRest {
 	 */
 	public TaskStateResponse importImage(ImportImageRequest imageReq) {
 
-		return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(imageReq, envHelper)));
-	}
-
-	@POST
-	@Path("/exportToRemoteArchive")
-	@Produces(MediaType.APPLICATION_JSON)
-	@Consumes(MediaType.APPLICATION_JSON)
-	public TaskStateResponse exportToRemoteArchive(RemoteExportRequest req) {
-		if (req.getWsHost() == null || req.getEnvId() == null)
-			return new TaskStateResponse(new BWFLAException("invalid arguments"));
-
-		String host = null;
+		ImportImageTaskRequest request = new ImportImageTaskRequest();
+		URL url;
 		try {
-			host = URLDecoder.decode(req.getWsHost(), "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new TaskStateResponse(new BWFLAException("metadata import failed"));
+			url = new URL(imageReq.getUrlString());
+		} catch (MalformedURLException me) {
+			String filename = imageReq.getUrlString();
+			if (filename == null || filename.contains("/"))
+				return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename));
+			File image = new File("/eaas/import/", filename);
+			LOG.info("path: " + image);
+			if (!image.exists())
+				return new TaskStateResponse(new BWFLAException("image : " + filename + " not found."));
+
+			try {
+				url = image.toURI().toURL();
+			} catch (MalformedURLException e) {
+				return new TaskStateResponse(new BWFLAException(e));
+			}
 		}
-		return new TaskStateResponse(taskManager.submitTask(new ExportImageTask(host, req.getObjectArchiveHost(),
-				req.getEnvId(), req.isExportObjectEmbedded())));
+		request.url = url;
+
+		if (imageReq.getRom() != null) {
+			File romFile = new File("/eaas/roms", imageReq.getRom());
+			if (!romFile.exists())
+				return new TaskStateResponse(new BWFLAException("rom file not found"));
+			request.romFile = romFile;
+		}
+		request.destArchive = "default";
+		request.templateId = imageReq.getTemplateId();
+		request.nativeConfig = imageReq.getNativeConfig();
+		request.environmentHelper = envHelper;
+		request.imageProposer = imageProposer;
+
+		try {
+			request.validate();
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+			return new TaskStateResponse(e);
+		}
+
+		return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(request, LOG)));
 	}
 
+	@Secured
+	@GET
+	@Path("/getNameIndexes")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	/**
+	 *
+	 * @return
+	 */
+    public ImageNameIndex getNameIndexes() throws BWFLAException, JAXBException {
+        return emilEnvRepo.getNameIndexes();
+    }
+
+//	@POST
+//	@Path("/exportToRemoteArchive")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	@Consumes(MediaType.APPLICATION_JSON)
+//	public TaskStateResponse exportToRemoteArchive(RemoteExportRequest req) {
+//		if (req.getWsHost() == null || req.getEnvId() == null)
+//			return new TaskStateResponse(new BWFLAException("invalid arguments"));
+//
+//		String host = null;
+//		try {
+//			host = URLDecoder.decode(req.getWsHost(), "UTF-8");
+//		} catch (UnsupportedEncodingException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			return new TaskStateResponse(new BWFLAException("metadata import failed"));
+//		}
+//		return new TaskStateResponse(taskManager.submitTask(new ExportImageTask(host, req.getObjectArchiveHost(),
+//				req.getEnvId(), req.isExportObjectEmbedded())));
+//	}
+
+	@Secured
+	@POST
+	@Path("/replicateImage")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	/**
+	 *
+	 * @return
+	 */
+	public ReplicateImagesResponse replicateImage(ReplicateImagesRequest replicateImagesRequest) {
+		if(replicateImagesRequest.getReplicateList() == null)
+			return new ReplicateImagesResponse(new BWFLAException("no environments given"));
+
+		ReplicateImagesResponse response = new ReplicateImagesResponse();
+		List<String> taskList = new ArrayList<String>();
+
+		ReplicateImageTask.ReplicateImageTaskRequest importRequest = new ReplicateImageTask.ReplicateImageTaskRequest();
+
+		for(String envId : replicateImagesRequest.getReplicateList())
+		{
+			EmilEnvironment emilEnvironment = emilEnvRepo.getEmilEnvironmentById(envId);
+			MachineConfiguration env;
+			if(emilEnvironment == null) {
+				LOG.severe("Environment " + envId + " not found");
+				continue;
+			}
+			try {
+				Environment e = envHelper.getEnvironmentById(emilEnvironment.getArchive(), envId);
+				if(!(e instanceof MachineConfiguration))
+					continue;
+				env = (MachineConfiguration)e;
+				importRequest.env = env;
+
+				importRequest.repository = emilEnvRepo;
+				importRequest.emilEnvironment = emilEnvironment;
+			} catch (BWFLAException e) {
+				e.printStackTrace();
+			}
+
+			importRequest.environmentHelper = envHelper;
+			importRequest.destArchive = replicateImagesRequest.getDestArchive();
+			importRequest.imageProposer = imageProposer;
+
+			if(authenticatedUser != null)
+				importRequest.username = authenticatedUser.getUsername();
+
+			try {
+				importRequest.validate();
+			} catch (BWFLAException e) {
+				e.printStackTrace();
+				return new ReplicateImagesResponse(e);
+			}
+
+			taskList.add(taskManager.submitTask(new ReplicateImageTask(importRequest, LOG)));
+		}
+		response.setTaskList(taskList);
+		return response;
+	}
+
+	@Secured
 	@GET
 	@Path("/taskState")
 	@Produces(MediaType.APPLICATION_JSON)
 	public TaskStateResponse taskState(@QueryParam("taskId") String taskId) {
 		final TaskInfo<Object> info = taskManager.getTaskInfo(taskId);
 		if (info == null)
-			return new TaskStateResponse(new BWFLAException("metadata import failed"));
+			return new TaskStateResponse(new BWFLAException("task failed"));
 
 		if (!info.result().isDone())
 			return new TaskStateResponse(taskId);
@@ -1003,73 +1179,6 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@GET
-	@Path("/export")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response export(@QueryParam("envId") String envId) {
-
-		if (exportPath == null || exportPath.isEmpty())
-			return Emil.errorMessageResponse("Emil export is not configured ");
-
-		File objectDir = createFolder("objects");
-		File imageDir = createFolder("images");
-		File metadataDir = createFolder("metadata");
-		File uiDir = createFolder("ui");
-
-		final EnvironmentsAdapter environmentHelper = envHelper;
-		BufferedWriter writer = null;
-		try {
-			Environment localChosenEnv = environmentHelper.getEnvironmentById(envId);
-
-			// this env has abstract (relative) references to an yet unknown image archive
-			Environment abstractEnv = environmentHelper.getEnvironmentById(envId);
-			if (abstractEnv == null || localChosenEnv == null)
-				return Emil.errorMessageResponse("could not find environment: " + envId);
-
-			EmilUtils.exportEnvironmentMedia((MachineConfiguration) abstractEnv,
-					(MachineConfiguration) localChosenEnv, imageDir, objectDir);
-
-			// fix archive binding for USB
-			for (AbstractDataResource ab : ((MachineConfiguration) abstractEnv).getAbstractDataResource()) {
-				if (ab instanceof ObjectArchiveBinding) {
-					ObjectArchiveBinding binding = (ObjectArchiveBinding) ab;
-					binding.setArchive("objects");
-					binding.setArchiveHost("localhost:8080");
-				}
-			}
-
-			writer = new BufferedWriter(new FileWriter(metadataDir.getAbsolutePath() + "/" + envId + ".xml"));
-			writer.write(abstractEnv.toString());
-
-			File uiSrcDir = new File("/eaas/ui");
-			if(uiSrcDir.exists()) {
-				FileUtils.copyDirectory(uiSrcDir, uiDir);
-				Files.write(Paths.get(uiDir.toPath() + "/envId"), createEnvIdJson(envId).getBytes());
-			}
-
-			return Emil.successMessageResponse("export completed");
-		} catch (Throwable t) {
-			return Emil.internalErrorResponse(t);
-		} finally {
-			try {
-				if (writer != null)
-					writer.close();
-			} catch (IOException e) {
-				LOG.log(Level.SEVERE, e.getMessage(), e);
-			}
-		}
-	}
-
-
-	private File createFolder(String folderName) {
-		String objectPath = exportPath + "/" + folderName;
-		File objectDir = new File(objectPath);
-		if (!objectDir.isDirectory()) {
-			objectDir.mkdir();
-		}
-		return objectDir;
-	}
-
 	private String createEnvIdJson(String envId) throws IOException {
 		JsonBuilder json = new JsonBuilder();
 		json.beginObject();
@@ -1085,219 +1194,227 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	class ImportImageTask extends AbstractTask<Object>
-	{
-		private ImportImageRequest imageReq;
-		private EnvironmentsAdapter environmentHelper;
+//	class ExportImageTask extends AbstractTask<Object>
+//	{
+//		private final String host;
+//		private final List<String> envIds;
+//		private boolean embedded;
+//		private final String remoteObjectArchiveHost;
+//
+//		ExportImageTask(String host, String remoteObjectArchiveHost, List<String> envIds, boolean embedded)
+//		{
+//			this.host = host;
+//			this.envIds = envIds;
+//			this.embedded = embedded;
+//			this.remoteObjectArchiveHost = remoteObjectArchiveHost;
+//		}
+//
+//		private void exportObjectAsImage(MachineConfiguration conf, EnvironmentsAdapter remoteAdapter)
+//				throws BWFLAException {
+//			List<AbstractDataResource> resources = conf.getAbstractDataResource();
+//			for(AbstractDataResource r : resources)
+//			{
+//				if(!(r instanceof ObjectArchiveBinding))
+//					continue;
+//
+//				ObjectArchiveBinding oab = (ObjectArchiveBinding)r;
+//
+//				String host = oab.getArchiveHost();
+//				String objectId = oab.getObjectId();
+//				String archive = oab.getArchive();
+//
+//				ObjectArchiveHelper helper = new ObjectArchiveHelper(host);
+//				ObjectArchiveHelper remoteHelper = new ObjectArchiveHelper(remoteObjectArchiveHost);
+//				ObjectFileCollection object = helper.getObjectHandle(archive, objectId);
+////			if(object.getFiles() != null) {
+////				for (ObjectFileCollectionHandle entry : object.getFiles()) {
+////					LOG.info("entry: " + entry.getFilename());
+////				}
+////			}
+//				remoteHelper.importObject(archive, object);
+//				oab.setArchiveHost(remoteObjectArchiveHost);
+//			}
+//		}
+//
+//		private void exportObjectEmbedded(MachineConfiguration conf, EnvironmentsAdapter remoteAdapter) throws BWFLAException {
+//			LOG.info("export image embedded");
+//			List<ImageArchiveBinding> importedObjects = new ArrayList<>();
+//			for(Iterator<AbstractDataResource> iter = conf.getAbstractDataResource().iterator(); iter.hasNext();)
+//			{
+//				AbstractDataResource r = iter.next();
+//				if(!(r instanceof ObjectArchiveBinding))
+//					continue;
+//
+//				ObjectArchiveBinding oab = (ObjectArchiveBinding)r;
+//				String host = oab.getArchiveHost();
+//				String objectId = oab.getObjectId();
+//				String archive = oab.getArchive();
+//
+//				ObjectArchiveHelper helper = new ObjectArchiveHelper(host);
+//				ObjectFileCollection object = helper.getObjectHandle(archive, objectId);
+//
+//				if(object.getFiles() == null || object.getFiles().size() == 0)
+//					continue;
+//
+//				if(object.getFiles().size() > 1) {
+//					LOG.warning("objects with multiple files are not supported");
+//					continue;
 
-		ImportImageTask(ImportImageRequest imageReq, EnvironmentsAdapter environmentHelper)
-		{
-			this.imageReq = imageReq;
-			this.environmentHelper = environmentHelper;
-		}
+//				}
+//
+//				ImageArchiveMetadata iaMD = new ImageArchiveMetadata();
+//				iaMD.setType(ImageType.OBJECT);
+//				ObjectFileCollectionHandle objHandle = object.getFiles().get(0);
+//				EnvironmentsAdapter.ImportImageHandle imageHandle= remoteAdapter.importImage(objHandle.getHandle(), iaMD);
+//
+//				iter.remove();
+//				ImageArchiveBinding imageArchiveBinding = imageHandle.getBinding(60*60*24);
+//				imageArchiveBinding.setId(objectId);
+//				importedObjects.add(imageArchiveBinding);
+//			}
+//
+//			for(ImageArchiveBinding b : importedObjects)
+//			{
+//				String bindingUrl = "binding://" + b.getId();
+//				for(Drive d : conf.getDrive())
+//				{
+//					if(!d.getData().startsWith(bindingUrl))
+//						continue;
+//					d.setData(bindingUrl);
+//				}
+//				conf.getAbstractDataResource().add(b);
+//			}
+//		}
+//
+//		@Override
+//		protected Object execute() throws Exception {
+//			EnvironmentsAdapter remoteAdapter = new EnvironmentsAdapter(host);
+//			try {
+//				for (String envId : envIds) {
+//					LOG.info("syncing " + envId);
+//					Environment env = envHelper.getEnvironmentById(envId);
+//
+//					ImageExport dependencies = envHelper.getImageDependecies(envId);
+//					List<ImageFileInfo> infos = dependencies.getImageFiles();
+//					for (ImageFileInfo info : infos) {
+//						LOG.info("ExportImageTask: upload dependency " + info.getId());
+//						ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
+//						iaMd.setType(info.getType());
+//						iaMd.setImageId(info.getId());
+//						iaMd.setDeleteIfExists(true);
+//						EnvironmentsAdapter.ImportImageHandle handle = remoteAdapter.importImage(info.getFileHandle(), iaMd);
+//						if(handle.getBinding(60*60*24*7)== null)
+//						 	return new BWFLAException("import failed: timeout");
+//					}
+//
+//					MachineConfiguration configuration = (MachineConfiguration)env;
+//					if(!embedded)
+//						exportObjectAsImage(configuration, remoteAdapter);
+//					else
+//						exportObjectEmbedded(configuration, remoteAdapter);
+//
+//					try {
+//						ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
+//						iaMd.setType(ImageType.OBJECT);
+//						remoteAdapter.importMetadata(env.value(), iaMd, true);
+//					} catch (JAXBException e) {
+//						LOG.log(Level.WARNING, e.getMessage(), e);
+//						return new BWFLAException("metadata import failed");
+//					}
+//				}
+//			} catch (BWFLAException e) {
+//				e.printStackTrace();
+//				return e;
+//			}
+//
+//			return null;
+//		}
+//	}
 
-		@Override
-		protected Object execute() throws Exception {
-			try {
-				MachineConfigurationTemplate pEnv = environmentHelper.getTemplate(imageReq.getTemplateId());
-				if (pEnv == null)
-					return new BWFLAException("invalid template id: " + imageReq.getTemplateId());
-				MachineConfiguration env = pEnv.implement();
+	//	@POST
+//	@Path("/exportToRemoteArchive")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	@Consumes(MediaType.APPLICATION_JSON)
+//	public TaskStateResponse exportToRemoteArchive(RemoteExportRequest req) {
+//		if (req.getWsHost() == null || req.getEnvId() == null)
+//			return new TaskStateResponse(new BWFLAException("invalid arguments"));
+//
+//		String host = null;
+//		try {
+//			host = URLDecoder.decode(req.getWsHost(), "UTF-8");
+//		} catch (UnsupportedEncodingException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			return new TaskStateResponse(new BWFLAException("metadata import failed"));
+//		}
+//		return new TaskStateResponse(taskManager.submitTask(new ExportImageTask(host, req.getObjectArchiveHost(),
+//				req.getEnvId(), req.isExportObjectEmbedded())));
+//	}
 
-				ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-				iaMd.setType(ImageType.TMP);
-
-				EnvironmentsAdapter.ImportImageHandle importState = null;
-				try {
-					URL url = new URL(imageReq.getUrlString());
-					importState = envHelper.importImage(url, iaMd, true);
-					//	binding = envHelper.generalizedImport(url, "tmp", env.getId(), true);
-				} catch (MalformedURLException me) {
-					String filename = imageReq.getUrlString();
-					if (filename == null || filename.contains("/"))
-						return new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename);
-					File image = new File("/eaas/import/", filename);
-					LOG.info("path: " + image);
-
-					if (!image.exists())
-						return new BWFLAException("image : " + filename + " not found.");
-
-					importState = envHelper.importImage(image.toURI().toURL(), iaMd, true);
-					// binding = envHelper.generalizedImport(image.toURI().toURL(), "tmp", env.getId(), true);
-				}
-
-				ImageArchiveBinding binding = importState.getBinding(60 * 60 * 60); // wait an hour
-				LOG.warning("binding id" + binding.getImageId());
-				if (binding == null)
-					return new BWFLAException("ImportImageTask: import image failed. Clould not create binding");
-
-				binding = envHelper.generalizedImport(binding.getImageId(), iaMd.getType(), imageReq.getTemplateId());
-
-				binding.setId("main_hdd");
-				env.getAbstractDataResource().add(binding);
-
-				env.getDescription().setTitle(imageReq.getLabel());
-				if (env.getNativeConfig() == null)
-					env.setNativeConfig(new NativeConfig());
-				env.getNativeConfig().setValue(imageReq.getNativeConfig());
-
-				if (imageReq.getRom() != null) {
-					iaMd.setType(ImageType.ROMS);
-					File romFile = new File("/eaas/roms", imageReq.getRom());
-					if (romFile.exists()) {
-						DataHandler handler = new DataHandler(new FileDataSource(romFile));
-
-						importState = envHelper.importImage(handler, iaMd);
-						ImageArchiveBinding romBinding = importState.getBinding(60 * 60 * 60); // wait an hour
-						romBinding.setId("rom-" + romFile.getName());
-						env.getAbstractDataResource().add(romBinding);
-					}
-				}
-				String newEnvironmentId = envHelper.importMetadata(env.toString(), iaMd, false);
-				Map<String, String> userData = new HashMap<>();
-				userData.put("environmentId", newEnvironmentId);
-				imageProposer.refreshIndex();
-				return userData;
-			} catch (Exception e) {
-				LOG.log(Level.SEVERE, e.getMessage(), e);
-				return e;
-			}
-		}
-	}
-
-	class ExportImageTask extends AbstractTask<Object>
-	{
-		private final String host;
-		private final List<String> envIds;
-		private boolean embedded;
-		private final String remoteObjectArchiveHost;
-
-		ExportImageTask(String host, String remoteObjectArchiveHost, List<String> envIds, boolean embedded)
-		{
-			this.host = host;
-			this.envIds = envIds;
-			this.embedded = embedded;
-			this.remoteObjectArchiveHost = remoteObjectArchiveHost;
-		}
-
-		private void exportObjectAsImage(MachineConfiguration conf, EnvironmentsAdapter remoteAdapter)
-				throws BWFLAException {
-			List<AbstractDataResource> resources = conf.getAbstractDataResource();
-			for(AbstractDataResource r : resources)
-			{
-				if(!(r instanceof ObjectArchiveBinding))
-					continue;
-
-				ObjectArchiveBinding oab = (ObjectArchiveBinding)r;
-
-				String host = oab.getArchiveHost();
-				String objectId = oab.getObjectId();
-				String archive = oab.getArchive();
-
-				ObjectArchiveHelper helper = new ObjectArchiveHelper(host);
-				ObjectArchiveHelper remoteHelper = new ObjectArchiveHelper(remoteObjectArchiveHost);
-				ObjectFileCollection object = helper.getObjectHandle(archive, objectId);
-//			if(object.getFiles() != null) {
-//				for (ObjectFileCollectionHandle entry : object.getFiles()) {
-//					LOG.info("entry: " + entry.getFilename());
+	//	@GET
+//	@Path("/export")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	public Response export(@QueryParam("envId") String envId) {
+//
+//		if (exportPath == null || exportPath.isEmpty())
+//			return Emil.errorMessageResponse("Emil export is not configured ");
+//
+//		File objectDir = createFolder("objects");
+//		File imageDir = createFolder("images");
+//		File metadataDir = createFolder("metadata");
+//		File uiDir = createFolder("ui");
+//
+//		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
+//		BufferedWriter writer = null;
+//		try {
+//			Environment localChosenEnv = environmentHelper.getEnvironmentById(envId);
+//
+//			// this env has abstract (relative) references to an yet unknown image archive
+//			Environment abstractEnv = environmentHelper.getEnvironmentById(envId);
+//			if (abstractEnv == null || localChosenEnv == null)
+//				return Emil.errorMessageResponse("could not find environment: " + envId);
+//
+//			EmilUtils.exportEnvironmentMedia((MachineConfiguration) abstractEnv,
+//					(MachineConfiguration) localChosenEnv, imageDir, objectDir);
+//
+//			// fix archive binding for USB
+//			for (AbstractDataResource ab : ((MachineConfiguration) abstractEnv).getAbstractDataResource()) {
+//				if (ab instanceof ObjectArchiveBinding) {
+//					ObjectArchiveBinding binding = (ObjectArchiveBinding) ab;
+//					binding.setArchive("objects");
+//					binding.setArchiveHost("localhost:8080");
 //				}
 //			}
-				remoteHelper.importObject(archive, object);
-				oab.setArchiveHost(remoteObjectArchiveHost);
-			}
-		}
+//
+//			writer = new BufferedWriter(new FileWriter(metadataDir.getAbsolutePath() + "/" + envId + ".xml"));
+//			writer.write(abstractEnv.toString());
+//
+//			File uiSrcDir = new File("/eaas/ui");
+//			if(uiSrcDir.exists()) {
+//				FileUtils.copyDirectory(uiSrcDir, uiDir);
+//				Files.write(Paths.get(uiDir.toPath() + "/envId"), createEnvIdJson(envId).getBytes());
+//			}
+//
+//			return Emil.successMessageResponse("export completed");
+//		} catch (Throwable t) {
+//			return Emil.internalErrorResponse(t);
+//		} finally {
+//			try {
+//				if (writer != null)
+//					writer.close();
+//			} catch (IOException e) {
+//				LOG.log(Level.SEVERE, e.getMessage(), e);
+//			}
+//		}
+//	}
+//
+//
+//	private File createFolder(String folderName) {
+//		String objectPath = exportPath + "/" + folderName;
+//		File objectDir = new File(objectPath);
+//		if (!objectDir.isDirectory()) {
+//			objectDir.mkdir();
+//		}
+//		return objectDir;
+//	}
 
-		private void exportObjectEmbedded(MachineConfiguration conf, EnvironmentsAdapter remoteAdapter) throws BWFLAException {
-			LOG.info("export image embedded");
-			List<ImageArchiveBinding> importedObjects = new ArrayList<>();
-			for(Iterator<AbstractDataResource> iter = conf.getAbstractDataResource().iterator(); iter.hasNext();)
-			{
-				AbstractDataResource r = iter.next();
-				if(!(r instanceof ObjectArchiveBinding))
-					continue;
-
-				ObjectArchiveBinding oab = (ObjectArchiveBinding)r;
-				String host = oab.getArchiveHost();
-				String objectId = oab.getObjectId();
-				String archive = oab.getArchive();
-
-				ObjectArchiveHelper helper = new ObjectArchiveHelper(host);
-				ObjectFileCollection object = helper.getObjectHandle(archive, objectId);
-
-				if(object.getFiles() == null || object.getFiles().size() == 0)
-					continue;
-
-				if(object.getFiles().size() > 1) {
-					LOG.warning("objects with multiple files are not supported");
-					continue;
-				}
-
-				ImageArchiveMetadata iaMD = new ImageArchiveMetadata();
-				iaMD.setType(ImageType.OBJECT);
-				ObjectFileCollectionHandle objHandle = object.getFiles().get(0);
-				EnvironmentsAdapter.ImportImageHandle imageHandle= remoteAdapter.importImage(objHandle.getHandle(), iaMD);
-
-				iter.remove();
-				ImageArchiveBinding imageArchiveBinding = imageHandle.getBinding(60*60*24);
-				imageArchiveBinding.setId(objectId);
-				importedObjects.add(imageArchiveBinding);
-			}
-
-			for(ImageArchiveBinding b : importedObjects)
-			{
-				String bindingUrl = "binding://" + b.getId();
-				for(Drive d : conf.getDrive())
-				{
-					if(!d.getData().startsWith(bindingUrl))
-						continue;
-					d.setData(bindingUrl);
-				}
-				conf.getAbstractDataResource().add(b);
-			}
-		}
-
-		@Override
-		protected Object execute() throws Exception {
-			EnvironmentsAdapter remoteAdapter = new EnvironmentsAdapter(host);
-			try {
-				for (String envId : envIds) {
-					LOG.info("syncing " + envId);
-					Environment env = envHelper.getEnvironmentById(envId);
-
-					ImageExport dependencies = envHelper.getImageDependecies(envId);
-					List<ImageFileInfo> infos = dependencies.getImageFiles();
-					for (ImageFileInfo info : infos) {
-						LOG.info("ExportImageTask: upload dependency " + info.getId());
-						ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-						iaMd.setType(info.getType());
-						iaMd.setImageId(info.getId());
-						iaMd.setDeleteIfExists(true);
-						EnvironmentsAdapter.ImportImageHandle handle = remoteAdapter.importImage(info.getFileHandle(), iaMd);
-						if(handle.getBinding(60*60*24*7)== null)
-						 	return new BWFLAException("import failed: timeout");
-					}
-
-					MachineConfiguration configuration = (MachineConfiguration)env;
-					if(!embedded)
-						exportObjectAsImage(configuration, remoteAdapter);
-					else
-						exportObjectEmbedded(configuration, remoteAdapter);
-
-					try {
-						ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-						iaMd.setType(ImageType.OBJECT);
-						remoteAdapter.importMetadata(env.value(), iaMd, true);
-					} catch (JAXBException e) {
-						LOG.log(Level.WARNING, e.getMessage(), e);
-						return new BWFLAException("metadata import failed");
-					}
-				}
-			} catch (BWFLAException e) {
-				e.printStackTrace();
-				return e;
-			}
-
-			return null;
-		}
-	}
 }

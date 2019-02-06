@@ -48,6 +48,7 @@ import javax.xml.bind.JAXBException;
 import de.bwl.bwfla.api.eaas.ComponentGroup;
 import de.bwl.bwfla.api.emucomp.Component;
 import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emucomp.api.NodeTcpConfiguration;
 import org.apache.tamaya.inject.api.Config;
 
@@ -79,6 +80,7 @@ public class Networks {
     private String eaasGw;
     
     @POST
+    @Secured
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
     public NetworkResponse createNetwork(NetworkRequest network, @Context final HttpServletResponse response) {
@@ -164,6 +166,7 @@ public class Networks {
     }
 
     @POST
+    @Secured
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{groupId}/components")
     public void addComponent(@PathParam("groupId") String groupId, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -181,6 +184,7 @@ public class Networks {
     }
 
     @DELETE
+    @Secured
     @Path("/{groupId}/components/{componentId}")
     public void removeComponent(@PathParam("groupId") String groupId, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
         try {
@@ -197,6 +201,7 @@ public class Networks {
     }
 
     @GET
+    @Secured
     @Path("/{groupId}/wsConnection")
     public String wsConnection(@PathParam("groupId") String groupId)
     {
@@ -214,6 +219,7 @@ public class Networks {
     }
 
     @GET
+    @Secured
     @Path("/{groupId}")
     public Collection<GroupComponent> listComponents(@PathParam("groupId") String groupId) {
         try {
@@ -244,6 +250,7 @@ public class Networks {
     }
     
     @POST
+    @Secured
     @Path("/{groupId}/keepalive")
     public void keepalive(@PathParam("groupId") String groupId) {
         try {

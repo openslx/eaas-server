@@ -146,6 +146,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
     @Override
     public void disconnect(String ethUrl) throws BWFLAException {
+        LOG.severe("disconnect " + ethUrl);
         final Thread thread = this.connections.remove(ethUrl);
         if (thread == null)
             throw new BWFLAException("Unknown connection URL: " + ethUrl);
@@ -155,7 +156,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             thread.interrupt();
             thread.join();
         }
-        catch (Exception error) {
+        catch (Throwable error) {
             throw new BWFLAException("Disconnecting '" + ethUrl + "' failed!", error);
         }
     }
@@ -217,7 +218,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             }
             finally {
                 try {
-                    System.out.println(" stream has closed " + ethUrl + " -- " + runner.getCommandString() + " " + runner.exitValue());
+                    System.out.println(" stream has closed " + ethUrl + " -- " + runner.getCommandString()); //  + " " + runner.exitValue());
                     wsClient.close();
                 } catch (IOException e1) {
                     e1.printStackTrace();

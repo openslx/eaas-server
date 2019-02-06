@@ -162,4 +162,14 @@ public class ObjectArchiveHelper {
 	{
 		return wsHost;
 	}
+
+	public void registerUserArchive(String userId) throws BWFLAException {
+		connectArchive();
+		archive.registerUserArchive(userId);
+	}
+
+	public void delete(String _archive, String objectId) throws BWFLAException {
+		connectArchive();
+		archive.delete(_archive, objectId);
+	}
 }

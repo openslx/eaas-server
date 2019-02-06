@@ -222,5 +222,19 @@
 				</dependency>
 			</dependencies>
 		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>metadata-oaipmh</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>metadata-oaipmh</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
 	</profiles>
 </project>

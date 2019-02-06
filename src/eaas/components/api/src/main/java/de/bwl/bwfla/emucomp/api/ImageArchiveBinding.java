@@ -94,7 +94,7 @@ public class ImageArchiveBinding extends Binding
 	}
 
 	public void setUrlPrefix(String host) {
-		if (!host.endsWith("/"))
+		if (host != null && !host.endsWith("/"))
 			host += "/";
 
 		this.urlPrefix = host;

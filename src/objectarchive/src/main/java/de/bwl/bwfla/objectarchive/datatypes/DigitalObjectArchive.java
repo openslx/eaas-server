@@ -53,4 +53,5 @@ public interface DigitalObjectArchive
 
     TaskState sync(List<String> objectId);
 
+    void delete(String id) throws BWFLAException;
 }

@@ -66,7 +66,7 @@ public class PceAtariStBean extends PceBean
 		String arch = emuEnvironment.getArch();
 		if (arch == null || arch.isEmpty()) {
 			arch = "68010";
-			LOG.warning("Emulator's architectrue was not set! Using default '" + arch + "'.");
+			LOG.warning("EmulatorContainer's architectrue was not set! Using default '" + arch + "'.");
 		}
 		
 		return "pce/atarist/atarist-" + arch + ".cfg";

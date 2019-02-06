@@ -37,8 +37,8 @@ components:
 
     emulator_containers:
         enabled: false
-        uid: 100000
-        gid: 100000
+        uid: 1000
+        gid: 1000
 
     containers:
         blobstore: http://localhost:8080

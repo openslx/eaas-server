@@ -25,14 +25,16 @@ import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.XmountOptions;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
-import org.apache.commons.io.FileUtils;
+import de.bwl.bwfla.imagebuilder.api.metadata.DockerImport;
+import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
 
 import javax.activation.DataHandler;
 import javax.activation.URLDataSource;
+import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
@@ -40,6 +42,8 @@ import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
+
+import static de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ArchiveFormat.DOCKER;
 
 
 public abstract class MediumBuilder
@@ -94,7 +98,23 @@ public abstract class MediumBuilder
 		return EmulatorUtils.xmount(device.toString(), mountpoint, options, log);
 	}
 
-	public static void copy(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
+	// we need to prepare the data source _before_ creating and mounting the dst image to support deduplication
+	public static void prepare(List<ImageContentDescription> entries, Path workdir, Logger log) throws BWFLAException
+	{
+		for (ImageContentDescription entry : entries) {
+			switch (entry.getArchiveFormat()) {
+				case DOCKER:
+					ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
+					DockerTools docker = new DockerTools(workdir, ds);
+					docker.pull();
+					docker.unpack();
+					break;
+			}
+		}
+	}
+
+	public static ImageBuilderMetadata build(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
+		ImageBuilderMetadata md = null;
 		for (ImageContentDescription entry : entries) {
 			DataHandler handler;
 
@@ -106,7 +126,6 @@ public abstract class MediumBuilder
 
 			switch (entry.getAction()) {
 				case COPY:
-
 					if (entry.getName() == null || entry.getName().isEmpty())
 						throw new BWFLAException("entry with action COPY must have a valid name");
 
@@ -119,10 +138,28 @@ public abstract class MediumBuilder
 
 				case EXTRACT:
 					// Extract archive directly to destination!
-					FilesExtractor.extract(handler, dstdir, entry.getArchiveFormat(), workdir, log);
+					ImageHelper.extract(handler, dstdir, entry.getArchiveFormat(), workdir, log);
+					break;
+
+				case RSYNC:
+					if(entry.getArchiveFormat().equals(DOCKER))
+					{
+						ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
+						if(ds.rootfs == null)
+							throw new BWFLAException("Docker data source not ready. Prepare() before calling build");
+						ImageHelper.rsync(ds.rootfs, dstdir);
+
+						DockerImport dockerMd = new DockerImport();
+						dockerMd.setImageRef(ds.imageRef);
+						dockerMd.setLayers(Arrays.asList(ds.layers));
+						dockerMd.setTag(ds.tag);
+
+						md = dockerMd;
+					}
 					break;
 			}
 		}
+		return md;
 	}
 
 	public static void sync(Path path, Logger log)

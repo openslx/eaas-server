@@ -207,6 +207,14 @@ public class BasiliskIIBean extends EmulatorBean
             }
 
             confValues.put(args[0], args[1]);
+            EmulatorBeanMode mode = this.getEmuBeanMode();
+            if(mode == EmulatorBeanMode.XPRA)
+            {
+                String screenConf = confValues.get("screen");
+                if(screenConf != null)
+                    screenConf = screenConf.replace("dga", "win");
+                confValues.put("screen", screenConf);
+            }
         }
         return confValues;
     }

@@ -16,6 +16,21 @@ public class ExportObject extends HttpExportServlet
 	@Inject
 	private ImageArchiveRegistry backends = null;
 
+	private File resolveFile(String imageArchiveName, String filename)
+	{
+		final ImageArchiveBackend backend = backends.lookup(imageArchiveName);
+		if(backend == null) {
+			log.severe("backend for " + imageArchiveName + " not found");
+			return null;
+		}
+		for (ImageType type : ImageType.values()) {
+			File f = new File(backend.getConfig().getImagePath() + "/" + type.name() + filename);
+			if (f.exists())
+				return f;
+		}
+		return null;
+	}
+
 	@Override
 	public File resolveRequest(String reqStr) 
 	{
@@ -30,14 +45,15 @@ public class ExportObject extends HttpExportServlet
 			return null;
 		}
 
-		final ImageArchiveBackend backend = backends.lookup(imageArchiveName);
-		for (ImageType type : ImageType.values()) {
-			File f = new File(backend.getConfig().getImagePath() + "/" + type.name() + filename);
-			if (f.exists())
-				return f;
+		File image = resolveFile(imageArchiveName, filename);
+		// TODO: temporary hack to avoid copying an image file to the private/default archive if only the metadata is updated.
+		if(image == null) {
+			if (imageArchiveName.equals("default"))
+				return resolveFile("public", filename);
+			else if(imageArchiveName.equals("public"))
+				return resolveFile("default", filename);
 		}
-
-		return null;
+		return image;
 	}
 
 	private static String parseImageArchiveName(String url)

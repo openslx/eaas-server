@@ -1,3 +1,22 @@
+/*
+ * This file is part of the Emulation-as-a-Service framework.
+ *
+ * The Emulation-as-a-Service framework is free software: you can
+ * redistribute it and/or modify it under the terms of the GNU General
+ * Public License as published by the Free Software Foundation, either
+ * version 3 of the License, or (at your option) any later version.
+ *
+ * The Emulation-as-a-Service framework is distributed in the hope that
+ * it will be useful, but WITHOUT ANY WARRANTY; without even the
+ * the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR
+ * PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with the Emulation-as-a-Software framework.
+ * If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package de.bwl.bwfla.emucomp.components.emulators;
 
 import java.io.IOException;
@@ -30,28 +49,35 @@ public class IpcSocket
 	private final String sockname;
 	private final int msgsize;
 	private final boolean unlink;
+	private final Type socktype;
 
 	public static final int DEFAULT_MSGBUFFER_CAPACITY = 8120;
 
+	/** Socket's type */
+	public enum Type
+	{
+		STREAM,
+		DGRAM
+	}
 
 	/** Creates a new domain-socket using the specified name. */
-	public static IpcSocket create(String sockname) throws IOException
+	public static IpcSocket create(String sockname, Type socktype) throws IOException
 	{
-		return IpcSocket.create(sockname, true);
+		return IpcSocket.create(sockname, socktype, true);
 	}
 	
 	/** Creates a new domain-socket using the specified name. */
-	public static IpcSocket create(String sockname, boolean unlink) throws IOException
+	public static IpcSocket create(String sockname, Type socktype, boolean unlink) throws IOException
 	{
 		IpcSocket socket = null;
 		try {
-			final int sockfd = SocketAPI.socket(SocketAPI.AF_UNIX, SocketAPI.SOCK_DGRAM, 0);
+			final int sockfd = SocketAPI.socket(SocketAPI.AF_UNIX, SocketAPI.socktype(socktype), 0);
 			sockaddr_un addr = new sockaddr_un(SocketAPI.AF_UNIX, sockname);
 			SocketAPI.bind(sockfd, addr, sockaddr_un.length());
 			IpcSocket.checkSocketName(sockfd, sockname);
 			
 			final int msgsize = IpcSocket.getBufferSize(sockfd);
-			socket = new IpcSocket(sockname, sockfd, msgsize, unlink);
+			socket = new IpcSocket(sockname, socktype, sockfd, msgsize, unlink);
 			LOG.info("New IPC socket " + sockname + " created.");
 		}
 		catch (LastErrorException exception) {
@@ -60,15 +86,58 @@ public class IpcSocket
 		
 		return socket;
 	}
-	
-	/** Sends specified message to the destination address. */
-	public boolean send(String destsock, byte[] message, boolean dontwait) throws IOException
+
+	/** Connects to an existing domain-socket using the specified name. */
+	public static IpcSocket connect(String sockname, Type socktype) throws IOException
 	{
-		return this.send(destsock, message, message.length, dontwait);
+		IpcSocket socket = null;
+		try {
+			final int sockfd = SocketAPI.socket(SocketAPI.AF_UNIX, SocketAPI.socktype(socktype), 0);
+			sockaddr_un addr = new sockaddr_un(SocketAPI.AF_UNIX, sockname);
+			SocketAPI.connect(sockfd, addr, sockaddr_un.length());
+
+			final int msgsize = IpcSocket.getBufferSize(sockfd);
+			socket = new IpcSocket(sockname, socktype, sockfd, msgsize, false);
+			LOG.info("IPC socket " + sockname + " connected.");
+		}
+		catch (LastErrorException exception) {
+			IpcSocket.rethrow("Connecting", sockname, exception);
+		}
+
+		return socket;
+	}
+
+	/** Sends specified message. */
+	public boolean send(byte[] message, boolean blocking) throws IOException
+	{
+		return this.send(message, message.length, blocking);
+	}
+
+	/** Sends specified message. */
+	public boolean send(byte[] message, int length, boolean blocking) throws IOException
+	{
+		try {
+			final int flags = (blocking) ? 0 : SocketAPI.MSG_DONTWAIT;
+			SocketAPI.send(sockfd, message, length, flags);
+		}
+		catch (LastErrorException exception) {
+			if (!blocking && (exception.getErrorCode() == SocketAPI.EAGAIN))
+				return false;  // Don't throw on EAGAIN
+
+			IpcSocket.rethrow("Sending using", sockname, exception);
+		}
+
+		return true;
+	}
+
+	/** Sends specified message to the destination address. */
+	public boolean sendto(String destsock, byte[] message, boolean blocking) throws IOException
+	{
+		return this.sendto(destsock, message, message.length, blocking);
 	}
 	
 	/** Sends specified message to the destination address. */
-	public boolean send(String destsock, byte[] message, int length, boolean blocking) throws IOException
+	public boolean sendto(String destsock, byte[] message, int length, boolean blocking) throws IOException
 	{
 		try {
 			final int flags = (blocking) ? 0 : SocketAPI.MSG_DONTWAIT;
@@ -96,7 +165,7 @@ public class IpcSocket
 		
 		try {
 			final int flags = (blocking) ? 0 : SocketAPI.MSG_DONTWAIT;
-			int numbytes = SocketAPI.recvfrom(sockfd, buffer.array(), buffer.capacity(), flags, null, null);
+			int numbytes = SocketAPI.recv(sockfd, buffer.array(), buffer.capacity(), flags);
 			
 			// Update buffer
 			buffer.position(numbytes);
@@ -145,7 +214,7 @@ public class IpcSocket
 			if (unlink)
 				SocketAPI.unlink(sockname);
 			
-			LOG.info("IPC socket  " + sockname + " closed.");
+			LOG.info("IPC socket " + sockname + " closed.");
 		}
 		catch (LastErrorException exception) {
 			IpcSocket.rethrow("Closing", sockname, exception);
@@ -166,16 +235,17 @@ public class IpcSocket
 	
 	
 	/* ==================== Internal Methods ==================== */
-	
+
 	/** Constructor */
-	private IpcSocket(String sockname, int sockfd, int msgsize, boolean unlink)
+	private IpcSocket(String sockname, Type socktype, int sockfd, int msgsize, boolean unlink)
 	{
 		this.sockfd = sockfd;
 		this.sockname = sockname;
 		this.msgsize = msgsize;
 		this.unlink = unlink;
+		this.socktype = socktype;
 	}
-	
+
 	private static void rethrow(String prefix, String name, LastErrorException exception) throws IOException
 	{
 		String cause = SocketAPI.strerror(exception);
@@ -244,6 +314,20 @@ final class SocketAPI
 		return SocketAPI.strerror(errno);
 	}
 
+	public static int socktype(IpcSocket.Type socktype)
+	{
+		switch (socktype)
+		{
+			case STREAM:
+				return SOCK_STREAM;
+
+			case DGRAM:
+				return SOCK_DGRAM;
+		}
+
+		return -1;
+	}
+
 
 	/* ========== Constants from socket.h ========== */
 
@@ -251,7 +335,8 @@ final class SocketAPI
 	public static final int AF_UNIX = 1;
 
 	// Socket's type
-	public static final int SOCK_DGRAM = 2;
+	public static final int SOCK_STREAM = 1;
+	public static final int SOCK_DGRAM  = 2;
 
 	// {get,set}sockopt's level
 	public static final int SOL_SOCKET = 1;
@@ -369,8 +454,11 @@ final class SocketAPI
 	public static native int socket(int socket_family, int socket_type, int protocol) throws LastErrorException;
 	public static native int getsockname(int sockfd, sockaddr_un addr, Buffer addrlen) throws LastErrorException;
 	public static native int getsockopt(int sockfd, int level, int optname, Buffer optval, Buffer optlen) throws LastErrorException;
+	public static native int connect(int sockfd, sockaddr_un addr, int addrlen) throws LastErrorException;
 	public static native int bind(int sockfd, sockaddr_un addr, int addrlen) throws LastErrorException;
+	public static native int send(int sockfd, byte[] buf, int len, int flags) throws LastErrorException;
 	public static native int sendto(int sockfd, byte[] buf, int len, int flags, sockaddr_un destaddr, int addrlen) throws LastErrorException;
+	public static native int recv(int sockfd, byte[] buf, int len, int flags) throws LastErrorException;
 	public static native int recvfrom(int sockfd, byte[] buf, int len, int flags, sockaddr_un srcaddr, Buffer addrlen) throws LastErrorException;
 	public static native int close(int fd) throws LastErrorException;
 	public static native int unlink(String name) throws LastErrorException;

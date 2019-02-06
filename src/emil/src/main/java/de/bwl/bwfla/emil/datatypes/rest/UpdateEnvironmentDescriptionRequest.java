@@ -24,6 +24,9 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private String gwPrivateIp;
 	private String gwPrivateMask;
 
+	private String containerEmulatorVersion;
+	private String containerEmulatorName;
+
 	private boolean enablePrinting;
 	private boolean enableRelativeMouse;
 	private boolean shutdownByOs;
@@ -31,6 +34,7 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean enableInternet;
 	private boolean connectEnvs;
 	private boolean serverMode;
+	private boolean localServerMode;
 	private boolean enableSocks;
 	private boolean canProcessAdditionalFiles;
 
@@ -141,6 +145,14 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 		this.serverMode = serverMode;
 	}
 
+	public boolean isLocalServerMode() {
+		return localServerMode;
+	}
+
+	public void setLocalServerMode(boolean localServerMode) {
+		this.localServerMode = localServerMode;
+	}
+
 	public boolean isEnableSocks() {
 		return enableSocks;
 	}
@@ -173,6 +185,21 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 		this.gwPrivateIp = gwPrivateIp;
 	}
 
+	public String getContainerEmulatorVersion() {
+		return containerEmulatorVersion;
+	}
+
+	public void setContainerEmulatorVersion(String containerEmulatorVersion) {
+		this.containerEmulatorVersion = containerEmulatorVersion;
+	}
+
+	public String getContainerEmulatorName() {
+		return containerEmulatorName;
+	}
+
+	public void setContainerEmulatorName(String containerEmulatorName) {
+		this.containerEmulatorName = containerEmulatorName;
+	}
 
 	public String getGwPrivateMask() {
 		return gwPrivateMask;

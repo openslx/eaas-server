@@ -21,7 +21,6 @@ package de.bwl.bwfla.imagebuilder;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
-import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
@@ -29,6 +28,7 @@ import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.imagebuilder.api.IImageBuilder;
 import de.bwl.bwfla.imagebuilder.api.ImageBuildHandle;
+import de.bwl.bwfla.imagebuilder.api.ImageBuilderResult;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import org.apache.tamaya.Configuration;
@@ -101,7 +101,7 @@ public class ImageBuilderBackend implements IImageBuilder
 	@Override
 	public boolean isDone(ImageBuildHandle build) throws BWFLAException
 	{
-		final TaskInfo<BlobHandle> info = builds.getTaskInfo(build.getId());
+		final TaskInfo<ImageBuilderResult> info = builds.getTaskInfo(build.getId());
 		if (info == null)
 			throw new BWFLAException("Invalid image-build handle!");
 
@@ -109,9 +109,9 @@ public class ImageBuilderBackend implements IImageBuilder
 	}
 
 	@Override
-	public BlobHandle get(ImageBuildHandle build) throws BWFLAException
+	public ImageBuilderResult get(ImageBuildHandle build) throws BWFLAException
 	{
-		final TaskInfo<BlobHandle> info = builds.getTaskInfo(build.getId());
+		final TaskInfo<ImageBuilderResult> info = builds.getTaskInfo(build.getId());
 		if (info == null)
 			throw new BWFLAException("Invalid image-build handle!");
 
@@ -158,7 +158,7 @@ public class ImageBuilderBackend implements IImageBuilder
 		}
 	}
 
-	private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<BlobHandle>
+	private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<ImageBuilderResult>
 	{
 		public TaskManager() throws NamingException
 		{
@@ -166,7 +166,7 @@ public class ImageBuilderBackend implements IImageBuilder
 		}
 	}
 
-	private class ImageBuildTask extends AbstractTask<BlobHandle>
+	private class ImageBuildTask extends AbstractTask<ImageBuilderResult>
 	{
 		private final ImageBuilderBackend backend;
 		private final Path workdir;
@@ -180,7 +180,7 @@ public class ImageBuilderBackend implements IImageBuilder
 		}
 
 		@Override
-		protected BlobHandle execute() throws Exception
+		protected ImageBuilderResult execute() throws Exception
 		{
 			try {
 				final ImageHandle image = backend.build(workdir, description);
@@ -193,7 +193,10 @@ public class ImageBuilderBackend implements IImageBuilder
 						.setName(image.getName())
 						.setType(image.getType());
 
-				return blobstore.put(blob);
+				ImageBuilderResult result = new ImageBuilderResult();
+				result.setBlobHandle(blobstore.put(blob));
+				result.setMetadata(image.getMetadata());
+				return result;
 			}
 			finally {
 				MediumBuilder.delete(workdir, log);

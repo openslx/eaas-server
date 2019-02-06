@@ -6,6 +6,7 @@ import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment;
 import de.bwl.bwfla.emil.datatypes.UserSessionResponse;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
@@ -39,6 +40,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
+    @Secured
     @Path("delete")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete(@QueryParam("sessionId") String id) {
@@ -47,7 +49,7 @@ public class EmilUserSession extends EmilRest {
 
         try {
             emilEnvRepo.delete(id, true, true);
-        } catch (IOException |JAXBException | BWFLAException e1 ) {
+        } catch (JAXBException | BWFLAException e1 ) {
             return Emil.internalErrorResponse(e1);
         }
 
@@ -56,6 +58,7 @@ public class EmilUserSession extends EmilRest {
 
 
     @GET
+    @Secured
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response userSessionList()
@@ -96,6 +99,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
+    @Secured
     @Path("/session")
     @Produces(MediaType.APPLICATION_JSON)
     public UserSessionResponse getUserSession(@QueryParam("userId") String userId, @QueryParam("objectId") String objectId) {

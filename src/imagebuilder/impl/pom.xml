@@ -80,6 +80,10 @@
             <groupId>de.bwl.bwfla</groupId>
             <artifactId>blobstore-client</artifactId>
         </dependency>
+        <dependency>
+            <groupId>de.bwl.bwfla</groupId>
+            <artifactId>imagearchive-client</artifactId>
+        </dependency>
     </dependencies>
 </project>
 

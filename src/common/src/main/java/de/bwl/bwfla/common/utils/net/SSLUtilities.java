@@ -26,6 +26,12 @@ import javax.net.ssl.X509TrustManager;
 public final class SSLUtilities {
 
 
+    public static void disableVerification()
+    {
+        trustAllHostnames();
+        trustAllHttpsCertificates();
+    }
+
     /**
      * Hostname verifier for the Sun's deprecated API.
      *

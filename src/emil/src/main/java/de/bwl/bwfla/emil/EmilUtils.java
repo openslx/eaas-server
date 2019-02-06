@@ -12,13 +12,7 @@ import java.util.logging.Logger;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ImageInformation;
-import de.bwl.bwfla.emucomp.api.AbstractDataResource;
-import de.bwl.bwfla.emucomp.api.ObjectArchiveBinding;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
-import de.bwl.bwfla.emucomp.api.FileCollection;
-import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 
 public class EmilUtils
@@ -42,7 +36,9 @@ public class EmilUtils
 		File tempDir = Files.createTempDirectory("", PosixFilePermissions.asFileAttribute(permissions)).toFile();
 		
 		java.nio.file.Path cowPath = tempDir.toPath().resolve("export.cow");
-		EmulatorUtils.createCowFile(ref, cowPath);
+		QcowOptions options = new QcowOptions();
+		options.setBackingFile(ref);
+		EmulatorUtils.createCowFile(cowPath, options);
 		java.nio.file.Path fuseMountpoint = cowPath
                 .resolveSibling(cowPath.getFileName() + ".fuse");
 		

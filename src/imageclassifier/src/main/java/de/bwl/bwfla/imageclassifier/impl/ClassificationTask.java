@@ -57,6 +57,7 @@ public class ClassificationTask extends BaseTask
 
 			Identification.IdentificationDetails<ClassificationEntry> details = new Identification.IdentificationDetails<>();
 			details.setDiskType(idData.getType());
+			if(idData.getIndex() != null)
 			details.setEntries(idData.getIndex().getClassifierList(policy));
 
 			resultHashMap.put(fce.getId(), details);

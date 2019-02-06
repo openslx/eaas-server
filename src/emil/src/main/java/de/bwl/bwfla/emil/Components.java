@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
+import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,12 +31,14 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.*;
+import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
@@ -44,11 +47,16 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.sse.OutboundSseEvent;
+import javax.ws.rs.sse.Sse;
+import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
@@ -63,7 +71,12 @@ import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
+import de.bwl.bwfla.emil.utils.EventObserver;
+import de.bwl.bwfla.emil.utils.PrintJobObserver;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
@@ -88,6 +101,8 @@ import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
+
+import static java.util.concurrent.TimeUnit.SECONDS;
 
 
 @ApplicationScoped
@@ -151,8 +166,8 @@ public class Components {
     @Config(value = "emil.containerdata.imagebuilder.timeout")
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration imageBuilderTimeout = null;
-
-    private EnvironmentsAdapter envHelper;
+    @Inject
+    private DatabaseEnvironmentsAdapter envHelper;
     private SoftwareArchiveHelper swHelper;
 
     @Inject
@@ -176,6 +191,10 @@ public class Components {
 
     ObjectArchiveHelper objectArchiveHelper;
 
+    @Inject
+    @AuthenticatedUser
+    private UserContext authenticatedUser;
+
     /** EaasWS web-service */
     private EaasWS eaas;
 
@@ -188,10 +207,8 @@ public class Components {
     @Resource(lookup = "java:jboss/ee/concurrency/executor/io")
     protected ExecutorService executor;
 
-
     @PostConstruct
     private void init() {
-        envHelper = new EnvironmentsAdapter(imageArchive);
         swHelper = new SoftwareArchiveHelper(softwareArchive);
         objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
         sessions = new ConcurrentHashMap<>();
@@ -261,6 +278,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @POST
+    @Secured
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request,
@@ -268,15 +286,16 @@ public class Components {
         ComponentResponse result;
 
         final TaskStack cleanups = new TaskStack();
+        final List<EventObserver> observer = new ArrayList<>();
 
         if (request.getClass().equals(MachineComponentRequest.class)) {
-            result = this.createMachineComponent((MachineComponentRequest) request, cleanups);
+            result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(ContainerComponentRequest.class)) {
-            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups);
+            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SlirpComponentRequest.class)) {
-            result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups);
+            result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SocksComponentRequest.class)) {
-            result = this.createSocksComponent((SocksComponentRequest) request, cleanups);
+            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
         }  else {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -285,7 +304,7 @@ public class Components {
         }
 
         final String cid = result.getId();
-        final ComponentSession session = new ComponentSession(cid, request, cleanups);
+        final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
         cleanups.push(() -> this.unregister(session));
 
         this.register(session);
@@ -299,7 +318,7 @@ public class Components {
         return result;
     }
 
-    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack tasks) {
+    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack tasks, List<EventObserver> observer) {
         try {
             VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
             
@@ -328,7 +347,7 @@ public class Components {
         }
     }
 
-    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack tasks) {
+    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack tasks, List<EventObserver> observer) {
         try {
             VdeSocksConfiguration socksConfig = new VdeSocksConfiguration();
             
@@ -352,7 +371,7 @@ public class Components {
         }
     }
 
-    protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups) {
+    protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
         if (desc.getEnvironment() == null) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -361,7 +380,7 @@ public class Components {
         }
 
         try {
-            final Environment chosenEnv = envHelper.getEnvironmentById(desc.getEnvironment());
+            final Environment chosenEnv = envHelper.getEnvironmentById(desc.getArchive(), desc.getEnvironment());
             if (chosenEnv == null || !(chosenEnv instanceof ContainerConfiguration)) {
                 throw new BadRequestException(Response
                         .status(Response.Status.BAD_REQUEST)
@@ -405,7 +424,7 @@ public class Components {
                 }
 
                 // Build input image
-                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay);
+                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
 
 
                     final Runnable cleanup = () -> {
@@ -420,7 +439,7 @@ public class Components {
 
                 // Add input image to container's config
 
-                final String bindingId = "input-" + numInputImages;
+                final String bindingId = "input-" + numInputImages++;
 
                 final ContainerConfiguration.Input input = new ContainerConfiguration.Input()
                         .setDestination(medium.getDestination())
@@ -465,7 +484,7 @@ public class Components {
         }
     }
 
-    protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups) {
+    protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer) {
         if (machineDescription.getEnvironment() == null) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -475,7 +494,8 @@ public class Components {
 
         try {
             EmilEnvironment emilEnv = this.emilEnvRepo.getEmilEnvironmentById(machineDescription.getEnvironment());
-            Environment chosenEnv = envHelper.getEnvironmentById(machineDescription.getEnvironment());
+            Environment chosenEnv = envHelper.getEnvironmentById(machineDescription.getArchive(), machineDescription.getEnvironment());
+
             if (chosenEnv == null) {
                 throw new BadRequestException(Response
                         .status(Response.Status.BAD_REQUEST)
@@ -535,7 +555,7 @@ public class Components {
                 }
 
                 // Build input image
-                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay);
+                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
                 // since cdrom is read-only entity, we return user ISO directly
                 if (description.getMediumType() != MediumType.CDROM) {
                     final Runnable cleanup = () -> {
@@ -555,7 +575,7 @@ public class Components {
                 if (description.getMediumType() != MediumType.CDROM)
                     binding.setPartitionOffset(description.getPartitionOffset());
                 binding.setFileSystemType(description.getFileSystemType());
-                binding.setId("input-" + numInputImages);
+                binding.setId("input-" + numInputImages++);
 
                 //FIXME remove if else and make it more elegant (maybe unite?)
                 if (medium.getMediumType() == MediumType.CDROM)
@@ -573,9 +593,8 @@ public class Components {
             }
 
             Integer driveId = null;
-
             if (machineDescription.getObject() != null) {
-                driveId = addObjectToEnvironment(chosenEnv,machineDescription.getArchive(),machineDescription.getObject());
+                driveId = addObjectToEnvironment(chosenEnv, machineDescription.getObjectArchive(), machineDescription.getObject());
             } else if (machineDescription.getSoftware() != null) {
                 String objectId = getObjectIdForSoftware(machineDescription.getSoftware());
                 String archiveId = getArchiveIdForSoftware(machineDescription.getSoftware());
@@ -602,12 +621,15 @@ public class Components {
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
 
+            if(emilEnv != null && emilEnv.isEnablePrinting())
+                observer.add(new PrintJobObserver(componentClient.getMachinePort(eaasGw), sessionId));
+
             return new MachineComponentResponse(sessionId, driveId);
         }
         catch (BWFLAException | JAXBException | MalformedURLException e) {
 
             TaskStack.run(cleanups);
-
+            e.printStackTrace();
             throw new InternalServerErrorException(
             		Response.serverError()
                     .entity(new ErrorInformation("Server has encountered an internal error: " + e.getMessage()))
@@ -654,6 +676,14 @@ public class Components {
         if(EmulationEnvironmentHelper.hasObjectBinding((MachineConfiguration)chosenEnv, objectId))
         {
             return EmulationEnvironmentHelper.getDriveId((MachineConfiguration)chosenEnv, objectId);
+        }
+
+        if(archiveId == null || archiveId.equals("default"))
+        {
+            if(authenticatedUser == null || authenticatedUser.getUsername() == null)
+                archiveId = "default";
+            else
+                archiveId = authenticatedUser.getUsername();
         }
 
         String chosenObjRef = archive.getFileCollectionForObject(archiveId, objectId);
@@ -706,6 +736,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @GET
+    @Secured
     @Path("/{componentId}")
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
@@ -740,6 +771,7 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
+    @Secured
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
         ComponentSession session = sessions.get(componentId);
@@ -772,6 +804,7 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
+    @Secured
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
@@ -811,6 +844,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
+    @Secured
     @Path("/{componentId}/controlurls")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
@@ -834,6 +868,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
+    @Secured
     @Path("/{componentId}/result")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getResult(@PathParam("componentId") String componentId)
@@ -871,6 +906,7 @@ public class Components {
      * @HTTP 408 if no screenshot could be retrieved from the emulator
      */
     @GET
+    @Secured
     @Path("/{componentId}/screenshot")
     @Produces("image/png")
     public InputStream screenshot(@PathParam("componentId") String componentId,
@@ -891,7 +927,7 @@ public class Components {
                     Thread.sleep(250);
                 }
                 if (numRetries <= 0) {
-                    throw new ServerErrorException(Response.Status.REQUEST_TIMEOUT);
+                    throw new ServerErrorException(Response.Status.BAD_REQUEST);
                 }
 
                 servletResponse.setHeader("Content-Disposition",
@@ -912,6 +948,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
+    @Secured
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
     public Response stop(@PathParam("componentId") String componentId,
@@ -934,6 +971,7 @@ public class Components {
     }
 
     @GET
+    @Secured
     @Path("/{componentId}/downloadPrintJob")
     @Produces("application/pdf")
     public InputStream downloadPrintJob(@PathParam("componentId") String componentId,
@@ -964,6 +1002,22 @@ public class Components {
     }
 
     @GET
+    @Secured
+    @Path("/{componentId}/events")
+    @Produces(MediaType.SERVER_SENT_EVENTS)
+    public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
+    {
+
+        LOG.warning("registering events");
+        final ComponentSession session = sessions.get(componentId);
+        if(session == null)
+            return;
+
+        session.initializeEventLoop(sink, sse);
+    }
+
+    @GET
+    @Secured
     @Path("/{componentId}/printJobs")
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> printJobs(@PathParam("componentId") String componentId) {
@@ -990,6 +1044,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
+    @Secured
     @Path("/{componentId}/snapshot")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1005,6 +1060,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
+    @Secured
     @Path("/{componentId}/checkpoint")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1021,6 +1077,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
+    @Secured
     @Path("/{componentId}/changeMedia")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1079,6 +1136,7 @@ public class Components {
      * @param componentId The component's ID to release.
      */
     @DELETE
+    @Secured
     @Path("/{componentId}")
     public void releaseComponent(@PathParam("componentId") String componentId) {
         ComponentSession session = sessions.get(componentId);
@@ -1118,7 +1176,7 @@ public class Components {
 
             LOG.info("Saving checkpointed environment in image-archive...");
 
-            final ImageArchiveBinding binding = envHelper.importImage(checkpointData, metadata).getBinding(15);
+            final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
             binding.setId("checkpoint");
             binding.setLocalAlias("checkpoint.tar.gz");
             binding.setAccess(Binding.AccessType.COPY);
@@ -1176,7 +1234,7 @@ public class Components {
                 return new SnapshotResponse(emilEnvRepo.saveImport(snapshot, (SaveImportRequest) request));
             }
             else if (request instanceof SaveDerivateRequest) { // implies SaveCreatedEnvironmentRequest && newEnvironmentRequest
-                return new SnapshotResponse(emilEnvRepo.saveAsRevision(snapshot, (SaveDerivateRequest) request));
+                return new SnapshotResponse(emilEnvRepo.saveAsRevision(snapshot, (SaveDerivateRequest) request, checkpoint));
             }
             else if (request instanceof SaveUserSessionRequest) {
                 return new SnapshotResponse(emilEnvRepo.saveAsUserSession(snapshot, (SaveUserSessionRequest) request));
@@ -1241,9 +1299,11 @@ public class Components {
         private final String id;
         private final ComponentRequest request;
         private final TaskStack tasks;
+        private final List<EventObserver> observerList;
+        private ScheduledFuture<?> eventTask;
+        private boolean finished = false;
 
-
-        public ComponentSession(String id, ComponentRequest request, TaskStack tasks)
+        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observer)
         {
             this.keepaliveTimestamp = new AtomicLong(0);
             this.startTimestamp = Components.timestamp();
@@ -1252,9 +1312,11 @@ public class Components {
             this.id = id;
             this.request = request;
             this.tasks = tasks;
+            this.observerList = observer;
 
             LOG.info("Session for component ID '" + id + "' created");
         }
+
 
         public void keepalive() throws BWFLAException
         {
@@ -1264,6 +1326,11 @@ public class Components {
 
         public void release()
         {
+            finished = true;
+
+            if(eventTask != null)
+                eventTask.cancel(true);
+
             if (released.getAndSet(true))
                 return;  // Release was already called!
 
@@ -1315,6 +1382,23 @@ public class Components {
         public long getStartTimestamp()
         {
             return startTimestamp;
+        }
+
+        public void initializeEventLoop(SseEventSink sink, Sse sse)
+        {
+            if(finished || eventTask != null)
+                return;
+
+            for(EventObserver eo : observerList) {
+                eventTask = scheduler.scheduleAtFixedRate(
+                () -> {
+                    System.out.println(eo.getName());
+                    for(String m : eo.messages()) {
+                        sink.send(sse.newEventBuilder().name(eo.getName())
+                                .data(String.class, m).build());
+                    }
+                }, 0, 5, TimeUnit.SECONDS);
+            }
         }
     }
 

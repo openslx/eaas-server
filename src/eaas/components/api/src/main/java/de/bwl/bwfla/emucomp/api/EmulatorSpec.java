@@ -45,6 +45,12 @@ public class EmulatorSpec
     @XmlAttribute(name = "version")
     protected String version;
 
+
+    @XmlAttribute(name = "containerName", required = false)
+    protected String containerName;
+    @XmlAttribute(name = "containerVersion", required = false)
+    protected String containerVersion;
+
     public EmulatorSpec.Machine getMachine() {
         return machine;
     }
@@ -55,6 +61,22 @@ public class EmulatorSpec
 
     public String getBean() {
         return bean;
+    }
+
+    public String getContainerName() {
+        return containerName;
+    }
+
+    public void setContainerName(String containerName) {
+        this.containerName = containerName;
+    }
+
+    public String getContainerVersion() {
+        return containerVersion;
+    }
+
+    public void setContainerVersion(String containerVersion) {
+        this.containerVersion = containerVersion;
     }
 
     public void setBean(String value) {

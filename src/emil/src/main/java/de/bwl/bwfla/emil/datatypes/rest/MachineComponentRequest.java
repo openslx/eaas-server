@@ -4,7 +4,7 @@
  * The Emulation-as-a-Service framework is free software: you can
  * redistribute it and/or modify it under the terms of the GNU General
  * Public License as published by the Free Software Foundation, either
- * version 3 of the License, or (at your option) any later version.
+ * emulatorVersion 3 of the License, or (at your option) any later emulatorVersion.
  *
  * The Emulation-as-a-Service framework is distributed in the hope that
  * it will be useful, but WITHOUT ANY WARRANTY; without even the
@@ -44,12 +44,18 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     
     @XmlElement(required = false, defaultValue = "default")
     private String archive = "default";
+
+    @XmlElement(required = false, defaultValue = "default")
+    private String objectArchive = "default";
     
     @XmlElement(required = false)
     private String software;
 
     @XmlElement(required = false, defaultValue = "false")
     private boolean lockEnvironment;
+
+    @XmlElement(required = false, defaultValue = "latest")
+    private String emulatorVersion = "latest";
 
     public String getEnvironment() {
         return environment;
@@ -105,5 +111,21 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     public void setLockEnvironment(boolean lockEnvironment) {
         this.lockEnvironment = lockEnvironment;
+    }
+
+    public String getEmulatorVersion() {
+        return emulatorVersion;
+    }
+
+    public void setEmulatorVersion(String emulatorVersion) {
+        this.emulatorVersion = emulatorVersion;
+    }
+
+    public String getObjectArchive() {
+        return objectArchive;
+    }
+
+    public void setObjectArchive(String objectArchive) {
+        this.objectArchive = objectArchive;
     }
 }

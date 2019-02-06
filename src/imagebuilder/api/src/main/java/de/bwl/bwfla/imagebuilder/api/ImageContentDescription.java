@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.imagebuilder.api;
 
+import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
+
 import javax.activation.DataHandler;
 import javax.activation.DataSource;
 import javax.activation.FileDataSource;
@@ -47,7 +49,10 @@ public class ImageContentDescription
 		COPY,
 
 		@XmlEnumValue("extract")
-		EXTRACT;
+		EXTRACT,
+
+		@XmlEnumValue("rsync")
+		RSYNC;
 
 		public static Action fromString(String value)
 		{
@@ -66,13 +71,15 @@ public class ImageContentDescription
 		TAR,
 
 		@XmlEnumValue("simg")
-		SIMG;
+		SIMG,
+
+		@XmlEnumValue("docker")
+		DOCKER;
 
 		public static ArchiveFormat fromString(String value)
 		{
 			return ArchiveFormat.valueOf(value.toUpperCase());
 		}
-
 	}
 
 
@@ -91,6 +98,8 @@ public class ImageContentDescription
 	@XmlElement(required = false)
 	private URL fileURL;
 
+	@XmlElement
+	private DockerDataSource dockerDataSource = null;
 
 	@XmlElement(required = true)
 	private ArchiveFormat archiveFormat;
@@ -193,6 +202,17 @@ public class ImageContentDescription
 		return this.setData(new FileDataSource(path.toFile()));
 	}
 
+	public ImageContentDescription setDataFromDockerSource(DockerDataSource ds)
+	{
+		this.dockerDataSource = ds;
+		this.archiveFormat = ArchiveFormat.DOCKER;
+		return this;
+	}
+
+	public DockerDataSource getDockerDataSource() {
+		return dockerDataSource;
+	}
+
 	public ImageContentDescription setDataFromUrl(URL url)
 	{
 		if (url == null)
@@ -223,5 +243,42 @@ public class ImageContentDescription
 		ImageContentDescription.check(name, "Image's name");
 		if (!name.matches(NAME_PATTERN))
 			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
+	}
+
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class DockerDataSource
+	{
+		@XmlElement
+		public String imageRef;
+
+		@XmlElement
+		public String tag;
+
+		@XmlElement
+		public String imageArchiveHost;
+
+		/* transient members, only used internally */
+		public Path rootfs;
+
+		public Path dockerDir;
+
+		public String[] layers;
+
+		DockerDataSource()
+		{
+		}
+
+		public DockerDataSource(String imageRef)
+		{
+			this.imageRef = imageRef;
+			this.tag = "latest";
+		}
+
+		public DockerDataSource(String imageRef, String tag)
+		{
+			this.imageRef = imageRef;
+			this.tag = tag;
+		}
 	}
 }

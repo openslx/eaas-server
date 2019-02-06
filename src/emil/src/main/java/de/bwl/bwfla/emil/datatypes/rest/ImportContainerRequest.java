@@ -152,7 +152,9 @@ public class ImportContainerRequest extends EmilRequestType {
         @XmlEnumValue("simg")
         SIMG("simg"),
         @XmlEnumValue("dockerhub")
-        DOCKERHUB("dockerhub");
+        DOCKERHUB("dockerhub"),
+        @XmlEnumValue("readymade")
+        READYMADE("readymade");
 
         private final String value;
 

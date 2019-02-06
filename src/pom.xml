@@ -14,8 +14,8 @@
 		<skipTests>true</skipTests>
 
 		<!-- version definitions for dependencies/modules -->
-		<wildfly.version>10.0.0.Final</wildfly.version>
-		<wildfly.bom.version>10.0.1.Final</wildfly.bom.version>
+		<wildfly.version>14.0.1.Final</wildfly.version>
+		<wildfly.bom.version>14.0.1.Final</wildfly.bom.version>
 
 		<jna.version>4.2.2</jna.version>
 		<commons.io.version>2.5</commons.io.version>
@@ -31,11 +31,12 @@
 		<jackson.version>1.9.13</jackson.version>
 		<jackson2.version>2.5.4</jackson2.version>
 		<junit.version>4.12</junit.version>
-		<javaee-api.version>7.0</javaee-api.version>
+		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
+		<xoai.version>4.2.0</xoai.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
-		<version.org.jboss.resteasy>3.0.14.Final</version.org.jboss.resteasy>
+		<version.org.jboss.resteasy>3.6.1.Final</version.org.jboss.resteasy>
 		<cxf.version>3.1.4</cxf.version>
 		<opencsv.version>3.9</opencsv.version>
 
@@ -273,6 +274,8 @@
 		<module>nbd-server</module>
 		<!-- <module>shibboleth</module> -->
 		<module>preservica-client</module>
+		<module>metadata-oaipmh</module>
+		<module>metadata-repository</module>
   </modules>
 
 	<dependencies>
@@ -289,7 +292,7 @@
 		<dependencies>
 			<dependency>
 				<groupId>org.wildfly.bom</groupId>
-				<artifactId>wildfly-javaee7</artifactId>
+				<artifactId>wildfly-javaee8</artifactId>
 				<scope>import</scope>
 				<type>pom</type>
 				<version>${wildfly.bom.version}</version>
@@ -418,13 +421,11 @@
 				<artifactId>enunciate-core-annotations</artifactId>
 				<version>${enunciate.version}</version>
 			</dependency>
-
 			<dependency>
 				<groupId>com.opencsv</groupId>
 				<artifactId>opencsv</artifactId>
 				<version>${opencsv.version}</version>
 			</dependency>
-
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>ear</artifactId>
@@ -657,6 +658,58 @@
 				<artifactId>imagebuilder-impl</artifactId>
 				<version>${project.version}</version>
 				<type>war</type>
+			</dependency>
+			<dependency>
+				<groupId>de.bwl.bwfla</groupId>
+				<artifactId>metadata-repository-api</artifactId>
+				<version>${project.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>de.bwl.bwfla</groupId>
+				<artifactId>metadata-repository-client</artifactId>
+				<version>${project.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>de.bwl.bwfla</groupId>
+				<artifactId>metadata-repository-server</artifactId>
+				<version>${project.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>org.dspace</groupId>
+				<artifactId>xoai-common</artifactId>
+				<version>${xoai.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>org.dspace</groupId>
+				<artifactId>xoai-data-provider</artifactId>
+				<version>${xoai.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>org.dspace</groupId>
+				<artifactId>xoai-service-provider</artifactId>
+				<version>${xoai.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>de.bwl.bwfla</groupId>
+				<artifactId>metadata-oaipmh</artifactId>
+				<version>${project.version}</version>
+				<type>war</type>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>2.9.7</version>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.dataformat</groupId>
+				<artifactId>jackson-dataformat-yaml</artifactId>
+				<version>2.9.2</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

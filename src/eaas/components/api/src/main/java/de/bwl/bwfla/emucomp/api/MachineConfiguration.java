@@ -51,7 +51,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
         "nic",
         "abstractDataResource",
         "nativeConfig",
-        "outputBindingId"
+        "outputBindingId",
 })
 @XmlRootElement(name="emulationEnvironment", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class MachineConfiguration
@@ -72,6 +72,7 @@ public class MachineConfiguration
     protected List<Nic> nic;
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
     protected String outputBindingId;
+
     @XmlElementRefs({
   	   @XmlElementRef(name="binding", type=Binding.class, namespace = "http://bwfla.bwl.de/common/datatypes"),
   	 @XmlElementRef(name="objectArchiveBinding", type=ObjectArchiveBinding.class, namespace = "http://bwfla.bwl.de/common/datatypes")})
@@ -120,7 +121,7 @@ public class MachineConfiguration
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "installedSoftwareId")
     protected List<String> installedSoftwareIds = new ArrayList<String>();
-    
+
     public String getArch() {
         return arch;
     }
@@ -182,6 +183,8 @@ public class MachineConfiguration
         }
         return this.abstractDataResource;
     }
+
+
 
     public MachineConfiguration.NativeConfig getNativeConfig() {
         return nativeConfig;
@@ -247,7 +250,7 @@ public class MachineConfiguration
         }
 
     }
-    
+
     public static MachineConfiguration fromValue(String data) throws JAXBException
     {
         return JaxbType.fromValue(data, MachineConfiguration.class);

@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.channels.FileChannel;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -11,8 +12,13 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.*;
 
+import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.jboss.resteasy.specimpl.ResponseBuilderImpl;
 
 
@@ -22,7 +28,12 @@ public class Emil extends EmilRest
 {
 	/* ### ADMIN Interfaces ### */
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext authenticatedUser;
+
 	@GET
+	@Secured
 	@Path("/buildInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response buildInfo()
@@ -40,7 +51,25 @@ public class Emil extends EmilRest
 		}
 	}
 
+	@Secured
 	@GET
+	@Path("/userInfo")
+	@Produces(MediaType.APPLICATION_JSON)
+	public UserInfoResponse userInfo() {
+		if(authenticatedUser != null && authenticatedUser.getUsername() != null)
+		{
+			UserInfoResponse resp = new UserInfoResponse();
+			resp.setUserId(authenticatedUser.getUsername());
+			resp.setFullName(authenticatedUser.getName());
+			return resp;
+		}
+		else
+			return new UserInfoResponse(new BWFLAException("no user context"));
+	}
+
+
+	@GET
+	@Secured
 	@Path("/serverLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response serverLog()
@@ -55,6 +84,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
+	@Secured
 	@Path("/resetUsageLog")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()
@@ -75,6 +105,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
+	@Secured
 	@Path("/usageLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response usageLog()

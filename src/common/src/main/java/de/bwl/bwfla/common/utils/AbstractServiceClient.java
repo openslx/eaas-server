@@ -35,6 +35,7 @@ import javax.xml.ws.soap.SOAPBinding;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.concurrent.FirstAccessComputationFuture;
+import de.bwl.bwfla.common.utils.net.SSLUtilities;
 
 
 public abstract class AbstractServiceClient<T extends Service> {
@@ -43,7 +44,12 @@ public abstract class AbstractServiceClient<T extends Service> {
     
     protected abstract T createService(URL url);
     protected abstract String getWsdlUrl(String host);
-    
+
+//    static {
+//        SSLUtilities.disableVerification();
+//    }
+
+
     protected T getService(URL url) throws BWFLAException {
         try {
             URI uri = url.toURI();

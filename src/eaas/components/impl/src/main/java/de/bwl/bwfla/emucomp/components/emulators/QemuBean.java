@@ -40,10 +40,13 @@ public class QemuBean extends EmulatorBean
 	@Override
 	protected String getEmuContainerName(MachineConfiguration machineConfiguration)
 	{
+		return "qemu-system";
+		/*
 		if(machineConfiguration.getArch().equalsIgnoreCase("i386") || machineConfiguration.getArch().equalsIgnoreCase("x86_64"))
 			return "qemu-system-x86";
 
 		return "qemu-system-" + machineConfiguration.getArch();
+		*/
 	}
 
 	public enum QEMU_ARCH {
@@ -64,14 +67,14 @@ public class QemuBean extends EmulatorBean
 	{
 
 		if(qemu_bin == null)
-			throw new BWFLAException("Emulator's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
+			throw new BWFLAException("EmulatorContainer's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
 
 		if(!isValidQemuArch(qemu_bin))
 			qemu_bin += emuEnvironment.getArch();
 
 		File exec = new File(qemu_bin);
 		if (exec == null || !exec.exists())
-			throw new BWFLAException("Emulator's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
+			throw new BWFLAException("EmulatorContainer's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
 
 		String config = this.getNativeConfig();
 		// Initialize the process-runner
@@ -151,7 +154,7 @@ public class QemuBean extends EmulatorBean
 
 		Path imagePath = null;
 		try {
-			imagePath = Paths.get(this.lookupResourceRaw(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
+			imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
 		} catch (Exception e) {
 			LOG.warning("Drive doesn't reference a valid binding, attach canceled.");
 			e.printStackTrace();

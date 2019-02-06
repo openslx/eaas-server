@@ -121,6 +121,15 @@ public class EmulationEnvironmentHelper {
 				continue;
 			}
 
+			if (r instanceof ImageArchiveBinding)
+			{
+				if(env.checkpointBindingId == null || !env.checkpointBindingId.isEmpty()) {
+					ImageArchiveBinding iab = (ImageArchiveBinding) r;
+					if (r.id.equals("emucon-rootfs"))
+						it.remove();
+				}
+			}
+
 			// resource was volatile (but not in use by a drive), remove it, too
 			for (AbstractDataResource origRes : original.getAbstractDataResource()) {
 

@@ -33,10 +33,12 @@ import net.handle.hdllib.PublicKeyAuthenticationInfo;
 import net.handle.hdllib.RemoveValueRequest;
 import net.handle.hdllib.ResolutionRequest;
 import net.handle.hdllib.ResolutionResponse;
+import net.handle.hdllib.Resolver;
 import net.handle.hdllib.ScanCallback;
 import net.handle.hdllib.Util;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
@@ -46,9 +48,10 @@ public class HandleClient
 	private final PublicKeyAuthenticationInfo pubKeyAuthInfo;
 	private final HandleResolver resolver;
 	private final byte[] encodedAdminRecord;
-	private final int urlRecordIndex;
 	private final String prefix;
 
+	public static final int INDEX_INVALID = -1;
+	public static final int INDEX_FIRST_URL_RECORD = 1;
 	public static final int INDEX_ADMIN_RECORD = 100;
 	public static final int TTL_ADMIN_RECORD = (int) TimeUnit.SECONDS.convert(24L, TimeUnit.HOURS);
 	public static final int TTL_URL_RECORD = (int) TimeUnit.SECONDS.convert(1L, TimeUnit.HOURS);
@@ -66,18 +69,12 @@ public class HandleClient
 
 	public HandleClient(String prefix, PublicKeyAuthenticationInfo pubKeyAuthInfo)
 	{
-		this(prefix, pubKeyAuthInfo, HandleUtils.getUrlRecordIndex());
-	}
-
-	public HandleClient(String prefix, PublicKeyAuthenticationInfo pubKeyAuthInfo, int urlRecordIndex)
-	{
 		if (prefix == null || prefix.isEmpty())
 			throw new IllegalArgumentException("Invalid prefix!");
 
 		this.pubKeyAuthInfo = pubKeyAuthInfo;
 		this.resolver = new HandleResolver();
 		this.encodedAdminRecord = HandleUtils.newEncodedAdminRecord(pubKeyAuthInfo);
-		this.urlRecordIndex = urlRecordIndex;
 		this.prefix = prefix;
 	}
 
@@ -85,7 +82,6 @@ public class HandleClient
 	public List<String> list() throws HandleException
 	{
 		final List<String> handles = new ArrayList<String>();
-
 		try {
 			final ScanCallback callback = (byte[] bytes) -> handles.add(Util.decodeString(bytes));
 			resolver.listHandlesUnderPrefix(prefix, pubKeyAuthInfo, callback);
@@ -102,7 +98,7 @@ public class HandleClient
 	{
 		final UrlEntry[] entries = new UrlEntry[urls.length];
 		for (int i = 0; i < urls.length; ++i)
-			entries[i] = new UrlEntry(urlRecordIndex + i, urls[i]);
+			entries[i] = new UrlEntry(INDEX_FIRST_URL_RECORD + i, urls[i]);
 
 		this.create(name, entries);
 	}
@@ -169,10 +165,12 @@ public class HandleClient
 		return urls;
 	}
 
-	/** Adds new URL value to handle. */
+	/** Adds new URL value to handle, finding next free index. */
 	public void add(String name, String url) throws HandleException
 	{
-		this.add(name, urlRecordIndex, url);
+		final HandleValue[] values = this.list(name);
+		final int index = this.findFreeIndex(values);
+		this.add(name, index, url);
 	}
 
 	/** Adds new URL value to handle. */
@@ -186,9 +184,30 @@ public class HandleClient
 	}
 
 	/** Updates handle's value with new URL. */
-	public void update(String name, String url) throws HandleException
+	public void update(String name, String newurl) throws HandleException
 	{
-		this.update(name, urlRecordIndex, url);
+		final String prefix = newurl.substring(newurl.lastIndexOf("/") + 1);
+		if (prefix.length() < 4)
+			throw new IllegalArgumentException("Invalid URL: " + newurl);
+
+		int index = INDEX_INVALID;
+
+		// Find matching previous URL record...
+		final HandleValue[] values = this.list(name, Common.STD_TYPE_URL);
+		for (HandleValue value : values) {
+			final String cururl = value.getDataAsString();
+			if (cururl.startsWith(prefix)) {
+				index = value.getIndex();
+				break;
+			}
+		}
+
+		if (index == INDEX_INVALID) {
+			net.handle.hdllib.HandleException error = new net.handle.hdllib.HandleException(net.handle.hdllib.HandleException.INVALID_VALUE);
+			throw new HandleException("Handle's URL prefix not found!", error);
+		}
+
+		this.update(name, index, newurl);
 	}
 
 	/** Updates handle's value with new URL. */
@@ -261,5 +280,49 @@ public class HandleClient
 		catch (net.handle.hdllib.HandleException error) {
 			throw new HandleException(errmsg, error);
 		}
+	}
+
+	private HandleValue[] list(String name) throws HandleException
+	{
+		final String handle = this.toHandle(name);
+		try {
+			return resolver.resolveHandle(handle);
+		}
+		catch (net.handle.hdllib.HandleException error) {
+			throw new HandleException("Resolving values for handle '" + handle + "' failed!", error);
+		}
+	}
+
+	private HandleValue[] list(String name, byte[]... types) throws HandleException
+	{
+		final String handle = this.toHandle(name);
+		try {
+			return resolver.resolveHandle(Util.encodeString(handle), types, null);
+		}
+		catch (net.handle.hdllib.HandleException error) {
+			throw new HandleException("Resolving values for handle '" + handle + "' failed!", error);
+		}
+	}
+
+	private int findFreeIndex(HandleValue[] values)
+	{
+		// Prepare all occupied index values
+		final int[] indices = new int[values.length];
+		for (int i = 0; i < values.length; ++i)
+			indices[i] = values[i].getIndex();
+
+		Arrays.sort(indices);
+
+		// Find first free/unused index...
+		int freeidx = INDEX_FIRST_URL_RECORD;
+		for (int i = 0; i < indices.length; ++i) {
+			final int curidx = indices[i];
+			if (freeidx < curidx)
+				return freeidx;
+
+			freeidx = curidx + 1;
+		}
+
+		return freeidx;
 	}
 }

@@ -30,6 +30,9 @@ import javax.jws.WebService;
 import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
+import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
+import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
@@ -37,7 +40,6 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
-import de.bwl.bwfla.imagearchive.datatypes.ImageExport;
 
 
 @Stateless
@@ -179,12 +181,6 @@ public class ImageArchiveWS
 				.setDefaultEnvironment(osId, envId);
 	}
 
-	public ImageExport getImageDependencies(String backend, String envId) throws BWFLAException
-	{
-		return this.lookup(backend)
-				.getImageDependencies(envId);
-	}
-
 	public String getImageBinding(String backend, String name, String version) throws BWFLAException
 	{
 		return this.lookup(backend)
@@ -197,11 +193,25 @@ public class ImageArchiveWS
 				.replicateImages(images);
 	}
 
+	public ImageNameIndex getNameIndexes(String backend) throws BWFLAException {
+		return this.lookup(backend)
+				.getNameIndexes();
+	}
+
+	public void addNameIndexesEntry(String backend, Entry entry, Alias alias) throws BWFLAException {
+		this.lookup(backend)
+				.addNameIndexesEntry(entry, alias);
+	}
+
 	public String getDefaultBackendName()
 	{
 		return backends.getImageArchiveConfig().getDefaultBackendName();
 	}
 
+	public Collection<String> listBackendNames()
+	{
+			return backends.listBackendNames();
+	}
 
 	/* ========================= Internal Helpers ========================= */
 

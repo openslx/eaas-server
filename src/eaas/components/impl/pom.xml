@@ -147,10 +147,5 @@
 			<groupId>javax.activation</groupId>
 			<artifactId>activation</artifactId>
 		</dependency>
-<dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-websockets-jsr</artifactId>
-            <type>jar</type>
-</dependency>
 	</dependencies>
 </project>

@@ -59,12 +59,12 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private static final long	serialVersionUID	= -3958997016973537612L;
 	protected final Logger log	= Logger.getLogger(this.getClass().getName());
 
-	final private String name;
-	final private String localPath;
+	private String name;
+	private String localPath;
 	private boolean defaultArchive;
 	
 	protected ObjectFileFilter objectFileFilter = new ObjectFileFilter();
-	final protected ObjectImportHandle importHandle;
+	protected ObjectImportHandle importHandle;
 
 	@Inject
 	@Config(value="objectarchive.httpexport")
@@ -92,6 +92,13 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	 * @param localPath
 	 */
 	public DigitalObjectFileArchive(String name, String localPath, boolean defaultArchive)
+	{
+		this.init(name, localPath, defaultArchive);
+	}
+
+	protected DigitalObjectFileArchive() {}
+
+	protected void init(String name, String localPath, boolean defaultArchive)
 	{
 		this.name = name;
 		this.localPath = localPath;
@@ -302,6 +309,31 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			return false;
 		}
 		return true;
+	}
+
+	public void delete(String objectId) throws BWFLAException {
+		if(objectId == null)
+			throw new BWFLAException("object id was null");
+
+		File topDir = new File(localPath);
+		if(!topDir.exists() || !topDir.isDirectory())
+		{
+			throw new BWFLAException("objectDir " + localPath + " does not exist");
+		}
+
+		File objectDir = new File(topDir, objectId);
+		if(!objectDir.exists() || !objectDir.isDirectory())
+		{
+			throw new BWFLAException("objectDir " + objectDir + " does not exist");
+		}
+
+		try {
+			FileUtils.deleteDirectory(objectDir);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new BWFLAException(e);
+		}
+
 	}
 
 	public FileCollection getObjectReference(String objectId)

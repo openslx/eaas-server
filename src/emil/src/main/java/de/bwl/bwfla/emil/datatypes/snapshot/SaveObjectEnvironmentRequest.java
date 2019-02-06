@@ -2,7 +2,6 @@ package de.bwl.bwfla.emil.datatypes.snapshot;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import de.bwl.bwfla.emil.datatypes.snapshot.SnapshotRequest;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -26,7 +25,7 @@ public class SaveObjectEnvironmentRequest extends SnapshotRequest {
 
 	@JsonProperty(required = true)
 	@XmlElement(required = true)
-	private String archiveId;
+	private String objectArchiveId;
 
 	@XmlElement
 	private boolean embeddedObject = false;
@@ -42,11 +41,11 @@ public class SaveObjectEnvironmentRequest extends SnapshotRequest {
 	}
 
 	
-	public String getArchiveId() {
-		return archiveId;
+	public String getObjectArchiveId() {
+		return objectArchiveId;
 	}
-	public void setArchiveId(String archiveId) {
-		this.archiveId = archiveId;
+	public void setObjectArchiveId(String archiveId) {
+		this.objectArchiveId = archiveId;
 	}
 
 	public String getTitle() {

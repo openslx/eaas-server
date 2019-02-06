@@ -119,5 +119,8 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 		return -1;
 	}
 
-
+	@Override
+	public void delete(String id) throws BWFLAException {
+		throw new BWFLAException("not supported");
+	}
 }

@@ -16,6 +16,11 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import de.bwl.bwfla.api.objectarchive.ObjectFileCollection;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
@@ -39,13 +44,18 @@ public class EmilSoftwareData extends EmilRest {
     @Inject
     @Config(value = "ws.objectarchive")
     private String objectArchive;
+
+	@Inject
+	@AuthenticatedUser
+	private UserContext authenticatedUser;
     
     @PostConstruct
     private void init() {
         swHelper = new SoftwareArchiveHelper(softwareArchive);
         objHelper = new ObjectArchiveHelper(objectArchive);
     }
-    
+
+    @Secured
 	@GET
 	@Path("/getSoftwareObject")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -103,6 +113,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @return A JSON response containing software package's description when found,
 	 *         else an error message.
 	 */
+	@Secured
 	@GET
 	@Path("/getSoftwarePackageDescription")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -157,6 +168,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @return A JSON response containing a list of descriptions
 	 *         for all software packages or an error message.
 	 */
+	@Secured
 	@GET
 	@Path("/getSoftwarePackageDescriptions")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -210,6 +222,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @param swo EmilSoftwareObject as JSON string
 	 * @return JSON response (error) message
 	 */
+	@Secured
 	@POST
 	@Path("/saveSoftwareObject")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -223,11 +236,29 @@ public class EmilSoftwareData extends EmilRest {
 			SoftwarePackage software = swarchive.getSoftwarePackageById(swo.getObjectId());
 			if(software == null)
 			{
-				
 				String archiveName = swo.getArchiveId();
 				if(archiveName == null)
+				{
+					if(authenticatedUser != null && authenticatedUser.getUsername() != null) {
+						LOG.info("got user context: " + authenticatedUser.getUsername());
+						archiveName = authenticatedUser.getUsername();
+					}
+				}
+
+				LOG.severe("got archive: " + swo.getArchiveId() + " for " + swo.getObjectId());
+				if(archiveName == null || !archiveName.equals("default"))
+				{
+					LOG.severe("importing object");
+					ObjectFileCollection object = objHelper.getObjectHandle(archiveName, swo.getObjectId());
+					if(object == null)
+					{
+						LOG.severe("importing object failed");
+						return Emil.errorMessageResponse("failed to access object");
+					}
+					objHelper.importObject("default", object);
 					archiveName = "default";
-				
+				}
+
 				software = new SoftwarePackage();
 				software.setObjectId(swo.getObjectId());
 				software.setArchive(archiveName);
@@ -255,5 +286,13 @@ public class EmilSoftwareData extends EmilRest {
 		
 		String message = "succsess";
 		return Emil.successMessageResponse(message);
+	}
+
+	private String manageUserCtx(String archiveId) throws BWFLAException {
+		if(authenticatedUser != null && authenticatedUser.getUsername() != null) {
+			LOG.info("got user context: " + authenticatedUser.getUsername());
+			return authenticatedUser.getUsername();
+		}
+		return archiveId;
 	}
 }

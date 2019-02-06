@@ -4,6 +4,7 @@ import java.io.File;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Level;
@@ -24,6 +25,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public List<Environment> getEnvironments(String type) throws BWFLAException, JAXBException {
+
 		return this.getEnvironments(this.getDefaultBackendName(), type);
 	}
 
@@ -45,6 +47,10 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return out;
 	}
 
+	public List<String> getRawEnvironemts(String backend,String type) throws BWFLAException {
+		return archive.getEnvironments(backend, type);
+	}
+
 	public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
 		return this.getTemplate(this.getDefaultBackendName(), id);
 	}
@@ -59,7 +65,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return null;
 	}
 
-	private void updateUrlPrefix(String backend, Environment env) throws BWFLAException
+	public void updateUrlPrefix(String backend, Environment env) throws BWFLAException
 	{
 		if (env instanceof MachineConfiguration) {
 			final MachineConfiguration config = (MachineConfiguration) env;
@@ -82,7 +88,10 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public void sync() throws BWFLAException {
-		this.sync(this.getDefaultBackendName());
+		connectArchive();
+		Collection<String> archives = listBackendNames();
+		for(String archive : archives)
+			this.sync(archive);
 	}
 
 	public void sync(String backend) throws BWFLAException {
@@ -360,11 +369,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 			emuEnv.setId(getRandomId());
 
 		archive.importConfiguration(backend, emuEnv.toString(), iaMd, preserveId);
-		log.info("Successfully registered image at " + wsHost + "id: " + emuEnv.getId());
+		log.info("Archive '" + backend + "' imported image '" + emuEnv.getId() + "'");
 		return emuEnv.getId();
 	}
 
-	private static String getRandomId() {
+	public static String getRandomId() {
 		return UUID.randomUUID().toString();
 	}
 
@@ -434,18 +443,8 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 					}
 				}
 			}
-
 			return binding;
 		}
-	}
-
-	public ImageExport getImageDependecies(String envId) throws BWFLAException {
-		return this.getImageDependecies(this.getDefaultBackendName(), envId);
-	}
-
-	public ImageExport getImageDependecies(String backend, String envId) throws BWFLAException {
-		connectArchive();
-		return archive.getImageDependencies(backend, envId);
 	}
 
 	public ImageArchiveBinding getImageBinding(String name, String version) throws BWFLAException {
@@ -471,12 +470,36 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return archive.getImageImportResult(backend, sessionId);
 	}
 
-	public List<String> replicateImages(List<String> images) throws BWFLAException {
+	public List<ImportImageHandle> replicateImages(List<String> images) throws BWFLAException {
 		return this.replicateImages(this.getDefaultBackendName(), images);
 	}
 
-	public List<String> replicateImages(String backend, List<String> images) throws BWFLAException {
-		return archive.replicateImages(backend, images);
+	public List<ImportImageHandle> replicateImages(String backend, List<String> images) throws BWFLAException {
+		connectArchive();
+		List<String> sessions = archive.replicateImages(backend, images);
+		List<ImportImageHandle> result = new ArrayList<>();
+		for(String sessionId : sessions)
+		{
+			log.severe(sessionId);
+			result.add(new ImportImageHandle(archive, backend, ImageType.BASE, sessionId));
+		}
+		return result;
+	}
+
+	public ImageNameIndex getNameIndexes(String backend) throws BWFLAException {
+		 connectArchive();
+		 return archive.getNameIndexes(backend);
+	}
+
+	public void addNameIndexesEntry(String backend, Entry entry, Alias alias) throws BWFLAException {
+		connectArchive();
+		archive.addNameIndexesEntry(backend, entry, alias);
+	}
+
+	public Collection<String> listBackendNames() throws BWFLAException
+	{
+		connectArchive();
+		return archive.listBackendNames();
 	}
 
 	public static class ImportNoFinishedException extends Exception {  }

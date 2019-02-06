@@ -1,11 +1,9 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
-import com.mongodb.ReflectionDBObject;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
-import de.bwl.bwfla.imageclassifier.client.Identification;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

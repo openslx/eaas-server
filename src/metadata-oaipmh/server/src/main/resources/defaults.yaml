@@ -1,0 +1,42 @@
+metadata_provider:
+    base_url: 'http://localhost:8080/oaipmh/providers'
+    backends:
+      - name: 'images'
+
+        # Repository information (see http://www.openarchives.org/OAI/2.0/openarchivesprotocol.htm#Identify)
+        identity:
+            repository_name: 'EaaS image-metadata dummy repository'
+            # Date format according to https://docs.oracle.com/javase/8/docs/api/java/util/Date.html
+            earliest_date: '2018-11-01T00:00:00Z'
+            admin_email: 'admin@dummy.com'
+
+        # Source for item+set lookups
+        source:
+            base_url: 'http://localhost:8080/emil/metadata-repositories/public-images'
+
+        response_limits:
+            max_num_identifiers: 50
+            max_num_records: 50
+            max_num_sets: 100
+
+      - name: 'environments'
+
+          # Repository information (see http://www.openarchives.org/OAI/2.0/openarchivesprotocol.htm#Identify)
+        identity:
+            repository_name: 'EaaS image-metadata dummy repository'
+            # Date format according to https://docs.oracle.com/javase/8/docs/api/java/util/Date.html
+            earliest_date: '2018-11-01T00:00:00Z'
+            admin_email: 'admin@dummy.com'
+
+          # Source for item+set lookups
+        source:
+            base_url: 'http://localhost:8080/emil/metadata-repositories/public-environments'
+
+        response_limits:
+            max_num_identifiers: 50
+            max_num_records: 50
+            max_num_sets: 100
+
+metadata_harvester:
+    base_url: 'http://localhost:8080/oaipmh/harvesters'
+   

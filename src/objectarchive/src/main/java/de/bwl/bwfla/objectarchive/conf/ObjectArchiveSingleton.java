@@ -115,8 +115,8 @@ public class ObjectArchiveSingleton
 		confValid = validate(); 
 		
 		if(!confValid)
-			throw new ObjectArchiveInitException("no valid canfiguration found");
-			
+			throw new ObjectArchiveInitException("no valid configuration found");
+
 		List<DigitalObjectArchive> archives = null;
 		archives = DigitalObjectArchiveFactory.createFromJson(new File(objArchiveConfDir));
 		

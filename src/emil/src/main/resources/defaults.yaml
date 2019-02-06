@@ -8,16 +8,15 @@ emil:
     imageproposerservice: http://localhost:8080
     emilobjectenvironmentspaths: /home/bwfla/emil-object-environments/
     usersessionretention: 10080
-    mongodbadress: localhost
-    mongodbport: 27017
-    mongodbname: eaas
-    emildbcollectionname: emilEnv
     containerdata:
         imagebuilder:
             timeout: 15 mins
             delay: 3 secs
     authEnabled: false
     authSecret: ''
+    imagesDatabase: images
+    emilDatabase: emil
+    classificationDatabase: classification
 
 ws:
     blobstore: http://localhost:8080/
@@ -29,3 +28,17 @@ ws:
     softwarearchive: http://localhost:8080/
 rest:
     blobstore: http://localhost:8080/blobstore/api/v1/blobs
+
+metadata_repositories:
+  - name: public-images  # Archive's name
+    type: images   # Archive's type
+    mode: R
+  - name: public-environments  # Archive's name
+    type: environments   # Archive's type
+    mode: R
+  - name: remote-images
+    type: images
+    mode: W
+  - name: remote-environments
+    type: environments
+    mode: W

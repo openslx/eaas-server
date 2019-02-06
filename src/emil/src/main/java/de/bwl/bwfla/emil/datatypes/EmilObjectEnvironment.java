@@ -16,14 +16,14 @@ public class EmilObjectEnvironment extends EmilEnvironment {
 	@XmlElement(required = false)
 	protected String objectId;
 	@XmlElement(required = false)
-	protected String archiveId;
+	protected String objectArchiveId;
 
 	public EmilObjectEnvironment(EmilObjectEnvironment template)
 	{
 		super(template);
 		driveId = template.driveId;
 		objectId = template.objectId;
-		archiveId = template.archiveId;
+		objectArchiveId = template.objectArchiveId;
 	}
 
 	public EmilObjectEnvironment(EmilEnvironment template)
@@ -52,11 +52,11 @@ public class EmilObjectEnvironment extends EmilEnvironment {
 		this.objectId = objectId;
 	}
 
-	public String getArchiveId() {
-		return archiveId;
+	public String getObjectArchiveId() {
+		return objectArchiveId;
 	}
 
-	public void setArchiveId(String archiveId) {
-		this.archiveId = archiveId;
+	public void setObjectArchiveId(String archiveId) {
+		this.objectArchiveId = archiveId;
 	}
 }

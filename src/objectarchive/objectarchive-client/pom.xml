@@ -68,6 +68,9 @@
 								<wsdlOption>
 									<wsdl>${project.build.directory}/dependency/WEB-INF/wsdl/ObjectArchiveFacadeWS.wsdl</wsdl>
 									<wsdlLocation>http://localhost:8080/objectarchive/ObjectArchiveFacadeWS?wsdl</wsdlLocation>
+									<bindingFiles>
+										<bindingFile>objectarchive.bindings</bindingFile>
+									</bindingFiles>
 								</wsdlOption>
 							</wsdlOptions>
 						</configuration>

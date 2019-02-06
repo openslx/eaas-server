@@ -19,6 +19,9 @@
 
 package de.bwl.bwfla.imagebuilder;
 
+import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
+import de.bwl.bwfla.imagebuilder.ws.ImageBuilder;
+
 import java.nio.file.Path;
 
 
@@ -27,6 +30,7 @@ public class ImageHandle
 	private final Path path;
 	private final String name;
 	private final String type;
+	private ImageBuilderMetadata metadata;
 
 	public ImageHandle(Path path, String name, String type)
 	{
@@ -48,5 +52,13 @@ public class ImageHandle
 	public String getType()
 	{
 		return type;
+	}
+
+	public ImageBuilderMetadata getMetadata() {
+		return metadata;
+	}
+
+	public void setMetadata(ImageBuilderMetadata metadata) {
+		this.metadata = metadata;
 	}
 }

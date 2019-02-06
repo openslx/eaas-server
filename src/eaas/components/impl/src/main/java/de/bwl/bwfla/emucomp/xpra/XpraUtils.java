@@ -29,11 +29,14 @@ public class XpraUtils
         runner.addEnvVariable("XDG_RUNTIME_DIR", "/tmp/" + port);
         return runner.start();
     }
+
     public static boolean startXpraSession(DeprecatedProcessRunner runner, int port, Logger log)
     {
         runner.setCommand("xpra");
         runner.addArgument("start");
         runner.addArgument(":" + port);
+        runner.addArgument("--socket-dir=/tmp");
+        runner.addArgument("--socket-dirs=/tmp");
         runner.addArgument("--bind-tcp=localhost:" + port);
         runner.addArgument("--daemon=no");
         runner.addArgument("--html=on");

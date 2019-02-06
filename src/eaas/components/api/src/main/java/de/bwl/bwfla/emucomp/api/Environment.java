@@ -29,16 +29,19 @@ import javax.xml.bind.annotation.XmlType;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
+import java.time.Instant;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "environment", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
-    "id",
+	Environment.Fields.IDENTIFIER,
+	Environment.Fields.TIMESTAMP,
     "description",
     "metaDataVersion",
-    "userTag"
+    "userTag",
+    "configurationType"
 })
 @XmlSeeAlso({
     MachineConfiguration.class,
@@ -49,11 +52,18 @@ import java.util.logging.Logger;
 })
 public class Environment extends ComponentConfiguration {
 
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
-    protected String id;
+	@XmlElement(name = Fields.IDENTIFIER, namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
+	protected String id;
+
+	@XmlElement(name = Fields.TIMESTAMP, namespace = "http://bwfla.bwl.de/common/datatypes")
+	protected String timestamp = Instant.now().toString();
     
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
     protected EnvironmentDescription description;
+
+    // MachineConfiguration, OciContainerConfiguration
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
+    protected String configurationType = this.getClass().getCanonicalName();
 
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected String metaDataVersion;
@@ -69,7 +79,15 @@ public class Environment extends ComponentConfiguration {
         this.id = value;
     }
 
-    public EnvironmentDescription getDescription() {
+	public String getTimestamp() {
+		return timestamp;
+	}
+
+	public void setTimestamp(String value) {
+		this.timestamp = value;
+	}
+
+	public EnvironmentDescription getDescription() {
         return description;
     }
 
@@ -105,4 +123,16 @@ public class Environment extends ComponentConfiguration {
     public void setUserTag(String userTag) {
         this.userTag = userTag;
     }
+
+    public String getConfigurationType() {
+        return configurationType;
+    }
+
+
+	/** Field names definition */
+	public final class Fields
+	{
+		public static final String IDENTIFIER = "id";
+		public static final String TIMESTAMP  = "timestamp";
+	}
 }

@@ -8,7 +8,7 @@ import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.ConfigType;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
 
 
-/** Emulator's configuration settings. */
+/** EmulatorContainer's configuration settings. */
 public class EmulatorConfig
 {
 	// Member fields

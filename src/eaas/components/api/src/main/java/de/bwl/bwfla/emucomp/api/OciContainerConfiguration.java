@@ -36,7 +36,7 @@ import java.util.logging.Logger;
 @XmlType(name = "ociContainerConfiguration", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
 		"process",
 		"rootfs",
-		"isGui",
+		"isGui"
 })
 @XmlRootElement(name = "ociContainerConfiguration", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class OciContainerConfiguration extends ContainerConfiguration
@@ -128,4 +128,6 @@ public class OciContainerConfiguration extends ContainerConfiguration
 			return args;
 		}
 	}
+
+
 }

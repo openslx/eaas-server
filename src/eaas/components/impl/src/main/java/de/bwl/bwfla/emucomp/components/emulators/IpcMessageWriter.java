@@ -37,7 +37,7 @@ public class IpcMessageWriter
 	/** Finishes writing the current message and sends it. */
 	public boolean send(String destsock, boolean blocking) throws IOException
 	{
-		return socket.send(destsock, this.array(), this.size(), blocking);
+		return socket.sendto(destsock, this.array(), this.size(), blocking);
 	}
 	
 	/** Writes a byte value. */

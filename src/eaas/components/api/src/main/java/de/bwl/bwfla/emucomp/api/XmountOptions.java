@@ -56,8 +56,6 @@ public class XmountOptions {
 	
 	public void setXmountOptions(DeprecatedProcessRunner process)
 	{
-
-
 		if(offset > 0 && size < 0)
 		{
 			process.addArguments("--offset", "" + offset);

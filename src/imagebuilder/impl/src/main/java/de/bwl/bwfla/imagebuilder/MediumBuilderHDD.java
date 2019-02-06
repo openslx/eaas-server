@@ -20,17 +20,19 @@
 package de.bwl.bwfla.imagebuilder;
 
 
+import de.bwl.bwfla.api.imagearchive.Entry;
+import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
+import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
+import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.ArrayDeque;
-import java.util.Deque;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Logger;
 
 
@@ -99,8 +101,15 @@ public class MediumBuilderHDD extends MediumBuilder
 		}
 
 		try {
+			MediumBuilderHDD.prepare(description.getContentEntries(), workdir, log);
+
 			// Create base qcow container
-			EmulatorUtils.createNewCowFile(qcow, description.getSizeInMb() + "M", log);
+			QcowOptions options = new QcowOptions();
+			options.setSize(description.getSizeInMb() + "M");
+			String backingFile = lookupBackingFile(description);
+			if(backingFile != null)
+				options.setBackingFile(backingFile);
+			EmulatorUtils.createCowFile(qcow, options, log);
 
 			// Mount it as raw disk-image
 			final XmountOptions xmoptions = new XmountOptions();
@@ -111,7 +120,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			});
 
 			// Partition the raw disk-image
-			if (description.getPartitionTableType() != PartitionTableType.NONE) {
+			if (backingFile == null && description.getPartitionTableType() != PartitionTableType.NONE) {
 				final int offset = description.getPartitionOffset();
 				this.partition(description.getPartitionTableType(), rawimg, description.getFileSystemType().name(), offset, log);
 
@@ -123,19 +132,19 @@ public class MediumBuilderHDD extends MediumBuilder
 			}
 
 			// Prepare filesystem on the partition
-			{
-				final FileSystemType fstype = description.getFileSystemType();
+			final FileSystemType fstype = description.getFileSystemType();
+			if(backingFile == null){
 				this.makefs(fstype, rawimg, log);
-				MediumBuilderHDD.sync(rawmnt, log);
-				MediumBuilderHDD.lklmount(rawimg, fusemnt, fstype, log);
-				tasks.add(() -> {
-					MediumBuilderHDD.sync(fusemnt, log);
-					MediumBuilderHDD.unmount(fusemnt, log);
-				});
 			}
+			MediumBuilderHDD.sync(rawmnt, log);
+			MediumBuilderHDD.lklmount(rawimg, fusemnt, fstype, log);
+			tasks.add(() -> {
+				MediumBuilderHDD.sync(fusemnt, log);
+				MediumBuilderHDD.unmount(fusemnt, log);
+			});
 
-			// Finally, copy image's content
-			MediumBuilderHDD.copy(description.getContentEntries(), fusemnt, workdir, log);
+			// Finally, build image's content
+			ImageBuilderMetadata md = MediumBuilderHDD.build(description.getContentEntries(), fusemnt, workdir, log);
 
 			// Unmount everything and flush data to disk!
 			MediumBuilderHDD.run(tasks, true);
@@ -143,7 +152,9 @@ public class MediumBuilderHDD extends MediumBuilder
 			log.info("Image built successfully");
 
 			// The final image!
-			return new ImageHandle(qcow, outname, outtype);
+			ImageHandle result = new ImageHandle(qcow, outname, outtype);
+			result.setMetadata(md);
+			return result;
 		}
 		catch (Exception error) {
 			if (error instanceof BWFLAException)
@@ -155,6 +166,54 @@ public class MediumBuilderHDD extends MediumBuilder
 			log.info("Cleaning up...");
 			MediumBuilderHDD.run(tasks, true);
 		}
+	}
+
+	private String lookupBackingFile(ImageDescription description) {
+		String backingFile = null;
+		int layerIndex = Integer.MAX_VALUE;
+
+		for(ImageContentDescription e : description.getContentEntries())
+		{
+			if(!e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
+			{
+				continue;
+			}
+			if(e.getDockerDataSource() == null)
+				continue;
+
+			ImageContentDescription.DockerDataSource ds = e.getDockerDataSource();
+			if(ds.imageArchiveHost == null || ds.layers == null)
+				continue;
+
+			EnvironmentsAdapter envHelper = new EnvironmentsAdapter(ds.imageArchiveHost);
+			try {
+				ImageNameIndex index = envHelper.getNameIndexes("emulators");
+				if(index.getEntries() == null)
+					continue;
+
+				for(ImageNameIndex.Entries.Entry _entry : index.getEntries().getEntry())
+				{
+					Entry indexEntry = _entry.getValue();
+					if(indexEntry.getProvenance() != null && indexEntry.getProvenance().getLayers() != null) {
+						List layerList = indexEntry.getProvenance().getLayers();
+						for(String l : ds.layers) {
+							int idx = layerList.indexOf(l);
+							if (idx >= 0)
+							{
+								// TODO: make the url creation more elegant 
+								if(idx < layerIndex)
+									backingFile = ds.imageArchiveHost + "/imagearchive/emulators/" + indexEntry.getImage().getId();
+							}
+						}
+					}
+				}
+			} catch (BWFLAException e1) {
+				e1.printStackTrace();
+				return null;
+			}
+		}
+		// log.info("found lookupBackingFile: " + backingFile);
+		return backingFile;
 	}
 
 

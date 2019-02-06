@@ -57,18 +57,6 @@ public class HandleUtils
 		return config.get("handle.prefix", String.class);
 	}
 
-	/** Returns handle.net index for URL records, as defined in configuration */
-	public static int getUrlRecordIndex()
-	{
-		return HandleUtils.getUrlRecordIndex(ConfigurationProvider.getConfiguration());
-	}
-
-	/** Returns handle.net index for URL records, as defined in configuration */
-	public static int getUrlRecordIndex(Configuration config)
-	{
-		return config.get("handle.url_record_index", Integer.class);
-	}
-
 	public static PublicKeyAuthenticationInfo preparePublicKeyAuthentication(String authHandle, int authIndex, Path privKeyFile)
 			throws BWFLAException
 	{

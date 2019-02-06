@@ -59,7 +59,6 @@ public class AmigaBean extends EmulatorBean {
                 emuRunner.addArgument(token.trim());
             }
         }
-
     }
 
     @Override

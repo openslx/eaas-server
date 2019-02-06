@@ -23,6 +23,7 @@ import java.net.URL;
 import java.time.Duration;
 
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
+import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilderService;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -70,7 +71,7 @@ public class ImageBuilderClient extends AbstractServiceClient<ImageBuilderServic
 	 * @param timeout The max. time to wait for the result.
 	 * @return The BlobHandle for the built image.
 	 */
-	public static BlobHandle awaitImageBuildResult(ImageBuilder builder, ImageBuildHandle handle, Duration timeout)
+	public static ImageBuilderResult awaitImageBuildResult(ImageBuilder builder, ImageBuildHandle handle, Duration timeout)
 			throws BWFLAException
 	{
 		return ImageBuilderClient.awaitImageBuildResult(builder, handle, timeout, Duration.ofSeconds(3));
@@ -84,7 +85,7 @@ public class ImageBuilderClient extends AbstractServiceClient<ImageBuilderServic
 	 * @param timeout The delay to wait between retries.
 	 * @return The BlobHandle for the built image.
 	 */
-	public static BlobHandle awaitImageBuildResult(ImageBuilder builder, ImageBuildHandle handle, Duration timeout, Duration delay)
+	public static ImageBuilderResult awaitImageBuildResult(ImageBuilder builder, ImageBuildHandle handle, Duration timeout, Duration delay)
 			throws BWFLAException
 	{
 		final long endms = System.currentTimeMillis() + timeout.toMillis();
@@ -114,7 +115,7 @@ public class ImageBuilderClient extends AbstractServiceClient<ImageBuilderServic
 	 * @param timeout The max. time to wait for the result.
 	 * @return The BlobHandle for the built image.
 	 */
-	public static BlobHandle build(ImageBuilder builder, ImageDescription description, Duration timeout)
+	public static ImageBuilderResult build(ImageBuilder builder, ImageDescription description, Duration timeout)
 			throws BWFLAException
 	{
 		return ImageBuilderClient.build(builder, description, timeout, Duration.ofSeconds(3));
@@ -128,7 +129,7 @@ public class ImageBuilderClient extends AbstractServiceClient<ImageBuilderServic
 	 * @param timeout The delay to wait between retries.
 	 * @return The BlobHandle for the built image.
 	 */
-	public static BlobHandle build(ImageBuilder builder, ImageDescription description, Duration timeout, Duration delay)
+	public static ImageBuilderResult build(ImageBuilder builder, ImageDescription description, Duration timeout, Duration delay)
 			throws BWFLAException
 	{
 		final ImageBuildHandle build = builder.build(description);

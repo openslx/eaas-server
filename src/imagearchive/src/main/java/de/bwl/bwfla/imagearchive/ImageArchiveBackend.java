@@ -23,14 +23,13 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
-import de.bwl.bwfla.emucomp.api.Environment;
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
-import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
+import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
+import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
-import de.bwl.bwfla.imagearchive.datatypes.ImageExport;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 
 import javax.activation.DataHandler;
@@ -46,11 +45,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.UUID;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class ImageArchiveBackend
+public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 {
 	private final Logger log;
 
@@ -77,6 +75,15 @@ public class ImageArchiveBackend
 	public ImageArchiveBackendConfig getConfig()
 	{
 		return config;
+	}
+
+	public ImageNameIndex getNameIndexes()
+	{
+		return imageHandler.getNameIndexes();
+	}
+
+	public void addNameIndexesEntry(Entry entry, Alias alias) {
+		imageHandler.addNameIndexesEntry(entry, alias);
 	}
 
 	synchronized public void deleteTempEnvironments() throws BWFLAException
@@ -210,7 +217,9 @@ public class ImageArchiveBackend
 		String id = UUID.randomUUID().toString();
 		File target = imageHandler.getImageTargetPath(type);
 		File destImgFile = new File(target, id);
-		EmulatorUtils.createNewCowFile(destImgFile.toPath(), size);
+		QcowOptions qcowOptions = new QcowOptions();
+		qcowOptions.setSize(size);
+		EmulatorUtils.createCowFile(destImgFile.toPath(), qcowOptions);
 		return id;
 	}
 
@@ -318,17 +327,6 @@ public class ImageArchiveBackend
 		}
 	}
 
-	public ImageExport getImageDependencies(String envId) throws BWFLAException
-	{
-		try {
-			return imageHandler.getImageExportData(envId);
-		}
-		catch (IOException e) {
-			log.log(Level.SEVERE, e.getMessage(), e);
-			throw new BWFLAException(e);
-		}
-	}
-
 	public String getImageBinding(String name, String version) throws BWFLAException
 	{
 		final ImageArchiveBinding binding = imageHandler.getImageBinding(name, version);
@@ -365,5 +363,14 @@ public class ImageArchiveBackend
 		}
 
 		return properties;
+	}
+
+	private static int compare(int a, int b) {
+		return a > b ? +1 : a < b ? -1 : 0;
+	}
+
+	@Override
+	public int compareTo(ImageArchiveBackend backend) {
+		return compare(getConfig().getOrder(), backend.getConfig().getOrder());
 	}
 }

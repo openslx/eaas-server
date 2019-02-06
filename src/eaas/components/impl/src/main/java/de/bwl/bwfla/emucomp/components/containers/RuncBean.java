@@ -136,41 +136,45 @@ public class RuncBean extends ContainerBean
 	@Override
 	public void start() throws BWFLAException {
 
-		if (isGui)
-			try {
+		if (isGui) {
+			throw new BWFLAException("XPRA-mode currently not supported!");
 
-				port = getPort();
-				XpraUtils.startXpraSession(xpraRunner, port, LOG);
-
-				if (!XpraUtils.waitUntilReady(port, 50000)) {
-					conBeanState.update(ContainerState.FAILED);
-					throw new BWFLAException("Connecting to Xpra server failed!");
-				}
-
-				DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-				runner.setCommand("xhost");
-				runner.addArgument("+local:root");
-				runner.addEnvVariable("DISPLAY", ":" + getPort());
-				runner.execute();
-				LOG.info("Xpra server started in process " + xpraRunner.getProcessId());
-
-				final Thread xpraObserver = workerThreadFactory.newThread(() -> {
-							xpraRunner.waitUntilFinished();
-							// cleanup will be performed later by EmulatorBean.destroy()
-							synchronized (conBeanState) {
-								final ContainerState curstate = conBeanState.get();
-								if (curstate == ContainerState.RUNNING) {
-									LOG.info("Xpra server stopped unexpectedly or user stopped/left the session");
-								}
-							}
-						}
-				);
-				xpraObserver.start();
-
-				this.addControlConnector(new XpraConnector(port));
-			} catch (IOException e) {
-				throw new BWFLAException("xpra initiation failed \n" + e.getMessage());
-			}
+//			try {
+//
+//				port = getPort();
+//				XpraUtils.startXpraSession(xpraRunner, port, LOG);
+//
+//				if (!XpraUtils.waitUntilReady(port, 50000)) {
+//					conBeanState.update(ContainerState.FAILED);
+//					throw new BWFLAException("Connecting to Xpra server failed!");
+//				}
+//
+//				DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+//				runner.setCommand("xhost");
+//				runner.addArgument("+local:root");
+//				runner.addEnvVariable("DISPLAY", ":" + getPort());
+//				runner.execute();
+//				LOG.info("Xpra server started in process " + xpraRunner.getProcessId());
+//
+//				final Thread xpraObserver = workerThreadFactory.newThread(() -> {
+//							xpraRunner.waitUntilFinished();
+//							// cleanup will be performed later by EmulatorBean.destroy()
+//							synchronized (conBeanState) {
+//								final ContainerState curstate = conBeanState.get();
+//								if (curstate == ContainerState.RUNNING) {
+//									LOG.info("Xpra server stopped unexpectedly or user stopped/left the session");
+//								}
+//							}
+//						}
+//				);
+//				xpraObserver.start();
+//
+//				this.addControlConnector(new XpraConnector(port));
+//			}
+//			catch (IOException e) {
+//				throw new BWFLAException("xpra initiation failed \n" + e.getMessage());
+//			}
+		}
 
 
 		super.start();

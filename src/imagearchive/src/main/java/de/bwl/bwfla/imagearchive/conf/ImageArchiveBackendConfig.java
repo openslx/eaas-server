@@ -24,8 +24,10 @@ import de.bwl.bwfla.common.services.handle.HandleUtils;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import org.apache.tamaya.Configuration;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
+import javax.persistence.criteria.CriteriaBuilder;
 import java.io.File;
 import java.util.logging.Logger;
 
@@ -42,6 +44,7 @@ public class ImageArchiveBackendConfig extends BaseConfig
 	private File metaDataPath;
 	private File recordingsPath;
 	private File defaultEnvironmentsPath;
+	private int order;
 
 
 	/* ========== Getters and Setters ========== */
@@ -149,6 +152,16 @@ public class ImageArchiveBackendConfig extends BaseConfig
 	public File getDefaultEnvironmentsPath()
 	{
 		return defaultEnvironmentsPath;
+	}
+
+	@Config(value="order", defaultValue = Integer.MAX_VALUE +"")
+	public void setOrder(String order) {
+		this.order = Integer.parseInt(order);
+	}
+
+	public int getOrder()
+	{
+		return order;
 	}
 
 

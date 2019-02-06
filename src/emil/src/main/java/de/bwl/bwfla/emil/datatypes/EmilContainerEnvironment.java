@@ -1,5 +1,7 @@
 package de.bwl.bwfla.emil.datatypes;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -44,8 +46,10 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     }
 
     public void setArgs(List<String> args) {
-        this.args = new ArrayList<>();
-        this.args.addAll(args);
+        if (args != null) {
+            this.args = new ArrayList<>();
+            this.args.addAll(args);
+        }
     }
 
     public List<String> getEnv() {
@@ -53,7 +57,9 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     }
 
     public void setEnv(List<String> env) {
-        this.env = new ArrayList<>();
-        this.env.addAll(env);
+        if (env != null) {
+            this.env = new ArrayList<>();
+            this.env.addAll(env);
+        }
     }
 }

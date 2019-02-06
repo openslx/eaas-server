@@ -21,11 +21,25 @@ public abstract class SnapshotRequest  extends EmilRequestType {
     @XmlElement(required = true)
     private String envId;
 
+    @XmlElement(required = false, defaultValue = "default")
+    private String archive = "default";
+
     @XmlElement(required = true)
     private String message;
 
     @XmlElement(required = false)
     private String author;
+
+    @XmlElement(required = false)
+    private boolean isRelativeMouse;
+
+    public boolean isRelativeMouse() {
+        return isRelativeMouse;
+    }
+
+    public void setRelativeMouse(boolean relativeMouse) {
+        isRelativeMouse = relativeMouse;
+    }
 
     public String getAuthor() {
         return author;
@@ -49,5 +63,13 @@ public abstract class SnapshotRequest  extends EmilRequestType {
 
     public void setEnvId(String envId) {
         this.envId = envId;
+    }
+
+    public String getArchive() {
+        return archive;
+    }
+
+    public void setArchive(String archive) {
+        this.archive = archive;
     }
 }

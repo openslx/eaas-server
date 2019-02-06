@@ -77,7 +77,7 @@ public class BindingsManager
 		}
 	}
 
-	private static final String ID_SEPARATOR = "/__";
+	private static final String ID_SEPARATOR = "/_____";
 
 	private final String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
 

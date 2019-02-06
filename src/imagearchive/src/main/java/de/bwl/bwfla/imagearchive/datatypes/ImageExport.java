@@ -25,9 +25,8 @@ public class ImageExport {
     @XmlAccessorType(XmlAccessType.NONE)
     static public class ImageFileInfo {
 
-        @XmlMimeType("application/octet-stream")
         @XmlElement
-        DataHandler fileHandle;
+        String urlPrefix;
 
         @XmlElement
         String id;
@@ -37,15 +36,15 @@ public class ImageExport {
 
         ImageFileInfo() {}
 
-        public ImageFileInfo(@XmlMimeType("application/octet-stream")DataHandler fileHandle, String id, ImageArchiveMetadata.ImageType type)
+        public ImageFileInfo(String prefix, String id, ImageArchiveMetadata.ImageType type)
         {
-            this.fileHandle = fileHandle;
+            this.urlPrefix = prefix;
             this.id = id;
             this.type = type;
         }
 
-        public DataHandler getFileHandle() {
-            return fileHandle;
+        public String getUrlPrefix() {
+            return urlPrefix;
         }
 
         public String getId() {

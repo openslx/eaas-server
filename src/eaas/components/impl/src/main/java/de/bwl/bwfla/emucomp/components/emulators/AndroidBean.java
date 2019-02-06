@@ -35,7 +35,7 @@ public class AndroidBean extends EmulatorBean
 	{
 		File exec = new File(emulatorBinary);
 		if (exec == null || !exec.exists())
-			throw new BWFLAException("Emulator's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
+			throw new BWFLAException("EmulatorContainer's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
 	
 		emuRunner.setCommand(exec.getAbsolutePath());
 
