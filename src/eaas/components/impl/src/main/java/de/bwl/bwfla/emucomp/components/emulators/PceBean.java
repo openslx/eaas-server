@@ -33,6 +33,7 @@ import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.logging.Level;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -96,6 +97,8 @@ public abstract class PceBean extends EmulatorBean
 	@Override
 	public void finishRuntimeConfiguration() throws BWFLAException
 	{
+		final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
+
 		// At this point we should have all runtime information
 		
 		try {
@@ -113,7 +116,10 @@ public abstract class PceBean extends EmulatorBean
 				this.writeln(writer, 1);
 				
 				for (Map.Entry<String, Drive> entry : deviceToDriveMapping.entrySet()) {
-					final String image = this.getImagePath(entry.getValue());
+					String image = this.getImagePath(entry.getValue());
+					if (this.isContainerModeEnabled())
+						image = hostPathReplacer.apply(image);
+
 					this.writeln(writer, "disk {");
 					this.writeln(writer, "drive", entry.getKey(), false);
 					this.writeln(writer, "optional", "1", false);
@@ -124,7 +130,6 @@ public abstract class PceBean extends EmulatorBean
 				}
 				
 				writer.flush();
-				writer.close();
 			}
 			
 			emuRunner.addArguments("--config", configFile.getAbsolutePath());
@@ -166,6 +171,11 @@ public abstract class PceBean extends EmulatorBean
 	@Override
 	public boolean connectDrive(Drive drive, boolean connect)
 	{
+		if (this.isXpraBackendEnabled()) {
+			LOG.warning("Media-change in XPRA-mode is currently not supported!");
+			return false;
+		}
+
 		final int tid = (drive.getType() == DriveType.FLOPPY) ? 0 : 1;
 		String device = driveToDeviceMapping.get(drive);
 		if (device != null) {
@@ -194,8 +204,12 @@ public abstract class PceBean extends EmulatorBean
 		this.attachDrive(tid, drive);
 		
 		try {
-			final String path = this.getImagePath(drive);
 			device = driveToDeviceMapping.get(drive);
+			String path = this.getImagePath(drive);
+			if (this.isContainerModeEnabled()) {
+				path = this.getContainerHostPathReplacer()
+						.apply(path);
+			}
 			
 			// Insert this drive to PCE emulator
 			ctlMsgWriter.begin(MessageType.EMULATOR_COMMAND);
@@ -243,13 +257,15 @@ public abstract class PceBean extends EmulatorBean
 		LOG.info("Using config template: " + name);
 		
 		// Read the contents of the template file
-		InputStream instream = cloader.getResourceAsStream(name);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(instream));
-		List<String> template = new ArrayList<String>(512);
-		while (reader.ready())
-			template.add(reader.readLine());
-		
-		return template;
+		try (final InputStream instream = cloader.getResourceAsStream(name);
+			 final BufferedReader reader = new BufferedReader(new InputStreamReader(instream)))
+		{
+			List<String> template = new ArrayList<String>(512);
+			while (reader.ready())
+				template.add(reader.readLine());
+
+			return template;
+		}
 	}
 
 	private boolean attachDrive(int tid, Drive drive)

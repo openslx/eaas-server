@@ -223,14 +223,10 @@ public class SheepShaverBean extends EmulatorBean
 		final String defaultsName = "sheepshaver.defaults";
 		ClassLoader cloader = this.getClass().getClassLoader();
 
-		InputStream instream = cloader.getResourceAsStream(defaultsName);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(instream));
-
-		String line = null;
-		try {
-
-			line = reader.readLine();
-
+		try (InputStream instream = cloader.getResourceAsStream(defaultsName);
+			 BufferedReader reader = new BufferedReader(new InputStreamReader(instream)))
+		{
+			String line = reader.readLine();
 			while (line != null)
 			{
 				String[] args = line.trim().split("\\s+");

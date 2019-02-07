@@ -68,13 +68,13 @@ public class PceMacPlusBean extends PceBean
 		String model = emuEnvironment.getModel();
 		if (model == null || model.isEmpty()) {
 			model = "classic";
-			LOG.warning("EmulatorContainer's model was not set! Using default '" + model + "'.");
+			LOG.warning("Emulator's model was not set! Using default '" + model + "'.");
 		}
 		
 		String arch = emuEnvironment.getArch();
 		if (arch == null || arch.isEmpty()) {
 			arch = "68000";
-			LOG.warning("EmulatorContainer's architectrue was not set! Using default '" + arch + "'.");
+			LOG.warning("Emulator's architectrue was not set! Using default '" + arch + "'.");
 		}
 		
 		return "pce/macplus/macplus-" + model + "-" + arch + ".cfg";

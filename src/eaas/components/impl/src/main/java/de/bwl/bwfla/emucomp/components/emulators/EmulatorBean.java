@@ -293,6 +293,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return emuContainerGroupId;
 	}
 
+
+	public Function<String, String> getContainerHostPathReplacer()
+	{
+		final String hostDataDir = this.getDataDir().toString();
+		return (cmdarg) -> cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+	}
+
 	public Path getDataDir()
 	{
 		final Path workdir = this.getWorkingDir();
@@ -612,8 +619,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				final String hostDataDir = this.getDataDir().toString();
 
-				final Function<String, String> hostPathReplacer =
-						(cmdarg) -> cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+				final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
 
 				// Safety check. Should never fail!
 				if (!this.getBindingsDir().startsWith(this.getDataDir())) {
@@ -2071,6 +2077,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	protected void prepareResource(AbstractDataResource resource) throws IllegalArgumentException, IOException, BWFLAException, JAXBException
 	{
 		bindings.register(resource);
+
+		// NOTE: Premount all objects to allow media-changes inside containers...
+		if (this.isContainerModeEnabled() && (resource instanceof ObjectArchiveBinding))
+			this.lookupResourceRaw(resource.getId(), XmountOutputFormat.RAW);
 	}
 
 	/**************************************************************************
