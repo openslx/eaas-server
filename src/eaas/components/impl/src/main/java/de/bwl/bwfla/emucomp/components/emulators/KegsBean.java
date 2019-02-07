@@ -31,6 +31,7 @@ import java.util.Comparator;
 import java.util.Deque;
 import java.util.Map;
 import java.util.TreeMap;
+import java.util.function.Function;
 import java.util.logging.Level;
 
 import javax.inject.Inject;
@@ -262,6 +263,8 @@ public class KegsBean extends EmulatorBean
 	
 	public void updateDiskConfFile() throws BWFLAException
 	{
+		final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
+
 		// Compose the disks configuration
 		File diskConfFile = new File(this.getDataDir().toFile(), "disk_conf");
 		try (BufferedWriter writer = new BufferedWriter(new FileWriter(diskConfFile))) {
@@ -270,7 +273,10 @@ public class KegsBean extends EmulatorBean
 				String image = this.getImagePath(drive);
 				if (image == null)
 					continue;  // No media to inject!
-				
+
+				if (this.isContainerModeEnabled())
+					image = hostPathReplacer.apply(image);
+
 				writer.write(entry.getKey());
 				writer.write(" = ");
 				writer.write(image);

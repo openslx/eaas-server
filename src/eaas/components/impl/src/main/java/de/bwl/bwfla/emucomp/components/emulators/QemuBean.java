@@ -390,6 +390,11 @@ public class QemuBean extends EmulatorBean
 			return;
 		}
 			if (command != null && !command.isEmpty()) {
+				if (this.isContainerModeEnabled()) {
+					command = this.getContainerHostPathReplacer()
+							.apply(command);
+				}
+
 				DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
 				runner.setCommand("/bin/bash");
 				runner.addArgument("-c");
