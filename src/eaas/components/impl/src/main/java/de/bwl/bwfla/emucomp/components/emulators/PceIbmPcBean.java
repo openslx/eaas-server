@@ -68,13 +68,13 @@ public class PceIbmPcBean extends PceBean
 		String model = emuEnvironment.getModel();
 		if (model == null || model.isEmpty()) {
 			model = "5150";
-			LOG.warning("EmulatorContainer's model was not set! Using default '" + model + "'.");
+			LOG.warning("Emulator's model was not set! Using default '" + model + "'.");
 		}
 		
 		String arch = emuEnvironment.getArch();
 		if (arch == null || arch.isEmpty()) {
 			arch = "80186";
-			LOG.warning("EmulatorContainer's architectrue was not set! Using default '" + arch + "'.");
+			LOG.warning("Emulator's architectrue was not set! Using default '" + arch + "'.");
 		}
 		
 		return "pce/ibmpc/ibmpc-" + model + "-" + arch + ".cfg";
