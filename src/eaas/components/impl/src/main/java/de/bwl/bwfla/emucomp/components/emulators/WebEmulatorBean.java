@@ -16,6 +16,7 @@ import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonObjectBuilder;
+import javax.json.JsonReader;
 import javax.naming.InitialContext;
 import javax.websocket.CloseReason;
 
@@ -104,8 +105,8 @@ public class WebEmulatorBean extends EmulatorBean implements MessageHandlerBoth 
 	}
 
 	public void onMessage(String message) {
-		JsonObject messageJson = Json.createReader(new StringReader(message)).readObject();
-		try {
+		try (JsonReader reader = Json.createReader(new StringReader(message))) {
+			JsonObject messageJson = reader.readObject();
 			requests.offer(messageJson);
 		} catch (IllegalStateException e) {
 			socket.close(new CloseReason(CloseReason.CloseCodes.VIOLATED_POLICY, "queue size exceeded"));

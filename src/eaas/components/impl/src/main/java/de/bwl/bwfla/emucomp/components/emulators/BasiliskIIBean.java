@@ -225,14 +225,9 @@ public class BasiliskIIBean extends EmulatorBean
         final String defaultsName = "basiliskii.defaults";
         ClassLoader cloader = this.getClass().getClassLoader();
 
-        InputStream instream = cloader.getResourceAsStream(defaultsName);
-        BufferedReader reader = new BufferedReader(new InputStreamReader(instream));
-
-        String line = null;
-        try {
-
-            line = reader.readLine();
-
+        try (final InputStream instream = cloader.getResourceAsStream(defaultsName)) {
+            final BufferedReader reader = new BufferedReader(new InputStreamReader(instream));
+            String line = reader.readLine();
             while (line != null)
             {
                 String[] args = line.trim().split("\\s+");

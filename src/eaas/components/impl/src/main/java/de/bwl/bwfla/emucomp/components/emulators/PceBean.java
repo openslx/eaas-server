@@ -124,7 +124,6 @@ public abstract class PceBean extends EmulatorBean
 				}
 				
 				writer.flush();
-				writer.close();
 			}
 			
 			emuRunner.addArguments("--config", configFile.getAbsolutePath());
@@ -243,13 +242,15 @@ public abstract class PceBean extends EmulatorBean
 		LOG.info("Using config template: " + name);
 		
 		// Read the contents of the template file
-		InputStream instream = cloader.getResourceAsStream(name);
-		BufferedReader reader = new BufferedReader(new InputStreamReader(instream));
-		List<String> template = new ArrayList<String>(512);
-		while (reader.ready())
-			template.add(reader.readLine());
-		
-		return template;
+		try (final InputStream instream = cloader.getResourceAsStream(name);
+			 final BufferedReader reader = new BufferedReader(new InputStreamReader(instream)))
+		{
+			List<String> template = new ArrayList<String>(512);
+			while (reader.ready())
+				template.add(reader.readLine());
+
+			return template;
+		}
 	}
 
 	private boolean attachDrive(int tid, Drive drive)
