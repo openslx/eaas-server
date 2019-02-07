@@ -24,6 +24,7 @@ import org.apache.commons.io.output.NullOutputStream;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import org.apache.tamaya.ConfigurationProvider;
 
 public class EmulatorUtils {
 	protected static final Logger log = Logger.getLogger("EmulatorUtils");
@@ -421,6 +422,10 @@ public class EmulatorUtils {
 		}
 		process.addArguments("-o", "allow_root");
 		process.addArguments("-o", "use_ino");
+
+		process.addArguments("-o", 
+				"uid=" + ConfigurationProvider.getConfiguration().get("components.emulator_containers.uid"));
+
 
 		process.addArgument(path.toString());
 		process.addArgument(dest.toString());
