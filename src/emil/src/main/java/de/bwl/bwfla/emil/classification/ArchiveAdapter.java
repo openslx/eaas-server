@@ -158,7 +158,7 @@ public class ArchiveAdapter {
                             if(_env instanceof EmilObjectEnvironment)
                                 break;
 
-                            if(_env.isVisible())
+                            if(_env != null && _env.isVisible())
                             {
                                 resultList.add(_env);
                             }
