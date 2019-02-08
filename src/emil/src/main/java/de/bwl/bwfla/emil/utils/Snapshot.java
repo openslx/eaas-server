@@ -13,10 +13,7 @@ import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 
 import javax.xml.bind.JAXBException;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -129,6 +126,15 @@ public class Snapshot
 
         }
 
+        if(!checkpoint) {
+            for (Iterator<BindingDataHandler> it = data.iterator(); it.hasNext(); ) {
+                BindingDataHandler bdh = it.next();
+                if (bdh.getId().equals("emucon-rootfs")) {
+                    it.remove();
+                }
+            }
+        }
+
         String newId = environmentsAdapter.importMachineEnvironment("default", machineConfiguration, data, iaMd);
         if(newId == null)
             throw new BWFLAException("create revision: importMachineEnvironment failed");
@@ -179,6 +185,14 @@ public class Snapshot
 //                e.printStackTrace();
 //            }
 //        }
+
+        for (Iterator<BindingDataHandler> it = data.iterator(); it.hasNext();)
+        {
+            BindingDataHandler bdh = it.next();
+            if(bdh.getId().equals("emucon-rootfs")) {
+                it.remove();
+            }
+        }
         String newId = environmentsAdapter.importMachineEnvironment("default", env, data, iaMd);
         if (newId == null)
             throw new BWFLAException("importMachineEnvironment failed");
@@ -224,8 +238,16 @@ public class Snapshot
         }
 
         String newId = null;
-        if (data != null)
+        if (data != null) {
+            for (Iterator<BindingDataHandler> it = data.iterator(); it.hasNext();)
+            {
+                BindingDataHandler bdh = it.next();
+                if(bdh.getId().equals("emucon-rootfs")) {
+                    it.remove();
+                }
+            }
             newId = environmentsAdapter.importMachineEnvironment(request.getArchive(), env, data, iaMd);
+        }
         else
             newId = environmentsAdapter.importMetadata(request.getArchive(), env, iaMd, false);
 

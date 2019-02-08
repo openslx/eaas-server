@@ -123,9 +123,10 @@ public class EmulationEnvironmentHelper {
 
 			if (r instanceof ImageArchiveBinding)
 			{
-				if(env.checkpointBindingId == null || !env.checkpointBindingId.isEmpty()) {
+
+				if(env.checkpointBindingId == null || env.checkpointBindingId.isEmpty()) {
 					ImageArchiveBinding iab = (ImageArchiveBinding) r;
-					if (r.id.equals("emucon-rootfs"))
+					if (iab.getId().equals("emucon-rootfs"))
 						it.remove();
 				}
 			}
