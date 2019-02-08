@@ -12,6 +12,8 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
+import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
@@ -114,6 +116,9 @@ public class QemuBean extends EmulatorBean
 						continue;
 					}
 				}
+
+				if(token.contains("nic,model="))
+					token += ",macaddr=" + NetworkUtils.getRandomHWAddress();
 
 				emuRunner.addArgument(token.trim());
 			}
