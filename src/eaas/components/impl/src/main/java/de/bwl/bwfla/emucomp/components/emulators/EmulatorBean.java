@@ -1967,7 +1967,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		LOG.info("Waiting for CRIU restore-worker to exit...");
 
 		final DeprecatedProcessRunner waiter = new DeprecatedProcessRunner("/bin/sh");
-		waiter.addArguments("-c", "while ! sudo runc ps "  + this.getContainerId() + "; do :; done; while sudo runc ps " + this.getContainerId() + " | grep -q criu; do :; done");
+		waiter.addArguments("-c", "while ! sudo runc " +
+				"ps "  + this.getContainerId() + "; do :; done; while sudo runc ps " + this.getContainerId() + " | grep -q criu; do :; done");
 		waiter.execute();
 	}
 
@@ -2079,8 +2080,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		bindings.register(resource);
 
 		// NOTE: Premount all objects to allow media-changes inside containers...
-		if (this.isContainerModeEnabled() && (resource instanceof ObjectArchiveBinding))
-			this.lookupResourceRaw(resource.getId(), XmountOutputFormat.RAW);
+	//	if (this.isContainerModeEnabled() && (resource instanceof ObjectArchiveBinding))
+	//		this.lookupResourceRaw(resource.getId(), XmountOutputFormat.RAW);
 	}
 
 	/**************************************************************************
