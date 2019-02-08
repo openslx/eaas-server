@@ -160,6 +160,13 @@ public class BindingsManager
 		return paths.get(binding);
 	}
 
+	/** Returns a collection of all binding-ids starting with prefix. */
+	public Stream<String> find(String prefix)
+	{
+		return bindings.keySet().stream()
+				.filter((id) -> id.startsWith(prefix));
+	}
+
 	/**
 	 * Resolves and mounts a binding location of either the form
 	 * binding://<binding_id>> or <binding_id>.

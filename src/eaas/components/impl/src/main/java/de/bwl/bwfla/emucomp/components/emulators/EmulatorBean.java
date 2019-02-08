@@ -1201,7 +1201,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			res.setId("attached_container_" + id);
 			try {
 				this.prepareResource(res);
-			} catch (IllegalArgumentException | IOException | JAXBException e) {
+			} catch (IllegalArgumentException | IOException e) {
 				throw new BWFLAException("Could not prepare the resource for this medium.", e);
 			}
 			this.emuEnvironment.getAbstractDataResource().add(res);
@@ -2075,13 +2075,22 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return this.lookupResource(binding, this.getImageFormatForDriveType(driveType));
 	}
 
-	protected void prepareResource(AbstractDataResource resource) throws IllegalArgumentException, IOException, BWFLAException, JAXBException
+	protected void prepareResource(AbstractDataResource resource) throws IllegalArgumentException, IOException, BWFLAException
 	{
 		bindings.register(resource);
 
-		// NOTE: Premount all objects to allow media-changes inside containers...
-	//	if (this.isContainerModeEnabled() && (resource instanceof ObjectArchiveBinding))
-	//		this.lookupResourceRaw(resource.getId(), XmountOutputFormat.RAW);
+		// NOTE: Premount all object's entries to allow media-changes inside containers...
+		if (this.isContainerModeEnabled() && (resource instanceof ObjectArchiveBinding)) {
+			bindings.find(resource.getId() + "/")
+					.forEach((binding) -> {
+						try {
+							this.lookupResourceRaw(binding, XmountOutputFormat.RAW);
+						}
+						catch (Exception error) {
+							throw new IllegalArgumentException(error);
+						}
+					});
+		}
 	}
 
 	/**************************************************************************
