@@ -80,6 +80,7 @@ public class EmilSoftwareData extends EmilRest {
             swo.setImportFMTs(new ArrayList<String>());
             swo.setLicenseInformation(software.getLicence());
             swo.setIsOperatingSystem(software.getIsOperatingSystem());
+            swo.setQID(software.getQID());
             return Emil.createResponse(Status.OK, swo);
         }
         catch(Throwable t)
@@ -284,7 +285,7 @@ public class EmilSoftwareData extends EmilRest {
 			return Emil.internalErrorResponse(t);
 		}
 		
-		String message = "succsess";
+		String message = "Successfully imported software object " + swo.getObjectId();
 		return Emil.successMessageResponse(message);
 	}
 
