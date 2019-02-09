@@ -334,6 +334,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return this.getWorkingDir().resolve("state");
 	}
 
+	public Path getPrintDir()
+	{
+		return this.getDataDir().resolve("print");
+	}
+
 	private void createWorkingSubDirs() throws IOException
 	{
 		// Currently, working directory in container-mode is structured as follows:
@@ -353,6 +358,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		Files.createDirectories(this.getNetworksDir());
 		Files.createDirectories(this.getSocketsDir());
 		Files.createDirectories(this.getUploadsDir());
+		Files.createDirectories(this.getPrintDir());
 	}
 
 	private Path getXpraSocketPath()

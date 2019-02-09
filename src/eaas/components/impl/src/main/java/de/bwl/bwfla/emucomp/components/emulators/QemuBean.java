@@ -132,7 +132,7 @@ public class QemuBean extends EmulatorBean
 			emuRunner.addArguments("-k", "en-us");
 		}
 
-		String printerOutput = this.getDataDir().resolve("printer.out").toString();
+		String printerOutput = this.getDataDir().resolve("print").resolve("printer.out").toString();
 		emuRunner.addArgument("-chardev");
 		emuRunner.addArgument("file",",id=char0",",path=" + printerOutput);
 		emuRunner.addArguments("-parallel","chardev:char0");
