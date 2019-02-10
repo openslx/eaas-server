@@ -45,12 +45,13 @@ public class UserConfigurationPropertySourceProvider extends BaseConfigurationPr
 
 	public static Path getConfigPath()
 	{
-		return Paths.get(System.getProperty("user.home"), ".bwFLA");
+		// return Paths.get(System.getProperty("user.home"), ".bwFLA");
+		return Paths.get("/eaas", "config");
 	}
 
 	private static URL[] getConfigLocation() 
 	{
-		final Path basedir = Paths.get(System.getProperty("user.home"), ".bwFLA");
+		final Path basedir =  Paths.get("/eaas", "config"); //Paths.get(System.getProperty("user.home"), ".bwFLA");
 		final ArrayList<URL> locations = new ArrayList<URL>(CONFIG_FILENAMES.length);
 		for (String filename : CONFIG_FILENAMES) {
 			final Path path = basedir.resolve(filename);
