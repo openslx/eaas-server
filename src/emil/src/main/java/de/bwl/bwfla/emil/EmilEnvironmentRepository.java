@@ -123,6 +123,10 @@ public class EmilEnvironmentRepository {
 	}
 
 	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted) {
+		return checkPermissions(env, wanted, getUserCtx());
+	}
+
+	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted, String userCtx) {
 		if (env == null)
 			return true;
 
@@ -135,21 +139,16 @@ public class EmilEnvironmentRepository {
 
 		EmilEnvironmentOwner owner = env.getOwner();
 		if (owner != null && owner.getUsername() != null) {
-			if (authenticatedUser == null || authenticatedUser.getUsername() == null) {
+			if (userCtx == null) {
 				LOG.severe("environment " + env.getEnvId() + " access denied to unknown user " + owner.getUsername());
 				return false;
 			}
 
-			String username = authenticatedUser.getUsername();
-			if (!username.equals(owner.getUsername())) {
+			if (!userCtx.equals(owner.getUsername())) {
 				LOG.warning("access denied to environment " + env.getEnvId()
-						+ ". Reason username mismatch: owner " + owner.getUsername() + " ctx " + username);
+						+ ". Reason username mismatch: owner " + owner.getUsername() + " ctx " + userCtx);
 				return false;
 			}
-		} else {
-			// we have a user context, but the user tries to delete a shared resource
-			if (authenticatedUser != null && authenticatedUser.getUsername() == null && wanted.equals(EmilEnvironmentPermissions.Permissions.WRITE))
-				return false;
 		}
 
 		if (wanted.getValue() > permissions.getUser().getValue()) {
@@ -157,7 +156,6 @@ public class EmilEnvironmentRepository {
 			return false;
 		}
 
-		//LOG.warning("Access denied to environment " +  env.getEnvId());
 		return true;
 	}
 
@@ -311,16 +309,16 @@ public class EmilEnvironmentRepository {
 
 	public EmilEnvironment getEmilEnvironmentById(String envid)
 	{
-		return getEmilEnvironmentById(getCollectionCtx(), envid);
+		return getEmilEnvironmentById(getCollectionCtx(), envid, getUserCtx());
 	}
 
-	public EmilEnvironment getEmilEnvironmentById(String collection, String envid) {
+	public EmilEnvironment getEmilEnvironmentById(String collection, String envid, String userCtx) {
 		if (envid == null)
 			return null;
 
 		try {
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
-			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ))
+			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				return getSharedEmilEnvironmentById(envid);
 
 			return env;
@@ -354,7 +352,7 @@ public class EmilEnvironmentRepository {
 			String parent = env.getParentEnvId();
 			while(parent != null)
 			{
-				EmilEnvironment p = getEmilEnvironmentById(userctx, parent);
+				EmilEnvironment p = getEmilEnvironmentById(userctx, parent, userctx);
 				if(!p.getArchive().equals(destArchive))
 				{
 					Environment pe = environmentsAdapter.getEnvironmentById(p.getArchive(), p.getEnvId());
