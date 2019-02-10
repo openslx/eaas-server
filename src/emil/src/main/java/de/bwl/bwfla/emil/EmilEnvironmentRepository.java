@@ -14,7 +14,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
+import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.guacplay.io.Metadata;
@@ -89,11 +91,10 @@ public class EmilEnvironmentRepository {
 
 	private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
-	public final class MetadataCollection
-	{
+	public final class MetadataCollection {
 		public static final String PUBLIC = "public";
-		public static final String REMOTE  = "remote";
-		public static final String DEFAULT  = "default";
+		public static final String REMOTE = "remote";
+		public static final String DEFAULT = "default";
 	}
 
 	private boolean checkPermissions(String envId, EmilEnvironmentPermissions.Permissions wanted) throws BWFLAException {
@@ -102,7 +103,7 @@ public class EmilEnvironmentRepository {
 	}
 
 	private String getCollectionCtx(String username) {
-		if(username == null)
+		if (username == null)
 			return emilDbCollectionName;
 		return username;
 	}
@@ -114,9 +115,8 @@ public class EmilEnvironmentRepository {
 		return authenticatedUser.getUsername();
 	}
 
-	private String getUserCtx()
-	{
-		if(authenticatedUser == null)
+	private String getUserCtx() {
+		if (authenticatedUser == null)
 			return null;
 
 		return authenticatedUser.getUsername();
@@ -146,8 +146,7 @@ public class EmilEnvironmentRepository {
 						+ ". Reason username mismatch: owner " + owner.getUsername() + " ctx " + username);
 				return false;
 			}
-		}
-		else {
+		} else {
 			// we have a user context, but the user tries to delete a shared resource
 			if (authenticatedUser != null && authenticatedUser.getUsername() == null && wanted.equals(EmilEnvironmentPermissions.Permissions.WRITE))
 				return false;
@@ -184,20 +183,18 @@ public class EmilEnvironmentRepository {
 		return false;
 	}
 
-	public Stream<EmilEnvironment> listPublicEnvironments(int offset, int maxcount, MongodbEaasConnector.FilterBuilder filter)
-	{
+	public Stream<EmilEnvironment> listPublicEnvironments(int offset, int maxcount, MongodbEaasConnector.FilterBuilder filter) {
 		return db.find(MetadataCollection.PUBLIC, offset, maxcount, filter, "type");
 	}
 
-	public long countPublicEnvironments(MongodbEaasConnector.FilterBuilder filter)
-	{
+	public long countPublicEnvironments(MongodbEaasConnector.FilterBuilder filter) {
 		return db.count(MetadataCollection.PUBLIC, filter);
 	}
 
 	private Stream<EmilEnvironment> loadEmilEnvironments() {
 		Stream<EmilEnvironment> all = db.find(getCollectionCtx(), new MongodbEaasConnector.FilterBuilder(), "type");
 		all = Stream.concat(all, db.find(MetadataCollection.PUBLIC, new MongodbEaasConnector.FilterBuilder(), "type"));
-		all = Stream.concat(all,  db.find(MetadataCollection.REMOTE, new MongodbEaasConnector.FilterBuilder(), "type"));
+		all = Stream.concat(all, db.find(MetadataCollection.REMOTE, new MongodbEaasConnector.FilterBuilder(), "type"));
 		return all;
 	}
 
@@ -265,8 +262,7 @@ public class EmilEnvironmentRepository {
 		try {
 			db.createIndex(emilDbCollectionName, "envId");
 			db.ensureTimestamp(emilDbCollectionName);
-		} catch (Exception e)
-		{
+		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
@@ -301,13 +297,10 @@ public class EmilEnvironmentRepository {
 		scheduledExecutorService.scheduleAtFixedRate(new Monitor(retention), 1, 1, TimeUnit.MINUTES);
 	}
 
-	private EmilEnvironment getSharedEmilEnvironmentById(String envid)
-	{
+	private EmilEnvironment getSharedEmilEnvironmentById(String envid) {
 		try {
 			return db.getObjectWithClassFromDatabaseKey(MetadataCollection.PUBLIC, "type", envid, "envId");
-		}
-		catch(BWFLAException | NoSuchElementException e)
-		{
+		} catch (BWFLAException | NoSuchElementException e) {
 			try {
 				return db.getObjectWithClassFromDatabaseKey(MetadataCollection.REMOTE, "type", envid, "envId");
 			} catch (BWFLAException | NoSuchElementException e1) {
@@ -316,12 +309,17 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
-	public EmilEnvironment getEmilEnvironmentById(String envid) {
+	public EmilEnvironment getEmilEnvironmentById(String envid)
+	{
+		return getEmilEnvironmentById(getCollectionCtx(), envid);
+	}
+
+	public EmilEnvironment getEmilEnvironmentById(String collection, String envid) {
 		if (envid == null)
 			return null;
 
 		try {
-			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(), "type", envid, "envId");
+			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ))
 				return getSharedEmilEnvironmentById(envid);
 
@@ -347,11 +345,28 @@ public class EmilEnvironmentRepository {
 		return result;
 	}
 
-	public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
+	synchronized public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
 			if(userctx == null)
 				throw new BWFLAException("no user context in publish image context");
 			db.deleteDoc(userctx, env.getEnvId(), env.getIdDBkey());
+
+			String parent = env.getParentEnvId();
+			while(parent != null)
+			{
+				EmilEnvironment p = getEmilEnvironmentById(userctx, parent);
+				if(!p.getArchive().equals(destArchive))
+				{
+					Environment pe = environmentsAdapter.getEnvironmentById(p.getArchive(), p.getEnvId());
+					ImageArchiveMetadata iam = new ImageArchiveMetadata();
+					iam.setType(ImageType.USER);
+					environmentsAdapter.importMetadata(destArchive, pe, iam, true);
+					db.deleteDoc(userctx, p.getEnvId(), p.getIdDBkey());
+					p.setArchive(destArchive);
+					save(p, false);
+				}
+				parent = p.getParentEnvId();
+			}
 		}
 		env.setArchive(destArchive);
 		save(env, false);

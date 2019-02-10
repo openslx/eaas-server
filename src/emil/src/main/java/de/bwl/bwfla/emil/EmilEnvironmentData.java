@@ -470,6 +470,7 @@ public class EmilEnvironmentData extends EmilRest {
 						json.beginObject();
 						json.add("id", parentEnv.getEnvId());
 						json.add("text", parentEnv.getDescription());
+						json.add("archive", parentEnv.getArchive());
 						json.endObject();
 					}
 					json.endArray();
@@ -837,17 +838,20 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @return
 	 */
 	public Response forkRevision(ForkRevisionRequest req) {
-		EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(req.getId());
-		if(newEmilEnv == null) {
+		EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(req.getId());
+		if(emilEnv == null) {
 			return Emil.internalErrorResponse("not found: " + req.getId());
 		}
 		try {
-			Environment environment = envHelper.getEnvironmentById(newEmilEnv.getArchive(), req.getId());
+			Environment environment = envHelper.getEnvironmentById(emilEnv.getArchive(), req.getId());
 			ImageArchiveMetadata md = new ImageArchiveMetadata();
 			md.setType(ImageType.USER);
-			String id = envHelper.importMetadata(newEmilEnv.getArchive(), environment, md, false);
+			String id = envHelper.importMetadata("default", environment, md, false);
+			EmilEnvironment newEmilEnv = new EmilEnvironment(emilEnv);
 			newEmilEnv.setEnvId(id);
-			newEmilEnv.setTitle(newEmilEnv.getTitle() + " " + newEmilEnv.getEnvId());
+			newEmilEnv.setTitle("[fork]: " + newEmilEnv.getTitle() + " " + newEmilEnv.getEnvId());
+			newEmilEnv.setArchive("default");
+			newEmilEnv.setParentEnvId(emilEnv.getParentEnvId());
 			emilEnvRepo.save(newEmilEnv, true);
 		} catch (BWFLAException  e) {
 			return Emil.internalErrorResponse(e);
