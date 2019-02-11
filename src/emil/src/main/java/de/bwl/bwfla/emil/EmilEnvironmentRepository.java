@@ -353,6 +353,10 @@ public class EmilEnvironmentRepository {
 			while(parent != null)
 			{
 				EmilEnvironment p = getEmilEnvironmentById(userctx, parent, userctx);
+				if(p == null)
+				{
+					throw new BWFLAException("parent image " + parent + " not found");
+				}
 				if(!p.getArchive().equals(destArchive))
 				{
 					Environment pe = environmentsAdapter.getEnvironmentById(p.getArchive(), p.getEnvId());
