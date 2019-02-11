@@ -956,7 +956,14 @@ public class ImageHandler
 			Binding b = new Binding();
 			b.setUrl(url.toString());
 			File dst = new File(target, imageid);
-			EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+			try {
+				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+			} catch (BWFLAException e)
+			{
+				b.setUrl("http://hdl.handle.net/" + imageHandler.handleClient.toHandle(imageid));
+				log.severe("retrying handle... "  + b.getUrl());
+				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+			}
 
 			String result = imageHandler.resolveLocalBackingFile(dst);
 			if (imageHandler.handleClient != null)
