@@ -7,24 +7,22 @@ import de.bwl.bwfla.emucomp.api.Nic;
 
 import java.nio.file.Paths;
 
-public class ContraltoBean extends EmulatorBean {
+public class LinAppleBean extends EmulatorBean {
     @Override
     protected void prepareEmulatorRunner() throws BWFLAException {
-        emuRunner.setCommand("mono");
-        emuRunner.addArgument("/ContrAlto/Contralto/bin/Debug/Contralto.exe");
-        emuRunner.setWorkingDirectory(Paths.get("/ContrAlto/Contralto/bin/Debug"));
+        emuRunner.setCommand("/usr/local/bin/linapple");
     }
 
     @Override
     protected String getEmulatorWorkdir()
     {
-        return "/ContrAlto/Contralto/bin/Debug";
+        return "/usr/local/linapple/";
     }
 
     @Override
     protected String getEmuContainerName(MachineConfiguration env)
     {
-        return "contralto";
+        return "linapple";
     }
 
     @Override

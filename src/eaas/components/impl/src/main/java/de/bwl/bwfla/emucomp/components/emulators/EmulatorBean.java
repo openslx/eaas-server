@@ -194,7 +194,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private String emuContainerGroupId = null;
 
 	/** Files to include into a container-checkpoint */
-	private List<String> emuContainerFilesToCheckpoint = null;
+	protected List<String> emuContainerFilesToCheckpoint = new ArrayList<>();
 
 	/** File extension for checkpoints */
 	private static final String CHECKPOINT_FILE_EXTENSION = ".tar.gz";
@@ -605,8 +605,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			final String cid = this.getContainerId();
 			final String workdir = this.getWorkingDir().toString();
 			final String rootfsdir = this.lookupResource(EMUCON_ROOTFS_BINDING_ID, XmountOutputFormat.RAW);
-
-			emuContainerFilesToCheckpoint = new ArrayList<String>();
 
 			// Generate container's config
 			{

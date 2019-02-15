@@ -133,6 +133,7 @@ public class QemuBean extends EmulatorBean
 		}
 
 		String printerOutput = this.getDataDir().resolve("print").resolve("printer.out").toString();
+		emuContainerFilesToCheckpoint.add(printerOutput);
 		emuRunner.addArgument("-chardev");
 		emuRunner.addArgument("file",",id=char0",",path=" + printerOutput);
 		emuRunner.addArguments("-parallel","chardev:char0");
