@@ -425,6 +425,8 @@ public class EmilEnvironmentData extends EmilRest {
 				json.add("author", emilenv.getAuthor());
 				json.add("canProcessAdditionalFiles", emilenv.isCanProcessAdditionalFiles());
 				json.add("archive", emilenv.getArchive());
+				json.add("xpraEncoding", emilenv.getXpraEncoding());
+
 				if( emilenv.getOwner() != null)
 					json.add("owner" , emilenv.getOwner().getUsername());
 				else
@@ -493,15 +495,14 @@ public class EmilEnvironmentData extends EmilRest {
 
 					if(machineConf.getUiOptions() != null && machineConf.getUiOptions().getForwarding_system() != null)
 					{
-						if(machineConf.getUiOptions().getForwarding_system().equalsIgnoreCase("xpra"))
-						json.add("useXpra", true);
-					}
+						if (machineConf.getUiOptions().getForwarding_system().equalsIgnoreCase("xpra"))
+							json.add("useXpra", true);
+                    }
 					else
 						json.add("useXpra", false);
 
-					if(machineConf.getEmulator().getBean() != null){
+					if (machineConf.getEmulator().getBean() != null) {
 						json.add("emulator", machineConf.getEmulator().getBean());
-
 					}
 
 					if (machineConf.getEmulator().getContainerName() != null) {
@@ -764,6 +765,7 @@ public class EmilEnvironmentData extends EmilRest {
 		newEnv.setServerIp(desc.getServerIp());
 		newEnv.setServerPort(desc.getServerPort());
 		newEnv.setCanProcessAdditionalFiles(desc.canProcessAdditionalFiles());
+		newEnv.setXpraEncoding(desc.getXpraEncoding());
 
 		if (desc.getTime() != null) {
 			newEnv.setTimeContext(desc.getTime());
