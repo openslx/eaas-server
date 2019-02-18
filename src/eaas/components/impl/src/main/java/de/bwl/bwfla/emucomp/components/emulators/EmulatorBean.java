@@ -1941,7 +1941,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	{
 		LOG.info("Waiting for emulator to become ready...");
 
-		final int timeout = 30000;  // in ms
+		final int timeout = 60000;  // in ms
 		final int waittime = 1000;  // in ms
 		for (int numretries = timeout / waittime; numretries > 0; --numretries) {
 			if (Files.exists(path)) {
