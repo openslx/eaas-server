@@ -45,12 +45,12 @@ public class VisualBoyAdvanceBean extends EmulatorBean {
             imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
             //check if this is first image
             emuRunner.addArgument(imagePath.toString());
+            return true;
         } catch (Exception e) {
             LOG.warning("Drive doesn't reference a valid binding, attach canceled." + e.getMessage());
             LOG.log(Level.WARNING, e.getMessage(), e);
             return false;
         }
-        return false;
     }
 
     @Override
