@@ -5,7 +5,10 @@ import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.emucomp.api.Nic;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.logging.Level;
 
 public class ContraltoBean extends EmulatorBean {
     @Override
@@ -29,7 +32,26 @@ public class ContraltoBean extends EmulatorBean {
 
     @Override
     protected boolean addDrive(Drive drive) {
-        return false;
+        if (drive == null || (drive.getData() == null)) {
+            LOG.severe("Drive doesn't contain an image, attach canceled.");
+            return false;
+        }
+        Path imagePath = null;
+        try {
+            imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
+
+            String script = "Load Disk 0 " + imagePath.toString() + "\n";
+            script += "Start";
+
+            Files.write(this.getDataDir().resolve("start"), script.getBytes());
+
+            emuRunner.addArguments("-script", this.getDataDir().resolve("start").toString());
+            return true;
+        } catch (Exception e) {
+            LOG.warning("Drive doesn't reference a valid binding, attach canceled." + e.getMessage());
+            LOG.log(Level.WARNING, e.getMessage(), e);
+            return false;
+        }
     }
 
     @Override
