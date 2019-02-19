@@ -31,6 +31,7 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean enableRelativeMouse;
 	private boolean shutdownByOs;
 	private boolean useXpra;
+	private String xpraEncoding;
 	private boolean enableInternet;
 	private boolean connectEnvs;
 	private boolean serverMode;
@@ -127,6 +128,14 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setUseXpra(boolean useXpra) {
 		this.useXpra = useXpra;
+	}
+
+	public String getXpraEncoding() {
+		return xpraEncoding;
+	}
+
+	public void setXpraEncoding(String xpraEncoding) {
+		this.xpraEncoding = xpraEncoding;
 	}
 
 	public boolean isEnableInternet() {

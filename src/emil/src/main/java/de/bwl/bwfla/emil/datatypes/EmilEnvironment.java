@@ -91,6 +91,9 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	@XmlElement(required = false)
 	private EmilEnvironmentPermissions permissions;
 
+	@XmlElement(required = false, defaultValue = "jpeg")
+	private String xpraEncoding;
+
 	public boolean isConnectEnvs() {
 		return connectEnvs;
 	}
@@ -143,6 +146,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		permissions = template.permissions;
 		connectEnvs = template.connectEnvs;
 		canProcessAdditionalFiles = template.canProcessAdditionalFiles;
+		xpraEncoding = template.xpraEncoding;
 	}
 
 	public String getArchive() {
@@ -385,5 +389,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setTimestamp(String timestamp) {
 		this.timestamp = timestamp;
+	}
+
+	public String getXpraEncoding() {
+		return xpraEncoding;
+	}
+
+	public void setXpraEncoding(String xpraEncoding) {
+		this.xpraEncoding = xpraEncoding;
 	}
 }
