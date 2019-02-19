@@ -40,8 +40,10 @@ public class ContraltoBean extends EmulatorBean {
         try {
             imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
 
-            String script = "Load Disk 0 " + imagePath.toString() + "\n";
-            script += "Start";
+            String script = "- Command load disk 0 " + imagePath.toString() + "\n";
+            script += "- Command start";
+
+            LOG.severe(script);
 
             Files.write(this.getDataDir().resolve("start"), script.getBytes());
 
