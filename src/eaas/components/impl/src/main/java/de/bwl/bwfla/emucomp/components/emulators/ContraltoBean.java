@@ -8,6 +8,7 @@ import de.bwl.bwfla.emucomp.api.Nic;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.function.Function;
 import java.util.logging.Level;
 
 public class ContraltoBean extends EmulatorBean {
@@ -32,16 +33,22 @@ public class ContraltoBean extends EmulatorBean {
 
     @Override
     protected boolean addDrive(Drive drive) {
+
+        final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
+
         if (drive == null || (drive.getData() == null)) {
             LOG.severe("Drive doesn't contain an image, attach canceled.");
             return false;
         }
-        Path imagePath = null;
+        String imagePath = null;
         try {
-            imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
+            imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType()))).toString();
 
-            String script = "- Command load disk 0 " + imagePath.toString() + "\n";
-            script += "- Command start";
+            if (this.isContainerModeEnabled())
+                imagePath = hostPathReplacer.apply(imagePath);
+
+            String script = "- Command load disk 0 " + imagePath + "\r\n";
+            script += "- Command start\r\n";
 
             LOG.severe(script);
 

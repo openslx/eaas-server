@@ -490,6 +490,16 @@ public class EmilEnvironmentRepository {
 //			LOG.warning(__env.isVisible() + "yyy");
 //		}
 
+//		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder();
+//		for(String user : _result.keySet()) {
+//			List<EmilEnvironment> envs = _result.get(user);
+//			for (EmilEnvironment e : envs)
+//			{
+//				LOG.severe("saving " + user + " -> " + e.jsonValueWithoutRoot(true));
+//				db.saveDoc(user, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
+//			}
+//		}
+
 		Collection<String> archives = environmentsAdapter.listBackendNames();
 		for(String a : archives) {
 			List<Environment> envs;
