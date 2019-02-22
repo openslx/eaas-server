@@ -364,7 +364,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		}
 		String exportPrefix;
 		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/" + objectId;
+			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/" + URLEncoder.encode(objectId, "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			// TODO Auto-generated catch block
 			log.log(Level.WARNING, e.getMessage(), e);

@@ -27,14 +27,13 @@ public class ExportObject extends HttpExportServlet
 			if(index < 0)
 				return null;
 			archive = URLDecoder.decode(reqStr.substring(1, index), "UTF-8");
+			objPath = URLDecoder.decode(reqStr.substring(reqStr.indexOf("/", 2) + 1), "UTF-8");
 		} catch (UnsupportedEncodingException e) {
 			log.log(Level.SEVERE, e.getMessage(), e);
 			return null;
 		}
 
-		objPath = reqStr.substring(reqStr.indexOf("/", 2) + 1);
-
-		// System.out.println("archive: " + archive + "-" + objPath);
+		System.out.println("archive: " + archive + "-" + objPath);
 
 		// System.out.println("http-object-archive: " + requestedObject);
 		if(ObjectArchiveSingleton.archiveMap == null)
