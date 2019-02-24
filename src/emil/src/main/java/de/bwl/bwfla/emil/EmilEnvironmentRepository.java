@@ -415,13 +415,13 @@ public class EmilEnvironmentRepository {
 
 	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException, JAXBException {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
-		// if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
-		//	throw new BWFLAException("permission denied");
+		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
+			throw new BWFLAException("permission denied");
 
 		if (!(env instanceof EmilSessionEnvironment)) {
 			if (env.getParentEnvId() != null) {
 				EmilEnvironment parentEnv = getEmilEnvironmentById(env.getParentEnvId());
-				if(true || checkPermissions(parentEnv, EmilEnvironmentPermissions.Permissions.WRITE)) {
+				if(parentEnv != null) {
 					parentEnv.removeChildEnvId(envId);
 					parentEnv.removeBranchEnvId(envId);
 					save(parentEnv, false);
