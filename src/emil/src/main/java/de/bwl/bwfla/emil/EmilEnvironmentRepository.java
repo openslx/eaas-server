@@ -413,7 +413,7 @@ public class EmilEnvironmentRepository {
 		throw new BWFLAException("emulators archive is not found");
 	}
 
-	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException, JAXBException {
+	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
 		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
 			throw new BWFLAException("permission denied");
@@ -432,7 +432,7 @@ public class EmilEnvironmentRepository {
 				LOG.info("deleting env " + env.getEnvId());
 				try {
 					environmentsAdapter.delete(env.getArchive(), envId, deleteMetadata, deleteImages);
-				} catch (NoSuchElementException e) {
+				} catch (NoSuchElementException | BWFLAException e) {
 					e.printStackTrace();
 				}
 				db.deleteDoc(getCollectionCtx(), envId, env.getIdDBkey());
