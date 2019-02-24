@@ -910,7 +910,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 			return Emil.successMessageResponse("reverted to environment: " + req.getRevId());
 
-		} catch (BWFLAException | JAXBException | JsonSyntaxException | JsonIOException e) {
+		} catch (BWFLAException | JsonSyntaxException | JsonIOException e) {
 			return Emil.errorMessageResponse("No emil environment found with ID: " + currentEnv.getParentEnvId());
 		}
 	}

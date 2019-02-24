@@ -823,7 +823,7 @@ public class EmilEnvironmentRepository {
 						delete(session.getEnvId(), true, true);
 					}
 				}
-			} catch (BWFLAException | JAXBException e) {
+			} catch (BWFLAException e) {
 				LOG.log(Level.SEVERE, e.getMessage(), e);
 			}
 		}
