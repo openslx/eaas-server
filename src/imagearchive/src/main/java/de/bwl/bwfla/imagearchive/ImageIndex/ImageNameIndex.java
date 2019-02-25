@@ -68,6 +68,7 @@ public class ImageNameIndex extends JaxbType
 	private final Map<String, Alias> aliases = new HashMap<String, Alias>();
 
 	private static final String VERSION_SEPARATOR = "|";
+	private static final String LATEST_TAG = "latest";
 
 	public ImageNameIndex(String indexConfigPath, Logger log) throws BWFLAException
 	{
@@ -108,7 +109,7 @@ public class ImageNameIndex extends JaxbType
 
 	public ImageNameIndex() throws BWFLAException
 	{
-		this.log = new PrefixLogger(ImageArchiveBackend.class.getName());;
+		this.log = new PrefixLogger(ImageArchiveBackend.class.getName());
 		this.executor = ImageNameIndex.lookup(log);
 	}
 
@@ -238,6 +239,13 @@ public class ImageNameIndex extends JaxbType
 		this.aliases.put(ImageNameIndex.toIndexKey(alias.getName(), alias.getAlias()), alias);
 		executor.execute(this::dump);
 	}
+
+    public void updateLatest(String emulator, String version) {
+        log.info("\nLatest (default) emulator update!\nemulator: " + emulator + "\nversion: " + version);
+        this.aliases.put(ImageNameIndex.toIndexKey(emulator, LATEST_TAG), new Alias(emulator, version, LATEST_TAG));
+        executor.execute(this::dump);
+    }
+
 
 	private void dump()
 	{

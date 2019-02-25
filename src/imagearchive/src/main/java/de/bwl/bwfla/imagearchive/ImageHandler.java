@@ -80,6 +80,10 @@ public class ImageHandler
 		imageNameIndex.addNameIndexesEntry(entry, alias);
 	}
 
+	public void updateLatestEmulator(String emulator, String version) {
+		imageNameIndex.updateLatest(emulator, version);
+	}
+
 
 	static private String getBackingImageId(String bf)
 	{

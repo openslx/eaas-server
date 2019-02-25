@@ -40,6 +40,7 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
@@ -98,7 +99,9 @@ public class EmilContainerData extends EmilRest {
     private AsyncIoTaskManager taskManager;
 
     protected static final Logger LOG = Logger.getLogger("eaas/containerData");
-    
+
+    private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+
     @PostConstruct
     private void initialize() {
         objHelper = new ObjectArchiveHelper(objectArchive);
@@ -226,6 +229,14 @@ public class EmilContainerData extends EmilRest {
         } catch (BWFLAException e) {
             return new TaskStateResponse(e);
         }
+    }
+
+    @Secured
+    @POST
+    @Path("/updateLatestEmulator")
+    @Consumes(MediaType.APPLICATION_JSON)
+    public void updateLatestEmulator(UpdateLatestEmulatorRequest request) throws BWFLAException {
+        envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
     }
 
     @Secured
@@ -501,7 +512,7 @@ public class EmilContainerData extends EmilRest {
                     }
                 }
 
-                envHelper.addNameIndexesEntry("emulators", entry, alias);
+                envHelper.addNameIndexesEntry(getEmulatorArchive(), entry, alias);
                 return new HashMap<>();
             }
             binding.setId("rootfs");
@@ -542,6 +553,13 @@ public class EmilContainerData extends EmilRest {
             userData.put("environmentId", newEnvironmentId);
             return userData;
         }
+    }
+
+    private String getEmulatorArchive() {
+        String archive = ConfigurationProvider.getConfiguration().get("emucomp.emulator_archive");
+        if(archive == null || archive.isEmpty())
+            return EMULATOR_DEFAULT_ARCHIVE;
+        return archive;
     }
 
     @Secured

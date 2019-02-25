@@ -169,6 +169,9 @@ public class DatabaseEnvironmentsAdapter {
     public void addNameIndexesEntry(String backend, Entry entry, Alias alias) throws BWFLAException {
         environmentsAdapter.addNameIndexesEntry(backend, entry, alias);
     }
+    public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
+        environmentsAdapter.updateLatestEmulator(backend, emulator, version);
+    }
 
 
     public String importMetadata(String archive, Environment environment, ImageArchiveMetadata iaMd, boolean preserveId) throws BWFLAException {

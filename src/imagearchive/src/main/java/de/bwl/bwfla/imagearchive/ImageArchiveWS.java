@@ -203,6 +203,11 @@ public class ImageArchiveWS
 				.addNameIndexesEntry(entry, alias);
 	}
 
+	public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
+		this.lookup(backend)
+				.updateLatestEmulator(emulator, version);
+	}
+
 	public String getDefaultBackendName()
 	{
 		return backends.getImageArchiveConfig().getDefaultBackendName();

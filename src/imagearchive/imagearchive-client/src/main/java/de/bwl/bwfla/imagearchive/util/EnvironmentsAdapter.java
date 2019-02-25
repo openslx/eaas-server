@@ -496,6 +496,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		archive.addNameIndexesEntry(backend, entry, alias);
 	}
 
+	public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
+		connectArchive();
+		archive.updateLatestEmulator(backend, emulator, version);
+	}
+
 	public Collection<String> listBackendNames() throws BWFLAException
 	{
 		connectArchive();

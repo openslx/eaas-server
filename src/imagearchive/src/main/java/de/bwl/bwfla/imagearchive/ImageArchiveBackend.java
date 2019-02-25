@@ -86,6 +86,10 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		imageHandler.addNameIndexesEntry(entry, alias);
 	}
 
+	public void updateLatestEmulator(String emulator, String version){
+		imageHandler.updateLatestEmulator(emulator, version);
+	}
+
 	synchronized public void deleteTempEnvironments() throws BWFLAException
 	{
 		imageHandler.cleanTmpFiles();
