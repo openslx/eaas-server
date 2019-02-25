@@ -413,15 +413,15 @@ public class EmilEnvironmentRepository {
 		throw new BWFLAException("emulators archive is not found");
 	}
 
-	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException, JAXBException {
+	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
-		// if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
-		//	throw new BWFLAException("permission denied");
+		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
+			throw new BWFLAException("permission denied");
 
 		if (!(env instanceof EmilSessionEnvironment)) {
 			if (env.getParentEnvId() != null) {
 				EmilEnvironment parentEnv = getEmilEnvironmentById(env.getParentEnvId());
-				if(true || checkPermissions(parentEnv, EmilEnvironmentPermissions.Permissions.WRITE)) {
+				if(parentEnv != null) {
 					parentEnv.removeChildEnvId(envId);
 					parentEnv.removeBranchEnvId(envId);
 					save(parentEnv, false);
@@ -432,7 +432,7 @@ public class EmilEnvironmentRepository {
 				LOG.info("deleting env " + env.getEnvId());
 				try {
 					environmentsAdapter.delete(env.getArchive(), envId, deleteMetadata, deleteImages);
-				} catch (NoSuchElementException e) {
+				} catch (NoSuchElementException | BWFLAException e) {
 					e.printStackTrace();
 				}
 				db.deleteDoc(getCollectionCtx(), envId, env.getIdDBkey());
@@ -488,6 +488,16 @@ public class EmilEnvironmentRepository {
 //
 //			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
 //			LOG.warning(__env.isVisible() + "yyy");
+//		}
+
+//		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder();
+//		for(String user : _result.keySet()) {
+//			List<EmilEnvironment> envs = _result.get(user);
+//			for (EmilEnvironment e : envs)
+//			{
+//				LOG.severe("saving " + user + " -> " + e.jsonValueWithoutRoot(true));
+//				db.saveDoc(user, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
+//			}
 //		}
 
 		Collection<String> archives = environmentsAdapter.listBackendNames();
@@ -813,7 +823,7 @@ public class EmilEnvironmentRepository {
 						delete(session.getEnvId(), true, true);
 					}
 				}
-			} catch (BWFLAException | JAXBException e) {
+			} catch (BWFLAException e) {
 				LOG.log(Level.SEVERE, e.getMessage(), e);
 			}
 		}

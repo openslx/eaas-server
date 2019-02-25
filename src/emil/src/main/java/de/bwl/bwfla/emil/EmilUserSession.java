@@ -49,7 +49,7 @@ public class EmilUserSession extends EmilRest {
 
         try {
             emilEnvRepo.delete(id, true, true);
-        } catch (JAXBException | BWFLAException e1 ) {
+        } catch (BWFLAException e1 ) {
             return Emil.internalErrorResponse(e1);
         }
 

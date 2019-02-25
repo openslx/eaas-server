@@ -421,7 +421,7 @@ public class EmilEnvironmentData extends EmilRest {
 				json.add("gwPrivateIp", emilenv.getGwPrivateIp());
 				json.add("gwPrivateMask", emilenv.getGwPrivateMask());
 				json.add("enableInternet", emilenv.isEnableInternet());
-				json.add("connectEnvs", emilenv.isCanProcessAdditionalFiles());
+				json.add("connectEnvs", emilenv.isConnectEnvs());
 				json.add("author", emilenv.getAuthor());
 				json.add("canProcessAdditionalFiles", emilenv.isCanProcessAdditionalFiles());
 				json.add("archive", emilenv.getArchive());
@@ -910,7 +910,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 			return Emil.successMessageResponse("reverted to environment: " + req.getRevId());
 
-		} catch (BWFLAException | JAXBException | JsonSyntaxException | JsonIOException e) {
+		} catch (BWFLAException | JsonSyntaxException | JsonIOException e) {
 			return Emil.errorMessageResponse("No emil environment found with ID: " + currentEnv.getParentEnvId());
 		}
 	}

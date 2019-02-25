@@ -2,14 +2,15 @@ package de.bwl.bwfla.emil;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment;
+import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
@@ -17,16 +18,12 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
-import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Logger;
 
 @ApplicationScoped
@@ -77,14 +74,57 @@ public class EmilDataImport {
         }
     }
 
-    private <T> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JsonIOException {
+    private <T extends JaxbType> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JAXBException {
         if (!Files.exists(envpath))
             throw new IOException("file not found");
 
-        try (Reader reader = Files.newBufferedReader(envpath, StandardCharsets.UTF_8)) {
-            return GSON.fromJson(reader, klass);
-        }
+        return JaxbType.fromJsonValue(FileUtils.readFileToString(envpath.toFile(), StandardCharsets.UTF_8), klass);
+
+        // try (Reader reader = Files.newBufferedReader(envpath, StandardCharsets.UTF_8)) {
+        //    return GSON.fromJson(reader, klass);
+        // }
     }
+
+
+    public HashMap<String, List<EmilEnvironment>> importFromFolder()
+    {
+        HashMap<String, List<EmilEnvironment>> result = new HashMap<>();
+        Path importPath = Paths.get(serverdatadir).resolve("import-envs");
+        if(!Files.exists(importPath)) {
+            LOG.severe("import path not found: " + importPath);
+            return result;
+        }
+
+        try {
+            DirectoryStream<Path> stream = Files.newDirectoryStream(importPath);
+            for (Path entry : stream) {
+
+                LOG.severe("user " + entry);
+                Path emilEnvs = entry.resolve("emil-environments");
+                if (Files.exists(emilEnvs)) {
+                    LOG.severe("loading emil environments");
+                    List<EmilEnvironment> envs = importEnvByPath(EmilEnvironment.class, emilEnvs);
+                    result.put(entry.getFileName().toString(), envs);
+                }
+
+                Path emilObjEnvs = entry.resolve("emil-object-environments");
+                if (Files.exists(emilObjEnvs))
+                {
+                    LOG.severe("loading emil obj environments");
+                    List<EmilObjectEnvironment> envs = importEnvByPath(EmilObjectEnvironment.class, emilObjEnvs);
+                    List<EmilEnvironment> _envs = new ArrayList<>();
+                    _envs.addAll(envs);
+                    result.put(entry.getFileName().toString(), _envs);
+                }
+            }
+        }
+        catch (IOException e)
+        {
+            return result;
+        }
+        return result;
+    }
+
 
     public synchronized List<EmilEnvironment> importExistentEnv(MongodbEaasConnector.DatabaseInstance db,
                                                                 String emilDbCollectionName) throws IOException, BWFLAException {
@@ -95,7 +135,7 @@ public class EmilDataImport {
 //        Path containerEnvs = Paths.get(serverdatadir).resolve("emil-container-environments");
 //
 //        // ensure the absence of null elements
-//        Optional.ofNullable(importEnvByPath(EmilEnvironment.class, Paths.get(emilEnvironmentsPath), emilEnvPath));
+//
 //        Optional.ofNullable(importEnvByPath(EmilObjectEnvironment.class, Paths.get(emilObjectEnvironmentsPath), objEnvPath));
 //        Optional.ofNullable(importEnvByPath(EmilSessionEnvironment.class, Paths.get(emilEnvironmentsPath), sessionEnvPath));
 //        Optional.ofNullable(importEnvByPath(EmilContainerEnvironment.class, Paths.get(emilEnvironmentsPath), containerEnvs));
@@ -115,7 +155,7 @@ public class EmilDataImport {
         return envs;
     }
 
-    public <T extends EmilEnvironment> List<T> importEnvByPath(final Class<T> klass, Path... paths) throws IOException {
+    private <T extends EmilEnvironment> List<T> importEnvByPath(final Class<T> klass, Path... paths) throws IOException {
         final List<T> environments = new ArrayList<>();
         for (Path path : paths) {
             if (!Files.exists(path)) {
@@ -136,6 +176,7 @@ public class EmilDataImport {
                     try {
                         T env = getEmilEnvironmentByPath(fpath, klass);
                         if (env != null) {
+                            LOG.severe(env.toString());
                             environments.add(env);
                         }
                     } catch (Exception e) {
@@ -148,7 +189,7 @@ public class EmilDataImport {
             if (obsoleteEnvsDir.toFile().exists()) {
                 obsoleteEnvsDir = Paths.get(obsoleteEnvsDir + UUID.randomUUID().toString());
             }
-            Files.move(path, obsoleteEnvsDir);
+            // Files.move(path, obsoleteEnvsDir);
         }
         return environments;
 
