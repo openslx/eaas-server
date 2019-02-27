@@ -336,9 +336,12 @@ public class ArchiveAdapter {
             String os = null;
             try {
                 os =  ((MachineConfiguration) envHelper.getEnvironmentById(env.getId())).getOperatingSystemId();
-                // sanitze: remove ':'
-                os = os.replace(':', '_');
-                qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
+
+                if(os != null) {
+                    // sanitze: remove ':'
+                    os = os.replace(':', '_');
+                    qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
+                }
             } catch (BWFLAException e) {
                 e.printStackTrace();
             }

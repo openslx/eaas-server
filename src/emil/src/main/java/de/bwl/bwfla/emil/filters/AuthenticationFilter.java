@@ -70,7 +70,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             // Validate the token
             validateToken(token);
         } catch (Exception e) {
-            e.printStackTrace();
+            // e.printStackTrace();
             requestContext.abortWith(
                     Response.status(Response.Status.UNAUTHORIZED).build());
         }
