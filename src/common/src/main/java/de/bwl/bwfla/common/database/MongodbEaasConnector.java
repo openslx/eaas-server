@@ -167,13 +167,19 @@ public class MongodbEaasConnector {
 			if (result == null)
 				throw new NoSuchElementException();
 
+			String classname = (String) result.get(classNameKey);
 			try {
-				final String classname = (String) result.get(classNameKey);
 				final Class<T> klass = (Class<T>) Class.forName(classname);
 				return T.fromJsonValueWithoutRoot(result.toJson(), klass);
 			}
 			catch (ClassNotFoundException e) {
-				throw new BWFLAException(e);
+				classname = "de.bwl.bwfla.emil.datatypes." + classname;
+				try {
+					Class<T> klass = (Class<T>) Class.forName(classname);
+					return T.fromJsonValueWithoutRoot(result.toJson(), klass);
+				} catch (ClassNotFoundException e1) {
+					throw new BWFLAException("failed to create object from JSON");
+				}
 			}
 		}
 
