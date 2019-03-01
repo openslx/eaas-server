@@ -204,11 +204,11 @@ public class ContainerUtil {
             DockerImport dockerMd = (DockerImport)md;
             Provenance pMd = new Provenance();
             pMd.getLayers().addAll(dockerMd.getLayers());
-            pMd.setOciSourceUrl("docker://" + dockerMd.getImageRef());
+            pMd.setOciSourceUrl(dockerMd.getImageRef());
             pMd.setVersionTag(dockerMd.getTag());
             entry.setProvenance(pMd);
 
-            entry.setName(dockerMd.getEmulatorType());
+            entry.setName("emucon-rootfs/" + dockerMd.getEmulatorType());
             entry.setVersion(dockerMd.getEmulatorVersion());
             entry.setDigest(dockerMd.getDigest());
 
