@@ -153,6 +153,9 @@ public abstract class MediumBuilder
 						dockerMd.setImageRef(ds.imageRef);
 						dockerMd.setLayers(Arrays.asList(ds.layers));
 						dockerMd.setTag(ds.tag);
+						dockerMd.setDigest(ds.digest);
+						dockerMd.setEmulatorVersion(ds.version);
+						dockerMd.setEmulatorType(ds.emulatorType);
 
 						md = dockerMd;
 					}

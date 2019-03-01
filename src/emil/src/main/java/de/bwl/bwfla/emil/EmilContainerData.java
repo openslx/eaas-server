@@ -34,6 +34,7 @@ import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
@@ -58,8 +59,10 @@ public class EmilContainerData extends EmilRest {
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
 
-    private List<DataSource> handlers = new ArrayList<>();
+    @Inject
+    private ContainerUtil containerUtil;
 
+    private List<DataSource> handlers = new ArrayList<>();
 
     @Inject
     @Config(value = "rest.blobstore")
@@ -81,15 +84,6 @@ public class EmilContainerData extends EmilRest {
     @Config("emil.dockerTmpBuildFiles")
     private String dockerTmpBuildFiles = null;
 
-    @Inject
-    @Config(value = "emil.containerdata.imagebuilder.delay")
-    @WithPropertyConverter(DurationPropertyConverter.class)
-    private Duration imageBuilderDelay = null;
-
-    @Inject
-    @Config(value = "emil.containerdata.imagebuilder.timeout")
-    @WithPropertyConverter(DurationPropertyConverter.class)
-    private Duration imageBuilderTimeout = null;
 
     @Inject
     private EmilEnvironmentRepository emilEnvRepo;
@@ -338,76 +332,10 @@ public class EmilContainerData extends EmilRest {
     class ImportContainerTask extends AbstractTask<Object>
     {
         private final ImportContainerRequest containerRequest;
-        final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
-        private final ImageDescription description = new ImageDescription()
-                .setMediumType(MediumType.HDD)
-                .setPartitionTableType(PartitionTableType.NONE)
-                .setFileSystemType(FileSystemType.EXT4)
-                .setSizeInMb(1024 * 10); // 10 Gb virtual size
+
 
         ImportContainerTask(ImportContainerRequest containerRequest) throws BWFLAException {
             this.containerRequest = containerRequest;
-        }
-
-        ImageContentDescription getImageEntryFromUrlStr(String urlString) throws BWFLAException
-        {
-            ImageContentDescription entry;
-            entry = new ImageContentDescription();
-            try {
-                entry.setURL(new URL(urlString));
-            } catch (MalformedURLException e) {
-                final String filename = urlString;
-                if (filename.contains("/")) {
-                    throw new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename);
-                }
-                File archiveFile = new File("/eaas/import/", filename);
-                if(!archiveFile.exists()) {
-                    throw new BWFLAException("file " + filename + " not found in input folder");
-                }
-                entry.setDataFromFile(archiveFile.toPath());
-            }
-            return entry;
-        }
-
-        private ImageBuilderResult createImagefromArchiveFile(String srcUrlString) throws BWFLAException {
-
-            ImageContentDescription entry = getImageEntryFromUrlStr(srcUrlString);
-
-            entry.setAction(ImageContentDescription.Action.EXTRACT)
-                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR);
-
-            description.addContentEntry(entry);
-            return this.createImageFromDescription(description);
-        }
-
-        private ImageBuilderResult createImagefromSingularityImg(String srcUrlString) throws BWFLAException
-        {
-            ImageContentDescription entry = getImageEntryFromUrlStr(srcUrlString);
-
-            entry.setAction(ImageContentDescription.Action.EXTRACT)
-                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.SIMG);
-
-            description.addContentEntry(entry);
-
-            return this.createImageFromDescription(description);
-        }
-
-        private ImageBuilderResult createImageFromDockerHub(String dockerName, String tag) throws BWFLAException {
-            ImageContentDescription entry = new ImageContentDescription();
-            entry.setAction(ImageContentDescription.Action.RSYNC);
-            ImageContentDescription.DockerDataSource dockerDataSource
-                    = new ImageContentDescription.DockerDataSource(dockerName, tag);
-            dockerDataSource.imageArchiveHost = envHelper.getImageArchiveHost();
-            entry.setDataFromDockerSource(dockerDataSource);
-            description.addContentEntry(entry);
-            ImageBuilderResult result = this.createImageFromDescription(description);
-
-            return result;
-        }
-
-        private ImageBuilderResult createImageFromDescription(ImageDescription description) throws BWFLAException
-        {
-            return ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay);
         }
 
         @Override
@@ -422,136 +350,21 @@ public class EmilContainerData extends EmilRest {
             if(containerRequest.getImageType() == null)
                 return new BWFLAException("missing image type");
 
-            ImageBuilderResult result = null;
-            URL imageUrl = null;
-
-            try {
-                switch(containerRequest.getImageType())
-                {
-                    case ROOTFS:
-                        result = createImagefromArchiveFile(containerRequest.getUrlString());
-                        break;
-                    case SIMG:
-                        result = createImagefromSingularityImg(containerRequest.getUrlString());
-                        break;
-                    case DOCKERHUB:
-                        result = createImageFromDockerHub(containerRequest.getUrlString(), containerRequest.getTag());
-                        break;
-                    case READYMADE:
-                        imageUrl = new URL(containerRequest.getUrlString());
-                        break;
-
-                    default:
-                        throw new BWFLAException("unkonwn imageType " + containerRequest.getImageType());
-                }
-
-            } catch (BWFLAException e) {
-                e.printStackTrace();
-                return e;
-            }
-
-            ImageArchiveMetadata meta = new ImageArchiveMetadata();
-            if(containerRequest instanceof ImportEmulatorRequest)
-                meta.setType(ImageType.BASE);
-            else
-                meta.setType(ImageType.TMP);
-
-            if (imageUrl == null)
-                if(result.getBlobHandle() == null)
-                    throw new BWFLAException("Image blob unavailable");
-                try {
-                    imageUrl = new URL(result.getBlobHandle().toRestUrl(blobStoreRestAddress, false));
-                } catch (MalformedURLException e) {
-                    return new BWFLAException(e);
-                }
-
-            EnvironmentsAdapter.ImportImageHandle importState = null;
-            ImageArchiveBinding binding;
-            try {
-                if (containerRequest instanceof ImportEmulatorRequest)
-                    importState = envHelper.importImage("emulators", imageUrl, meta, true);
-                else
-                    importState = envHelper.importImage("default", imageUrl, meta, true);
-
-                binding = importState.getBinding(60 * 60 * 60); //wait an hour
-            }
-            catch (BWFLAException e) {
-                e.printStackTrace();
-                return e;
-            }
 
             if (containerRequest instanceof ImportEmulatorRequest) {
-                ImportEmulatorRequest emulatorRequest = (ImportEmulatorRequest) containerRequest;
 
-                de.bwl.bwfla.api.imagearchive.ImageDescription iD = new de.bwl.bwfla.api.imagearchive.ImageDescription();
-                iD.setType(meta.getType().value());
-                iD.setId(binding.getImageId());
-                iD.setFstype(emulatorRequest.getFstype());
-
-                Entry entry = new Entry();
-                entry.setName(emulatorRequest.getEmulatorType());
-                entry.setVersion(emulatorRequest.getVersion());
-                entry.setImage(iD);
-
-                Alias alias = new Alias();
-                alias.setName(emulatorRequest.getEmulatorType());
-                alias.setVersion(emulatorRequest.getVersion());
-                alias.setAlias(emulatorRequest.getAlias());
-
-                if(result.getMetadata() != null)
-                {
-                    ImageBuilderMetadata md = result.getMetadata();
-                    if(md instanceof DockerImport)
-                    {
-                        DockerImport dockerMd = (DockerImport)md;
-                        Provenance pMd = new Provenance();
-                        pMd.getLayers().addAll(dockerMd.getLayers());
-                        pMd.setOciSourceUrl("docker://" + dockerMd.getImageRef());
-                        pMd.setVersionTag(dockerMd.getTag());
-                        entry.setProvenance(pMd);
-                    }
-                }
-
-                envHelper.addNameIndexesEntry(getEmulatorArchive(), entry, alias);
+                ImportEmulatorRequest request = (ImportEmulatorRequest)containerRequest;
+                containerUtil.importEmulator(request);
                 return new HashMap<>();
             }
-            binding.setId("rootfs");
-            binding.setFileSystemType("ext4");
+            else
+            {
+                String newEnvironmentId = containerUtil.importContainer(containerRequest);
+                Map<String, String> userData = new HashMap<>();
 
-            OciContainerConfiguration config = new OciContainerConfiguration();
-            EnvironmentDescription description = new EnvironmentDescription();
-            description.setTitle(containerRequest.getName());
-            config.setDescription(description);
-            config.getDataResources().add(binding);
-
-            config.setGui(containerRequest.guiRequired());
-
-            config.setOutputPath(containerRequest.getOutputFolder());
-            config.setInputPath(containerRequest.getInputFolder());
-            config.setRootFilesystem("binding://rootfs");
-
-            OciContainerConfiguration.Process process = new OciContainerConfiguration.Process();
-            if(containerRequest.getProcessEnvs() != null && containerRequest.getProcessEnvs().size() > 0)
-                process.setEnvironmentVariables(containerRequest.getProcessEnvs());
-            process.setArguments(containerRequest.getProcessArgs());
-            config.setProcess(process);
-
-            config.setId("dummy");
-
-            log.warning(config.toString());
-            String newEnvironmentId = null;
-            try {
-                LOG.info("importing config: " + config.toString());
-                newEnvironmentId = envHelper.importMetadata("default", config, meta, false);
-            } catch (BWFLAException e) {
-                e.printStackTrace();
-                return e;
+                userData.put("environmentId", newEnvironmentId);
+                return userData;
             }
-            
-            Map<String, String> userData = new HashMap<>();
-
-            userData.put("environmentId", newEnvironmentId);
-            return userData;
         }
     }
 

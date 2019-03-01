@@ -50,6 +50,10 @@ public class EmulatorSpec
     protected String containerName;
     @XmlAttribute(name = "containerVersion", required = false)
     protected String containerVersion;
+    @XmlAttribute(name = "upstreamDigest", required = false)
+    protected String upstreamDigest;
+    @XmlAttribute(name = "ociSourceUrl", required = false)
+    protected String ociSourceUrl;
 
     public EmulatorSpec.Machine getMachine() {
         return machine;
@@ -91,6 +95,21 @@ public class EmulatorSpec
         this.version = value;
     }
 
+    public String getDigest() {
+        return upstreamDigest;
+    }
+
+    public void setDigest(String digest) {
+        this.upstreamDigest = digest;
+    }
+
+    public String getOciSourceUrl() {
+        return ociSourceUrl;
+    }
+
+    public void setOciSourceUrl(String ociSourceUrl) {
+        this.ociSourceUrl = ociSourceUrl;
+    }
 
     @XmlAccessorType(XmlAccessType.FIELD)
     @XmlType(name = "", propOrder = {"id", "name"})

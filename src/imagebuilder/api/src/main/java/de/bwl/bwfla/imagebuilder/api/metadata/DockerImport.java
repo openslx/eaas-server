@@ -19,6 +19,15 @@ public class DockerImport extends ImageBuilderMetadata {
     @XmlElement
     private List<String> layers;
 
+    @XmlElement
+    private String emulatorVersion;
+
+    @XmlElement
+    private String digest;
+
+    @XmlElement
+    private String emulatorType;
+
     public String getImageRef() {
         return imageRef;
     }
@@ -41,5 +50,29 @@ public class DockerImport extends ImageBuilderMetadata {
 
     public void setLayers(List layers) {
         this.layers = layers;
+    }
+
+    public String getEmulatorVersion() {
+        return emulatorVersion;
+    }
+
+    public void setEmulatorVersion(String emulatorVersion) {
+        this.emulatorVersion = emulatorVersion;
+    }
+
+    public String getDigest() {
+        return digest;
+    }
+
+    public void setDigest(String digest) {
+        this.digest = digest;
+    }
+
+    public String getEmulatorType() {
+        return emulatorType;
+    }
+
+    public void setEmulatorType(String emulatorType) {
+        this.emulatorType = emulatorType;
     }
 }

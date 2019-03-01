@@ -405,14 +405,6 @@ public class EmilEnvironmentRepository {
 		// LOG.severe(env.toString());
 	}
 
-	public ImageNameIndex getNameIndexes() throws BWFLAException, JAXBException {
-		for (String a : environmentsAdapter.listBackendNames()) {
-			if (a.equals(EMULATOR_DEFAULT_ARCHIVE))
-				return environmentsAdapter.getNameIndexes(a);
-		}
-		throw new BWFLAException("emulators archive is not found");
-	}
-
 	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
 		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))

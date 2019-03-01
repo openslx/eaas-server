@@ -102,8 +102,9 @@ public class DatabaseEnvironmentsAdapter {
         }
     }
 
-    public ImageNameIndex getNameIndexes(String backend) throws BWFLAException {
-       return environmentsAdapter.getNameIndexes(backend);
+    private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+    public ImageNameIndex getNameIndexes() throws BWFLAException {
+       return environmentsAdapter.getNameIndexes(EMULATOR_DEFAULT_ARCHIVE);
     }
 
     public List<Environment> getEnvironments(String archive) throws BWFLAException, JAXBException {

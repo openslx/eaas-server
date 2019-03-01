@@ -24,6 +24,9 @@ public class Entry extends JaxbType
     @XmlElement
     private Provenance provenance;
 
+    @XmlElement
+    private String digest;
+
     Entry(String name, String version, ImageDescription image)
     {
         this.name = name;
@@ -75,5 +78,13 @@ public class Entry extends JaxbType
 
     public void setImage(ImageDescription image) {
         this.image = image;
+    }
+
+    public String getDigest() {
+        return digest;
+    }
+
+    public void setDigest(String digest) {
+        this.digest = digest;
     }
 }

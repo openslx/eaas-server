@@ -37,6 +37,7 @@ import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.utils.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emucomp.api.*;
@@ -78,6 +79,9 @@ public class EmilEnvironmentData extends EmilRest {
 
 	private AsyncIoTaskManager taskManager;
 	private ImageProposer imageProposer;
+
+	@Inject
+	private ContainerUtil containerUtil;
 
 	@Inject
 	@AuthenticatedUser
@@ -1067,7 +1071,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @return
 	 */
     public ImageNameIndex getNameIndexes() throws BWFLAException, JAXBException {
-        return emilEnvRepo.getNameIndexes();
+        return envHelper.getNameIndexes();
     }
 
 //	@POST
@@ -1131,6 +1135,7 @@ public class EmilEnvironmentData extends EmilRest {
 			importRequest.environmentHelper = envHelper;
 			importRequest.destArchive = replicateImagesRequest.getDestArchive();
 			importRequest.imageProposer = imageProposer;
+			importRequest.containerUtil = containerUtil;
 
 			if(authenticatedUser != null)
 				importRequest.username = authenticatedUser.getUsername();

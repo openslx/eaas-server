@@ -252,8 +252,13 @@ public class ImageContentDescription
 		@XmlElement
 		public String imageRef;
 
+		// symbolic tag
 		@XmlElement
 		public String tag;
+
+		// docker digest
+		@XmlElement
+		public String digest;
 
 		@XmlElement
 		public String imageArchiveHost;
@@ -264,6 +269,10 @@ public class ImageContentDescription
 		public Path dockerDir;
 
 		public String[] layers;
+
+		public String version;
+
+		public String emulatorType;
 
 		DockerDataSource()
 		{
@@ -280,5 +289,6 @@ public class ImageContentDescription
 			this.imageRef = imageRef;
 			this.tag = tag;
 		}
+
 	}
 }

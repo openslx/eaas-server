@@ -131,10 +131,10 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 	public void registerImagesRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)
 	{
 		if (mode.equalsIgnoreCase(AccessMode.READ_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
-			sources.register(name, MetaDataSources.images(name, envdb, executor));
+			sources.register(name, MetaDataSources.images("public", envdb, executor));
 
 		if (mode.equalsIgnoreCase(AccessMode.WRITE_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
-			sinks.register(name, MetaDataSinks.images(name, envdb));
+			sinks.register(name, MetaDataSinks.images("remote", envdb));
 	}
 
 	public void registerEnvironmentsRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)

@@ -1,9 +1,6 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlEnumValue;
-import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
@@ -22,6 +19,9 @@ public class ImportContainerRequest extends EmilRequestType {
 
     @XmlElement(required = false)
     private String tag;
+
+    @XmlAttribute(required = false)
+    private String digest;
 
     private String outputFolder;
     private String inputFolder;
@@ -143,6 +143,14 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public void setImageType(ContainerImageType imageType) {
         this.imageType = imageType;
+    }
+
+    public String getDigest() {
+        return digest;
+    }
+
+    public void setDigest(String digest) {
+        this.digest = digest;
     }
 
     @XmlEnum
