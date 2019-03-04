@@ -12,6 +12,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.net.URL;
+import java.time.Instant;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -162,6 +163,7 @@ public class DatabaseEnvironmentsAdapter {
 
 
     public void updateMetadata(String archive, Environment environment) throws BWFLAException {
+        environment.setTimestamp(Instant.now().toString());
         db.saveDoc(archive, environment.getId(), metaDataIdKey, environment.jsonValueWithoutRoot(false));
         environmentsAdapter.updateMetadata(archive, environment.toString());
     }

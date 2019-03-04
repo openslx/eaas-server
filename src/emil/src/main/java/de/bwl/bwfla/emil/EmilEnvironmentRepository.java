@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -386,6 +387,8 @@ public class EmilEnvironmentRepository {
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
+
+		env.setTimestamp(Instant.now().toString());
 
 		if(env.getArchive() == null)
 			env.setArchive(MetadataCollection.DEFAULT);

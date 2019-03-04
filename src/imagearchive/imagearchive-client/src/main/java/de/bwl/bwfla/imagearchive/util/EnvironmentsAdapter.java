@@ -3,6 +3,7 @@ package de.bwl.bwfla.imagearchive.util;
 import java.io.File;
 
 import java.net.URL;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -368,6 +369,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		if (!preserveId)
 			emuEnv.setId(getRandomId());
 
+		emuEnv.setTimestamp(Instant.now().toString());
 		archive.importConfiguration(backend, emuEnv.toString(), iaMd, preserveId);
 		log.info("Archive '" + backend + "' imported image '" + emuEnv.getId() + "'");
 		return emuEnv.getId();
