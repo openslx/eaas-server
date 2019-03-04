@@ -121,6 +121,7 @@ public class ImageNameIndex extends JaxbType
 
 	/** Returns index entry for specified name and version. */
 	public Entry get(String name, String version) {
+		System.out.println("looking for " + ImageNameIndex.toIndexKey(name, version));
 		Entry entry = entries.get(ImageNameIndex.toIndexKey(name, version));
 		if (entry != null)
 			return entry;

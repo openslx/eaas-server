@@ -345,14 +345,25 @@ public class EmilEnvironmentRepository {
 
 	synchronized public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
-			if(userctx == null)
-				throw new BWFLAException("no user context in publish image context");
-			db.deleteDoc(userctx, env.getEnvId(), env.getIdDBkey());
+
+			String collection = null;
+			String username = null;
+
+			if(userctx == null) {
+				collection = emilDbCollectionName;
+				// throw new BWFLAException("no user context in publish image context");
+			}
+			else
+			{
+				collection = userctx;
+				username = userctx;
+			}
+			db.deleteDoc(collection, env.getEnvId(), env.getIdDBkey());
 
 			String parent = env.getParentEnvId();
 			while(parent != null)
 			{
-				EmilEnvironment p = getEmilEnvironmentById(userctx, parent, userctx);
+				EmilEnvironment p = getEmilEnvironmentById(collection, parent, username);
 				if(p == null)
 				{
 					throw new BWFLAException("parent image " + parent + " not found");
@@ -363,7 +374,7 @@ public class EmilEnvironmentRepository {
 					ImageArchiveMetadata iam = new ImageArchiveMetadata();
 					iam.setType(ImageType.USER);
 					environmentsAdapter.importMetadata(destArchive, pe, iam, true);
-					db.deleteDoc(userctx, p.getEnvId(), p.getIdDBkey());
+					db.deleteDoc(collection, p.getEnvId(), p.getIdDBkey());
 					p.setArchive(destArchive);
 					save(p, false);
 				}

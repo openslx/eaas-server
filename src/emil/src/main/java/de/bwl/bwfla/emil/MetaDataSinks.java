@@ -73,6 +73,7 @@ public class MetaDataSinks
 				final Environment environment = Environment.fromValue(item.getMetaData());
 				final ImageArchiveMetadata iamd = new ImageArchiveMetadata();
 				iamd.setType(ImageType.BASE);  // TODO: how should this type be supplied?
+				log.info("inserting item " + environment.getId());
 				db.importMetadata(archive, environment, iamd, true);
 			}
 			catch (JAXBException error) {
