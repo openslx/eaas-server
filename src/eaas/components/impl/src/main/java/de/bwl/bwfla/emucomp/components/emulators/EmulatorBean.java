@@ -444,7 +444,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					final ImageArchiveBinding image;
 					if (env.getEmulator().getContainerName() != null && env.getEmulator().getContainerVersion() != null) {
 						LOG.warning("loading emulator: " + name + " " + env.getEmulator().getContainerVersion());
-						image = archive.getImageBinding(this.getEmulatorArchive(), env.getEmulator().getContainerName(), env.getEmulator().getContainerVersion());
+						image = archive.getImageBinding(this.getEmulatorArchive(), name, env.getEmulator().getContainerVersion());
 					}
 					else {
 						LOG.warning("loading emulator " + name + " latest");
