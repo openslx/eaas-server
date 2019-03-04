@@ -19,22 +19,45 @@
 
 package de.bwl.bwfla.eaas.cluster.provider.iaas;
 
-import java.util.UUID;
+import java.security.SecureRandom;
 
 // package-private
+
 
 /** A simple class for the node's name generation */
 class NodeNameGenerator
 {
+	// Name-Alphabet, skipping easy to confuse chars: i, l, o
+	private static final String ALPHABET = "0123456789abcdefghjkmnpqrstuvwxyz";
+	private static final SecureRandom RANDOM = new SecureRandom();
+
 	private final String prefix;
+	private final int randlen;
 
 	public NodeNameGenerator(String prefix)
 	{
+		this(prefix, 5);
+	}
+
+	public NodeNameGenerator(String prefix, int randlen)
+	{
 		this.prefix = prefix;
+		this.randlen = randlen;
 	}
 
 	public String next()
 	{
-		return (prefix + UUID.randomUUID());
+		final StringBuilder name = new StringBuilder(prefix.length() + randlen)
+				.append(prefix);
+
+		final int jmax = ALPHABET.length();
+
+		// Generate random suffix...
+		for (int i = 0; i < randlen; ++i) {
+			final int j = RANDOM.nextInt(jmax);
+			name.append(ALPHABET.charAt(j));
+		}
+
+		return name.toString();
 	}
 }

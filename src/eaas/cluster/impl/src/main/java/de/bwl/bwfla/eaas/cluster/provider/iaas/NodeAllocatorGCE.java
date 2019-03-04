@@ -641,7 +641,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 				// Create boot disk
 				{
 					final AttachedDiskInitializeParams params = new AttachedDiskInitializeParams()
-							.setDiskName(vmname + "-boot-disk")
+							.setDiskName(vmname)
 							.setDiskType(diskTypeUrl)
 							.setDiskSizeGb(config.getVmPersistentDiskSize())
 							.setSourceImage(config.getVmPersistentDiskImageUrl());
