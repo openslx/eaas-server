@@ -442,10 +442,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					final EnvironmentsAdapter archive = new EnvironmentsAdapter(imageArchiveAddress);
 					final String name = EMUCON_ROOTFS_BINDING_ID + "/" + this.getEmuContainerName(env);
 					final ImageArchiveBinding image;
-					if (env.getEmulator().getContainerName() != null && env.getEmulator().getContainerVersion() != null)
+					if (env.getEmulator().getContainerName() != null && env.getEmulator().getContainerVersion() != null) {
+						LOG.warning("loading emulator: " + name + " " + env.getEmulator().getContainerVersion());
 						image = archive.getImageBinding(this.getEmulatorArchive(), env.getEmulator().getContainerName(), env.getEmulator().getContainerVersion());
-					else
+					}
+					else {
+						LOG.warning("loading emulator " + name + " latest");
 						image = archive.getImageBinding(this.getEmulatorArchive(), name, "latest");
+					}
 
 					if (image == null)
 						throw new BWFLAException("Emulator's rootfs-image not found!");
