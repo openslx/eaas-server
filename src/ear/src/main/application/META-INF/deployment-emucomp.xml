@@ -1,0 +1,8 @@
+<jboss-deployment-structure>
+  <ear-subdeployments-isolated>false</ear-subdeployments-isolated>
+  <deployment>
+    <dependencies>
+      <module name="deployment.eaas-server.ear.eaas-components-impl-0.0.1-SNAPSHOT.war" services="import"/>
+    </dependencies>
+  </deployment>
+</jboss-deployment-structure>
