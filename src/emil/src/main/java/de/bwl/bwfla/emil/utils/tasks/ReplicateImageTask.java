@@ -74,6 +74,7 @@ public class ReplicateImageTask extends AbstractTask<Object> {
                 if (entry == null)
                     throw new BWFLAException("emulator entry not found. can't publish this environment");
 
+                request.env.getEmulator().setContainerVersion(entry.getVersion());
                 request.env.getEmulator().setOciSourceUrl(entry.getProvenance().getOciSourceUrl());
                 request.env.getEmulator().setDigest(entry.getDigest());
             }
