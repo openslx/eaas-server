@@ -375,7 +375,14 @@ public class EmilEnvironmentRepository {
 					ImageArchiveMetadata iam = new ImageArchiveMetadata();
 					iam.setType(ImageType.USER);
 					environmentsAdapter.importMetadata(destArchive, pe, iam, true);
-					db.deleteDoc(collection, p.getEnvId(), p.getIdDBkey());
+					LOG.severe("trying to delete parent with id: " + p.getEnvId() + " in archive " + p.getArchive());
+					try {
+						db.deleteDoc(collection, p.getEnvId(), p.getIdDBkey());
+					} catch (Exception e)
+					{
+						e.printStackTrace();
+						LOG.severe("fix me");
+					}
 					p.setArchive(destArchive);
 					save(p, false);
 				}
