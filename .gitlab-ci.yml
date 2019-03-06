@@ -34,7 +34,7 @@ emucomp-build:
 gateway-build:
   script: 
     - ln -fs src/ear/src/main/application/META-INF/deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
-    - mvn -f pom.xml clean install -P '!emucomp' -pl ear -am
+    - mvn -f src/pom.xml clean install -P '!emucomp' -pl ear -am
   artifacts:
    paths:
     - eaas-server.ear
