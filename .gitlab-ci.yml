@@ -38,7 +38,7 @@ gateway-build:
     - mvn -f pom.xml clean install -P '!emucomp' -pl ear -am
   artifacts:
    paths:
-    - src/ear/target/eaas-server.ear
+    - eaas-server.ear
   cache:
    paths:
     - .m2
