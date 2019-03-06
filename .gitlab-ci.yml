@@ -19,7 +19,7 @@ standalone-server-build:
     - eaas-server.ear
   cache:
     paths:
-    - src/.m2 
+    - .m2 
     
 emucomp-build:
   script: 
