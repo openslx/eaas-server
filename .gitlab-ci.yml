@@ -42,7 +42,3 @@ gateway-build:
   cache:
    paths:
     - .m2
-    
-trigger:
-  stage: deploy
-  trigger: openslx/emucomp-image-builder
