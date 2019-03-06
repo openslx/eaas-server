@@ -22,7 +22,7 @@ standalone-server-build:
     
 emucomp-build:
   script: 
-    - ln -fs src/ear/src/main/application/META-INF/deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - ln -fs deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean install -P emucomp -pl ear -am
   artifacts:
    paths:
@@ -33,7 +33,7 @@ emucomp-build:
     
 gateway-build:
   script: 
-    - ln -fs src/ear/src/main/application/META-INF/deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - ln -fs deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean install -P '!emucomp' -pl ear -am
   artifacts:
    paths:
