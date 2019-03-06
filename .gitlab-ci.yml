@@ -3,7 +3,6 @@ image: maven:3-jdk-8
 
 
 before_script:
-  - cd src
   - cp -r .m2 /root/ || true
 after_script:
   - cp -r /root/.m2 .
