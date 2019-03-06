@@ -12,7 +12,7 @@ after_script:
 
 standalone-server-build:
   script:
-  - mvn clean install
+  - mvn -f src/pom.xml clean install
   artifacts:
     paths:
     - eaas-server.ear
@@ -22,8 +22,8 @@ standalone-server-build:
     
 emucomp-build:
   script: 
-    - ln -fs ear/src/main/application/META-INF/deployment-emucomp.xml ear/src/main/application/META-INF/jboss-deployment-structure.xml
-    - mvn -f pom.xml clean install -P emucomp -pl ear -am
+    - ln -fs src/ear/src/main/application/META-INF/deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - mvn -f src/pom.xml clean install -P emucomp -pl ear -am
   artifacts:
    paths:
     - eaas-server.ear
@@ -33,7 +33,7 @@ emucomp-build:
     
 gateway-build:
   script: 
-    - ln -fs ear/src/main/application/META-INF/deployment-gateway.xml ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - ln -fs src/ear/src/main/application/META-INF/deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f pom.xml clean install -P '!emucomp' -pl ear -am
   artifacts:
    paths:
