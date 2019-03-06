@@ -7,6 +7,7 @@ before_script:
   - cp -r .m2 /root/ || true
 after_script:
   - cp -r /root/.m2 .
+  - cp src/ear/target/eaas-server.ear .
   
 
 
@@ -15,7 +16,7 @@ standalone-server-build:
   - mvn clean install
   artifacts:
     paths:
-    - src/ear/target/eaas-server.ear
+    - eaas-server.ear
   cache:
     paths:
     - src/.m2 
@@ -26,7 +27,7 @@ emucomp-build:
     - mvn -f pom.xml clean install -P emucomp -pl ear -am
   artifacts:
    paths:
-    - src/ear/target/eaas-server.ear
+    - eaas-server.ear
   cache:
    paths:
     - .m2
