@@ -47,7 +47,7 @@ gateway-build:
 trigger:
   stage: deploy
   variables:
-   TRIGGER_NAMESPACE: $CI_PROJECT_NAMESPACE
+   TRIGGER_NAMESPACE: openslx
   trigger: openslx/emucomp-image-builder
   only:
     refs:
