@@ -2,17 +2,13 @@ image: maven:3-jdk-8
 
 
 before_script:
- - echo $CI_PROJECT_NAME
- - echo $CI_PROJECT_NAMESPACE
  - cp -r .m2 /root/ || true
 
 after_script:
  - cp -r /root/.m2 .
  - cp src/ear/target/eaas-server.ear .
   
-
-
-.standalone-server-build:
+standalone-server-build:
   script:
   - mvn -f src/pom.xml clean install
   artifacts:
@@ -22,7 +18,7 @@ after_script:
     paths:
     - .m2 
     
-.emucomp-build:
+emucomp-build:
   script: 
     - ln -fs deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean install -P emucomp -pl ear -am
@@ -33,7 +29,7 @@ after_script:
    paths:
     - .m2
     
-.gateway-build:
+gateway-build:
   script: 
     - ln -fs deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
     - mvn -f src/pom.xml clean install -P '!emucomp' -pl ear -am
@@ -48,9 +44,8 @@ trigger:
   stage: deploy
   script:
    - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=master https://gitlab.com/api/v4/projects/11165186/trigger/pipeline
-  #variables:
-  # TRIGGER_NAMESPACE: $CI_PROJECT_NAMESPACE
-#  trigger: openslx/emucomp-image-builder
- # only:
- #   refs:
- #      - emil-db-rework
+  only:
+   refs:
+     - emil-db-rework
+   variables:
+     - $CI_PROJECT_NAMESPACE == "openslx"
