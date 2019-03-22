@@ -64,6 +64,10 @@ public abstract class AbstractServiceClient<T extends Service> {
     
     protected T getService(String host) throws BWFLAException {
         try {
+            // FIXME make protocol check more generic
+            if(!host.contains("http://") && !host.contains("https://")){
+                host = "http://" + host;
+            }
             URI uri = new URI(getWsdlUrl(host));
             return getService(uri.toURL());
         } catch (MalformedURLException|URISyntaxException e) {

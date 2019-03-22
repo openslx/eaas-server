@@ -1,29 +1,54 @@
 image: maven:3-jdk-8
 
-before_script:
-  - cd src
-  - cp -r .m2 /root/ || true
-after_script:
-  - cp -r /root/.m2 .
+.caching: &caching
+  before_script:
+   - cp -r .m2 /root/ || true
 
-server-build:
+  after_script:
+   - cp -r /root/.m2 .
+   - cp src/ear/target/eaas-server.ear .
+  
+standalone-server-build:
+  <<: *caching
   script:
-  - mvn clean install
-  - cp -r /root/.m2 .
+   - mvn -f src/pom.xml clean install
   artifacts:
     paths:
-    - src/ear/target/eaas-server.ear
+    - eaas-server.ear
   cache:
     paths:
-    - src/.m2 
+    - .m2 
     
 emucomp-build:
-  script: 
-    - ln -fs ear/src/main/application/META-INF/deployment-emucomp.xml ear/src/main/application/META-INF/jboss-deployment-structure.xml
-    - mvn -f pom.xml clean install -P emucomp -pl ear -am
+  <<: *caching
+  script:
+    - ln -fs deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - mvn -f src/pom.xml clean install -P emucomp -pl ear -am
   artifacts:
    paths:
-    - src/ear/target/eaas-server.ear
+    - eaas-server.ear
   cache:
    paths:
     - .m2
+    
+gateway-build:
+  <<: *caching
+  script: 
+    - ln -fs deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - mvn -f src/pom.xml clean install -P '!emucomp' -pl ear -am
+  artifacts:
+   paths:
+    - eaas-server.ear
+  cache:
+   paths:
+    - .m2
+    
+trigger:
+  stage: deploy
+  script:
+   - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=master https://gitlab.com/api/v4/projects/11165186/trigger/pipeline
+  only:
+   refs:
+     - emil-db-rework
+   variables:
+     - $CI_PROJECT_NAMESPACE == "openslx"
