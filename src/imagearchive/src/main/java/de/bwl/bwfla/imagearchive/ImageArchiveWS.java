@@ -218,6 +218,10 @@ public class ImageArchiveWS
 			return backends.listBackendNames();
 	}
 
+	public void extractMetadata(String backend, String imageId) throws BWFLAException {
+		this.lookup(backend).extractMetadata(imageId);
+	}
+
 	/* ========================= Internal Helpers ========================= */
 
 	private ImageArchiveBackend lookup(String name) throws BWFLAException

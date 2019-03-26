@@ -163,7 +163,7 @@ public class ContainerUtil {
                 break;
 
             default:
-                throw new BWFLAException("unkonwn imageType " + emulatorRequest.getImageType());
+                throw new BWFLAException("unknown imageType " + emulatorRequest.getImageType());
         }
 
         if (imageUrl == null)
@@ -188,6 +188,7 @@ public class ContainerUtil {
         binding = importState.getBinding(60 * 60 * 60); //wait an hour
 
         de.bwl.bwfla.api.imagearchive.ImageDescription iD = new de.bwl.bwfla.api.imagearchive.ImageDescription();
+        envHelper.extractMetadata(binding.getImageId());
         iD.setType(meta.getType().value());
         iD.setId(binding.getImageId());
         iD.setFstype(FileSystemType.EXT4.toString());

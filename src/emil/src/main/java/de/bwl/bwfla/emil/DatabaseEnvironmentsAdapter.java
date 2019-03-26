@@ -230,4 +230,8 @@ public class DatabaseEnvironmentsAdapter {
     {
         return imageArchive;
     }
+
+    public void extractMetadata(String imageId) throws BWFLAException {
+        environmentsAdapter.extractMetadata(imageId);
+    }
 }

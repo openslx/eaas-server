@@ -7,6 +7,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
@@ -802,6 +803,62 @@ public class ImageHandler
 		}
 	}
 
+	public void extractMetadata(String imageId) throws BWFLAException {
+		File srcDir = getImageTargetPath("base");
+		File imgFile = new File(srcDir, imageId);
+		if(!imgFile.exists())
+			throw new BWFLAException("can't find emulator image " + imgFile);
+
+		ImageMounter image = new ImageMounter(imgFile.toPath());
+
+		image.mountDD();
+		// todo: read from metadata
+		image.mountFileSystem(FileSystemType.EXT4);
+
+		Path fsDir = image.getFsDir();
+		if(!Files.exists(fsDir))
+		{
+			image.completeUnmount();
+			throw new BWFLAException("can't find filesystem");
+		}
+
+		Path metadata = fsDir.resolve("metadata");
+		if(!Files.exists(metadata))
+		{
+			image.completeUnmount();
+			log.severe("no metedata directory found");
+			return;
+		}
+
+		Path templates = metadata.resolve("templates");
+		if(Files.exists(templates))
+		{
+			File dst = getMetaDataTargetPath("template");
+			try {
+				FileUtils.copyDirectory(templates.toFile(), dst);
+			} catch (IOException e) {
+				e.printStackTrace();
+				image.completeUnmount();
+				throw new BWFLAException(e);
+			}
+		}
+
+		Path environments = metadata.resolve("environments");
+		if(Files.exists(environments))
+		{
+			File dst = getMetaDataTargetPath("base");
+			try {
+				FileUtils.copyDirectory(environments.toFile(), dst);
+			} catch (IOException e) {
+				e.printStackTrace();
+				image.completeUnmount();
+				throw new BWFLAException(e);
+			}
+		}
+		image.completeUnmount();
+	}
+
+
 	/**
 	 * Asynchronously replicates specified images by importing them into this image archive.
 	 * @param images A list of source URLs for images to import.
@@ -913,8 +970,6 @@ public class ImageHandler
 			URL,
 			STREAM
 		};
-
-
 
 		public ImageLoader(InputStream inputStream, File target, String importId, ImageHandler imageHandler)  {
 

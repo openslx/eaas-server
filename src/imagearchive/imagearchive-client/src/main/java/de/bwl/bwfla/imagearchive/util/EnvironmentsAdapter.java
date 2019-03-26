@@ -30,6 +30,8 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.getEnvironments(this.getDefaultBackendName(), type);
 	}
 
+	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+
 	public List<Environment> getEnvironments(String backend, String type) throws BWFLAException, JAXBException {
 		connectArchive();
 
@@ -101,7 +103,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException {
-		return this.getTemplates(this.getDefaultBackendName());
+		return this.getTemplates(EMULATOR_DEFAULT_ARCHIVE);
 	}
 
 	public List<MachineConfigurationTemplate> getTemplates(String backend) throws BWFLAException {
@@ -462,6 +464,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		catch (Exception error) {
 			throw new BWFLAException(error);
 		}
+	}
+
+	public void extractMetadata(String imageId) throws BWFLAException {
+		connectArchive();
+		archive.extractMetadata(EMULATOR_DEFAULT_ARCHIVE, imageId);
 	}
 
 	public ImageImportResult getImageImportResult(String sessionId) throws BWFLAException {

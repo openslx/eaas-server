@@ -216,6 +216,10 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
+	public void extractMetadata(String imageId) throws BWFLAException {
+		imageHandler.extractMetadata(imageId);
+	}
+
 	public String createImage(String size, String type) throws BWFLAException
 	{
 		String id = UUID.randomUUID().toString();
