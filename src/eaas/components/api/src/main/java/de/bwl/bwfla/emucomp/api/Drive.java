@@ -313,6 +313,7 @@ public class Drive
             switch(qid)
             {
                 case "Q495265":
+                case "Q877050":
                     return CDROM;
                 default:
                     throw new IllegalArgumentException();
