@@ -20,29 +20,17 @@
 package de.bwl.bwfla.objectarchive.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.Zip32Utils;
-import de.bwl.bwfla.emucomp.api.Binding.ResourceType;
-import de.bwl.bwfla.emucomp.api.Drive;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.FileCollection;
-import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
-import de.bwl.bwfla.objectarchive.DefaultDriveMapper;
 import de.bwl.bwfla.objectarchive.datatypes.*;
-import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection.ObjectFileCollectionHandle;
-import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
 
-import javax.activation.DataHandler;
-import javax.activation.FileDataSource;
 import javax.inject.Inject;
 import java.io.*;
 import java.net.URLEncoder;
-import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class DigitalObjectMETSFileArchive implements Serializable, DigitalObjectArchive
@@ -51,15 +39,21 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	protected final Logger log	= Logger.getLogger(this.getClass().getName());
 
 	final private String name;
-	final private String localPath;
+	final private String metaDataPath;
+	final private String dataPath;
 	private boolean defaultArchive;
+
+	@Inject
+	@Config(value="objectarchive.httpexport")
+	public String httpExport;
 
 	private HashMap<String, MetsObject> objects;
 
-	public DigitalObjectMETSFileArchive(String name, String localPath, boolean defaultArchive)
+	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive)
 	{
 		this.name = name;
-		this.localPath = localPath;
+		this.metaDataPath = metaDataPath;
+		this.dataPath = dataPath;
 		this.defaultArchive = defaultArchive;
 		ConfigurationInjection.getConfigurationInjector().configure(this);
 
@@ -70,15 +64,15 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	{
 		HashMap<String, MetsObject> _objects = new HashMap<>();
 
-		File objectDir = new File(localPath);
+		File objectDir = new File(metaDataPath);
 		if(!objectDir.exists() && !objectDir.isDirectory())
 		{
-			log.info("objectDir " + localPath + " does not exist");
+			log.info("metadataPath " + metaDataPath + " does not exist");
 		}
 
 		for(File mets: objectDir.listFiles())
 		{
-			log.severe("parsing: " +mets.getAbsolutePath());
+			log.severe("parsing: " + mets.getAbsolutePath());
 			try {
 				MetsObject obj = new MetsObject(mets);
 				_objects.put(obj.getId(), obj);
@@ -92,6 +86,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	@Override
 	public List<String> getObjectList()
 	{	
+		log.severe("getObjectList: " + objects.size());
 		return new ArrayList<>(objects.keySet());
 	}
 
@@ -102,7 +97,17 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		if(obj == null)
 			return null;
 
-		return obj.getFileCollection();
+		if(dataPath != null) {
+			try {
+				String exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8");
+				return obj.getFileCollection(exportPrefix);
+			} catch (UnsupportedEncodingException e) {
+				e.printStackTrace();
+				return null;
+			}
+		}
+		else
+			return obj.getFileCollection(null);
 	}
 
 	@Override
@@ -122,9 +127,8 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	@Override
 	public Path getLocalPath() {
-		return null;
+		return Paths.get(dataPath);
 	}
-
 
 	@Override
 	public DigitalObjectMetadata getMetadata(String objectId) {

@@ -25,18 +25,28 @@ public class DigitalObjectMETSFileArchiveDescriptor extends DigitalObjectArchive
 	 *
 	 */
 	private static final long serialVersionUID = 1L;
-	private String localPath;
+	private String metadataPath;
+	private String dataPath;
 
 	public DigitalObjectMETSFileArchiveDescriptor()
 	{
 		setType(ArchiveType.METS);
 	}
 
-	public String getLocalPath() {
-		return localPath;
+
+	public String getMetadataPath() {
+		return metadataPath;
 	}
 
-	public void setLocalPath(String localPath) {
-		this.localPath = localPath;
+	public void setMetadataPath(String metaFolder) {
+		this.metadataPath = metaFolder;
+	}
+
+	public String getDataPath() {
+		return dataPath;
+	}
+
+	public void setDataPath(String dataPath) {
+		this.dataPath = dataPath;
 	}
 }

@@ -1,10 +1,12 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import gov.loc.mets.*;
+import org.apache.commons.io.FileUtils;
 import org.w3c.dom.Element;
 
 import javax.xml.bind.JAXBContext;
@@ -13,6 +15,7 @@ import javax.xml.bind.Unmarshaller;
 import java.awt.*;
 import java.io.File;
 import java.math.BigInteger;
+import java.net.URLEncoder;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -106,11 +109,12 @@ public class MetsObject {
             for (MetsType.FileSec.FileGrp fileGrp : fileGrpList) {
                 for (FileType file : fileGrp.getFile()) {
                     try {
-
                         ObjectFile of = new ObjectFile();
                         of.fileLocations = getFileLocation(file);
                         setTypeInfo(of, file);
-                        of.size = file.getSIZE();
+
+                        if(file.getSIZE() != null)
+                            of.size = file.getSIZE();
                         of.id = file.getID();
                         objectFiles.put(of.id, of);
                         log.info(of.toString());
@@ -225,6 +229,7 @@ public class MetsObject {
         return wikiId;
     }
 
+
     public MetsObject(File metsFile) throws BWFLAException {
 
         if (!metsFile.exists())
@@ -240,7 +245,7 @@ public class MetsObject {
         }
 
         init();
-        getFileCollection();
+        // getFileCollection();
     }
 
     public MetsObject(Element element) throws BWFLAException {
@@ -254,7 +259,7 @@ public class MetsObject {
         }
         init();
 
-        getFileCollection();
+        // getFileCollection(null);
     }
 
     public YaleMetsFileInformation getFileInformation(String id) {
@@ -291,11 +296,13 @@ public class MetsObject {
         }
     }
 
-    public FileCollection getFileCollection()
+    public FileCollection getFileCollection(String exportPrefix)
     {
+        log.severe("get object file collection");
         FileCollection c = new FileCollection(getId());
         for(String fileId : objectFiles.keySet())
         {
+            log.severe("adding object: " + fileId);
             ObjectFile of = objectFiles.get(fileId);
             if(of.fileLocations.size() == 0 ) {
                 log.warning("METS ObjectFile " + of.id + " has no file locations");
@@ -307,13 +314,22 @@ public class MetsObject {
             try {
                 if(of.mediumType != null)
                     t = Drive.DriveType.fromQID(of.mediumType);
-                else
+                else if (of.fileType != null)
+                    t = Drive.DriveType.fromQID(of.fileType);
+                else {
+                    log.severe("can't resolve drive type: ");
                     continue;
+                }
             }
             catch (IllegalArgumentException e)
             {
                 e.printStackTrace();
                 continue;
+            }
+            if(exportPrefix != null)
+            {
+                if(!url.startsWith("http://"))
+                    url = exportPrefix + "/" + url;
             }
             FileCollectionEntry fce = new FileCollectionEntry(url, t, of.id);
             c.files.add(fce);

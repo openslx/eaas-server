@@ -85,7 +85,7 @@ public class DigitalObjectArchiveFactory {
 				DigitalObjectMETSFileArchiveDescriptor m = 	gson.create().fromJson(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);
 				if(m == null)
 					return null;
-				return new DigitalObjectMETSFileArchive(m.getName(), m.getLocalPath(), m.isDefaultArchive());
+				return new DigitalObjectMETSFileArchive(m.getName(), m.getMetadataPath(), m.getDataPath(), m.isDefaultArchive());
 				
 			default:
 				return null;
