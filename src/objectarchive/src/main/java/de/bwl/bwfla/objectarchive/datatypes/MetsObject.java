@@ -320,6 +320,8 @@ public class MetsObject {
                     log.severe("can't resolve drive type: ");
                     continue;
                 }
+                if(t == null)
+                    continue;
             }
             catch (IllegalArgumentException e)
             {

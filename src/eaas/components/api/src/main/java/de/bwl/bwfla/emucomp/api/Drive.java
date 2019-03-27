@@ -316,7 +316,8 @@ public class Drive
                 case "Q877050":
                     return CDROM;
                 default:
-                    throw new IllegalArgumentException();
+                    System.out.println("unknow qid " + qid);
+                    return null;
             }
         }
     }
