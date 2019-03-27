@@ -67,7 +67,11 @@ public class NetworkSwitchProxy implements NetworkSwitch
     public String wsConnect(String componentId) throws BWFLAException {
 
         final SessionRegistry.Entry session = sessions.lookup(componentId);
-        final String componentHost = session.getResourceHandle().getNodeID().getNodeHost();
+        String componentHost = session.getResourceHandle().getNodeID().getNodeHost();
+        // FIXME make protocol check more generic
+        if(!componentHost.contains("http://") && !componentHost.contains("https://")){
+            componentHost = "http://" + componentHost;
+        }
         final URI hostURI = URI.create(componentHost);
 
         String wsAddress = getNetworkSwitch(componentId).wsConnect(componentId);
