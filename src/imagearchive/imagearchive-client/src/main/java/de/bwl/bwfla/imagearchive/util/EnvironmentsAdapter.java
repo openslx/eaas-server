@@ -55,7 +55,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
-		return this.getTemplate(this.getDefaultBackendName(), id);
+		return this.getTemplate(EMULATOR_DEFAULT_ARCHIVE, id);
 	}
 
 	public MachineConfigurationTemplate getTemplate(String backend, String id) throws BWFLAException {
