@@ -71,7 +71,8 @@ public class ImportImageTask extends AbstractTask<Object> {
             if (binding == null)
                 return new BWFLAException("ImportImageTask: import image failed. Could not create binding");
 
-            binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(), iaMd.getType(), request.templateId);
+            // binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
+            //        iaMd.getType(), request.templateId);
 
             binding.setId("main_hdd");
             env.getAbstractDataResource().add(binding);
