@@ -213,7 +213,7 @@ public class ContainerUtil {
             entry.setVersion(dockerMd.getEmulatorVersion());
             entry.setDigest(dockerMd.getDigest());
 
-            alias.setName(dockerMd.getEmulatorType());
+            alias.setName("emucon-rootfs/" + dockerMd.getEmulatorType());
             alias.setVersion(dockerMd.getEmulatorVersion());
             if(emulatorRequest.getAlias() != null && !emulatorRequest.getAlias().isEmpty())
                 alias.setAlias(emulatorRequest.getAlias());
