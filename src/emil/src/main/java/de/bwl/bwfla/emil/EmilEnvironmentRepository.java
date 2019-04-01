@@ -124,6 +124,11 @@ public class EmilEnvironmentRepository {
 	}
 
 	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted) {
+
+		String userCtx = getUserCtx();
+		if(userCtx == null)
+			return true;
+
 		return checkPermissions(env, wanted, getUserCtx());
 	}
 
