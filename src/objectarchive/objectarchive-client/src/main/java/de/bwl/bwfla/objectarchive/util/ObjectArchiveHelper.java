@@ -74,8 +74,9 @@ public class ObjectArchiveHelper {
 	public List<String> getObjectList(String _archive) throws BWFLAException
 	{
 		connectArchive();
+
 		List<String> objs = archive.getObjectList(_archive);
-		
+
 		if(objs == null)
 		{
 			log.warning("archive  " + _archive + " is empty");
