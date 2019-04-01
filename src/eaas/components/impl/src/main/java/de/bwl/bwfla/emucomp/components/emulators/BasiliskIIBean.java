@@ -33,7 +33,7 @@ public class BasiliskIIBean extends EmulatorBean
 	@Override
 	protected String getEmuContainerName(MachineConfiguration env)
 	{
-		return "basilisk2";
+		return "basiliskII";
 	}
 
 	@Override

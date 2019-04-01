@@ -47,7 +47,7 @@ public class PceIbmPcBean extends PceBean
 	@Override
 	protected String getEmuContainerName(MachineConfiguration env)
 	{
-		return "pce-ibmpc";
+		return "pce";
 	}
 
 	@Override

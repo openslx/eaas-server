@@ -54,6 +54,7 @@ import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
+import org.openjena.atlas.logging.Log;
 
 @Path("EmilEnvironmentData")
 @ApplicationScoped
@@ -998,9 +999,8 @@ public class EmilEnvironmentData extends EmilRest {
 	public Response overrideObjectCharacterization(OverrideCharacterizationRequest request) {
 		String objectId = request.getObjectId();
 		List<EnvironmentInfo> environments = request.getEnvironments();
-
 		try {
-			archive.setCachedEnvironmentsForObject(objectId, environments);
+			archive.setCachedEnvironmentsForObject(objectId, environments, request.getDescription());
 			return Emil.successMessageResponse("");
 		} catch (Exception e) {
 			return Emil.errorMessageResponse(e.getMessage());

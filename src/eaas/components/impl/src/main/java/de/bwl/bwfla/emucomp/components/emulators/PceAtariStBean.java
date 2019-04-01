@@ -45,7 +45,7 @@ public class PceAtariStBean extends PceBean
 	@Override
 	protected String getEmuContainerName(MachineConfiguration env)
 	{
-		return "pce-atari-st";
+		return "pce";
 	}
 
 	@Override

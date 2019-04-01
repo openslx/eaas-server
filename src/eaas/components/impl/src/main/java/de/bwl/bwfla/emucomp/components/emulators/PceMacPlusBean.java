@@ -47,7 +47,7 @@ public class PceMacPlusBean extends PceBean
 	@Override
 	protected String getEmuContainerName(MachineConfiguration env)
 	{
-		return "pce-macplus";
+		return "pce";
 	}
 
 	@Override
