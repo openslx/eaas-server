@@ -125,6 +125,10 @@ public class ArchiveAdapter {
         }
     }
 
+    public ClassificationResult getClassificationResultForObject(String objectId){
+        return db.load(objectId);
+    }
+
     private List<EnvironmentInfo> resolveEmilEnvironments(String objectId, Collection<String> proposedEnvironments) throws IOException, BWFLAException {
 
         HashMap<String, List<EmilEnvironment>> envMap = new HashMap<>();
@@ -373,7 +377,7 @@ public class ArchiveAdapter {
         }
     }
 
-    public void setCachedEnvironmentsForObject(String objectId, List<EnvironmentInfo> environments)
+    public void setCachedEnvironmentsForObject(String objectId, List<EnvironmentInfo> environments, String userDescription)
             throws BWFLAException {
 
         ClassificationResult result = null;
@@ -384,6 +388,7 @@ public class ArchiveAdapter {
         }
 
         result.setEnvironmentList(environments);
+        result.setUserDescription(userDescription);
         try {
             db.save(result, objectId);
         } catch (JAXBException | IOException e) {

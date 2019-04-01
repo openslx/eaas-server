@@ -168,7 +168,14 @@ public class EmilObjectData extends EmilRest {
 				DigitalObjectMetadata md = objHelper.getObjectMetadata(archiveId, id);
 				ObjectListItem item = new ObjectListItem(id);
 				item.setTitle(md.getTitle());
-				item.setDescription(md.getDescription());
+
+				try {
+					item.setDescription(archive.getClassificationResultForObject(id).getUserDescription());
+				} catch (NoSuchElementException e){
+					LOG.info("no cache for " + id + ". Getting default description");
+					item.setDescription(md.getDescription());
+				}
+
 				item.setThumbnail(md.getThumbnail());
 				item.setSummary(md.getSummary());
 				objList.add(item);

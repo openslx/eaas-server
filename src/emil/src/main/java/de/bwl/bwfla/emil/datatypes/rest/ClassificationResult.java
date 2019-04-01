@@ -35,6 +35,9 @@ public class ClassificationResult extends EmilResponseType {
     @XmlElement(required = true)
     private String objectId;
 
+    @XmlElement(required = false)
+    private String userDescription;
+
     public ClassificationResult(String objectId,
                                 HashMap<String, IdentificationData> fileFormats,
                                 HashMap<String, DiskType> mediaFormats) {
@@ -92,6 +95,14 @@ public class ClassificationResult extends EmilResponseType {
                 return true;
         }
         return false;
+    }
+
+    public String getUserDescription() {
+        return userDescription;
+    }
+
+    public void setUserDescription(String userDescription) {
+        this.userDescription = userDescription;
     }
 
     public HashMap<String, DiskType> getMediaFormats() {
