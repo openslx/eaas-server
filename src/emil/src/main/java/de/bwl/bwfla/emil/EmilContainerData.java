@@ -361,7 +361,7 @@ public class EmilContainerData extends EmilRest {
             {
                 String newEnvironmentId = containerUtil.importContainer(containerRequest);
                 Map<String, String> userData = new HashMap<>();
-
+                envHelper.sync();
                 userData.put("environmentId", newEnvironmentId);
                 return userData;
             }
