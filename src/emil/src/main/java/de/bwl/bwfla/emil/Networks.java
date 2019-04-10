@@ -21,10 +21,7 @@ package de.bwl.bwfla.emil;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -183,6 +180,24 @@ public class Networks {
         response.setStatus(Response.Status.OK.getStatusCode());
     }
 
+    @POST
+    @Secured
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Path("/{groupId}/addComponentToSwitch")
+    public void addComponentToSwitch(@PathParam("groupId") String groupId, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
+        try {
+            final String switchId = this.findSwitchId(groupId);
+            this.addComponent(groupId, switchId, component, false);
+        }
+        catch (BWFLAException error) {
+            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorInformation("Could not add component to group!", error.getMessage()))
+                    .build());
+        }
+
+        response.setStatus(Response.Status.OK.getStatusCode());
+    }
+
     @DELETE
     @Secured
     @Path("/{groupId}/components/{componentId}")
@@ -265,8 +280,29 @@ public class Networks {
         }
     }
 
-    private void addComponent(String groupId, String switchId, NetworkRequest.ComponentSpec component) {
+
+    @GET
+    @Secured
+    @Produces(MediaType.APPLICATION_JSON)
+    public Collection<String> getAllGroupIds() {
         try {
+            return groupClient.getComponentGroupPort(eaasGw).listGroupIds();
+        } catch (BWFLAException e) {
+            throw new NotFoundException(Response
+                    .status(Response.Status.NOT_FOUND)
+                    .entity(new ErrorInformation(
+                            "Could not send keepalive request.", e.getMessage()))
+                    .build());
+        }
+    }
+
+    private void addComponent(String groupId, String switchId, NetworkRequest.ComponentSpec component) {
+        addComponent(groupId, switchId, component, true);
+    }
+
+    private void addComponent(String groupId, String switchId, NetworkRequest.ComponentSpec component, boolean addToGroup) {
+        try {
+
             final Map<String, URI> map = this.getControlUrls(component.getComponentId());
 
             URI uri;
@@ -286,7 +322,9 @@ public class Networks {
             }
 
             componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, uri.toString());
-            groupClient.getComponentGroupPort(eaasGw).add(groupId, component.getComponentId());
+
+            if (addToGroup)
+                groupClient.getComponentGroupPort(eaasGw).add(groupId, component.getComponentId());
 
         } catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
