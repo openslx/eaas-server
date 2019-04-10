@@ -8,6 +8,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -81,7 +82,15 @@ public class ComponentGroup {
         }
         return new HashSet<String>(groupToComponents.get(uuid));
     }
-    
+
+    @WebMethod
+    public Set<String> listGroupIds() throws BWFLAException {
+        return groupToComponents.keySet()
+                .stream()
+                .map(UUID::toString)
+                .collect(Collectors.toSet());
+    }
+
     @WebMethod
     public void keepalive(@WebParam(name="groupId")String groupId) throws BWFLAException {
         UUID uuid = UUID.fromString(groupId);
