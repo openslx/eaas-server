@@ -589,8 +589,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isLocalModeEnabled())
 			LOG.info("Local-mode enabled. Emulator will be started locally!");
 
-		// emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
-
+		LOG.info("initializing fake clock");
+		emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
 		if (this.isXpraBackendEnabled()) {
 			// TODO: implement this, if needed!
 			if (!this.isContainerModeEnabled())
@@ -1919,7 +1919,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	private void waitUntilEmulatorCtlSocketReady(EmuCompState expstate) throws BWFLAException
 	{
-		final int timeout = 30000;  // in ms
+		final int timeout = 60000;  // in ms
 
 		final String message = "Waiting for emulator's control-socket to become ready...";
 		boolean ok = this.waitForReadyNotification(EventID.EMULATOR_CTLSOCK_READY, message, timeout, expstate);

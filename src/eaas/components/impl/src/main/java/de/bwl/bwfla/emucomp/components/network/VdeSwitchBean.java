@@ -207,6 +207,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
                 byte buf[] = new byte[1500];
                 int n = 0;
+                Thread.sleep(1000);
                 while (!Thread.currentThread().isInterrupted() && ((n = in.read(buf)) != -1)) {
                     wsClient.send(ByteBuffer.wrap(buf, 0, n));
                 }
