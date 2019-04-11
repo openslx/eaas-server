@@ -19,19 +19,24 @@
 
 package de.bwl.bwfla.emil;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.SessionResource;
+import de.bwl.bwfla.emucomp.client.ComponentClient;
+import org.apache.tamaya.inject.api.Config;
+import sun.nio.ch.Net;
 
+import javax.annotation.Resource;
+import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import java.net.HttpURLConnection;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.time.Duration;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -40,14 +45,41 @@ import java.util.logging.Logger;
 @ApplicationScoped
 public class SessionManager
 {
+	@Inject
+	private ComponentClient componentClient;
+
+	@Inject
+	private ComponentGroupClient groupClient;
+
+	@Inject
+	@Config("components.client_timeout")
+	protected Duration sessionExpirationTimeout;
+
+	@Inject
+	@Config(value = "ws.eaasgw")
+	private String eaasGw;
+
 	private final Logger log = Logger.getLogger(this.getClass().getName());
 
 	private final Map<String, Session> sessions;
 
-
 	public SessionManager()
 	{
 		this.sessions = new ConcurrentHashMap<String, Session>();
+	}
+
+	public NetworkSession createNetworkSession(String switchId) throws BWFLAException {
+		final String id = UUID.randomUUID().toString();
+		NetworkSession session = new NetworkSession(id, groupClient.getComponentGroupPort(eaasGw).createGroup(), switchId);
+		register(session);
+		return session;
+	}
+
+	public Session createSession() throws BWFLAException {
+		final String id = UUID.randomUUID().toString();
+		Session session = new Session(id, groupClient.getComponentGroupPort(eaasGw).createGroup());
+		register(session);
+		return session;
 	}
 
 	/** Registers a new session */
@@ -62,28 +94,6 @@ public class SessionManager
 	{
 		sessions.remove(id);
 		log.info("Session '" + id + "' unregistered");
-	}
-
-	/** Adds new resources to an existing session */
-	public void add(String id, List<SessionResource> resources)
-	{
-		sessions.computeIfPresent(id, (key, session) -> {
-			session.resources().addAll(resources);
-			log.info("" + resources.size() + " resource(s) added to session '" + id + "'");
-			return session;
-		});
-	}
-
-	/** Removes resources from an existing session */
-	public void remove(String id, List<String> resids)
-	{
-		sessions.computeIfPresent(id, (unused, session) -> {
-			final Set<String> idsToRemove = new HashSet<String>(resids);
-			final List<SessionResource> resources = session.resources();
-			resources.removeIf((resource) -> idsToRemove.contains(resource.getId()));
-			log.info("" + resids.size() + " resource(s) removed from session '" + id + "'");
-			return session;
-		});
 	}
 
 	/** Returns session */
@@ -108,18 +118,32 @@ public class SessionManager
 		});
 	}
 
-	/** Runs keepalive calls for session's resources */
-	public void keepalive(Executor executor)
+	/** Runs internal keepalives calls for detached session's resources */
+	void update(ExecutorService executor)
 	{
 		final List<String> idsToRemove = new ArrayList<String>();
 		final long curtime = SessionManager.timems();
 		sessions.forEach((id, session) -> {
-			if (curtime > session.getExpirationTimestamp()) {
+			if(session.isFailed())
+			{
 				idsToRemove.add(id);
 				return;
 			}
-
-			executor.execute(new SessionKeepAliveTask(session, log));
+			if(session.isDetached()) {
+				if (session.getExpirationTimestamp() > 0 && curtime > session.getExpirationTimestamp()) {
+					idsToRemove.add(id);
+					return;
+				}
+				executor.execute(new SessionKeepAliveTask(session, log));
+			}
+			else
+			{
+				if (session.getLastUpdate() + (2L * sessionExpirationTimeout.toMillis()) < curtime)
+				{
+					idsToRemove.add(id);
+					return;
+				}
+			}
 		});
 
 		idsToRemove.forEach((id) -> {
@@ -128,14 +152,12 @@ public class SessionManager
 		});
 	}
 
-
 	public static long timems()
 	{
 		return System.currentTimeMillis();
 	}
 
-
-	private static class SessionKeepAliveTask implements Runnable
+	private class SessionKeepAliveTask implements Runnable
 	{
 		private final Session session;
 		private final Logger log;
@@ -149,32 +171,7 @@ public class SessionManager
 		@Override
 		public void run()
 		{
-			for (SessionResource resource : session.resources()) {
-				HttpURLConnection connection = null;
-				try {
-					final URL url = new URL(resource.getKeepaliveUrl());
-					connection = (HttpURLConnection) url.openConnection();
-					connection.setRequestMethod("POST");
-					connection.setUseCaches(false);
-					connection.connect();
-
-					final int code = connection.getResponseCode();
-					resource.setFailed(code != HttpURLConnection.HTTP_OK && code != HttpURLConnection.HTTP_NO_CONTENT);
-					if (resource.isFailed()) {
-						log.warning("Keepalive failed for '" + session.id() + "/" + resource.getId() + "'!");
-					}
-				}
-				catch (Exception error) {
-					final String message = "Performing keepalive for session's resource '"
-							+ session.id() + "/" + resource.getId() + "' failed!";
-
-					log.log(Level.WARNING, message, error);
-				}
-				finally {
-					if (connection != null)
-						connection.disconnect();
-				}
-			}
+			session.keepAlive(log);
 		}
 	}
 }

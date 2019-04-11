@@ -19,11 +19,11 @@
 
 package de.bwl.bwfla.emil;
 
-import de.bwl.bwfla.emil.datatypes.SessionLifetimeRequest;
-import de.bwl.bwfla.emil.datatypes.SessionRequest;
-import de.bwl.bwfla.emil.datatypes.CreateSessionResponse;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
-import de.bwl.bwfla.emil.datatypes.SessionResource;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.eaas.client.ComponentGroupClient;
+import de.bwl.bwfla.emil.datatypes.*;
+import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
@@ -32,21 +32,14 @@ import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.time.Duration;
-import java.util.Collection;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 
@@ -65,23 +58,32 @@ public class Sessions
 	private ExecutorService executor;
 
 	@Inject
+	private ComponentClient componentClient;
+
+	@Inject
+	private ComponentGroupClient groupClient;
+
+	@Inject
+	@Config(value = "ws.eaasgw")
+	private String eaasGw;
+
+	@Inject
 	@Config("components.timeout")
 	private Duration resourceExpirationTimeout;
 
-
 	/* ========================= Public API ========================= */
 
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public CreateSessionResponse create(SessionRequest request, @Context final HttpServletResponse response)
-	{
-		final String id = UUID.randomUUID().toString();
-		sessions.register(new Session(id, request.getResources()));
-		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit());
-		response.setStatus(Response.Status.CREATED.getStatusCode());
-		return new CreateSessionResponse(id);
-	}
+//	@POST
+//	@Consumes(MediaType.APPLICATION_JSON)
+//	@Produces(MediaType.APPLICATION_JSON)
+//	public CreateSessionResponse create(SessionRequest request, @Context final HttpServletResponse response)
+//	{
+//		final String id = UUID.randomUUID().toString();
+//		sessions.register(new Session(id, request.getResources()));
+//		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit());
+//		response.setStatus(Response.Status.CREATED.getStatusCode());
+//		return new CreateSessionResponse(id);
+//	}
 
 	@DELETE
 	@Path("/{id}")
@@ -91,46 +93,65 @@ public class Sessions
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
+//	@POST
+//	@Consumes(MediaType.APPLICATION_JSON)
+//	@Path("/{id}/resources")
+//	public void addResources(@PathParam("id") String id, SessionRequest request, @Context final HttpServletResponse response)
+//	{
+//		sessions.add(id, request.getResources());
+//		response.setStatus(Response.Status.OK.getStatusCode());
+//	}
+//
+//	@DELETE
+//	@Consumes(MediaType.APPLICATION_JSON)
+//	@Path("/{id}/resources")
+//	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
+//	{
+//		sessions.remove(id, resources);
+//		response.setStatus(Response.Status.OK.getStatusCode());
+//	}
+
+//	@GET
+//	@Produces(MediaType.APPLICATION_JSON)
+//	@Path("/{id}/resources")
+//	public Collection<String> getResources(@PathParam("id") String id)
+//	{
+//		final Session session = sessions.get(id);
+//		if (session == null) {
+//			throw new NotFoundException(Response.status(Response.Status.NOT_FOUND)
+//					.entity(new ErrorInformation("Session not found!", "Session-ID: " + id))
+//					.build());
+//		}
+//
+//		try {
+//			return groupClient.getComponentGroupPort(eaasGw).list(session.resources());
+//		} catch (BWFLAException e) {
+//			throw new NotFoundException(Response.status(Response.Status.NOT_FOUND)
+//					.entity(new ErrorInformation("Session has no valid group", "Session-ID: " + id))
+//					.build());
+//		}
+//	}
+
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("/{id}/resources")
-	public void addResources(@PathParam("id") String id, SessionRequest request, @Context final HttpServletResponse response)
+	@Path("/{id}/detach")
+	public void setLifetime(@PathParam("id") String id, SessionLifetimeRequest request, @Context final HttpServletResponse response)
 	{
-		sessions.add(id, request.getResources());
+		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit());
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
-	@DELETE
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("/{id}/resources")
-	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
-	{
-		sessions.remove(id, resources);
-		response.setStatus(Response.Status.OK.getStatusCode());
-	}
-
-	@GET
-	@Produces(MediaType.APPLICATION_JSON)
-	@Path("/{id}/resources")
-	public Collection<SessionResource> getResources(@PathParam("id") String id)
-	{
+	@POST
+	@Secured
+	@Path("/{id}/keepalive")
+	public void keepalive(@PathParam("id") String id) {
 		final Session session = sessions.get(id);
 		if (session == null) {
 			throw new NotFoundException(Response.status(Response.Status.NOT_FOUND)
 					.entity(new ErrorInformation("Session not found!", "Session-ID: " + id))
 					.build());
 		}
-
-		return session.resources();
-	}
-
-	@POST
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Path("/{id}/lifetime")
-	public void setLifetime(@PathParam("id") String id, SessionLifetimeRequest request, @Context final HttpServletResponse response)
-	{
-		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit());
-		response.setStatus(Response.Status.OK.getStatusCode());
+		session.keepAlive(null);
 	}
 
 	@GET
@@ -146,7 +167,7 @@ public class Sessions
 	@PostConstruct
 	private void initialize()
 	{
-		final Runnable trigger = () -> executor.execute(() -> sessions.keepalive(executor));
+		final Runnable trigger = () -> executor.execute(() -> sessions.update(executor));
 		final long delay = resourceExpirationTimeout.toMillis() / 2L;
 		scheduler.scheduleWithFixedDelay(trigger, delay, delay, TimeUnit.MILLISECONDS);
 	}

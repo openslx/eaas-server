@@ -19,27 +19,62 @@
 
 package de.bwl.bwfla.emil;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.SessionResource;
+import de.bwl.bwfla.emucomp.client.ComponentClient;
+import org.apache.tamaya.inject.api.Config;
 
+import javax.inject.Inject;
 import java.util.List;
+import java.util.logging.Logger;
 
 
-public class Session
-{
+public class Session {
 	private final String id;
-	private final List<SessionResource> resources;
-	private long expirationTimestamp;
+	private final String groupId;
+	private long expirationTimestamp = 0;
+	private boolean detached = false;
+	private boolean failed = false;
+	private long lastUpdate;
 
-	public Session(String id, List<SessionResource> resources)
-	{
-		this(id, resources, Long.MAX_VALUE);
+	@Inject
+	private ComponentClient componentClient;
+
+	@Inject
+	private ComponentGroupClient groupClient;
+
+	@Inject
+	@Config(value = "ws.eaasgw")
+	private String eaasGw;
+
+	Session(String id, String groupId) {
+		this.groupId = groupId;
+		this.id = id;
 	}
 
-	public Session(String id, List<SessionResource> resources, long expirationTimestamp)
+	public void addComponent(String componentId) throws BWFLAException {
+		groupClient.getComponentGroupPort(eaasGw).add(groupId, componentId);
+	}
+
+	public void removeComponent(String componentId) throws BWFLAException {
+		groupClient.getComponentGroupPort(eaasGw).remove(groupId, componentId);
+	}
+
+	public List<String> getComponents() throws BWFLAException {
+		return groupClient.getComponentGroupPort(eaasGw).list(groupId);
+	}
+
+	public void keepAlive(Logger log)
 	{
-		this.id = id;
-		this.resources = resources;
-		this.expirationTimestamp = expirationTimestamp;
+		try {
+			groupClient.getComponentGroupPort(eaasGw).keepalive(groupId);
+			lastUpdate = System.currentTimeMillis();
+		} catch (BWFLAException e) {
+			failed = true;
+			if(log != null)
+				log.severe("keepalive failed for group " + groupId + " setting status to failed");
+		}
 	}
 
 	public String id()
@@ -47,9 +82,9 @@ public class Session
 		return id;
 	}
 
-	public List<SessionResource> resources()
+	public String resources()
 	{
-		return resources;
+		return groupId;
 	}
 
 	public long getExpirationTimestamp()
@@ -60,5 +95,18 @@ public class Session
 	public void setExpirationTimestamp(long timestamp)
 	{
 		this.expirationTimestamp = timestamp;
+		detached = true;
+	}
+
+	public boolean isDetached() {
+		return detached;
+	}
+
+	public boolean isFailed() {
+		return failed;
+	}
+
+	public long getLastUpdate() {
+		return lastUpdate;
 	}
 }

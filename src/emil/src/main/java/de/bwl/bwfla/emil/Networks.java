@@ -68,9 +68,9 @@ public class Networks {
     
     @Inject
     private ComponentClient componentClient;
-    
+
     @Inject
-    private ComponentGroupClient groupClient;
+    private SessionManager sessions = null;
 
     @Inject
     @Config(value = "ws.eaasgw")
@@ -90,22 +90,19 @@ public class Networks {
 
         NetworkResponse networkResponse = null;
         try {
-            // create new empty group
-            String groupId = groupClient.getComponentGroupPort(eaasGw).createGroup();
-            networkResponse = new NetworkResponse(groupId);
-
             // a switch comes included with every network group
             NetworkSwitchConfiguration switchConfig = new NetworkSwitchConfiguration();
             String switchId = eaasClient.getEaasWSPort(eaasGw).createSession(switchConfig.value(false));
-    
-            groupClient.getComponentGroupPort(eaasGw).add(groupId, switchId);
+
+            Session session = sessions.createNetworkSession(switchId);
+            networkResponse = new NetworkResponse(session.id());
 
             String nodeTcpId = null;
             if (network.hasInternet()) {
                 VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
                 String slirpMac = slirpConfig.getHwAddress();
                 String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
-                groupClient.getComponentGroupPort(eaasGw).add(groupId, slirpId);
+                session.addComponent(slirpId);
 
                 Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(slirpId));
                 String slirpUrl = controlUrls.get("ws+ethernet+" + slirpMac).toString();
@@ -137,7 +134,7 @@ public class Networks {
                 }
 
                 nodeTcpId = eaasClient.getEaasWSPort(eaasGw).createSession(nodeConfig.value(false));
-                groupClient.getComponentGroupPort(eaasGw).add(groupId, nodeTcpId);
+                session.addComponent(nodeTcpId);
 
                 Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(nodeTcpId));
                 String nodeTcpUrl = controlUrls.get("ws+ethernet+" + nodeConfig.getHwAddress()).toString();
@@ -150,7 +147,7 @@ public class Networks {
 
             // add all the other components
             for (NetworkRequest.ComponentSpec component : network.getComponents()) {
-                this.addComponent(groupId, switchId, component);
+                this.addComponent(session, switchId, component);
             }
             
             response.setStatus(Response.Status.CREATED.getStatusCode());
@@ -165,11 +162,15 @@ public class Networks {
     @POST
     @Secured
     @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/{groupId}/components")
-    public void addComponent(@PathParam("groupId") String groupId, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
+    @Path("/{id}/components")
+    public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
         try {
-            final String switchId = this.findSwitchId(groupId);
-            this.addComponent(groupId, switchId, component);
+            Session session = sessions.get(id);
+            if(session == null || !(session instanceof NetworkSession))
+                throw new BWFLAException("session not found " + id);
+
+            final String switchId = ((NetworkSession) session).getSwitchId();
+            this.addComponent(session, switchId, component);
         }
         catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -183,11 +184,15 @@ public class Networks {
     @POST
     @Secured
     @Consumes(MediaType.APPLICATION_JSON)
-    @Path("/{groupId}/addComponentToSwitch")
-    public void addComponentToSwitch(@PathParam("groupId") String groupId, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
+    @Path("/{id}/addComponentToSwitch")
+    public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
         try {
-            final String switchId = this.findSwitchId(groupId);
-            this.addComponent(groupId, switchId, component, false);
+            Session session = sessions.get(id);
+            if(session == null || !(session instanceof NetworkSession))
+                throw new BWFLAException("session not found " + id);
+
+            final String switchId = ((NetworkSession) session).getSwitchId();
+            this.addComponent(session, switchId, component, false);
         }
         catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -200,11 +205,15 @@ public class Networks {
 
     @DELETE
     @Secured
-    @Path("/{groupId}/components/{componentId}")
-    public void removeComponent(@PathParam("groupId") String groupId, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
+    @Path("/{id}/components/{componentId}")
+    public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
         try {
-            final String switchId = this.findSwitchId(groupId);
-            this.removeComponent(groupId, switchId, componentId);
+            Session session = sessions.get(id);
+            if(session == null || !(session instanceof NetworkSession))
+                throw new BWFLAException("session not found " + id);
+
+            final String switchId = ((NetworkSession) session).getSwitchId();
+            this.removeComponent(session, switchId, componentId);
         }
         catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -217,30 +226,38 @@ public class Networks {
 
     @GET
     @Secured
-    @Path("/{groupId}/wsConnection")
-    public String wsConnection(@PathParam("groupId") String groupId)
+    @Path("/{id}/wsConnection")
+    public String wsConnection(@PathParam("id") String id)
     {
         try {
-            String switchId = findSwitchId(groupId);
+            Session session = sessions.get(id);
+            if(session == null || !(session instanceof NetworkSession))
+                throw new BWFLAException("session not found " + id);
+
+            final String switchId = ((NetworkSession) session).getSwitchId();
             return componentClient.getNetworkSwitchPort(eaasGw).wsConnect(switchId);
         } catch (BWFLAException e) {
             e.printStackTrace();
             throw new ServerErrorException(Response
                     .status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ErrorInformation(
-                            "Could not find switch for group: " + groupId , e.getMessage()))
+                            "Could not find switch for session: " + id , e.getMessage()))
                     .build());
         }
     }
 
     @GET
     @Secured
-    @Path("/{groupId}")
-    public Collection<GroupComponent> listComponents(@PathParam("groupId") String groupId) {
+    @Path("/{id}")
+    public Collection<GroupComponent> listComponents(@PathParam("id") String id) {
         try {
             Collection<GroupComponent> result = new HashSet<GroupComponent>();
-            
-            List<String> components = groupClient.getComponentGroupPort(eaasGw).list(groupId);
+
+            Session session = sessions.get(id);
+            if(session == null || !(session instanceof NetworkSession))
+                throw new BWFLAException("session not found " + id);
+
+            List<String> components = session.getComponents();
             for (String componentId : components) {
                 String type = componentClient.getComponentPort(eaasGw).getComponentType(componentId);
                 
@@ -263,44 +280,19 @@ public class Networks {
                     .build());
         }
     }
-    
-    @POST
-    @Secured
-    @Path("/{groupId}/keepalive")
-    public void keepalive(@PathParam("groupId") String groupId) {
-        try {
-            groupClient.getComponentGroupPort(eaasGw).keepalive(groupId);
-            return;
-        } catch (BWFLAException e) {
-            throw new NotFoundException(Response
-                    .status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorInformation(
-                            "Could not send keepalive request.", e.getMessage()))
-                    .build());
-        }
-    }
-
 
     @GET
     @Secured
     @Produces(MediaType.APPLICATION_JSON)
     public Collection<String> getAllGroupIds() {
-        try {
-            return groupClient.getComponentGroupPort(eaasGw).listGroupIds();
-        } catch (BWFLAException e) {
-            throw new NotFoundException(Response
-                    .status(Response.Status.NOT_FOUND)
-                    .entity(new ErrorInformation(
-                            "Could not send keepalive request.", e.getMessage()))
-                    .build());
-        }
+            return sessions.list();
     }
 
-    private void addComponent(String groupId, String switchId, NetworkRequest.ComponentSpec component) {
-        addComponent(groupId, switchId, component, true);
+    private void addComponent(Session session, String switchId, NetworkRequest.ComponentSpec component) {
+        addComponent(session, switchId, component, true);
     }
 
-    private void addComponent(String groupId, String switchId, NetworkRequest.ComponentSpec component, boolean addToGroup) {
+    private void addComponent(Session session, String switchId, NetworkRequest.ComponentSpec component, boolean addToGroup) {
         try {
 
             final Map<String, URI> map = this.getControlUrls(component.getComponentId());
@@ -324,7 +316,7 @@ public class Networks {
             componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, uri.toString());
 
             if (addToGroup)
-                groupClient.getComponentGroupPort(eaasGw).add(groupId, component.getComponentId());
+                session.addComponent(component.getComponentId());
 
         } catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -333,7 +325,7 @@ public class Networks {
         }
     }
 
-    private void removeComponent(String groupId, String switchId, String componentId) {
+    private void removeComponent(Session session, String switchId, String componentId) {
         try {
             final Map<String, URI> map = this.getControlUrls(componentId);
             final String ethurl = map.entrySet().stream()
@@ -347,25 +339,13 @@ public class Networks {
                     .getValue().toString();
 
             componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethurl);
-            groupClient.getComponentGroupPort(eaasGw).remove(groupId, componentId);
+            session.removeComponent(componentId);
         }
         catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ErrorInformation("Could not acquire group information.", error.getMessage()))
                     .build());
         }
-    }
-
-    private String findSwitchId(String groupId) throws BWFLAException {
-        final ComponentGroup group = groupClient.getComponentGroupPort(eaasGw);
-        final Component component = componentClient.getComponentPort(eaasGw);
-        for (String cid : group.list(groupId)) {
-            final String type = component.getComponentType(cid);
-            if (type.contentEquals("switch"))
-                return cid;
-        }
-
-        throw new BWFLAException("No network-switch found in component group '" + groupId + "'!");
     }
 
     private Map<String, URI> getControlUrls(String componentId) throws BWFLAException {
