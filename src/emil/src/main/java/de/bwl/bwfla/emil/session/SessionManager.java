@@ -129,6 +129,10 @@ public class SessionManager
 	public void setLifetime(String id, long lifetime, TimeUnit unit)
 	{
 		sessions.computeIfPresent(id, (unused, session) -> {
+			if (lifetime == -1) {
+				session.setExpirationTimestamp(-1);
+				return session;
+			}
 			final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
 			session.setExpirationTimestamp(timestamp);
 			return session;
