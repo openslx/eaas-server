@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.session;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
@@ -38,43 +38,9 @@ public class Session {
 	private boolean failed = false;
 	private long lastUpdate;
 
-	@Inject
-	private ComponentClient componentClient;
-
-	@Inject
-	private ComponentGroupClient groupClient;
-
-	@Inject
-	@Config(value = "ws.eaasgw")
-	private String eaasGw;
-
 	Session(String id, String groupId) {
 		this.groupId = groupId;
 		this.id = id;
-	}
-
-	public void addComponent(String componentId) throws BWFLAException {
-		groupClient.getComponentGroupPort(eaasGw).add(groupId, componentId);
-	}
-
-	public void removeComponent(String componentId) throws BWFLAException {
-		groupClient.getComponentGroupPort(eaasGw).remove(groupId, componentId);
-	}
-
-	public List<String> getComponents() throws BWFLAException {
-		return groupClient.getComponentGroupPort(eaasGw).list(groupId);
-	}
-
-	public void keepAlive(Logger log)
-	{
-		try {
-			groupClient.getComponentGroupPort(eaasGw).keepalive(groupId);
-			lastUpdate = System.currentTimeMillis();
-		} catch (BWFLAException e) {
-			failed = true;
-			if(log != null)
-				log.severe("keepalive failed for group " + groupId + " setting status to failed");
-		}
 	}
 
 	public String id()
@@ -82,9 +48,19 @@ public class Session {
 		return id;
 	}
 
-	public String resources()
+	String groupId()
 	{
 		return groupId;
+	}
+
+	void setFailed()
+	{
+		failed = true;
+	}
+
+	void update()
+	{
+		lastUpdate = System.currentTimeMillis();
 	}
 
 	public long getExpirationTimestamp()

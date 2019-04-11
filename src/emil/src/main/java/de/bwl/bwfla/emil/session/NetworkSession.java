@@ -1,6 +1,7 @@
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.session;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emil.session.Session;
 
 public class NetworkSession extends Session {
 
@@ -9,7 +10,6 @@ public class NetworkSession extends Session {
     NetworkSession(String id, String groupId, String switchId) throws BWFLAException {
         super(id, groupId);
         this.switchId = switchId;
-        addComponent(switchId);
     }
 
     public String getSwitchId() {

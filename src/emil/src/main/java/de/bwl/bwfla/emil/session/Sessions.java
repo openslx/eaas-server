@@ -17,9 +17,8 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.session;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
@@ -36,8 +35,6 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.net.URI;
-import java.net.URISyntaxException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -151,7 +148,7 @@ public class Sessions
 					.entity(new ErrorInformation("Session not found!", "Session-ID: " + id))
 					.build());
 		}
-		session.keepAlive(null);
+		sessions.keepAlive(session, null);
 	}
 
 	@GET

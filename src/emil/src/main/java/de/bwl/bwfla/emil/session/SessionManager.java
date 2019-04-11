@@ -17,28 +17,20 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.session;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
-import de.bwl.bwfla.emil.datatypes.SessionResource;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
-import sun.nio.ch.Net;
 
-import javax.annotation.Resource;
-import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -71,6 +63,7 @@ public class SessionManager
 	public NetworkSession createNetworkSession(String switchId) throws BWFLAException {
 		final String id = UUID.randomUUID().toString();
 		NetworkSession session = new NetworkSession(id, groupClient.getComponentGroupPort(eaasGw).createGroup(), switchId);
+		addComponent(session, switchId);
 		register(session);
 		return session;
 	}
@@ -80,6 +73,30 @@ public class SessionManager
 		Session session = new Session(id, groupClient.getComponentGroupPort(eaasGw).createGroup());
 		register(session);
 		return session;
+	}
+
+	public void addComponent(Session session, String componentId) throws BWFLAException {
+		groupClient.getComponentGroupPort(eaasGw).add(session.groupId(), componentId);
+	}
+
+	public void removeComponent(Session session, String componentId) throws BWFLAException {
+		groupClient.getComponentGroupPort(eaasGw).remove(session.groupId(), componentId);
+	}
+
+	public List<String> getComponents(Session session) throws BWFLAException {
+		return groupClient.getComponentGroupPort(eaasGw).list(session.groupId());
+	}
+
+	public void keepAlive(Session session, Logger log)
+	{
+		try {
+			groupClient.getComponentGroupPort(eaasGw).keepalive(session.groupId());
+			session.update();
+		} catch (BWFLAException e) {
+			session.setFailed();
+			if(log != null)
+				log.severe("keepalive failed for group " + session.groupId() + " setting status to failed");
+		}
 	}
 
 	/** Registers a new session */
@@ -171,7 +188,7 @@ public class SessionManager
 		@Override
 		public void run()
 		{
-			session.keepAlive(log);
+			keepAlive(session, log);
 		}
 	}
 }
