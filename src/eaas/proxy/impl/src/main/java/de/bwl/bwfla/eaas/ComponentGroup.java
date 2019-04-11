@@ -101,6 +101,7 @@ public class ComponentGroup {
             try {
                 component.keepalive(componentId);
             } catch(Throwable t) {
+                components.remove(componentId);
                 log.log(Level.WARNING, "Could not send keepalive to a component.", t);
                 e = new BWFLAException("At least one keepalive could not be sent to the component: " + e.getMessage(), e);
             }

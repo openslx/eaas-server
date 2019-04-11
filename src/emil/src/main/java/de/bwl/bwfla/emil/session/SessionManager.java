@@ -145,11 +145,11 @@ public class SessionManager
 		final List<String> idsToRemove = new ArrayList<String>();
 		final long curtime = SessionManager.timems();
 		sessions.forEach((id, session) -> {
-			if(session.isFailed())
-			{
-				idsToRemove.add(id);
-				return;
-			}
+//			if(session.isFailed())
+//			{
+//				idsToRemove.add(id);
+//				return;
+//			}
 			if(session.isDetached()) {
 				if (session.getExpirationTimestamp() > 0 && curtime > session.getExpirationTimestamp()) {
 					idsToRemove.add(id);
