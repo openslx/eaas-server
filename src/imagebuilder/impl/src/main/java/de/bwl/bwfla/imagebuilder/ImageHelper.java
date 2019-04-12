@@ -118,12 +118,14 @@ class ImageHelper {
 			int ret = process.waitUntilFinished();
 			process.printStdOut();
 			process.printStdErr();
-			process.cleanup();
 			if (ret != 0)
 				throw new BWFLAException("Running untar failed!");
 		}
 		catch (IOException error) {
 			throw new BWFLAException("Extracting tar archive failed!", error);
+		}
+		finally {
+			process.cleanup();
 		}
 	}
 
