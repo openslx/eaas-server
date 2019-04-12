@@ -660,7 +660,7 @@ public class EmulatorUtils {
 				}
 
 				try {
-					Thread.sleep(500L);
+					Thread.sleep(1000L);
 				}
 				catch (Exception error) {
 					// Ignore it!
