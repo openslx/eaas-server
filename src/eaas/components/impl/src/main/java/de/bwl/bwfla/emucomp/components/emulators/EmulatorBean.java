@@ -589,8 +589,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isLocalModeEnabled())
 			LOG.info("Local-mode enabled. Emulator will be started locally!");
 
-		LOG.info("initializing fake clock");
-		emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
+		// LOG.info("initializing fake clock");
+		// emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
 		if (this.isXpraBackendEnabled()) {
 			// TODO: implement this, if needed!
 			if (!this.isContainerModeEnabled())
