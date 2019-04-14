@@ -757,6 +757,17 @@ public class Components {
     }
 
 
+    public boolean keepalive(String componentId, boolean ignoreMissing) throws BWFLAException {
+        ComponentSession session = sessions.get(componentId);
+        if(session == null) {
+            if(!ignoreMissing)
+                LOG.info("Component Session null! Should throw instead. " + componentId);
+            return false;
+        }
+
+        session.keepalive();
+        return true;
+    }
 
     /**
      * Sends a keepalive request to the component. Keepalives have to be sent
@@ -774,14 +785,9 @@ public class Components {
     @Secured
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
-        ComponentSession session = sessions.get(componentId);
-        if(session == null) {
-            LOG.info("Component Session null! Should throw instead. " + componentId);
-            return;
-        }
 
         try {
-            session.keepalive();
+            keepalive(componentId, false);
         }
         catch (BWFLAException error) {
             throw new NotFoundException(Response

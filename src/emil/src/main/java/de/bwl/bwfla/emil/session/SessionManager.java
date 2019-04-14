@@ -97,7 +97,8 @@ public class SessionManager
 			List<String> componentList = getComponents(session);
 			for(String c : componentList)
 			{
-				components.keepalive(c);
+				if(!components.keepalive(c, true))
+					componentClient.getComponentPort(eaasGw).keepalive(c);
 			}
 			session.update();
 		} catch (BWFLAException e) {

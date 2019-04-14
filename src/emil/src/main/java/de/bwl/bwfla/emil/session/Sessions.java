@@ -65,7 +65,7 @@ public class Sessions
 	private String eaasGw;
 
 	@Inject
-	@Config("components.timeout")
+	@Config("components.client_timeout")
 	private Duration resourceExpirationTimeout;
 
 	/* ========================= Public API ========================= */
