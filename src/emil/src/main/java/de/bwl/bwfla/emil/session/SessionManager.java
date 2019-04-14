@@ -21,6 +21,7 @@ package de.bwl.bwfla.emil.session;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
+import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
@@ -42,6 +43,9 @@ public class SessionManager
 
 	@Inject
 	private ComponentGroupClient groupClient;
+
+	@Inject
+	private Components components;
 
 	@Inject
 	@Config("components.client_timeout")
@@ -90,7 +94,11 @@ public class SessionManager
 	public void keepAlive(Session session, Logger log)
 	{
 		try {
-			groupClient.getComponentGroupPort(eaasGw).keepalive(session.groupId());
+			List<String> componentList = getComponents(session);
+			for(String c : componentList)
+			{
+				components.keepalive(c);
+			}
 			session.update();
 		} catch (BWFLAException e) {
 			session.setFailed();
