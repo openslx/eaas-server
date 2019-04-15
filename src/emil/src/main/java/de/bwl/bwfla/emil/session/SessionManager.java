@@ -133,7 +133,7 @@ public class SessionManager
 	/** Returns a list of all session IDs */
 	public Collection<Session> list()
 	{
-		return sessions.entrySet().stream().map(e -> e.getValue()).collect(Collectors.toList());
+		return sessions.entrySet().stream().map(e -> e.getValue()).filter(s -> s.isDetached()).collect(Collectors.toList());
 	}
 
 	/** Updates session's lifetime */
