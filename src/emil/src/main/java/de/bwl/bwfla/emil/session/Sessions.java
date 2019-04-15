@@ -22,6 +22,7 @@ package de.bwl.bwfla.emil.session;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.session.rest.DetachRequest;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
@@ -131,10 +132,11 @@ public class Sessions
 
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
 	@Path("/{id}/detach")
-	public void setLifetime(@PathParam("id") String id, SessionLifetimeRequest request, @Context final HttpServletResponse response)
+	public void setLifetime(@PathParam("id") String id, DetachRequest request, @Context final HttpServletResponse response)
 	{
-		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit());
+		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit(), request.getSessionName());
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
@@ -153,11 +155,10 @@ public class Sessions
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Collection<String> list()
+	public Collection<Session> list()
 	{
 		return sessions.list();
 	}
-
 
 	/* ========================= Internal Helpers ========================= */
 

@@ -104,6 +104,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	public String libfaketime;
 
 	@Inject
+	@Config("components.emulator_containers.snapshot")
+	public boolean isSnapshotEnabled = false;
+
+	@Inject
 	@Config("emucomp.blobstore_soap")
 	private String blobStoreAddressSoap = null;
 	@Inject
@@ -589,8 +593,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isLocalModeEnabled())
 			LOG.info("Local-mode enabled. Emulator will be started locally!");
 
-		LOG.info("initializing fake clock");
-		emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
+		if(isSnapshotEnabled) {
+			LOG.info("initializing fake clock");
+			emuRunner.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_clock_gettime.so");
+		}
 		if (this.isXpraBackendEnabled()) {
 			// TODO: implement this, if needed!
 			if (!this.isContainerModeEnabled())

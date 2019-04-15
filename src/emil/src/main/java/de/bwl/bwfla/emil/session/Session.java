@@ -20,23 +20,32 @@
 package de.bwl.bwfla.emil.session;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.SessionResource;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.inject.Inject;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 import java.util.List;
 import java.util.logging.Logger;
 
-
-public class Session {
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.NONE)
+public class Session extends JaxbType {
 	private final String id;
 	private final String groupId;
 	private long expirationTimestamp = 0;
 	private boolean detached = false;
 	private boolean failed = false;
 	private long lastUpdate;
+
+	@XmlElement
+	private String name;
 
 	Session(String id, String groupId) {
 		this.groupId = groupId;
@@ -63,12 +72,12 @@ public class Session {
 		lastUpdate = System.currentTimeMillis();
 	}
 
-	public long getExpirationTimestamp()
+	long getExpirationTimestamp()
 	{
 		return expirationTimestamp;
 	}
 
-	public void setExpirationTimestamp(long timestamp)
+	void setExpirationTimestamp(long timestamp)
 	{
 		this.expirationTimestamp = timestamp;
 		detached = true;
@@ -82,7 +91,16 @@ public class Session {
 		return failed;
 	}
 
-	public long getLastUpdate() {
+	long getLastUpdate() {
 		return lastUpdate;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public String getName()
+	{
+		return name;
 	}
 }

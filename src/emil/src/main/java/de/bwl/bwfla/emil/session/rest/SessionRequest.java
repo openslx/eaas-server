@@ -17,9 +17,9 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil.datatypes;
+package de.bwl.bwfla.emil.session.rest;
 
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.emil.datatypes.SessionResource;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -30,7 +30,7 @@ import java.util.List;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class SessionRequest extends SessionLifetimeRequest
+public class SessionRequest extends DetachRequest
 {
 	@XmlElement(required = true)
 	private List<SessionResource> resources;

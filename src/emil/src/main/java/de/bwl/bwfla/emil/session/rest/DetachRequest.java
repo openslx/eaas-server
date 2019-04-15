@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil.datatypes;
+package de.bwl.bwfla.emil.session.rest;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
@@ -30,13 +30,15 @@ import java.util.concurrent.TimeUnit;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class SessionLifetimeRequest extends JaxbType
+public class DetachRequest extends JaxbType
 {
 	@XmlElement(required = true)
 	private long lifetime;
 
 	private TimeUnit unit;
 
+	@XmlElement
+	private String sessionName;
 
 	public long getLifetime()
 	{
@@ -75,5 +77,13 @@ public class SessionLifetimeRequest extends JaxbType
 			default:
 				throw new IllegalArgumentException("Unsupported time unit: " + unitstr);
 		}
+	}
+
+	public String getSessionName() {
+		return sessionName;
+	}
+
+	public void setSessionName(String sessionName) {
+		this.sessionName = sessionName;
 	}
 }

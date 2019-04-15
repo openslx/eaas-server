@@ -37,6 +37,7 @@ components:
 
     emulator_containers:
         enabled: false
+        snapshot: false
         uid: 1000
         gid: 1000
 

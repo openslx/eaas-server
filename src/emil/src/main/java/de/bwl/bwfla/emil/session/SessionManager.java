@@ -33,6 +33,8 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
+import java.util.stream.Collector;
+import java.util.stream.Collectors;
 
 
 @ApplicationScoped
@@ -129,13 +131,13 @@ public class SessionManager
 	}
 
 	/** Returns a list of all session IDs */
-	public Collection<String> list()
+	public Collection<Session> list()
 	{
-		return sessions.keySet();
+		return sessions.entrySet().stream().map(e -> e.getValue()).collect(Collectors.toList());
 	}
 
 	/** Updates session's lifetime */
-	public void setLifetime(String id, long lifetime, TimeUnit unit)
+	public void setLifetime(String id, long lifetime, TimeUnit unit, String name)
 	{
 		sessions.computeIfPresent(id, (unused, session) -> {
 			if (lifetime == -1) {
@@ -144,6 +146,7 @@ public class SessionManager
 			}
 			final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
 			session.setExpirationTimestamp(timestamp);
+			session.setName(name);
 			return session;
 		});
 	}
