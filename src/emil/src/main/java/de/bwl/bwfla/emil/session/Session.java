@@ -37,7 +37,9 @@ import java.util.logging.Logger;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class Session extends JaxbType {
+	@XmlElement
 	private final String id;
+
 	private final String groupId;
 	private long expirationTimestamp = 0;
 	private boolean detached = false;
