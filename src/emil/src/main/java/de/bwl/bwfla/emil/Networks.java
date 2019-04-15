@@ -280,6 +280,13 @@ public class Networks {
         }
     }
 
+    @GET
+    @Secured
+    @Produces(MediaType.APPLICATION_JSON)
+    public Collection<Session> getAllGroupIds() {
+            return sessions.list();
+    }
+
     private void addComponent(Session session, String switchId, NetworkRequest.ComponentSpec component) {
         addComponent(session, switchId, component, true);
     }
