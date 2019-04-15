@@ -52,6 +52,8 @@ public class MachineProxy implements Machine
 
     protected Machine getMachine(String componentId) throws BWFLAException {
     	final SessionRegistry.Entry session = sessions.lookup(componentId);
+    	if(session == null)
+    		throw new BWFLAException("session for component id " + componentId + " not found.");
 		final ResourceHandle resource = session.getResourceHandle();
         return componentClient.getMachinePort(resource.getNodeID());
     }
@@ -67,10 +69,6 @@ public class MachineProxy implements Machine
     {
         getMachine(componentId).stop(componentId);
     }
-
-
-
-
 
 	@Override
 	public int changeMedium(String componentId, int arg1, String arg2) throws BWFLAException
