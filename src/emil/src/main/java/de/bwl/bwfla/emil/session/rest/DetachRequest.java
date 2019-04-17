@@ -37,6 +37,28 @@ public class DetachRequest extends JaxbType
 
 	private TimeUnit unit;
 
+	@XmlElement(required = false)
+	private ComponentTitleCreator componentTitle;
+
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class ComponentTitleCreator extends JaxbType
+	{
+		@XmlElement(required = true, name = "componentName")
+		private String componentName;
+		@XmlElement(required = true, name = "componentId")
+		private String componentId;
+
+		public String getComponentName() {
+			return componentName;
+		}
+
+		public String getComponentId() {
+			return componentId;
+		}
+	}
+
+
 	@XmlElement
 	private String sessionName;
 
@@ -79,8 +101,19 @@ public class DetachRequest extends JaxbType
 		}
 	}
 
+
+
+
 	public String getSessionName() {
 		return sessionName;
+	}
+
+	public ComponentTitleCreator getComponentTitle() {
+		return componentTitle;
+	}
+
+	public void setComponentTitle(ComponentTitleCreator componentTitle) {
+		this.componentTitle = componentTitle;
 	}
 
 	public void setSessionName(String sessionName) {

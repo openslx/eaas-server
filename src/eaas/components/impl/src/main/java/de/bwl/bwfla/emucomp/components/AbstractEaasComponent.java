@@ -37,6 +37,7 @@ import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 public abstract class AbstractEaasComponent implements ClusterComponent
 {
 	private String componentID;
+	private String detachedTitle;
 	
 	protected ComponentState state = ComponentState.OK;
 	private BWFLAException asyncError = null;
@@ -107,7 +108,15 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 	protected void addControlConnector(IConnector connector) {
 	    this.controlConnectors.put(connector.getProtocol(), connector);
 	}
-	
+
+	public String getDetachedTitle() {
+		return detachedTitle;
+	}
+
+	public void setDetachedTitle(String detachedTitle) {
+		this.detachedTitle = detachedTitle;
+	}
+
 	public IConnector getControlConnector(String protocol) {
 	    return controlConnectors.get(protocol);
 	}

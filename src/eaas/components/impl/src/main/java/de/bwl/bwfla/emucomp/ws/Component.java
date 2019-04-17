@@ -76,6 +76,7 @@ public class Component
     @WebMethod
     public String getComponentType(String id) throws BWFLAException {
         final AbstractEaasComponent component = nodeManager.getComponentById(id, AbstractEaasComponent.class);
+
         return component.getComponentType();
     }
     

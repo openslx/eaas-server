@@ -41,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBException;
 
+import de.bwl.bwfla.api.emucomp.GetControlUrlsResponse;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.session.NetworkSession;
@@ -259,9 +260,25 @@ public class Networks {
             List<String> components = sessions.getComponents(session);
             for (String componentId : components) {
                 String type = componentClient.getComponentPort(eaasGw).getComponentType(componentId);
+
+
                 
                 try {
-                    result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId)));
+                    if(type.equals("nodetcp")) {
+                        System.out.println("!!!!!!!! nodetcp");
+                        NetworkResponse networkResponse = new NetworkResponse(session.id());
+
+                        Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentId));
+
+                        String nodeInfoUrl = controlUrls.get("info").toString();
+                        result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId),
+                                networkResponse ));
+                        networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
+                        result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId),
+                                networkResponse ));
+
+                    } else
+                        result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId)));
                 } catch (URISyntaxException e) {
                     throw new ServerErrorException(Response
                             .status(Response.Status.INTERNAL_SERVER_ERROR)

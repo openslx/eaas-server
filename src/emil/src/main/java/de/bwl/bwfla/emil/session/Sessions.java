@@ -136,7 +136,7 @@ public class Sessions
 	@Path("/{id}/detach")
 	public void setLifetime(@PathParam("id") String id, DetachRequest request, @Context final HttpServletResponse response)
 	{
-		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit(), request.getSessionName());
+		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit(), request.getSessionName(), request.getComponentTitle());
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 

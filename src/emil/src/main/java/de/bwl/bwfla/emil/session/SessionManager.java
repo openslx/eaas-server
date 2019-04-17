@@ -22,6 +22,7 @@ package de.bwl.bwfla.emil.session;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.Components;
+import de.bwl.bwfla.emil.session.rest.DetachRequest;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
@@ -139,6 +140,23 @@ public class SessionManager
 	/** Updates session's lifetime */
 	public void setLifetime(String id, long lifetime, TimeUnit unit, String name)
 	{
+		setLifetime(id, lifetime, unit, name, null);
+	}
+
+	/** Updates session's lifetime */
+	public void setLifetime(String id, long lifetime, TimeUnit unit, String name, DetachRequest.ComponentTitleCreator componentTitle)
+	{
+		log.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  " + componentTitle.getComponentId());
+		log.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  " + componentTitle.getComponentName());
+
+		try {
+			List <String> sessionsList =getComponents(sessions.get(id));
+			for (int i = 0; i < sessionsList.size(); i++) {
+				log.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  " + sessionsList.get(i));
+			}
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+		}
 		sessions.computeIfPresent(id, (unused, session) -> {
 			if (lifetime == -1) {
 				session.setExpirationTimestamp(-1);

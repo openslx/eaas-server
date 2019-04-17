@@ -21,11 +21,25 @@ public class GroupComponent extends JaxbType {
     @XmlElement(required = false)
     private URI link;
 
+    @XmlElement(required = false)
+    private NetworkResponse networkData;
+
+    public GroupComponent() {
+    }
+
     public GroupComponent(String componentId, String type, URI link) {
         super();
         this.componentId = componentId;
         this.type = type;
         this.link = link;
+    }
+
+    public GroupComponent(String componentId, String type, URI link, NetworkResponse controlUrls) {
+        super();
+        this.componentId = componentId;
+        this.type = type;
+        this.link = link;
+        this.networkData = controlUrls;
     }
 
     public String getComponentId() {
@@ -50,5 +64,13 @@ public class GroupComponent extends JaxbType {
 
     public void setLink(URI link) {
         this.link = link;
+    }
+
+    public NetworkResponse getControlUrls() {
+        return networkData;
+    }
+
+    public void setControlUrls(NetworkResponse controlUrls) {
+        this.networkData = controlUrls;
     }
 }

@@ -254,6 +254,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return "machine";
 	}
 
+
 	@Override
 	public ComponentState getState() throws BWFLAException
 	{
