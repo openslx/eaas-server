@@ -21,6 +21,7 @@ import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.BasicClientConnectionManager;
+import org.apache.http.impl.conn.PoolingClientConnectionManager;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
@@ -47,7 +48,8 @@ public class HttpOAIClient implements OAIClient {
 	
 	public HttpOAIClient(String baseUrl) {
 		this.baseUrl = baseUrl;
-		httpclient = new DefaultHttpClient(createHttpParams());
+		// Allow multiple concurrent connections per server
+		httpclient = new DefaultHttpClient(new PoolingClientConnectionManager(), createHttpParams());
 	}
 
 
