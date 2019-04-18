@@ -22,6 +22,7 @@ package de.bwl.bwfla.emil;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.*;
+import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -76,7 +77,9 @@ public class Networks {
     @Inject
     @Config(value = "ws.eaasgw")
     private String eaasGw;
-    
+
+    protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
+
     @POST
     @Secured
     @Consumes({ MediaType.APPLICATION_JSON })
@@ -208,19 +211,22 @@ public class Networks {
     @Secured
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
-        try {
+ //       try {
             Session session = sessions.get(id);
             if(session == null || !(session instanceof NetworkSession))
-                throw new BWFLAException("session not found " + id);
+            {
+                LOG.severe("removeComponent: session not found " + id);
+                return;
+            }
 
             final String switchId = ((NetworkSession) session).getSwitchId();
             this.removeComponent(session, switchId, componentId);
-        }
-        catch (BWFLAException error) {
-            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation("Could not remove component from group!", error.getMessage()))
-                    .build());
-        }
+ //       }
+//        catch (BWFLAException error) {
+//            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+//                    .entity(new ErrorInformation("Could not remove component from group!", error.getMessage()))
+//                    .build());
+//        }
 
         response.setStatus(Response.Status.OK.getStatusCode());
     }
