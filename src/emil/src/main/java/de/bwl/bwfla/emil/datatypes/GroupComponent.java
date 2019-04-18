@@ -24,6 +24,13 @@ public class GroupComponent extends JaxbType {
     @XmlElement(required = false)
     private NetworkResponse networkData;
 
+    @XmlElement(required = false)
+    private String customComponentName;
+
+    @XmlElement(required = false)
+    private boolean isLocalmodeEnabled = false;
+
+
     public GroupComponent() {
     }
 
@@ -34,6 +41,23 @@ public class GroupComponent extends JaxbType {
         this.link = link;
     }
 
+    public GroupComponent(String componentId, String type, URI link, String customComponentName) {
+        super();
+        this.componentId = componentId;
+        this.type = type;
+        this.link = link;
+        this.customComponentName = customComponentName;
+    }
+
+    public GroupComponent(String componentId, String type, URI link, String customComponentName, NetworkResponse networkData) {
+        super();
+        this.componentId = componentId;
+        this.type = type;
+        this.link = link;
+        this.customComponentName = customComponentName;
+        this.networkData = networkData;
+    }
+
     public GroupComponent(String componentId, String type, URI link, NetworkResponse controlUrls) {
         super();
         this.componentId = componentId;
@@ -41,6 +65,8 @@ public class GroupComponent extends JaxbType {
         this.link = link;
         this.networkData = controlUrls;
     }
+
+
 
     public String getComponentId() {
         return componentId;

@@ -1,9 +1,6 @@
 package de.bwl.bwfla.eaas;
 
-import java.util.Collections;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.UUID;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.logging.Level;
@@ -27,7 +24,7 @@ public class ComponentGroup {
     @Inject
     Logger log;
     
-    protected ConcurrentMap<UUID, Set<String>> groupToComponents = new ConcurrentHashMap<UUID, Set<String>>();
+    protected ConcurrentMap<UUID, Set<ComponentGroupElement>> groupToComponents = new ConcurrentHashMap<UUID, Set<ComponentGroupElement>>();
     
     @Inject
     protected ComponentProxy component;
@@ -35,7 +32,7 @@ public class ComponentGroup {
     @WebMethod
     public String createGroup() {
         UUID groupId = UUID.randomUUID();
-        groupToComponents.computeIfAbsent(groupId, id -> Collections.synchronizedSet(new HashSet<String>()));
+        groupToComponents.computeIfAbsent(groupId, id -> Collections.synchronizedSet(new HashSet<ComponentGroupElement>()));
         return groupId.toString();
     }
     
@@ -47,22 +44,40 @@ public class ComponentGroup {
     @WebMethod
     public void add(@WebParam(name="groupId") String groupId,
             @WebParam(name="componentId") String componentId) throws BWFLAException {
-        Set<String> group = groupToComponents.get(UUID.fromString(groupId));
+        Set<ComponentGroupElement> group = groupToComponents.get(UUID.fromString(groupId));
         if (group == null) {
             throw new IllegalArgumentException("Could not find group with the given groupId");
         }
         synchronized(group) {
             // re-verify that the group is still valid
             if (groupToComponents.containsKey(UUID.fromString(groupId))) {
-                group.add(componentId);
+                group.add(new ComponentGroupElement(componentId));
             }
+        }
+    }
+
+    @WebMethod
+    public void update(@WebParam(name = "groupId") String groupId,
+                       @WebParam(name = "componentGroupElement") ComponentGroupElement component) throws BWFLAException {
+        Set<ComponentGroupElement> group = groupToComponents.get(UUID.fromString(groupId));
+        if (group == null) {
+            throw new IllegalArgumentException("Could not find group with the given groupId");
+        }
+        synchronized (group) {
+            Optional<ComponentGroupElement> oldElement = group.stream().filter(obj -> obj.getComponentId().equals(component.getComponentId())).findFirst();
+            if(!oldElement.isPresent()){
+                throw new BWFLAException("component is not found");
+            }
+            group.remove(oldElement.get());
+            group.add(component);
+
         }
     }
 
     @WebMethod
     public void remove(@WebParam(name="groupId") String groupId,
             @WebParam(name="componentId") String componentId) throws BWFLAException {
-        Set<String> group = groupToComponents.get(UUID.fromString(groupId));
+        Set<ComponentGroupElement> group = groupToComponents.get(UUID.fromString(groupId));
         if (group == null) {
             throw new IllegalArgumentException("Could not find group with the given groupId");
         }
@@ -75,12 +90,12 @@ public class ComponentGroup {
     }
     
     @WebMethod
-    public Set<String> list(@WebParam(name="groupId") String groupId) throws BWFLAException {
+    public Set<ComponentGroupElement> list(@WebParam(name="groupId") String groupId) throws BWFLAException {
         UUID uuid = UUID.fromString(groupId);
         if (!groupToComponents.containsKey(uuid)) {
             throw new IllegalArgumentException("Could not find group with the given groupId");
         }
-        return new HashSet<String>(groupToComponents.get(uuid));
+        return new HashSet<ComponentGroupElement>(groupToComponents.get(uuid));
     }
 
     @WebMethod
@@ -94,14 +109,14 @@ public class ComponentGroup {
     @WebMethod
     public void keepalive(@WebParam(name="groupId")String groupId) throws BWFLAException {
         UUID uuid = UUID.fromString(groupId);
-        Set<String> components = new HashSet<String>(groupToComponents.get(uuid));
+        Set<ComponentGroupElement> components = new HashSet<ComponentGroupElement>(groupToComponents.get(uuid));
 
         BWFLAException e = null;
-        for (String componentId : components) {
+        for (ComponentGroupElement componentElement : components) {
             try {
-                component.keepalive(componentId);
+                component.keepalive(componentElement.getComponentId());
             } catch(Throwable t) {
-                components.remove(componentId);
+                components.remove(componentElement.getComponentId());
                 log.log(Level.WARNING, "Could not send keepalive to a component.", t);
                 e = new BWFLAException("At least one keepalive could not be sent to the component: " + e.getMessage(), e);
             }

@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil.session;
 
+import de.bwl.bwfla.api.eaas.ComponentGroupElement;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.Components;
@@ -86,22 +87,26 @@ public class SessionManager
 		groupClient.getComponentGroupPort(eaasGw).add(session.groupId(), componentId);
 	}
 
+	public void updateComponent(Session session, ComponentGroupElement component) throws BWFLAException {
+		groupClient.getComponentGroupPort(eaasGw).update(session.groupId(), component);
+	}
+
 	public void removeComponent(Session session, String componentId) throws BWFLAException {
 		groupClient.getComponentGroupPort(eaasGw).remove(session.groupId(), componentId);
 	}
 
-	public List<String> getComponents(Session session) throws BWFLAException {
+	public List<ComponentGroupElement> getComponents(Session session) throws BWFLAException {
 		return groupClient.getComponentGroupPort(eaasGw).list(session.groupId());
 	}
 
 	public void keepAlive(Session session, Logger log)
 	{
 		try {
-			List<String> componentList = getComponents(session);
-			for(String c : componentList)
+			List<ComponentGroupElement> componentList = getComponents(session);
+			for(ComponentGroupElement c : componentList)
 			{
-				if(!components.keepalive(c, true))
-					componentClient.getComponentPort(eaasGw).keepalive(c);
+				if(!components.keepalive(c.getComponentId(), true))
+					componentClient.getComponentPort(eaasGw).keepalive(c.getComponentId());
 			}
 			session.update();
 		} catch (BWFLAException e) {
@@ -146,13 +151,20 @@ public class SessionManager
 	/** Updates session's lifetime */
 	public void setLifetime(String id, long lifetime, TimeUnit unit, String name, DetachRequest.ComponentTitleCreator componentTitle)
 	{
-		log.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  " + componentTitle.getComponentId());
-		log.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  " + componentTitle.getComponentName());
+		if (componentTitle.getComponentName() != null) {
+			ComponentGroupElement groupElement = new ComponentGroupElement();
+			groupElement.setComponentId(componentTitle.getComponentId());
+			groupElement.setCustomName(componentTitle.getComponentName());
+			try {
+				updateComponent(sessions.get(id), groupElement);
+			} catch (BWFLAException e) {
+				log.warning(e.getMessage());
+			}
+		}
 
 		try {
-			List <String> sessionsList =getComponents(sessions.get(id));
+			List <ComponentGroupElement> sessionsList =getComponents(sessions.get(id));
 			for (int i = 0; i < sessionsList.size(); i++) {
-				log.warning("!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  " + sessionsList.get(i));
 			}
 		} catch (BWFLAException e) {
 			e.printStackTrace();

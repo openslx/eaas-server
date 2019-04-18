@@ -36,13 +36,26 @@ public class NetworkResponse extends JaxbType {
     @XmlElement(required = true)
     private String id;
 
+    @XmlElement(required = true)
+    private boolean isLocalMode = false;
+
     @XmlElement
     private Map<String, URI> networkUrls ;
+
+
 
     public NetworkResponse(String id) {
         super();
         this.id = id;
         networkUrls = new HashMap<>();
+    }
+
+    public boolean isLocalMode() {
+        return isLocalMode;
+    }
+
+    public void setLocalMode(boolean localMode) {
+        isLocalMode = localMode;
     }
 
     public String getId() {

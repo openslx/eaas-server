@@ -41,6 +41,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.xml.bind.JAXBException;
 
+import de.bwl.bwfla.api.eaas.ComponentGroupElement;
 import de.bwl.bwfla.api.emucomp.GetControlUrlsResponse;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
@@ -257,28 +258,33 @@ public class Networks {
             if(session == null || !(session instanceof NetworkSession))
                 throw new BWFLAException("session not found " + id);
 
-            List<String> components = sessions.getComponents(session);
-            for (String componentId : components) {
-                String type = componentClient.getComponentPort(eaasGw).getComponentType(componentId);
+            List<ComponentGroupElement> components = sessions.getComponents(session);
+            for (ComponentGroupElement componentElement : components) {
+                String type = componentClient.getComponentPort(eaasGw).getComponentType(componentElement.getComponentId());
 
 
                 
                 try {
                     if(type.equals("nodetcp")) {
-                        System.out.println("!!!!!!!! nodetcp");
                         NetworkResponse networkResponse = new NetworkResponse(session.id());
 
-                        Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentId));
+                        Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
 
                         String nodeInfoUrl = controlUrls.get("info").toString();
-                        result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId),
-                                networkResponse ));
                         networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
-                        result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId),
+
+                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
                                 networkResponse ));
 
+                    } else if (type.equals("machine")){
+                        String componentName = componentElement.getCustomName();
+                        if (componentName == null)
+                            componentName = componentElement.getComponentId();
+
+                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
+                                componentName));
                     } else
-                        result.add(new GroupComponent(componentId, type, new URI("../components/" + componentId)));
+                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId())));
                 } catch (URISyntaxException e) {
                     throw new ServerErrorException(Response
                             .status(Response.Status.INTERNAL_SERVER_ERROR)
