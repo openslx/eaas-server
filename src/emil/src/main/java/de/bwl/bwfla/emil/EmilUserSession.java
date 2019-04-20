@@ -81,6 +81,7 @@ public class EmilUserSession extends EmilRest {
                 json.add("title", emilenv.getTitle());
                 json.add("envId", emilenv.getEnvId());
                 json.add("objectId", emilenv.getObjectId());
+                json.add("archiveId", emilenv.getObjectArchiveId());
                 json.add("userId", emilenv.getUserId());
                 json.add("creationDate", emilenv.getCreationDate() + "");
                 json.endObject();

@@ -119,6 +119,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	/*
 	@Secured
 	@GET
 	@Path("/objectDependencies")
@@ -136,6 +137,7 @@ public class EmilEnvironmentData extends EmilRest {
 			return new ArrayList<>();
 		}
 	}
+	*/
 
 	@Secured
 	@POST
@@ -441,7 +443,7 @@ public class EmilEnvironmentData extends EmilRest {
 				{
 					EmilObjectEnvironment emilObjEnv = (EmilObjectEnvironment) emilenv;
 					json.add("objectId", emilObjEnv.getObjectId());
-					json.add("archiveId", emilObjEnv.getObjectArchiveId());
+					json.add("objectArchive", emilObjEnv.getObjectArchiveId());
 					envType = "object";
 				}
 
@@ -998,6 +1000,7 @@ public class EmilEnvironmentData extends EmilRest {
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response overrideObjectCharacterization(OverrideCharacterizationRequest request) {
 		String objectId = request.getObjectId();
+		String objectArchive = request.getObjectArchive();
 		List<EnvironmentInfo> environments = request.getEnvironments();
 		try {
 			archive.setCachedEnvironmentsForObject(objectId, environments, request.getDescription());

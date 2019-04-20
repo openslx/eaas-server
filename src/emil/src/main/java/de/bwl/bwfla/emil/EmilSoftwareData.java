@@ -71,6 +71,7 @@ public class EmilSoftwareData extends EmilRest {
             }
             
             swo.setObjectId(software.getObjectId());
+            swo.setArchiveId(software.getArchive());
             swo.setAllowedInstances(software.getNumSeats());
             List<String> fmts = software.getSupportedFileFormats();
             if(fmts == null)
@@ -192,6 +193,7 @@ public class EmilSoftwareData extends EmilRest {
                 json.beginObject();
                 json.add("id", desc.getSoftwareId());
                 json.add("label", desc.getLabel());
+                json.add("archiveId", desc.getArchiveId() != null ? desc.getArchiveId() : "default");
                 json.add("isOperatingSystem", desc.getIsOperatingSystem());
                 json.endObject();
             }

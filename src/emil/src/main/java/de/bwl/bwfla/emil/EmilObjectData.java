@@ -2,7 +2,6 @@ package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
 import de.bwl.bwfla.api.objectarchive.ObjectFileCollection;
-import de.bwl.bwfla.api.objectarchive.TaskState;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
@@ -34,12 +33,12 @@ import javax.xml.bind.JAXBException;
 import java.io.*;
 import java.util.*;
 import java.util.logging.Level;
+import java.util.stream.Collectors;
 
-@Path("EmilObjectData")
+@Path("/objects")
 @ApplicationScoped
 public class EmilObjectData extends EmilRest {
 
-    ObjectArchiveHelper objHelper;
     SoftwareArchiveHelper swHelper;
 
     @Inject
@@ -60,18 +59,17 @@ public class EmilObjectData extends EmilRest {
 	private static final String tmpArchiveName = "emil-temp-objects";
 	private static Set<String> objArchives;
 
+	private final String USER_ARCHIVE_PREFIX = "user_archive";
+
 	@Inject
 	@Config(value="objectarchive.userarchive")
 	private String userArchiveBase;
 
-
-
 	@PostConstruct
     private void init() {
-        objHelper = new ObjectArchiveHelper(objectArchive);
         swHelper = new SoftwareArchiveHelper(softwareArchive);
 		try {
-			objArchives = new HashSet<>(objHelper.getArchives());
+			objArchives = new HashSet<>(archive.objects().getArchives());
 		} catch (BWFLAException e) {
 			e.printStackTrace();
 		}
@@ -84,7 +82,7 @@ public class EmilObjectData extends EmilRest {
 	public Response sync()
 	{
 		try {
-			objHelper.sync();
+			archive.objects().sync();
 		} catch (BWFLAException e) {
 			return Emil.internalErrorResponse(e);
 		}
@@ -102,7 +100,7 @@ public class EmilObjectData extends EmilRest {
 			return new TaskStateResponse(new BWFLAException("invalid arguments"));
 		
 		try {
-			return new TaskStateResponse(objHelper.sync(req.getArchive(), req.getObjectIDs()));
+			return new TaskStateResponse(archive.objects().sync(req.getArchive(), req.getObjectIDs()));
 		} catch (BWFLAException e) {
 			return new TaskStateResponse(e);
 		}
@@ -115,7 +113,7 @@ public class EmilObjectData extends EmilRest {
 	public TaskStateResponse getObjectImportTaskState(@QueryParam("taskId") String taskId)
 	{
 		try {
-			return new TaskStateResponse(objHelper.getTaskState(taskId));
+			return new TaskStateResponse(archive.objects().getTaskState(taskId));
 		} catch (BWFLAException e) {
 			return new TaskStateResponse(e);
 		}
@@ -134,27 +132,24 @@ public class EmilObjectData extends EmilRest {
 	 */
 	@Secured
 	@GET
-	@Path("/list")
+	@Path("/{objectArchive}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public ObjectListResponse list(@QueryParam("archiveId") @DefaultValue("default")  String archiveId,
+	public Response list(@PathParam("objectArchive") String archiveId,
 								   @Context final HttpServletResponse response)
 	{
-		try {
-			archiveId = manageUserCtx(archiveId);
-		} catch (BWFLAException e) {
-			return new ObjectListResponse();
+		if(archiveId == null || archiveId.equals("default")) {
+			try {
+				archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				archiveId = "default";
+			}
 		}
 
-		ObjectListResponse resp = new ObjectListResponse();
 		try {
-			List<String> objects = objHelper.getObjectList(archiveId);
+			List<String> objects = archive.objects().getObjectList(archiveId);
 			if(objects == null) {
 				LOG.warning("objects null");
-//				throw new BadRequestException(Response
-//						.status(Status.BAD_REQUEST)
-//						.entity(new ErrorInformation("loading archive '" + archiveId + "' failed"))
-//						.build());
-				resp.setStatus("1");
+				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Objects are null").build();
 			}
 
 			ArrayList<ObjectListItem> objList = new ArrayList<>();
@@ -165,9 +160,10 @@ public class EmilObjectData extends EmilRest {
 				if(software != null)
 					continue;
 
-				DigitalObjectMetadata md = objHelper.getObjectMetadata(archiveId, id);
+				DigitalObjectMetadata md = archive.objects().getObjectMetadata(archiveId, id);
 				ObjectListItem item = new ObjectListItem(id);
 				item.setTitle(md.getTitle());
+				item.setArchiveId(archiveId);
 
 				try {
 					item.setDescription(archive.getClassificationResultForObject(id).getUserDescription());
@@ -180,15 +176,14 @@ public class EmilObjectData extends EmilRest {
 				item.setSummary(md.getSummary());
 				objList.add(item);
 			}
-			resp.setObjects(objList);
-			return resp;
+			return Response.status(Response.Status.OK).entity(objList).build();
 		}
 		catch (Exception e)
 		{
 			e.printStackTrace();
 			LOG.severe("I've got an exception in list");
 			throw new BadRequestException(Response
-					.status(Response.Status.BAD_REQUEST)
+					.status(Response.Status.INTERNAL_SERVER_ERROR)
 					.entity(new ErrorInformation(e.getMessage()))
 					.build());
 		}
@@ -202,87 +197,19 @@ public class EmilObjectData extends EmilRest {
 	 */
 	@Secured
 	@GET
-	@Path("/metadata")
+	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public DigitalObjectMetadataResponse metadata(@QueryParam("objectId") String objectId,
-												  @QueryParam("archiveId") @DefaultValue("default")  String archiveId)
+	public MediaDescriptionResponse mediaDescription(@PathParam("objectId") String objectId,
+												     @PathParam("objectArchive") String archiveId,
+													 @QueryParam("updateClassification") @DefaultValue("false") boolean updateClassification,
+													 @QueryParam("updateProposal") @DefaultValue("false") boolean updateProposal)
 	{
-		try {
-			archiveId = manageUserCtx(archiveId);
-		} catch (BWFLAException e) {
-			return new DigitalObjectMetadataResponse(e);
-		}
-
-
-		try {
-			return new DigitalObjectMetadataResponse(objHelper.getObjectMetadata(archiveId, objectId));
-		}
-		catch (BWFLAException e) {
-			return new DigitalObjectMetadataResponse(e);
-		}
-	}
-	
-	/**
-	 */
-	@Secured
-	@GET
-	@Path("/environments")
-	@Produces(MediaType.APPLICATION_JSON)
-	public ClassificationResult environments(@QueryParam("objectId") String objectId,
-                                             @QueryParam("archiveId") @DefaultValue("default")  String archiveId,
-                                             @QueryParam("updateClassification") @DefaultValue("false") boolean updateClassification,
-                                             @QueryParam("updateProposal") @DefaultValue("false") boolean updateProposal)
-	{
-		try {
-			archiveId = manageUserCtx(archiveId);
-		} catch (BWFLAException e) {
-			new ClassificationResult(e);
-		}
-
-		try {
-			if(environmentRepository.getEmilEnvironments().isEmpty())
-				environmentRepository.initialize();
-			return archive.getEnvironmentsForObject(archiveId, objectId, updateClassification, updateProposal);
-		}
-		catch (JAXBException | NoSuchElementException e) {
-			LOG.log(Level.WARNING, e.getMessage(), e);
-			return new ClassificationResult();
-		}
-		catch(BWFLAException e)
-		{
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new ClassificationResult(e);
-		}
-	}
-
-	/**
-	 * Returns a description of media corresponding to a specified digital object:
-	 * <pre>
-	 * {
-	 *      "status": "0",
-	 *      "media": [
-	 *          {
-	 *              "mediumtype": &ltMedium's type&gt,
-	 *              "labels": [ "label-1", ..., "label-n" ]
-	 *          },
-	 *          ...
-	 *      ]
-	 * }
-	 * </pre>
-	 * 
-	 * @param objectId The digital object's ID.
-	 * @return A JSON response containing media description, or an error message.
-	 */
-	@Secured
-	@GET
-	@Path("/mediaDescription")
-	@Produces(MediaType.APPLICATION_JSON)
-	public MediaDescriptionResponse mediaDescription(@QueryParam("objectId") String objectId, @QueryParam("archiveId") @DefaultValue("default")  String archiveId)
-	{
-		try {
-			archiveId = manageUserCtx(archiveId);
-		} catch (BWFLAException e) {
-			return new MediaDescriptionResponse(e);
+		if(archiveId == null || archiveId.equals("default")) {
+			try {
+				archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				archiveId = "default";
+			}
 		}
 
 		MediaDescriptionResponse resp = new MediaDescriptionResponse();
@@ -295,22 +222,13 @@ public class EmilObjectData extends EmilRest {
 			}
 
 			FileCollection fc = FileCollection.fromValue(chosenObjRef);
-			DriveType type = fc.files.get(0).getType();
+			resp.setMediaItems(fc);
+			resp.setMetadata(archive.objects().getObjectMetadata(archiveId, objectId));
 
-			MediaDescriptionTypeList item = new MediaDescriptionTypeList();
-			item.setMediumType(type.name());
-
-			for (FileCollectionEntry fce : fc.files) {
-				if(fce.getLabel() == null)
-					item.getItems().add(new MediaDescriptionItem(fce.getId()));
-				else
-					item.getItems().add(new MediaDescriptionItem(fce.getId(), fce.getLabel()));
-			}
-
-			resp.getMedium().add(item);
+			resp.setObjectEnvironments(archive.getEnvironmentsForObject(archiveId, objectId, updateClassification, updateProposal));
 			return resp;
 		}
-		catch (JAXBException exception) {
+		catch (BWFLAException | JAXBException exception) {
 			return new MediaDescriptionResponse(new BWFLAException(exception));
 		}
 	}
@@ -344,7 +262,7 @@ public class EmilObjectData extends EmilRest {
 		ObjectArchiveHelper localhelper = new ObjectArchiveHelper("http://localhost:8080");
 		try {
 			ObjectFileCollection object = localhelper.getObjectHandle(tmpArchiveName, objId);
-			objHelper.importObject(archive, object);
+			this.archive.objects().importObject(archive, object);
 			localhelper.delete(tmpArchiveName, objId);
 		} catch (BWFLAException e) {
 			e.printStackTrace();
@@ -360,7 +278,14 @@ public class EmilObjectData extends EmilRest {
 	public ObjectArchivesResponse getArchives()
 	{
 		try {
-			List<String> archives = objHelper.getArchives();
+
+			String defaultArchive = manageUserCtx("default");
+
+			List<String> archives = objArchives.stream().filter(
+					e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(defaultArchive))
+			).filter(
+					e -> !e.equals("default")
+			).collect(Collectors.toList());
 			ObjectArchivesResponse response = new ObjectArchivesResponse();
 			response.setArchives(archives);
 			return response;
@@ -462,9 +387,9 @@ public class EmilObjectData extends EmilRest {
 	private String manageUserCtx(String archiveId) throws BWFLAException {
 		if(authenticatedUser != null && authenticatedUser.getUsername() != null) {
 			LOG.info("got user context: " + authenticatedUser.getUsername());
-			archiveId = authenticatedUser.getUsername();
+			archiveId = USER_ARCHIVE_PREFIX + authenticatedUser.getUsername();
 			if (!objArchives.contains(archiveId)) {
-				objHelper.registerUserArchive(archiveId);
+				archive.objects().registerUserArchive(archiveId);
 				objArchives.add(archiveId);
 			}
 			return authenticatedUser.getUsername();

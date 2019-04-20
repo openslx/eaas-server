@@ -96,22 +96,38 @@ public class ArchiveAdapter {
         return this.getEnvironmentsForObject(archiveId, objectId, false, false);
     }
 
-    public ClassificationResult getEnvironmentsForObject(String archiveId, String objectId, boolean forceCharacterization, boolean forceProposal) throws BWFLAException {
+    public ClassificationResult getEnvironmentsForObject(String archiveId, String objectId,
+                                                         boolean forceCharacterization,
+                                                         boolean forceProposal) throws BWFLAException {
         try {
+            LOG.severe("getEnvironmentsForObject " + forceCharacterization + " " + forceProposal);
             // shortcut to force characterization if requested:
             if (forceCharacterization) {
                 throw new NoSuchElementException();
             }
-            ClassificationResult cached = db.load(objectId);
-            if(!forceProposal && cached.getEnvironmentList() != null && cached.getEnvironmentList().size() > 0) {
-                return cached;
-            }
-            else {
+
+            ClassificationResult cached = null;
+
+            try { cached = db.load(objectId); } catch (NoSuchElementException ignore) {}
+            if(forceProposal)
+            {
+                if(cached == null)
+                    throw new NoSuchElementException();
                 ClassificationResult result = propose(cached, objectId);
+                try {
+                    db.save(result, objectId);
+                } catch (JAXBException|IOException e) {
+                    LOG.log(Level.SEVERE, e.getMessage(), e);
+                }
                 return result;
             }
+            if(cached == null)
+                return new ClassificationResult();
+
+            return cached;
         } catch (NoSuchElementException e) {
             // if no data for the object id, classify it
+            LOG.severe("no such element exception");
             ClassificationResult response = this.classifyObject(archiveId, objectId);
             try {
                 // do not saveDoc the proposal result here
@@ -197,7 +213,7 @@ public class ArchiveAdapter {
 
         return result;
     }
-    
+
     private ClassificationResult classifyObject(String archiveId, String objectId) throws BWFLAException {
         try {
 
@@ -371,7 +387,7 @@ public class ArchiveAdapter {
             if (fc == null)
                 throw new BWFLAException("Returned FileCollection is null for '" + archiveId + "/" + objectId + "'!");
             return fc.value();
-            
+
         } catch (JAXBException e) {
             throw new BWFLAException("Cannot find object reference for '" + objectId + "'", e);
         }
@@ -399,6 +415,11 @@ public class ArchiveAdapter {
 
     public List<String> getEnvironmentDependencies(String envId) throws IOException, JAXBException {
         return db.getEnvironmentDependencies(envId);
+    }
+
+    public ObjectArchiveHelper objects()
+    {
+        return objHelper;
     }
 
 }

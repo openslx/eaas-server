@@ -16,6 +16,9 @@ public class ObjectListItem {
     String title;
 
     @XmlElement(required = true)
+    String archiveId;
+
+    @XmlElement(required = true)
     String description;
 
     @XmlElement(required = false)
@@ -66,5 +69,13 @@ public class ObjectListItem {
 
     public void setSummary(String summary) {
         this.summary = summary;
+    }
+
+    public String getArchiveId() {
+        return archiveId;
+    }
+
+    public void setArchiveId(String archiveId) {
+        this.archiveId = archiveId;
     }
 }

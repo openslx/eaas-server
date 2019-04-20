@@ -30,7 +30,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "softwareDescription", namespace="http://bwfla.bwl.de/common/datatypes",
-	propOrder = { "softwareId", "label", "isOperatingSystem" })
+	propOrder = { "softwareId", "label", "isOperatingSystem", "archiveId" })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class SoftwareDescription extends JaxbType
 {
@@ -42,6 +42,9 @@ public class SoftwareDescription extends JaxbType
 	
 	@XmlElement(required = false)
 	private boolean isOperatingSystem = false;
+
+	@XmlElement(required = true, defaultValue = "default")
+	private String archiveId;
 
 	public SoftwareDescription()
 	{
@@ -81,5 +84,13 @@ public class SoftwareDescription extends JaxbType
 
 	public void setIsOperatingSystem(boolean isOperatingSystem) {
 		this.isOperatingSystem = isOperatingSystem;
+	}
+
+	public String getArchiveId() {
+		return archiveId;
+	}
+
+	public void setArchiveId(String archiveId) {
+		this.archiveId = archiveId;
 	}
 }

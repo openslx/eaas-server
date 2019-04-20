@@ -5,11 +5,11 @@ import java.util.List;
 public class OverrideCharacterizationRequest {
     protected String objectId;
     protected String description;
+    protected String objectArchive;
 
     public String getDescription() {
         return description;
     }
-
     public void setDescription(String description) {
         this.description = description;
     }
@@ -27,4 +27,12 @@ public class OverrideCharacterizationRequest {
         this.environments = environments;
     }
     protected List<EnvironmentInfo> environments;
+
+    public String getObjectArchive() {
+        return objectArchive;
+    }
+
+    public void setObjectArchive(String objectArchive) {
+        this.objectArchive = objectArchive;
+    }
 }

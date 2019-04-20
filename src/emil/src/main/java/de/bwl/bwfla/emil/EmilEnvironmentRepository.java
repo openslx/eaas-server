@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.jar.JarException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -281,7 +282,13 @@ public class EmilEnvironmentRepository {
 				}
 			}
 		}
-
+		try {
+			initialize();
+		}
+		catch (BWFLAException| JAXBException e)
+		{
+			e.printStackTrace();
+		}
 		objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
 
 //		try {
