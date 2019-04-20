@@ -80,6 +80,7 @@ public abstract class ViceBean extends EmulatorBean
 					}
 
 					Path imglink = images.resolve(imgname);
+					imgpath = images.relativize(imgpath);
 					Files.createSymbolicLink(imglink, imgpath);
 				} catch (IOException exception) {
 					LOG.warning("Creating alias-link for binding '" + name + "' failed!");
