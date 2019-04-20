@@ -50,6 +50,10 @@ public class ObjectArchiveHelper {
 		bp.getRequestContext().put("javax.xml.ws.client.receiveTimeout", "0");
 		bp.getRequestContext().put("javax.xml.ws.client.connectionTimeout", "0");
 		bp.getRequestContext().put("com.sun.xml.internal.ws.transport.http.client.streaming.chunk.size", 8192);
+
+		// make this threadsafe
+		// https://stackoverflow.com/questions/10599959/is-this-jax-ws-client-call-thread-safe
+		bp.getRequestContext().put("thread.local.request.context","true");
 		bp.getRequestContext().put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, host + "/objectarchive/ObjectArchiveFacadeWS?wsdl");
 
 		return archive;
