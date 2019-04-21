@@ -120,14 +120,14 @@ public class ObjectArchiveSingleton
 		List<DigitalObjectArchive> archives = null;
 		archives = DigitalObjectArchiveFactory.createFromJson(new File(objArchiveConfDir));
 		
-		if(archives.size() == 0)
-		{
+		// if(archives.size() == 0)
+		// {
 			File defaultObjectsPath = new File(defaultLocalFilePath);
 			if(!defaultObjectsPath.exists())
-				throw new ObjectArchiveInitException("no archive configuration found");
+				throw new ObjectArchiveInitException("default object path does not exist");
 			
-			archives.add(new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, true));	
-		}
+			archives.add(new DigitalObjectFileArchive("default", defaultLocalFilePath, true));
+		// }
 
 		// add internal upload archive
 		File tempObjectPath = new File(serverdatadir, tmpArchiveDir);
