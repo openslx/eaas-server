@@ -119,7 +119,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	/*
+
 	@Secured
 	@GET
 	@Path("/objectDependencies")
@@ -137,7 +137,7 @@ public class EmilEnvironmentData extends EmilRest {
 			return new ArrayList<>();
 		}
 	}
-	*/
+	
 
 	@Secured
 	@POST
