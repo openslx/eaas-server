@@ -149,7 +149,7 @@ public class EmilObjectData extends EmilRest {
 			List<String> objects = archive.objects().getObjectList(archiveId);
 			if(objects == null) {
 				LOG.warning("objects null");
-				return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity("Objects are null").build();
+				return Response.status(Response.Status.BAD_REQUEST).entity("Objects are null").build();
 			}
 
 			ArrayList<ObjectListItem> objList = new ArrayList<>();
@@ -183,7 +183,7 @@ public class EmilObjectData extends EmilRest {
 			e.printStackTrace();
 			LOG.severe("I've got an exception in list");
 			throw new BadRequestException(Response
-					.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.status(Response.Status.BAD_REQUEST)
 					.entity(new ErrorInformation(e.getMessage()))
 					.build());
 		}
@@ -281,6 +281,7 @@ public class EmilObjectData extends EmilRest {
 
 			String defaultArchive = manageUserCtx("default");
 
+			objArchives = new HashSet<>(archive.objects().getArchives());
 			List<String> archives = objArchives.stream().filter(
 					e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(defaultArchive))
 			).filter(
@@ -390,7 +391,7 @@ public class EmilObjectData extends EmilRest {
 			archiveId = USER_ARCHIVE_PREFIX + authenticatedUser.getUsername();
 			if (!objArchives.contains(archiveId)) {
 				archive.objects().registerUserArchive(archiveId);
-				objArchives.add(archiveId);
+				objArchives = new HashSet<>(archive.objects().getArchives());
 			}
 			return authenticatedUser.getUsername();
 		}
