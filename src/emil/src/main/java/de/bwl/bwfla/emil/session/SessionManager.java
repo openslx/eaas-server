@@ -163,20 +163,22 @@ public class SessionManager
 		}
 
 		try {
-			List <ComponentGroupElement> sessionsList =getComponents(sessions.get(id));
+			List <ComponentGroupElement> sessionsList = getComponents(sessions.get(id));
 			for (int i = 0; i < sessionsList.size(); i++) {
 			}
 		} catch (BWFLAException e) {
 			e.printStackTrace();
 		}
+
 		sessions.computeIfPresent(id, (unused, session) -> {
-			if (lifetime == -1) {
-				session.setExpirationTimestamp(-1);
-				return session;
-			}
-			final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
-			session.setExpirationTimestamp(timestamp);
 			session.setName(name);
+			if (lifetime < 0) {
+				session.setExpirationTimestamp(-1);
+			}
+			else {
+				final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
+				session.setExpirationTimestamp(timestamp);
+			}
 			return session;
 		});
 	}
