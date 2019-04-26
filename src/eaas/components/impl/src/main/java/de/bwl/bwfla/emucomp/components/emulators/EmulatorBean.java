@@ -1554,7 +1554,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 
 		LOG.info("Checkpointing emulator-container " + this.getContainerId() + "...");
-
+//		try {
+//			Thread.sleep(1000);
+//		} catch (InterruptedException e) {
+//			e.printStackTrace();
+//		}
 		// Try to checkpoint the container...
 		process.setCommand("emucon-checkpoint");
 		process.addArgument("--non-interactive");

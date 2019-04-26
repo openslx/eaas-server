@@ -50,6 +50,8 @@ public class ComponentProxy implements Component {
     protected Component getComponent(String componentId) throws BWFLAException {
         try {
             final SessionRegistry.Entry session = sessions.lookup(componentId);
+            if(session == null)
+                throw new BWFLAException("session not found for component " + componentId);
             final ResourceHandle resource = session.getResourceHandle();
             return client.getComponentPort(resource.getNodeID());
         } catch (BWFLAException e) {
@@ -69,7 +71,10 @@ public class ComponentProxy implements Component {
 
     @Override
     public void keepalive(String componentId) throws BWFLAException {
-        getComponent(componentId).keepalive(componentId);
+        Component c = getComponent(componentId);
+        if( c == null )
+            throw new BWFLAException("component not found: " + componentId);
+        c.keepalive(componentId);
     }
 
     @Override
@@ -79,7 +84,10 @@ public class ComponentProxy implements Component {
 
     @Override
     public String getComponentType(String componentId) throws BWFLAException {
-        return getComponent(componentId).getComponentType(componentId);
+        Component c = getComponent(componentId);
+        if( c == null )
+            throw new BWFLAException("component not found: " + componentId);
+        return c.getComponentType(componentId);
     }
 
     @Override
