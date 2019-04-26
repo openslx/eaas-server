@@ -50,6 +50,7 @@ import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IThrowingSupplier;
 import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
+import de.bwl.bwfla.emucomp.xpra.PulseAudioStreamer;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
@@ -878,7 +879,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 		}
 		else if (this.isXpraBackendEnabled()) {
-			this.addControlConnector(new XpraConnector(this.getXpraSocketPath()));
+			final PulseAudioStreamer streamer = new PulseAudioStreamer();
+			this.addControlConnector(new XpraConnector(this.getXpraSocketPath(), streamer));
 		}
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);

@@ -20,6 +20,8 @@
 package de.bwl.bwfla.emucomp.control.connectors;
 
 
+import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
+
 import java.net.URI;
 import java.nio.file.Path;
 
@@ -29,10 +31,12 @@ public class XpraConnector implements IConnector
     public final static String PROTOCOL = "xpra";
 
     private final Path iosock;
+    private final IAudioStreamer streamer;
     private Runnable disconnector;
 
-    public XpraConnector(Path iosock) {
+    public XpraConnector(Path iosock, IAudioStreamer streamer) {
         this.iosock = iosock;
+        this.streamer = streamer;
     }
 
     @Override
@@ -49,6 +53,11 @@ public class XpraConnector implements IConnector
         return iosock;
     }
 
+    public IAudioStreamer getAudioStreamer()
+    {
+        return streamer;
+    }
+
     public void setDisconnectHandler(Runnable handler) {
         this.disconnector = handler;
     }
@@ -56,5 +65,8 @@ public class XpraConnector implements IConnector
     public void disconnect() {
         if (disconnector != null)
             disconnector.run();
+
+        if (streamer != null)
+            streamer.close();
     }
 }
