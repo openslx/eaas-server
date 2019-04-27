@@ -38,6 +38,7 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 {
 	private String componentID;
 	private String detachedTitle;
+	private String environmentId = null;
 	
 	protected ComponentState state = ComponentState.OK;
 	private BWFLAException asyncError = null;
@@ -123,5 +124,13 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 	
 	protected void fail(BWFLAException e) {
 	    this.asyncError = e;
+	}
+
+	public String getEnvironmentId() {
+		return environmentId;
+	}
+
+	public void setEnvironmentId(String environmentId) {
+		this.environmentId = environmentId;
 	}
 }

@@ -281,7 +281,7 @@ public class Networks {
                                 networkResponse ));
 
                     } else if (type.equals("machine")){
-                        String componentName = componentElement.getCustomName();
+                        String componentName = componentClient.getComponentPort(eaasGw).getEnvironmentId(componentElement.getComponentId());
                         if (componentName == null)
                             componentName = componentElement.getComponentId();
 

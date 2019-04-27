@@ -91,6 +91,14 @@ public class ComponentProxy implements Component {
     }
 
     @Override
+    public String getEnvironmentId(String componentId) throws BWFLAException {
+        Component c = getComponent(componentId);
+        if( c == null )
+            throw new BWFLAException("component not found: " + componentId);
+        return c.getEnvironmentId(componentId);
+    }
+
+    @Override
     public Return getControlUrls(String componentId) throws BWFLAException {
         final SessionRegistry.Entry session = sessions.lookup(componentId);
         final String componentHost = session.getResourceHandle().getNodeID().getNodeHost();
