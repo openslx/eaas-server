@@ -80,7 +80,7 @@ public class BackendConfig extends BaseConfig
 		public void setUrl(String url)
 		{
 			ConfigHelpers.check(url, "URL is invalid!");
-			this.url = url;
+			this.url = BackendConfig.sanitize(url);
 		}
 	}
 
@@ -98,7 +98,7 @@ public class BackendConfig extends BaseConfig
 		public void setBaseUrl(String url)
 		{
 			ConfigHelpers.check(url, "Base URL is invalid!");
-			this.baseurl = url;
+			this.baseurl = BackendConfig.sanitize(url);
 		}
 	}
 
@@ -199,5 +199,20 @@ public class BackendConfig extends BaseConfig
 		private static final String SINK     = "sink";
 		private static final String URL      = "url";
 		private static final String BASE_URL = "base_url";
+	}
+
+	private static String sanitize(String url)
+	{
+		// Fix URLs containing empty paths:
+		// http://host.org/a//b -> http://host.org/a/b
+
+		final String separator = "://";
+		final String[] parts = url.split(separator);
+		if (parts.length != 2)
+			throw new IllegalArgumentException();
+
+		final String protocol = parts[0];
+		final String path = parts[1].replaceAll("//", "/");
+		return protocol + separator + path;
 	}
 }
