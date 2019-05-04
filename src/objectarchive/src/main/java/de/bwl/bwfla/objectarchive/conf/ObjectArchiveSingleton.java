@@ -20,6 +20,7 @@
 package de.bwl.bwfla.objectarchive.conf;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -117,17 +118,12 @@ public class ObjectArchiveSingleton
 		if(!confValid)
 			throw new ObjectArchiveInitException("no valid configuration found");
 
-		List<DigitalObjectArchive> archives = null;
-		archives = DigitalObjectArchiveFactory.createFromJson(new File(objArchiveConfDir));
-		
-//		if(archives.size() == 0)
-//		{
-			File defaultObjectsPath = new File(defaultLocalFilePath);
-			if(!defaultObjectsPath.exists())
-				throw new ObjectArchiveInitException("no archive configuration found");
-			
-			archives.add(new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, true));	
-//		}
+		List<DigitalObjectArchive> archives = new ArrayList<>();
+		archives.addAll(DigitalObjectArchiveFactory.createFromJson(new File(objArchiveConfDir)));
+
+		File defaultObjectsPath = new File(defaultLocalFilePath);
+		if(!defaultObjectsPath.exists())
+			throw new ObjectArchiveInitException("no archive configuration found");
 
 		// add internal upload archive
 		File tempObjectPath = new File(serverdatadir, tmpArchiveDir);
@@ -137,9 +133,17 @@ public class ObjectArchiveSingleton
 		for(DigitalObjectArchive a : archives)
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
-			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default"))
+			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default")) {
 				ObjectArchiveSingleton.archiveMap.put("default", a);
-		}	
+				break;
+			}
+		}
+
+		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
+		archiveMap.put(_a.getName(), _a);
+		if(!archiveMap.contains("default")) {
+			ObjectArchiveSingleton.archiveMap.put("default", _a);
+		}
 	}
 
 	public static TaskState submitTask(AbstractTask<Object> task)
