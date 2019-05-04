@@ -62,6 +62,9 @@ public class NodeAllocatorConfigGCE extends NodeAllocatorConfig
 	@Config("vm.machine_type")
 	private String vmType = null;
 
+	@Config("vm.min_cpu_platform")
+	private String vmMinCpuPlatform = null;
+
 	@Config("vm.persistent_disk.type")
 	private String vmPersistentDiskType = null;
 
@@ -232,6 +235,18 @@ public class NodeAllocatorConfigGCE extends NodeAllocatorConfig
 		ConfigHelpers.check(type, "Machine type is invalid!");
 
 		this.vmType = type;
+	}
+
+	public String getVmMinCpuPlatform()
+	{
+		return vmMinCpuPlatform;
+	}
+
+	public void setVmMinCpuPlatform(String platform)
+	{
+		ConfigHelpers.check(platform, "Machine's CPU platform is invalid!");
+
+		this.vmMinCpuPlatform = platform;
 	}
 
 	public String getVmPersistentDiskType()
@@ -481,6 +496,7 @@ public class NodeAllocatorConfigGCE extends NodeAllocatorConfig
 		this.setNodeNamePrefix(nodeNamePrefix);
 		this.setServiceAccountCredentialsFile(serviceAccountCredentialsFile);
 		this.setVmType(vmType);
+		this.setVmMinCpuPlatform(vmMinCpuPlatform);
 		this.setVmPersistentDiskType(vmPersistentDiskType);
 		this.setVmPersistentDiskSize(vmPersistentDiskSize);
 		this.setVmPersistentDiskImageUrl(vmPersistentDiskImageUrl);
@@ -513,6 +529,7 @@ public class NodeAllocatorConfigGCE extends NodeAllocatorConfig
 			dumper.add(DumpFields.VM, () -> {
 				json.writeStartObject(DumpFields.VM)
 					.write("machine_type", vmType)
+					.write("min_cpu_platform", vmMinCpuPlatform)
 					.writeStartObject("persistent_disk")
 						.write("type", vmPersistentDiskType)
 						.write("size", vmPersistentDiskSize)
