@@ -6,9 +6,9 @@
 	<description>EaaS cluster manager implementation.</description>
 	<packaging>jar</packaging>
 	<properties>
-		<google.client.version>1.22.0</google.client.version>
+		<google.client.version>1.25.0</google.client.version>
 		<google.compute.version>beta-rev49-1.22.0</google.compute.version>
-		<jclouds.version>2.0.1</jclouds.version>
+		<jclouds.version>2.1.2</jclouds.version>
 	</properties>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>

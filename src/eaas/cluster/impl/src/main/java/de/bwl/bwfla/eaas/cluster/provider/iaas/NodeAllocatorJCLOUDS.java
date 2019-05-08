@@ -41,8 +41,6 @@ import java.util.logging.Logger;
 
 import javax.json.stream.JsonGenerator;
 
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.conf.CommonSingleton;
 import de.bwl.bwfla.eaas.cluster.provider.NodeAllocationRequest;
 import org.jclouds.Constants;
 import org.jclouds.ContextBuilder;
@@ -55,8 +53,8 @@ import org.jclouds.compute.domain.Template;
 import org.jclouds.compute.options.TemplateOptions;
 import org.jclouds.compute.predicates.NodePredicates;
 import org.jclouds.logging.jdk.config.JDKLoggingModule;
-import org.jclouds.openstack.keystone.v2_0.config.CredentialTypes;
-import org.jclouds.openstack.keystone.v2_0.config.KeystoneProperties;
+import org.jclouds.openstack.keystone.auth.config.CredentialTypes;
+import org.jclouds.openstack.keystone.config.KeystoneProperties;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -76,9 +74,7 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
 import de.bwl.bwfla.eaas.cluster.dump.DumpTrigger;
 import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 import de.bwl.bwfla.eaas.cluster.provider.Node;
-import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
-import org.jclouds.rest.ApiContext;
 
 
 public class NodeAllocatorJCLOUDS implements INodeAllocator
@@ -108,7 +104,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			ClusterManagerExecutors executors, PrefixLoggerContext parentLogContext) throws MalformedURLException
 	{
 		final PrefixLoggerContext logContext = new PrefixLoggerContext(parentLogContext)
-				.add("NA", config.getProviderName());
+				.add("NA", config.getProviderType());
 
 		this.log = new PrefixLogger(this.getClass().getName(), logContext);
 		this.config = config;
@@ -290,8 +286,13 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 		final Collection<NodeInfo> knownNodes = nodeRegistry.values();
 		final Set<String> destroyedNodes = new LinkedHashSet<String>();
 		{
-			compute.destroyNodesMatching(filter)
-					.forEach((node) -> destroyedNodes.add(node.getId()));
+			knownNodes.forEach((node) -> {
+				final Map<String, Object> metadata = node.getMetadata();
+				final String id = (String) metadata.get(MDVAR_VMID);
+				log.info("Deleting node " + metadata.get(MDVAR_VMNAME) + "...");
+				destroyedNodes.add(id);
+				compute.destroyNode(id);
+			});
 		}
 		
 		final int numDestroyedNodes = destroyedNodes.size();
@@ -427,20 +428,32 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 	private static ComputeService newComputeService(NodeAllocatorConfigJCLOUDS config)
 	{
 		final Iterable<Module> modules = ImmutableSet.<Module>of(new JDKLoggingModule());
-		
 		final Properties overrides = new Properties();
-		switch (config.getProviderName())
-		{
-			case "openstack-nova":
+		String identity, credential, endpoint;
+		switch (config.getProviderType()) {
+			case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
+				final NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK osconfig = config.getProviderConfig()
+						.as(NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.class);
+
 				overrides.setProperty(KeystoneProperties.CREDENTIAL_TYPE, CredentialTypes.PASSWORD_CREDENTIALS);
+				overrides.setProperty(KeystoneProperties.KEYSTONE_VERSION, osconfig.getAuthApiVersion());
 				overrides.setProperty(Constants.PROPERTY_TRUST_ALL_CERTS, "true");
-				overrides.setProperty(Constants.PROPERTY_API_VERSION, "2");
+				if (osconfig.getAuthApiVersion().equals("3"))
+					overrides.setProperty(KeystoneProperties.SCOPE, "project:" + osconfig.getAuthProjectName());
+
+				identity = osconfig.getAuthUser();
+				credential = osconfig.getAuthPassword();
+				endpoint = osconfig.getAuthEndpoint();
+
 				break;
+
+			default:
+				throw new IllegalStateException("Unknown provider-type: " + config.getProviderType());
 		}
 		
-		final ComputeServiceContext context = ContextBuilder.newBuilder(config.getProviderName())
-				.credentials(config.getProviderIdentity(), config.getProviderCredential())
-				.endpoint(config.getProviderEndpoint())
+		final ComputeServiceContext context = ContextBuilder.newBuilder(config.getProviderType())
+				.credentials(identity, credential)
+				.endpoint(endpoint)
 				.overrides(overrides)
 				.modules(modules)
 				.buildView(ComputeServiceContext.class);
@@ -477,24 +490,21 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			for (int i = 0; i < numRequestedNodes; ++i)
 				names.add(nodeNameGenerator.next());
 
-			TemplateOptions options = null;
-
-			if(config.getProviderName().equals("openstack-nova") && request.getUserMetaData() != null)
-			{
-				options = NovaTemplateOptions.Builder
-						.securityGroupNames(config.getSecurityGroupName())
-						.networks(config.getVmNetworkId())
-						.userData(request.getUserMetaData().apply("*").getBytes())
-						.nodeNames(names);
-			}
-			else
-			{
-				options = nodeTemplate.getOptions()
-						.securityGroups(config.getSecurityGroupName())
-						.networks(config.getVmNetworkId())
-						.nodeNames(names);
-			}
 			// Update options for node template...
+			final TemplateOptions options = nodeTemplate.getOptions()
+					.securityGroups(config.getSecurityGroupName())
+					.networks(config.getVmNetworkId())
+					.nodeNames(names);
+
+			switch (config.getProviderType()) {
+				case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
+					if (request.getUserMetaData() != null) {
+						final String userdata = request.getUserMetaData().apply("*");
+						options.as(NovaTemplateOptions.class)
+								.userData(userdata.getBytes());
+					}
+					break;
+			}
 
 			// Update template...
 			final Template template = compute.templateBuilder()
