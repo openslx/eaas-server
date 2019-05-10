@@ -41,8 +41,6 @@ import java.util.logging.Logger;
 
 import javax.json.stream.JsonGenerator;
 
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.conf.CommonSingleton;
 import de.bwl.bwfla.eaas.cluster.provider.NodeAllocationRequest;
 import org.jclouds.Constants;
 import org.jclouds.ContextBuilder;
@@ -55,8 +53,8 @@ import org.jclouds.compute.domain.Template;
 import org.jclouds.compute.options.TemplateOptions;
 import org.jclouds.compute.predicates.NodePredicates;
 import org.jclouds.logging.jdk.config.JDKLoggingModule;
-import org.jclouds.openstack.keystone.v2_0.config.CredentialTypes;
-import org.jclouds.openstack.keystone.v2_0.config.KeystoneProperties;
+import org.jclouds.openstack.keystone.auth.config.CredentialTypes;
+import org.jclouds.openstack.keystone.config.KeystoneProperties;
 
 import com.google.common.base.Predicate;
 import com.google.common.collect.ImmutableSet;
@@ -76,9 +74,7 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
 import de.bwl.bwfla.eaas.cluster.dump.DumpTrigger;
 import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 import de.bwl.bwfla.eaas.cluster.provider.Node;
-import org.jclouds.openstack.nova.v2_0.NovaApi;
 import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
-import org.jclouds.rest.ApiContext;
 
 
 public class NodeAllocatorJCLOUDS implements INodeAllocator
@@ -105,10 +101,10 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 	private final AtomicInteger numAllocationRequests;
 
 	public NodeAllocatorJCLOUDS(NodeAllocatorConfigJCLOUDS config, Consumer<NodeID> onDownCallback,
-			ClusterManagerExecutors executors, PrefixLoggerContext parentLogContext) throws MalformedURLException
+								ClusterManagerExecutors executors, PrefixLoggerContext parentLogContext) throws MalformedURLException
 	{
 		final PrefixLoggerContext logContext = new PrefixLoggerContext(parentLogContext)
-				.add("NA", config.getProviderName());
+				.add("NA", config.getProviderType());
 
 		this.log = new PrefixLogger(this.getClass().getName(), logContext);
 		this.config = config;
@@ -162,11 +158,11 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 		final Runnable task = () -> {
 			final AllocationResultHandler result =
 					new AllocationResultHandler(numRequestedNodes, pending, request.getOnErrorCallback(), log);
-			
+
 			final Set<? extends NodeMetadata> nodes = this.makeVmCreateRequest(request, numRequestedNodes);
 			for (int i = numRequestedNodes - nodes.size(); i > 0; --i)
 				result.onNodeFailure();
-			
+
 			// Functor for waiting until the node is reachable
 			final Function<NodeInfo, CompletableFuture<NodeInfo>> checkReachabilityFtor = (info) -> {
 				log.info("Waiting for node '" + info.getNodeId() + "' to become reachable...");
@@ -180,11 +176,11 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 						.setLogger(log)
 						.setNodeInfo(info)
 						.build();
-				
+
 				executors.io().execute(check);
 				return check.completion();
 			};
-			
+
 			// Functor for handling success outcomes of boot requests
 			final Consumer<NodeInfo> checkResultAction = (info) -> {
 				final Node node = info.getNode();
@@ -203,7 +199,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 					trigger.submit(executors.io());
 					result.onNodeFailure();
 				}
-				
+
 				long duration = System.currentTimeMillis() - startTimestamp;
 				duration = TimeUnit.MILLISECONDS.toSeconds(duration);
 				log.info("Allocating node '" + nid + "' took " + duration + " second(s)");
@@ -213,7 +209,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			for (NodeMetadata node : nodes) {
 				final String name = "vm-allocation-" + numAllocationRequests.incrementAndGet();
 				final CleanupHandlerChain cleanups = new CleanupHandlerChain(name, log);
-				
+
 				// Register a cleanup handler for VM instance
 				{
 					final Runnable handler = () -> {
@@ -222,10 +218,10 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 						compute.destroyNode(node.getId());
 						log.info("VM '" + vmname + "' deleted");
 					};
-					
+
 					cleanups.add(handler);
 				}
-				
+
 				// Functor for handling error outcome of a boot request
 				final BiConsumer<Void, Throwable> checkErrorAction = (unused, error) -> {
 					if (error == null)
@@ -235,15 +231,15 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 					result.onNodeFailure();
 					cleanups.execute();
 				};
-				
+
 				log.info("VM '" + node.getName() + "' created");
-				
+
 				final CompletionTrigger<NodeMetadata> trigger = new CompletionTrigger<NodeMetadata>(node);
 				this.makeNodeInfo(trigger.completion(), cleanups)
-					.thenCompose(checkReachabilityFtor)
-					.thenAccept(checkResultAction)
-					.whenComplete(checkErrorAction);
-				
+						.thenCompose(checkReachabilityFtor)
+						.thenAccept(checkResultAction)
+						.whenComplete(checkErrorAction);
+
 				trigger.submit(executors.io());
 			}
 		};
@@ -270,11 +266,11 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			final Map<String, Object> metadata = info.getMetadata();
 			final String vmname = (String) metadata.get(MDVAR_VMNAME);
 			log.info("Releasing node '" + info.getNodeId() + "' (" + vmname + ")...");
-			
+
 			final CompletionTrigger<NodeInfo> trigger = new CompletionTrigger<NodeInfo>(info);
 			this.makeVmDeleteRequest(trigger.completion())
-				.whenComplete((value, error) -> result.complete(value));
-			
+					.whenComplete((value, error) -> result.complete(value));
+
 			trigger.submit(executors.io());
 		};
 
@@ -290,10 +286,15 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 		final Collection<NodeInfo> knownNodes = nodeRegistry.values();
 		final Set<String> destroyedNodes = new LinkedHashSet<String>();
 		{
-			compute.destroyNodesMatching(filter)
-					.forEach((node) -> destroyedNodes.add(node.getId()));
+			knownNodes.forEach((node) -> {
+				final Map<String, Object> metadata = node.getMetadata();
+				final String id = (String) metadata.get(MDVAR_VMID);
+				log.info("Deleting node " + metadata.get(MDVAR_VMNAME) + "...");
+				destroyedNodes.add(id);
+				compute.destroyNode(id);
+			});
 		}
-		
+
 		final int numDestroyedNodes = destroyedNodes.size();
 		final int numKnownNodes = knownNodes.size();
 
@@ -301,17 +302,17 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			log.info("No VMs found to be deleted");
 			return true;
 		}
-		
+
 		final StringBuilder sb = new StringBuilder(2048);
 		if (numDestroyedNodes < numKnownNodes) {
 			final int numFailures = numKnownNodes - numDestroyedNodes;
 			sb.append("Destroying ")
-				.append(numFailures)
-				.append(" out of ")
-				.append(numKnownNodes)
-				.append(" VM(s) failed!")
-				.append("\n\n")
-				.append("    Failed VM IDs:\n");
+					.append(numFailures)
+					.append(" out of ")
+					.append(numKnownNodes)
+					.append(" VM(s) failed!")
+					.append("\n\n")
+					.append("    Failed VM IDs:\n");
 
 			final Set<String> failedNodes = new LinkedHashSet<String>();
 			knownNodes.forEach((node) -> {
@@ -427,20 +428,32 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 	private static ComputeService newComputeService(NodeAllocatorConfigJCLOUDS config)
 	{
 		final Iterable<Module> modules = ImmutableSet.<Module>of(new JDKLoggingModule());
-		
 		final Properties overrides = new Properties();
-		switch (config.getProviderName())
-		{
-			case "openstack-nova":
+		String identity, credential, endpoint;
+		switch (config.getProviderType()) {
+			case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
+				final NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK osconfig = config.getProviderConfig()
+						.as(NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.class);
+
 				overrides.setProperty(KeystoneProperties.CREDENTIAL_TYPE, CredentialTypes.PASSWORD_CREDENTIALS);
+				overrides.setProperty(KeystoneProperties.KEYSTONE_VERSION, osconfig.getAuthApiVersion());
 				overrides.setProperty(Constants.PROPERTY_TRUST_ALL_CERTS, "true");
-				overrides.setProperty(Constants.PROPERTY_API_VERSION, "2");
+				if (osconfig.getAuthApiVersion().equals("3"))
+					overrides.setProperty(KeystoneProperties.SCOPE, "project:" + osconfig.getAuthProjectName());
+
+				identity = osconfig.getAuthUser();
+				credential = osconfig.getAuthPassword();
+				endpoint = osconfig.getAuthEndpoint();
+
 				break;
+
+			default:
+				throw new IllegalStateException("Unknown provider-type: " + config.getProviderType());
 		}
-		
-		final ComputeServiceContext context = ContextBuilder.newBuilder(config.getProviderName())
-				.credentials(config.getProviderIdentity(), config.getProviderCredential())
-				.endpoint(config.getProviderEndpoint())
+
+		final ComputeServiceContext context = ContextBuilder.newBuilder(config.getProviderType())
+				.credentials(identity, credential)
+				.endpoint(endpoint)
 				.overrides(overrides)
 				.modules(modules)
 				.buildView(ComputeServiceContext.class);
@@ -466,42 +479,39 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 
 		return ResourceSpec.create(cpu, hardware.getRam(), MemoryUnit.MEGABYTES);
 	}
-	
+
 	private Set<? extends NodeMetadata> makeVmCreateRequest(NodeAllocationRequest request, int numRequestedNodes)
 	{
 		try {
 			log.info("Starting " + numRequestedNodes + " requested node(s)...");
-			
+
 			// Prepare a list of names for requested nodes...
 			final List<String> names = new ArrayList<String>(numRequestedNodes);
 			for (int i = 0; i < numRequestedNodes; ++i)
 				names.add(nodeNameGenerator.next());
 
-			TemplateOptions options = null;
-
-			if(config.getProviderName().equals("openstack-nova") && request.getUserMetaData() != null)
-			{
-				options = NovaTemplateOptions.Builder
-						.securityGroupNames(config.getSecurityGroupName())
-						.networks(config.getVmNetworkId())
-						.userData(request.getUserMetaData().apply("*").getBytes())
-						.nodeNames(names);
-			}
-			else
-			{
-				options = nodeTemplate.getOptions()
-						.securityGroups(config.getSecurityGroupName())
-						.networks(config.getVmNetworkId())
-						.nodeNames(names);
-			}
 			// Update options for node template...
+			final TemplateOptions options = nodeTemplate.getOptions()
+					.securityGroups(config.getSecurityGroupName())
+					.networks(config.getVmNetworkId())
+					.nodeNames(names);
+
+			switch (config.getProviderType()) {
+				case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
+					if (request.getUserMetaData() != null) {
+						final String userdata = request.getUserMetaData().apply("*");
+						options.as(NovaTemplateOptions.class)
+								.userData(userdata.getBytes());
+					}
+					break;
+			}
 
 			// Update template...
 			final Template template = compute.templateBuilder()
 					.fromTemplate(nodeTemplate)
 					.options(options)
 					.build();
-			
+
 			return compute.createNodesInGroup(config.getNodeGroupName(), numRequestedNodes, template);
 		}
 		catch (RunNodesException exception) {
@@ -514,7 +524,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			return exception.getSuccessfulNodes();
 		}
 	}
-	
+
 	private CompletableFuture<Boolean> makeVmDeleteRequest(CompletableFuture<NodeInfo> trigger)
 	{
 		final Function<NodeInfo, Boolean> functor = (info) -> {
@@ -540,17 +550,17 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 	{
 		final Function<NodeMetadata, NodeInfo> functor = (instance) -> {
 			final String vmname = instance.getName();
-	
+
 			// Lookup the public IP address of the instance
 			final String extip = instance.getPublicAddresses()
 					.iterator()
 					.next();
-	
+
 			if (extip == null || extip.isEmpty())
 				throw new IllegalStateException("No external IP address for VM '" + vmname + "' found!");
-	
+
 			log.info("VM '" + vmname + "' is running. External IP is " + extip);
-	
+
 			// Compute the URL for health checks and create node
 			final String urlTemplate = config.getHealthCheckUrl();
 			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, extip);
@@ -566,10 +576,10 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 				throw new CompletionException(error);
 			}
 		};
-		
+
 		return trigger.thenApply(functor);
 	}
-	
+
 	private void scheduleHealthChecking(boolean delayed)
 	{
 		// Action trigger...

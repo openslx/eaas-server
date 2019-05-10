@@ -21,7 +21,9 @@ package de.bwl.bwfla.eaas.cluster.config;
 
 import java.util.concurrent.TimeUnit;
 
+import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.json.stream.JsonGenerator;
 
 import org.apache.tamaya.ConfigException;
@@ -39,17 +41,7 @@ import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 
 public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 {
-	@Config("provider.name")
-	private String providerName = null;
-
-	@Config("provider.identity")
-	private String identity = null;
-
-	@Config("provider.credential")
-	private String credential = null;
-
-	@Config("provider.endpoint")
-	private String endpoint = null;
+	private ProviderConfig provider = null;
 
 	@Config("security_group_name")
 	private String securityGroupName = null;
@@ -59,7 +51,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 	@Config("node_name_prefix")
 	private String nodeNamePrefix = null;
-	
+
 	@Config("vm.network_id")
 	private String vmNetworkId = null;
 
@@ -68,7 +60,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 	@Config("vm.image_id")
 	private String vmImageId = null;
-	
+
 	@Config("vm.boot_poll_interval")
 	@WithPropertyConverter(DurationPropertyConverter.class)
 	private long vmBootPollInterval = -1L;
@@ -76,61 +68,27 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 	@Config("vm.boot_poll_interval_delta")
 	@WithPropertyConverter(DurationPropertyConverter.class)
 	private long vmBootPollIntervalDelta = -1L;
-	
+
 	@Config("vm.max_num_boot_polls")
 	private int vmMaxNumBootPolls = -1;
 
 
 	/* ========== Getters and Setters ========== */
 
-	public String getProviderName()
+	public String getProviderType()
 	{
-		return providerName;
+		return provider.getType();
 	}
 
-	public void setProviderName(String provider)
+	public ProviderConfig getProviderConfig()
 	{
-		ConfigHelpers.check(provider, "Provider name is invalid!");
-
-		this.providerName = provider;
+		return provider;
 	}
 
-	public String getProviderIdentity()
+	public void setProviderConfig(ProviderConfig provider)
 	{
-		return identity;
+		this.provider = provider;
 	}
-
-	public void setProviderIdentity(String identity)
-	{
-		ConfigHelpers.check(identity, "Provider identity is invalid!");
-
-		this.identity = identity;
-	}
-
-	public String getProviderCredential()
-	{
-		return credential;
-	}
-
-	public void setProviderCredential(String credential)
-	{
-		ConfigHelpers.check(credential, "Provider credential is invalid!");
-
-		this.credential = credential;
-	}
-	
-	public String getProviderEndpoint()
-	{
-		return endpoint;
-	}
-
-	public void setProviderEndpoint(String endpoint)
-	{
-		ConfigHelpers.check(endpoint, "Provider endpoint is invalid!");
-
-		this.endpoint = endpoint;
-	}
-	
 
 	public String getSecurityGroupName()
 	{
@@ -143,7 +101,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 		this.securityGroupName = name;
 	}
-	
+
 	public String getNodeGroupName()
 	{
 		return nodeGroupName;
@@ -155,7 +113,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 		this.nodeGroupName = name;
 	}
-	
+
 	public String getNodeNamePrefix()
 	{
 		return nodeNamePrefix;
@@ -167,7 +125,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 		this.nodeNamePrefix = name;
 	}
-	
+
 	public String getVmNetworkId()
 	{
 		return vmNetworkId;
@@ -179,7 +137,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 		this.vmNetworkId = id;
 	}
-	
+
 	public String getVmHardwareId()
 	{
 		return vmHardwareId;
@@ -191,19 +149,19 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 		this.vmHardwareId = id;
 	}
-	
+
 	public String getVmImageId()
 	{
 		return vmImageId;
 	}
-	
+
 	public void setVmImageId(String id)
 	{
 		ConfigHelpers.check(id, "Image ID is invalid!");
 
 		this.vmImageId = id;
 	}
-	
+
 	public long getVmBootPollInterval()
 	{
 		return vmBootPollInterval;
@@ -237,7 +195,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 	{
 		this.setVmBootPollIntervalDelta(unit.toMillis(delta));
 	}
-	
+
 	public int getVmMaxNumBootPolls()
 	{
 		return vmMaxNumBootPolls;
@@ -257,6 +215,177 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 	}
 
 
+	/* ========== Provider Configs ========== */
+
+	public static abstract class ProviderConfig
+	{
+		private final String type;
+
+
+		protected ProviderConfig(String type)
+		{
+			this.type = type;
+		}
+
+		public String getType()
+		{
+			return type;
+		}
+
+		public <T> T as(Class<T> clazz)
+		{
+			return clazz.cast(this);
+		}
+
+		public abstract void load(Configuration config) throws ConfigException;
+
+		public abstract void validate() throws ConfigException;
+
+		public abstract JsonObject dump();
+
+		public static ProviderConfig create(Configuration config)
+		{
+			ProviderConfig provider = null;
+
+			final String type = config.get("type");
+			switch (type) {
+				case ProviderConfigOPENSTACK.TYPE:
+					provider = new ProviderConfigOPENSTACK();
+					break;
+
+				default:
+					throw new ConfigException("Unknown provider-type: " + type);
+			}
+
+			provider.load(config);
+			return provider;
+		}
+	}
+
+	public static class ProviderConfigOPENSTACK extends ProviderConfig
+	{
+		public static final String TYPE = "openstack-nova";
+
+		@Config("auth.endpoint")
+		private String authEndpoint = null;
+
+		@Config("auth.api_version")
+		private String authApiVersion = null;
+
+		@Config("auth.project_name")
+		private String authProjectName = null;
+
+		@Config("auth.user")
+		private String authUser = null;
+
+		@Config("auth.password")
+		private String authPassword= null;
+
+
+		public ProviderConfigOPENSTACK()
+		{
+			super(TYPE);
+		}
+
+		public String getAuthEndpoint()
+		{
+			return authEndpoint;
+		}
+
+		public void setAuthEndpoint(String endpoint)
+		{
+			ConfigHelpers.check(endpoint, "Provider's auth-endpoint is invalid!");
+
+			this.authEndpoint = endpoint;
+		}
+
+		public String getAuthApiVersion()
+		{
+			return authApiVersion;
+		}
+
+		public void setAuthApiVersion(String version)
+		{
+			ConfigHelpers.check(version, "Provider's auth-api-version is invalid!");
+
+			this.authApiVersion = version;
+		}
+
+		public String getAuthProjectName()
+		{
+			return authProjectName;
+		}
+
+		public void setAuthProjectName(String project)
+		{
+			ConfigHelpers.check(project, "Provider's auth-project is invalid!");
+
+			this.authProjectName = project;
+		}
+
+		public String getAuthUser()
+		{
+			return authUser;
+		}
+
+		public void setAuthUser(String user)
+		{
+			ConfigHelpers.check(user, "Provider's auth-user is invalid!");
+
+			this.authUser = user;
+		}
+
+		public String getAuthPassword()
+		{
+			return authPassword;
+		}
+
+		public void setAuthPassword(String password)
+		{
+			ConfigHelpers.check(password, "Provider's auth-password is invalid!");
+
+			this.authPassword = password;
+		}
+
+		@Override
+		public void load(Configuration config) throws ConfigException
+		{
+			// Configure annotated members of this instance
+			ConfigHelpers.configure(this, config);
+		}
+
+		@Override
+		public void validate() throws ConfigException
+		{
+			// Re-check the arguments...
+			this.setAuthEndpoint(authEndpoint);
+			this.setAuthApiVersion(authApiVersion);
+			this.setAuthProjectName(authProjectName);
+			this.setAuthUser(authUser);
+			this.setAuthPassword(authPassword);
+		}
+
+		@Override
+		public JsonObject dump()
+		{
+			final JsonObjectBuilder auth = Json.createObjectBuilder()
+					.add("endpoint", authEndpoint)
+					.add("api_version", authApiVersion);
+
+			return Json.createObjectBuilder()
+					.add(DumpFields.TYPE, this.getType())
+					.add(DumpFields.AUTH, auth.build())
+					.build();
+		}
+
+		private static class DumpFields
+		{
+			private static final String TYPE  = "type";
+			private static final String AUTH  = "auth";
+		}
+	}
+
+
 	/* ========== Initialization ========== */
 
 	@Override
@@ -264,20 +393,19 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 	{
 		// Configure annotated members of this instance
 		ConfigHelpers.configure(this, config);
+
+		this.provider = ProviderConfig.create(ConfigHelpers.filter(config, "provider."));
 	}
 
 	@Override
 	public void validate() throws ConfigException
 	{
 		this.valid = false;
-		
+
 		super.validate();
 
 		// Re-check the arguments...
-		this.setProviderName(providerName);
-		this.setProviderIdentity(identity);
-		this.setProviderCredential(credential);
-		this.setProviderEndpoint(endpoint);
+		this.provider.validate();
 		this.setNodeGroupName(nodeGroupName);
 		this.setNodeNamePrefix(nodeNamePrefix);
 		this.setSecurityGroupName(securityGroupName);
@@ -287,45 +415,37 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 		this.setVmBootPollInterval(vmBootPollInterval);
 		this.setVmBootPollIntervalDelta(vmBootPollIntervalDelta);
 		this.setVmMaxNumBootPolls(vmMaxNumBootPolls);
-		
+
 		this.valid = true;
 	}
-	
+
 	@Override
 	public void dump(JsonGenerator json, DumpConfig dconf, int flags)
 	{
 		final DumpTrigger trigger = new DumpTrigger(dconf);
 		trigger.setResourceDumpHandler(() -> {
 			final ObjectDumper dumper = new ObjectDumper(json, dconf, flags, this.getClass());
-			dumper.add(DumpFields.PROVIDER, () -> {
-				json.writeStartObject(DumpFields.PROVIDER);
-				json.write("name", providerName);
-				json.write("identity", ConfigHelpers.anonymize(identity, 'X'));
-				json.write("credential", ConfigHelpers.anonymize(credential, 'X'));
-				json.write("endpoint", endpoint);
-				json.writeEnd();
-			});
-
+			dumper.add(DumpFields.PROVIDER, () -> json.write(DumpFields.PROVIDER, provider.dump()));
 			dumper.add(DumpFields.SECURITY_GROUP, () -> json.write(DumpFields.SECURITY_GROUP, securityGroupName));
 			dumper.add(DumpFields.NODE_GROUP_NAME, () -> json.write(DumpFields.NODE_GROUP_NAME, nodeGroupName));
 			dumper.add(DumpFields.NODE_NAME_PREFIX, () -> json.write(DumpFields.NODE_NAME_PREFIX, nodeNamePrefix));
-			
+
 			dumper.add(DumpFields.VM, () -> {
 				json.writeStartObject(DumpFields.VM)
-					.write("network_id", vmNetworkId)
-					.write("hardware_id", vmHardwareId)
-					.write("image_id", vmImageId)
-					.write("boot_poll_interval", DumpHelpers.toDurationString(vmBootPollInterval))
-					.write("boot_poll_interval_delta", DumpHelpers.toDurationString(vmBootPollIntervalDelta))
-					.write("max_num_boot_polls", vmMaxNumBootPolls)
-				.writeEnd();
+						.write("network_id", vmNetworkId)
+						.write("hardware_id", vmHardwareId)
+						.write("image_id", vmImageId)
+						.write("boot_poll_interval", DumpHelpers.toDurationString(vmBootPollInterval))
+						.write("boot_poll_interval_delta", DumpHelpers.toDurationString(vmBootPollIntervalDelta))
+						.write("max_num_boot_polls", vmMaxNumBootPolls)
+						.writeEnd();
 			});
-			
+
 			final JsonObject object = super.dump();
 			object.forEach((key, value) -> {
 				dumper.add(key, () -> json.write(key, value));
 			});
-			
+
 			dumper.run();
 		});
 
