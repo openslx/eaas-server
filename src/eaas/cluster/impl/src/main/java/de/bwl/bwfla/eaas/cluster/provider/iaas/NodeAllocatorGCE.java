@@ -679,7 +679,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 				final String minCpuPlatform = config.getVmMinCpuPlatform();
 				if (minCpuPlatform != null && !minCpuPlatform.isEmpty())
-					instance.setCpuPlatform(minCpuPlatform);
+					instance.setMinCpuPlatform(minCpuPlatform);
 
 				// Add guest accelerators...
 				if (!config.getVmAccelerators().isEmpty()) {
