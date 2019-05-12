@@ -133,15 +133,16 @@ public class ObjectArchiveSingleton
 		for(DigitalObjectArchive a : archives)
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
+			LOG.info("adding object archive" + a.getName());
 			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default")) {
 				ObjectArchiveSingleton.archiveMap.put("default", a);
-				break;
+				LOG.warning("setting archive " + a.getName() + " as default");
 			}
 		}
 
 		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
 		archiveMap.put(_a.getName(), _a);
-		if(!archiveMap.contains("default")) {
+		if(!archiveMap.containsKey("default")) {
 			ObjectArchiveSingleton.archiveMap.put("default", _a);
 		}
 	}
