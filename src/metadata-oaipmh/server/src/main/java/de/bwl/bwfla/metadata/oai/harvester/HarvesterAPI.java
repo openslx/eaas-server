@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.oai.harvester;
 
+import de.bwl.bwfla.common.datatypes.security.Secured;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
 
 import javax.annotation.Resource;
@@ -59,6 +60,7 @@ public class HarvesterAPI
 	// ========== Admin API ==============================
 
 	@GET
+	@Secured
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listHarvesters()
 	{
@@ -68,6 +70,7 @@ public class HarvesterAPI
 	}
 
 	@POST
+	@Secured
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(BackendConfig config)
 	{
@@ -77,6 +80,7 @@ public class HarvesterAPI
 	}
 
 	@DELETE
+	@Secured
 	@Path("/{name}")
 	public Response unregister(@PathParam("name") String name)
 	{
@@ -88,6 +92,7 @@ public class HarvesterAPI
 	}
 
 	@POST
+	@Secured
 	@Path("/{name}")
 	public CompletionStage<Response> harvest(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
@@ -114,6 +119,7 @@ public class HarvesterAPI
 	}
 
 	@GET
+	@Secured
 	@Path("/{name}/status")
 	public Response status(@PathParam("name") String name)
 	{
