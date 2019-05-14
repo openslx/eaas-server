@@ -45,6 +45,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
+import de.bwl.bwfla.common.datatypes.security.Secured;
 import org.dspace.xoai.dataprovider.DataProvider;
 import org.dspace.xoai.dataprovider.builder.OAIRequestParametersBuilder;
 import org.dspace.xoai.dataprovider.parameters.OAIRequest;
@@ -73,6 +74,7 @@ public class ProviderAPI
 	// ========== Admin API ==============================
 
 	@GET
+	@Secured
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listProviders()
 	{
@@ -85,6 +87,7 @@ public class ProviderAPI
 	// ========== OAI-PMH API ==============================
 
 	@GET
+	@Secured
 	@Path("/{name}")
 	public CompletionStage<Response> get(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
@@ -92,6 +95,7 @@ public class ProviderAPI
 	}
 
 	@POST
+	@Secured
 	@Path("/{name}")
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public CompletionStage<Response> post(@PathParam("name") String name, @Context HttpServletRequest request)
