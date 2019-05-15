@@ -52,3 +52,14 @@ trigger:
      - emil-db-rework
    variables:
      - $CI_PROJECT_NAMESPACE == "openslx"
+
+deploy-citar:
+ stage: deploy
+ before_script:
+  - apt-get update -qq && apt-get install -y rsync sshpass
+ script:
+  - sshpass -p $gitlab rsync -e "ssh -o StrictHostKeyChecking=no" -rltvz -O src/ear/target/eaas-server.ear gitlab@192.52.32.102:/mnt/data/citar-demo/deployments/eaas-server.ear
+  - sshpass -p $gitlab ssh gitlab@192.52.32.102 'sudo systemctl restart eaas'
+ only:
+  refs:
+   - citar-release
