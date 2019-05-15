@@ -49,7 +49,7 @@ trigger:
    - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=master https://gitlab.com/api/v4/projects/11165186/trigger/pipeline
   only:
    refs:
-     - emil-db-rework
+     - master
    variables:
      - $CI_PROJECT_NAMESPACE == "openslx"
 
