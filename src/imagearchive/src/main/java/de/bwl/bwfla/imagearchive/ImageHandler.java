@@ -581,7 +581,6 @@ public class ImageHandler
 			if ((env = loadMetaDataFile(fileEntry)) != null) {
 				Environment emuEnv = null;
 				try {
-					// log.info("env \n" + env);
 					emuEnv = Environment.fromValue(env);
 				} catch (Throwable t) {
 					log.info("loadMetadata: failed to parse environment: " + t.getMessage());
