@@ -146,12 +146,7 @@ public class EmilEnvironmentData extends EmilRest {
 				Environment env =  envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
 
 				if(!(env instanceof MachineConfiguration))
-					throw new BadRequestException(Response
-							.status(Response.Status.BAD_REQUEST)
-							.entity(new ErrorInformation("no machine configuratuin found " + envId))
-							.build());
-
-				machineConf = (MachineConfiguration)env;
+					machineConf = null;
 
 
 			List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
@@ -161,7 +156,7 @@ public class EmilEnvironmentData extends EmilRest {
 		} catch (BWFLAException e) {
 			throw new BadRequestException(Response
 					.status(Response.Status.BAD_REQUEST)
-					.entity(new ErrorInformation(e.getCause()))
+					.entity(new ErrorInformation("failed retrieving data"))
 					.build());
 		}
 	}
@@ -238,63 +233,6 @@ public class EmilEnvironmentData extends EmilRest {
 
 		imageProposer.refreshIndex();
 		return Emil.successMessageResponse("delete success!");
-	}
-
-	/**
-	 * Looks up and returns all possible environments. A JSON response will be
-	 * returned, containing:
-	 * <p>
-	 * <pre>
-	 * {
-	 *      "status": "0",
-	 *      "environments": [
-	 *          { "id": &ltEnvironment's ID&gt, "label": "Environment's label" },
-	 *          ...
-	 *      ]
-	 * }
-	 * </pre>
-	 * <p>
-	 * In case of an error a JSON response containing the corresponding message
-	 * will be returned:
-	 * <p>
-	 * <pre>
-	 * {
-	 *      "status": "1",
-	 *      "message": "Error message."
-	 * }
-	 * </pre>
-	 *
-	 * @return A JSON object with supported environments when found, else an
-	 * error message.
-	 */
-	@Secured
-	@GET
-	@Path("/getAllEnvironments")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getAllEnvironments() {
-		try {
-			List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
-			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-			json.beginObject();
-			json.add("status", "0");
-			json.name("environments");
-			json.beginArray();
-
-			for (EmilEnvironment env : environments) {
-				json.beginObject();
-				json.add("id", env.getEnvId());
-				json.add("label", env.getTitle());
-				json.endObject();
-			}
-
-			json.endArray();
-			json.endObject();
-			json.finish();
-
-			return Emil.createResponse(Status.OK, json.toString());
-		} catch (Throwable t) {
-			return Emil.errorMessageResponse(t.getMessage());
-		}
 	}
 
 	@Secured
@@ -572,6 +510,8 @@ public class EmilEnvironmentData extends EmilRest {
 
 				machineConfiguration.getUiOptions().getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
+				machineConfiguration.setDrive(desc.getDrives());
+
 				if(desc.isEnableInternet())
 				{
 					List<Nic> nics = machineConfiguration.getNic();
@@ -805,35 +745,6 @@ public class EmilEnvironmentData extends EmilRest {
 		envHelper.sync();
 		init();
 		return Emil.successMessageResponse("syncing archives ");
-	}
-
-	@Secured
-	@GET
-	@Path("/environmentMetaData")
-	@Produces(MediaType.APPLICATION_JSON)
-	public EnvironmentMetaData getEnvironmentMetaData(@QueryParam("archive") String archive, @QueryParam("envId") String envId)
-	{
-		if(envId == null || archive == null)
-			return new EnvironmentMetaData(new BWFLAException("environment ID / archive was null"));
-
-		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
-		try {
-			MachineConfiguration machineConfiguration = (MachineConfiguration)envHelper.getEnvironmentById(archive, envId);
-
-			if(machineConfiguration.getEmulator() == null)
-				return new EnvironmentMetaData(new BWFLAException("invalid machine metadata: " + machineConfiguration.toString()));
-			final String bean = machineConfiguration.getEmulator().getBean();
-
-			EnvironmentMetaData emd = new EnvironmentMetaData();
-			emd.setMediaChangeSupport(EmulationEnvironmentHelper.beanSupportsMediaChange(bean, null));
-
-			return emd;
-
-		} catch (BWFLAException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new EnvironmentMetaData(e);
-		}
-
 	}
 
 	@Secured

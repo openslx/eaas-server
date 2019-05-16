@@ -3,6 +3,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 import de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
+import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -115,6 +116,8 @@ public class EnvironmentDetails {
     @XmlElement private String containerName;
     @XmlElement private String containerVersion;
 
+    @XmlElement private List<Drive> drives;
+
     /* Object Environments */
 
     @XmlElement
@@ -166,6 +169,11 @@ public class EnvironmentDetails {
         this.canProcessAdditionalFiles = emilenv.isCanProcessAdditionalFiles();
         this.archive = emilenv.getArchive();
         this.xpraEncoding = emilenv.getXpraEncoding();
+
+        if(machineConf != null)
+            this.drives = machineConf.getDrive();
+        else
+            this.drives = new ArrayList<>();
 
         if( emilenv.getOwner() != null)
             this.owner = emilenv.getOwner().getUsername();
