@@ -10,7 +10,7 @@ public class ImportEmulatorRequest extends ImportContainerRequest {
     @XmlElement(required = true)
     private String fstype;
 
-    @XmlElement(required = true)
+    @XmlElement(required = false)
     private String alias;
 
     @XmlElement(required = true)

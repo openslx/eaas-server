@@ -103,8 +103,6 @@ public class ReplicateImageTask extends AbstractTask<Object> {
                 importEmulatorRequest.setImageType(DOCKERHUB);
 
                 request.containerUtil.importEmulator(importEmulatorRequest);
-
-
             }
 
         }
