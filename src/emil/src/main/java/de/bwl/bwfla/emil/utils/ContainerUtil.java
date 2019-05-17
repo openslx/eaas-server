@@ -277,6 +277,8 @@ public class ContainerUtil {
         config.getDataResources().add(binding);
 
         config.setGui(containerRequest.guiRequired());
+        if (containerRequest.getCustomSubdir() != null && !containerRequest.getCustomSubdir().equals(""))
+            config.setCustomSubdir(containerRequest.getCustomSubdir());
 
         config.setOutputPath(containerRequest.getOutputFolder());
         config.setInputPath(containerRequest.getInputFolder());

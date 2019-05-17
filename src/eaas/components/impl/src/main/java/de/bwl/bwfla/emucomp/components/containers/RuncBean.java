@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.emucomp.components.containers;
 
-import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.net.ConfigKey;
@@ -27,8 +26,7 @@ import de.bwl.bwfla.common.utils.net.PortRangeProvider;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
-import de.bwl.bwfla.emucomp.xpra.XpraUtils;
+
 import org.apache.tamaya.inject.api.Config;
 
 import javax.inject.Inject;
@@ -70,7 +68,10 @@ public class RuncBean extends ContainerBean
 
 			final DeprecatedProcessRunner cgen = new DeprecatedProcessRunner();
 			cgen.setCommand("emucon-cgen");
-			cgen.addArguments("--rootfs", rootfs);
+			if (config.getCustomSubdir() != null)
+				cgen.addArguments("--rootfs", rootfs + "/" + config.getCustomSubdir());
+			else
+				cgen.addArguments("--rootfs", rootfs);
 			cgen.addArguments("--output", conConfigPath);
 			if (this.isUserNamespaceEnabled()) {
 				cgen.addArguments("--user", this.getContainerRuntimeUser());
