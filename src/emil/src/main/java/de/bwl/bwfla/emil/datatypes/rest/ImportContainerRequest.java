@@ -16,6 +16,7 @@ public class ImportContainerRequest extends EmilRequestType {
     private String runtimeID;
     private String name;
     private String urlString;
+    private String customSubdir;
 
     @XmlElement(required = false)
     private String tag;
@@ -151,6 +152,14 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public void setDigest(String digest) {
         this.digest = digest;
+    }
+
+    public String getCustomSubdir() {
+        return customSubdir;
+    }
+
+    public void setCustomSubdir(String customSubdir) {
+        this.customSubdir = customSubdir;
     }
 
     @XmlEnum
