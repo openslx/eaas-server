@@ -99,15 +99,16 @@ public class Sessions
 //		sessions.add(id, request.getResources());
 //		response.setStatus(Response.Status.OK.getStatusCode());
 //	}
-//
-//	@DELETE
-//	@Consumes(MediaType.APPLICATION_JSON)
-//	@Path("/{id}/resources")
-//	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
-//	{
-//		sessions.remove(id, resources);
-//		response.setStatus(Response.Status.OK.getStatusCode());
-//	}
+
+	@DELETE
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Path("/{id}/resources")
+	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
+	{
+		System.out.println("delete");
+		sessions.remove(id, resources);
+		response.setStatus(Response.Status.OK.getStatusCode());
+	}
 
 //	@GET
 //	@Produces(MediaType.APPLICATION_JSON)

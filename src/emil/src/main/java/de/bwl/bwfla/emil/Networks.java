@@ -266,10 +266,8 @@ public class Networks {
 
             List<ComponentGroupElement> components = sessions.getComponents(session);
             for (ComponentGroupElement componentElement : components) {
+
                 String type = componentClient.getComponentPort(eaasGw).getComponentType(componentElement.getComponentId());
-
-
-                
                 try {
                     if(type.equals("nodetcp")) {
                         NetworkResponse networkResponse = new NetworkResponse(session.id());
@@ -283,7 +281,7 @@ public class Networks {
                                 networkResponse ));
 
                     } else if (type.equals("machine")){
-                        String componentName = componentElement.getCustomName();
+                        String componentName = componentClient.getComponentPort(eaasGw).getEnvironmentId(componentElement.getComponentId());
                         if (componentName == null)
                             componentName = componentElement.getComponentId();
 

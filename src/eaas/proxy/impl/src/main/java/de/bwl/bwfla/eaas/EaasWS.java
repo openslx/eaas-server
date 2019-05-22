@@ -54,6 +54,7 @@ import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelectorParser;
 import de.bwl.bwfla.eaas.proxy.DirectComponentClient;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
+import de.bwl.bwfla.emucomp.api.Environment;
 import org.apache.tamaya.inject.api.Config;
 
 
@@ -154,7 +155,15 @@ public class EaasWS
             }
             
             final List<LabelSelector> labelSelectors = this.parseLabelSelectors(selectors);
-            final ResourceSpec spec = ResourceSpec.create(1, CpuUnit.CORES, 512, MemoryUnit.MEGABYTES);
+
+            ResourceSpec spec = null;
+            if (config instanceof Environment) {
+            	spec = ResourceSpec.create(500, CpuUnit.MILLICORES, 512, MemoryUnit.MEGABYTES);
+			}
+            else
+            	spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
+
+
 	        final ResourceHandle resource = clusterManager.allocate(labelSelectors, allocationId, spec, Duration.ofMinutes(2));
 			try {
 				final Component component = serviceCache.getComponentPort(resource.getNodeID());

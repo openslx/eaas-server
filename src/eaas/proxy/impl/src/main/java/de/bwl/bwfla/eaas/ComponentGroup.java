@@ -84,7 +84,7 @@ public class ComponentGroup {
         synchronized(group) {
             // re-verify that the group is still valid
             if (groupToComponents.containsKey(UUID.fromString(groupId))) {
-                group.remove(componentId);
+                group.removeIf(item -> (item.getComponentId().equals(componentId)));
             }
         }
     }

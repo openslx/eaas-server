@@ -36,7 +36,8 @@ import java.util.logging.Logger;
 @XmlType(name = "ociContainerConfiguration", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
 		"process",
 		"rootfs",
-		"isGui"
+		"isGui",
+		"customSubdir"
 })
 @XmlRootElement(name = "ociContainerConfiguration", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class OciContainerConfiguration extends ContainerConfiguration
@@ -49,6 +50,9 @@ public class OciContainerConfiguration extends ContainerConfiguration
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
 	protected boolean isGui = false;
+
+	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
+	protected String customSubdir = null;
 
 	public Process getProcess()
 	{
@@ -81,6 +85,14 @@ public class OciContainerConfiguration extends ContainerConfiguration
 
 	public void setGui(boolean gui) {
 		isGui = gui;
+	}
+
+	public String getCustomSubdir() {
+		return customSubdir;
+	}
+
+	public void setCustomSubdir(String customSubdir) {
+		this.customSubdir = customSubdir;
 	}
 
 	public OciContainerConfiguration copy()

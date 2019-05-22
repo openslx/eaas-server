@@ -3,6 +3,9 @@ package de.bwl.bwfla.emil.datatypes.rest;
 import javax.persistence.Entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import de.bwl.bwfla.emucomp.api.Drive;
+
+import java.util.List;
 
 
 @Entity
@@ -38,6 +41,7 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean localServerMode;
 	private boolean enableSocks;
 	private boolean canProcessAdditionalFiles;
+	private List<Drive> drives;
 
 	public String getEnvId() {
 		return envId;
@@ -232,5 +236,13 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setAuthor(String author) {
 		this.author = author;
+	}
+
+	public List<Drive> getDrives() {
+		return drives;
+	}
+
+	public void setDrives(List<Drive> drives) {
+		this.drives = drives;
 	}
 }

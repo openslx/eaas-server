@@ -756,6 +756,14 @@ public class Components {
         }
     }
 
+    public boolean hasComponentSession(String componentId)
+    {
+        ComponentSession session = sessions.get(componentId);
+        if(session == null)
+            return false;
+
+        return true;
+    }
 
     public boolean keepalive(String componentId, boolean ignoreMissing) throws BWFLAException {
         ComponentSession session = sessions.get(componentId);

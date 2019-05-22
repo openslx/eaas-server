@@ -189,13 +189,15 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			throw new BWFLAException("objectDir " + localPath + " does not exist");
 		}
 		Path targetDir = objectDir.toPath().resolve(resource.getId());
-		if(!targetDir.toFile().exists())
-			if(!targetDir.toFile().mkdirs())
-			{
+		if(!targetDir.toFile().exists()) {
+			if (!targetDir.toFile().mkdirs()) {
 				throw new BWFLAException("could not create directory: " + targetDir);
 			}
+		}
 
 		Path target = targetDir.resolve("thumbnail.jpeg");
+		if(Files.exists(target))
+			return;
 		EmulatorUtils.copyRemoteUrl(resource, target, null);
 	}
 

@@ -79,7 +79,13 @@ public class Component
 
         return component.getComponentType();
     }
-    
+
+    @WebMethod
+    public String getEnvironmentId(String id) throws BWFLAException {
+        final AbstractEaasComponent component = nodeManager.getComponentById(id, AbstractEaasComponent.class);
+        return component.getEnvironmentId();
+    }
+
     @WebMethod
     public Map<String, URI> getControlUrls(String id) throws BWFLAException {
         final AbstractEaasComponent component = nodeManager.getComponentById(id, AbstractEaasComponent.class);

@@ -350,6 +350,7 @@ public class EmulatorUtils {
 
 			DeprecatedProcessRunner process = new DeprecatedProcessRunner("xmount");
 			process.setLogger(log);
+			// process.addArgument("-d");
 			process.addArguments("--in" , xmountOpts.getInFmt().toString(),
 					imagePath);
 
@@ -357,6 +358,7 @@ public class EmulatorUtils {
 			process.addArguments(mountpoint.toAbsolutePath().toString());
 
 			if (!process.execute()) {
+			// if (!process.start()) {
 				try {
 					Files.deleteIfExists(mountpoint);
 				} catch (IOException e) {
@@ -367,6 +369,11 @@ public class EmulatorUtils {
 						+ ". See log output for more information (maybe).");
 			}
 
+//			try {
+//				Thread.sleep(5000);
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
 			switch (xmountOpts.getOutFmt()) {
 				case RAW:
 					return mountpoint.resolve(baseName + ".dd");

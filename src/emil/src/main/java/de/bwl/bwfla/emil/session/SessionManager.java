@@ -29,6 +29,7 @@ import org.apache.tamaya.inject.api.Config;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.ws.rs.NotFoundException;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -110,9 +111,9 @@ public class SessionManager
 			}
 			session.update();
 		} catch (BWFLAException e) {
-			session.setFailed();
-			if(log != null)
-				log.severe("keepalive failed for group " + session.groupId() + " setting status to failed");
+			// session.setFailed();
+			// if(log != null)
+			// 	log.severe("keepalive failed for group " + session.groupId() + " setting status to failed");
 		}
 	}
 
@@ -156,27 +157,32 @@ public class SessionManager
 			groupElement.setComponentId(componentTitle.getComponentId());
 			groupElement.setCustomName(componentTitle.getComponentName());
 			try {
+				Session s = sessions.get(id);
+				if(s == null)
+					throw new BWFLAException("Session not found " + id);
 				updateComponent(sessions.get(id), groupElement);
 			} catch (BWFLAException e) {
-				log.warning(e.getMessage());
+				log.severe(e.getMessage());
 			}
 		}
 
 		try {
-			List <ComponentGroupElement> sessionsList =getComponents(sessions.get(id));
+			List <ComponentGroupElement> sessionsList = getComponents(sessions.get(id));
 			for (int i = 0; i < sessionsList.size(); i++) {
 			}
 		} catch (BWFLAException e) {
 			e.printStackTrace();
 		}
+
 		sessions.computeIfPresent(id, (unused, session) -> {
-			if (lifetime == -1) {
-				session.setExpirationTimestamp(-1);
-				return session;
-			}
-			final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
-			session.setExpirationTimestamp(timestamp);
 			session.setName(name);
+			if (lifetime < 0) {
+				session.setExpirationTimestamp(-1);
+			}
+			else {
+				final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
+				session.setExpirationTimestamp(timestamp);
+			}
 			return session;
 		});
 	}
@@ -218,6 +224,37 @@ public class SessionManager
 	public static long timems()
 	{
 		return System.currentTimeMillis();
+	}
+
+	public void remove(String id, List<String> resources) {
+		Session session = get(id);
+		for(String componentId : resources)
+		{
+			log.info("deleting component id: " + componentId + "from session " + id);
+			try {
+				removeComponent(session, componentId);
+			} catch (BWFLAException e) {
+				e.printStackTrace();
+			}
+			try {
+				components.releaseComponent(componentId);
+			}
+			catch (NotFoundException ignore) { }
+		}
+
+		try {
+			List<ComponentGroupElement> sessionsList = getComponents(sessions.get(id));
+			for (ComponentGroupElement element : sessionsList) {
+				String cId = element.getComponentId();
+				if(components.hasComponentSession(cId))
+					return;
+			}
+			log.info("deleting session " + id + " looks empty... " + sessionsList.size());
+			unregister(id);
+		} catch (BWFLAException e)
+		{
+			e.printStackTrace();
+		}
 	}
 
 	private class SessionKeepAliveTask implements Runnable
