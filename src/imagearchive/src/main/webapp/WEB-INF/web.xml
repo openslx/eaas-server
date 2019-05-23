@@ -14,6 +14,16 @@
  <servlet-mapping>
   <servlet-name>Image Archive Servlet</servlet-name>
   <url-pattern>/*</url-pattern>
- </servlet-mapping>         
-         
+ </servlet-mapping>
+
+ <filter>
+  <filter-name>ServletAuthenticationFilter</filter-name>
+  <filter-class>de.bwl.bwfla.common.services.net.ServletAuthenticationFilter</filter-class>
+ </filter>
+
+ <filter-mapping>
+  <filter-name>ServletAuthenticationFilter</filter-name>
+  <url-pattern>/*</url-pattern>
+  <dispatcher>REQUEST</dispatcher>
+ </filter-mapping>
 </web-app>

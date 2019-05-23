@@ -80,7 +80,7 @@ public class XmountOptions {
 
 		if(proxyUrl != null) {
 			log.warning("using http_proxy " + proxyUrl);
-			process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
+	// 		process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			process.addEnvVariable("http_proxy", proxyUrl);
 		}
 	}
