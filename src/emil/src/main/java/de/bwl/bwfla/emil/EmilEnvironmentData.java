@@ -143,17 +143,16 @@ public class EmilEnvironmentData extends EmilRest {
 		// Add all environments to the response...
 			MachineConfiguration machineConf = null;
 
-				Environment env =  envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
-
-				if(!(env instanceof MachineConfiguration))
-					machineConf = null;
-
+			Environment env = envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+			if (env instanceof MachineConfiguration)
+				machineConf = (MachineConfiguration) env;
 
 			List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
 			EnvironmentDetails result = new EnvironmentDetails(emilenv, machineConf, parents);
 			return Response.status(Response.Status.OK).entity(result).build();
 
 		} catch (BWFLAException e) {
+			e.printStackTrace();
 			throw new BadRequestException(Response
 					.status(Response.Status.BAD_REQUEST)
 					.entity(new ErrorInformation("failed retrieving data"))
