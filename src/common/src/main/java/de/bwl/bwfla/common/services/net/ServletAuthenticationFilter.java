@@ -7,7 +7,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-@WebFilter("/*")
 public class ServletAuthenticationFilter  implements Filter {
 
     private ServletContext context;
@@ -31,10 +30,10 @@ public class ServletAuthenticationFilter  implements Filter {
         HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
 
         String jwt = getBearerToken( httpRequest );
-//        if(jwt != null)
-//            LOG.info("jwt " + jwt);
-//        else
-//            LOG.info("no jwt found");
+        if(jwt != null)
+            LOG.info("jwt " + jwt);
+        else
+            LOG.info("no jwt found");
 
         filterChain.doFilter( servletRequest, servletResponse );
     }

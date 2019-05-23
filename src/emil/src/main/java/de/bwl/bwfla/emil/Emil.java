@@ -17,6 +17,7 @@ import de.bwl.bwfla.common.utils.*;
 
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.jboss.resteasy.specimpl.ResponseBuilderImpl;
@@ -33,7 +34,7 @@ public class Emil extends EmilRest
 	private UserContext authenticatedUser;
 
 	@GET
-	@Secured
+	@Secured({Role.PUBLIC})
 	@Path("/buildInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response buildInfo()

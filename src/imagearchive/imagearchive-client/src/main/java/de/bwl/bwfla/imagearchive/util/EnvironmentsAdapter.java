@@ -21,8 +21,8 @@ import de.bwl.bwfla.emucomp.api.*;
 
 public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
-	public EnvironmentsAdapter(String wsHost) {
-		super(wsHost);
+	public EnvironmentsAdapter(String wsHost, String authenticationToken) {
+		super(wsHost, authenticationToken);
 	}
 
 	public List<Environment> getEnvironments(String type) throws BWFLAException, JAXBException {

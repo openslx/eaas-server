@@ -134,6 +134,7 @@ public class ContainerUtil {
                 = new ImageContentDescription.DockerDataSource(dockerName, tag);
 
         dockerDataSource.imageArchiveHost = envHelper.getImageArchiveHost();
+        dockerDataSource.authenticationToken = envHelper.getApiAuthenticationToken();
         dockerDataSource.digest = digest;
         entry.setDataFromDockerSource(dockerDataSource);
         description.addContentEntry(entry);

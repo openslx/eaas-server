@@ -185,7 +185,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			if(ds.imageArchiveHost == null || ds.layers == null)
 				continue;
 
-			EnvironmentsAdapter envHelper = new EnvironmentsAdapter(ds.imageArchiveHost);
+			EnvironmentsAdapter envHelper = new EnvironmentsAdapter(ds.imageArchiveHost, ds.authenticationToken);
 			try {
 				ImageNameIndex index = envHelper.getNameIndexes("emulators");
 				if(index.getEntries() == null)

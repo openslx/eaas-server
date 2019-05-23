@@ -74,6 +74,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             requestContext.abortWith(
                     Response.status(Response.Status.UNAUTHORIZED).build());
         }
+
     }
 
     private void validateToken(String token) throws Exception {
@@ -82,12 +83,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             throw new BWFLAException("no auth secret configured. configure 'emil.authSecret'");
 
         try {
+            System.out.println(" secret " + authSecret);
             Algorithm algorithm = Algorithm.HMAC256(authSecret);
             JWTVerifier verifier = JWT.require(algorithm)
                     .build(); //Reusable verifier instance
             DecodedJWT jwt = verifier.verify(token);
             userAuthenticatedEvent.fire(jwt);
         } catch (JWTVerificationException exception){
+            exception.printStackTrace();
             throw exception;
         }
     }

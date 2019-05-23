@@ -259,56 +259,56 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("success!");
 	}
 
-	@Secured
-	@GET
-	@Path("/remoteList")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response remoteList(@QueryParam("host") String host, @QueryParam("type") String type) {
-		String hostUrl;
-		try {
-			hostUrl = URLDecoder.decode(host, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return Emil.errorMessageResponse(e.getMessage());
-		}
-
-		List<Environment> envs;
-		EnvironmentsAdapter remoteArchive = new EnvironmentsAdapter(hostUrl);
-		try {
-			envs = remoteArchive.getEnvironments(type);
-			LOG.info(remoteArchive.toString());
-		} catch (BWFLAException | JAXBException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return Emil.errorMessageResponse(e.getMessage());
-		}
-
-		if (envs == null)
-			return Emil.errorMessageResponse("no envs");
-
-
-		try {
-			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-			json.beginObject();
-			json.add("status", "0");
-			json.name("environments");
-			json.beginArray();
-
-			for (Environment m : envs) {
-				json.beginObject();
-				json.add("envId", m.getId());
-				json.endObject();
-			}
-
-			json.endArray();
-			json.endObject();
-			json.finish();
-
-			return Emil.createResponse(Status.OK, json.toString());
-
-		} catch (Throwable t) {
-			return Emil.internalErrorResponse(t);
-		}
-	}
+//	@Secured
+//	@GET
+//	@Path("/remoteList")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	public Response remoteList(@QueryParam("host") String host, @QueryParam("type") String type) {
+//		String hostUrl;
+//		try {
+//			hostUrl = URLDecoder.decode(host, "UTF-8");
+//		} catch (UnsupportedEncodingException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			return Emil.errorMessageResponse(e.getMessage());
+//		}
+//
+//		List<Environment> envs;
+//		EnvironmentsAdapter remoteArchive = new EnvironmentsAdapter(hostUrl);
+//		try {
+//			envs = remoteArchive.getEnvironments(type);
+//			LOG.info(remoteArchive.toString());
+//		} catch (BWFLAException | JAXBException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			return Emil.errorMessageResponse(e.getMessage());
+//		}
+//
+//		if (envs == null)
+//			return Emil.errorMessageResponse("no envs");
+//
+//
+//		try {
+//			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
+//			json.beginObject();
+//			json.add("status", "0");
+//			json.name("environments");
+//			json.beginArray();
+//
+//			for (Environment m : envs) {
+//				json.beginObject();
+//				json.add("envId", m.getId());
+//				json.endObject();
+//			}
+//
+//			json.endArray();
+//			json.endObject();
+//			json.finish();
+//
+//			return Emil.createResponse(Status.OK, json.toString());
+//
+//		} catch (Throwable t) {
+//			return Emil.internalErrorResponse(t);
+//		}
+//	}
 
 	@Secured
 	@GET

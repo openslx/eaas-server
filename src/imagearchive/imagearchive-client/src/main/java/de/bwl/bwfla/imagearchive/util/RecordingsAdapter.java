@@ -11,7 +11,7 @@ public class RecordingsAdapter extends ImageArchiveWSClient
 
 	public RecordingsAdapter(String wsHost)
 	{
-		super(wsHost);
+		super(wsHost, null);
 	}
 
 	public List<IwdMetaData> getRecordings(String env) throws BWFLAException

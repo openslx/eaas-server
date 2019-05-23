@@ -32,6 +32,10 @@ public class DatabaseEnvironmentsAdapter {
     private String imageArchive;
 
     @Inject
+    @Config(value = "ws.apikey")
+    private String apiAuthenticationToken;
+
+    @Inject
     private MongodbEaasConnector dbConnector;
     private MongodbEaasConnector.DatabaseInstance db;
 
@@ -41,7 +45,7 @@ public class DatabaseEnvironmentsAdapter {
 
     @PostConstruct
     public void init() {
-        environmentsAdapter = new EnvironmentsAdapter(imageArchive);
+        environmentsAdapter = new EnvironmentsAdapter(imageArchive, apiAuthenticationToken);
         db = dbConnector.getInstance(dbName);
         db.ensureTimestamp("public");
         sync();
@@ -229,6 +233,11 @@ public class DatabaseEnvironmentsAdapter {
     public String getImageArchiveHost()
     {
         return imageArchive;
+    }
+
+    public String getApiAuthenticationToken()
+    {
+        return apiAuthenticationToken;
     }
 
     public void extractMetadata(String imageId) throws BWFLAException {
