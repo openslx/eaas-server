@@ -116,6 +116,7 @@ public class EmulatorUtils {
 
 				QcowOptions qcowOptions = new QcowOptions();
 				qcowOptions.setBackingFile(resUrl);
+				log.warning("setting proxy to: " + xmountOpts.getProxyUrl());
 				qcowOptions.setProxyUrl(xmountOpts.getProxyUrl());
 				EmulatorUtils.createCowFile(cowPath, qcowOptions);
 

@@ -62,7 +62,7 @@ abstract class ImageArchiveWSClient implements Serializable
 		
 		archive = getImageArchiveCon(wsHost, authenticationToken);
 		if(archive == null)
-			throw new BWFLAException("could not connect to image archive @" + wsHost);
+			throw new BWFLAException("could not connect to image archive @" + wsHost + " using token " + authenticationToken);
 	}
 
 	public String getDefaultBackendName() throws BWFLAException

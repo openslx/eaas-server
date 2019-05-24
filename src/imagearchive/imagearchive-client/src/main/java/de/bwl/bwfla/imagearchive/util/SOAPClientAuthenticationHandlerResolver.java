@@ -19,6 +19,7 @@ public class SOAPClientAuthenticationHandlerResolver implements HandlerResolver 
     public List<Handler> getHandlerChain(PortInfo portInfo) {
         List<Handler> handlerChain = new ArrayList<Handler>();
         SOAPClientAuthenticationHandler hh = new SOAPClientAuthenticationHandler(authenticationToken);
+        System.out.println("initialized handler");
         handlerChain.add(hh);
         return handlerChain;
     }

@@ -26,6 +26,8 @@ ws:
     embedgw: http://localhost:8080/
     objectarchive: http://localhost:8080/
     softwarearchive: http://localhost:8080/
+    apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZlbG9wZXIiLCJuYW1lIjoiRWFhUyIsImlhdCI6MTUxNjIzOTAyMn0.p4ZD7kxyou09xxTZnTieQR8EFxDMopkv88nHLH-mzm8
+    apiSecret: eaas
 rest:
     blobstore: http://localhost:8080/blobstore/api/v1/blobs
 

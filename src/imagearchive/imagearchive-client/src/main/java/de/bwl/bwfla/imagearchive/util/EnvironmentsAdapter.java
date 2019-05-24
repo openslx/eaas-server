@@ -23,6 +23,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
 	public EnvironmentsAdapter(String wsHost, String authenticationToken) {
 		super(wsHost, authenticationToken);
+		log.warning("inititalize with token: " + authenticationToken);
 	}
 
 	public List<Environment> getEnvironments(String type) throws BWFLAException, JAXBException {
