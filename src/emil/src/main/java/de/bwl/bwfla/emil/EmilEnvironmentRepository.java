@@ -9,10 +9,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.jar.JarException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -75,10 +71,6 @@ public class EmilEnvironmentRepository {
 	protected String imageArchive;
 
 	@Inject
-	@Config(value = "emil.usersessionretention")
-	protected long retention;
-
-	@Inject
 	@AuthenticatedUser
 	private UserContext authenticatedUser;
 
@@ -89,9 +81,8 @@ public class EmilEnvironmentRepository {
 
 	private ObjectArchiveHelper objectArchiveHelper;
 
+	@Inject
 	private UserSessions sessions;
-
-	private final ScheduledExecutorService scheduledExecutorService = Executors.newScheduledThreadPool(1);
 
 	public final class MetadataCollection {
 		public static final String PUBLIC = "public";
@@ -291,6 +282,7 @@ public class EmilEnvironmentRepository {
 		}
 		objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
 
+
 //		try {
 //			try {
 //				 importExistentEnv();
@@ -304,8 +296,7 @@ public class EmilEnvironmentRepository {
 
 		// removeMissingEnvironments();
 
-		LOG.info("Setting user retention time to: " + retention);
-		scheduledExecutorService.scheduleAtFixedRate(new Monitor(retention), 1, 1, TimeUnit.MINUTES);
+
 	}
 
 	private EmilEnvironment getSharedEmilEnvironmentById(String envid) {
@@ -464,25 +455,12 @@ public class EmilEnvironmentRepository {
 				db.deleteDoc(ClassificationData.collectionName, envId, ClassificationData.parentElement + ".environmentList.id", false);
 			}
 		} else {
-			EmilSessionEnvironment session = (EmilSessionEnvironment) env;
-			sessions.remove(session);
-			environmentsAdapter.delete(env.getArchive(), envId, true, true);
-			db.deleteDoc(getCollectionCtx(), envId, env.getIdDBkey());
-			if (session.getParentEnvId() != null) {
-				EmilEnvironment parentEnv = getEmilEnvironmentById(session.getParentEnvId());
-				if (parentEnv instanceof EmilSessionEnvironment && !(parentEnv.getChildrenEnvIds().size() > 1)) {
-					delete(session.getParentEnvId(), true, true);
-				}
-			}
+			sessions.delete((EmilSessionEnvironment)env);
 		}
 	}
 
 	public  <T extends JaxbType> ArrayList<T> getDatabaseContent(String type, Class<T> klass ) throws BWFLAException {
 		return db.getRootlessJaxbObjects(getCollectionCtx(), type, "type");
-	}
-
-	public List<EmilSessionEnvironment> getEmilSessionEnvironments() {
-		return sessions.toList();
 	}
 
 	public int initialize() throws JAXBException, BWFLAException {
@@ -829,31 +807,6 @@ public class EmilEnvironmentRepository {
 		return result;
 	}
 
-	class Monitor implements Runnable {
-		long retention;
-
-		public Monitor(long retention) {
-			this.retention = retention;
-		}
-
-		@Override
-		public void run() {
-			try {
-				long now = (new Date().getTime());
-				List<EmilSessionEnvironment> sessions = getEmilSessionEnvironments();
-				for (EmilSessionEnvironment session : sessions) {
-					if (now - session.getCreationDate() > retention * 1000 * 60 * 60) // hours (DNB)
-					{
-						System.out.println("deleting session: " + session.getCreationDate() + " now: " + now);
-						delete(session.getEnvId(), true, true);
-					}
-				}
-			} catch (BWFLAException e) {
-				LOG.log(Level.SEVERE, e.getMessage(), e);
-			}
-		}
-
-
 //	public static boolean _replaceEmilEnvironment(EmilEnvironment env, String basedir)
 //	{
 //		try {
@@ -870,6 +823,4 @@ public class EmilEnvironmentRepository {
 //		return EmilUtils.saveEmilEnvironment(env, basedir);
 //	}
 
-
-	}
 }
