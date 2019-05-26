@@ -252,7 +252,7 @@ public class EmilEnvironmentRepository {
 //	}
 
 	@PostConstruct
-	public void init() {
+	public synchronized void init() {
 
 		db = dbConnector.getInstance(dbName);
 		try {
