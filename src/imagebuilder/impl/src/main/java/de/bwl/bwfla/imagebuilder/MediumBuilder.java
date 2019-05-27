@@ -102,6 +102,7 @@ public abstract class MediumBuilder
 	public static void prepare(List<ImageContentDescription> entries, Path workdir, Logger log) throws BWFLAException
 	{
 		for (ImageContentDescription entry : entries) {
+			if(entry.getArchiveFormat() != null)
 			switch (entry.getArchiveFormat()) {
 				case DOCKER:
 					ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();

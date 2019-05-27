@@ -174,7 +174,7 @@ public class MediumBuilderHDD extends MediumBuilder
 
 		for(ImageContentDescription e : description.getContentEntries())
 		{
-			if(!e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
+			if(e.getArchiveFormat() == null || !e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
 			{
 				continue;
 			}
