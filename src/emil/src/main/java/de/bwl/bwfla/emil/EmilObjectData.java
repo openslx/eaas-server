@@ -189,6 +189,34 @@ public class EmilObjectData extends EmilRest {
 		}
 	}
 
+	@Secured
+	@DELETE
+	@Path("/{objectArchive}/{objectId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response delete(@PathParam("objectId") String objectId,
+						   @PathParam("objectArchive") String archiveId) {
+		if(archiveId == null || archiveId.equals("default")) {
+			try {
+				archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				archiveId = "default";
+			}
+		}
+
+		try {
+			archive.objects().delete(archiveId, objectId);
+			return Response.status(Response.Status.OK).build();
+		}
+		catch (BWFLAException e)
+		{
+			throw new BadRequestException(Response
+					.status(Response.Status.BAD_REQUEST)
+					.entity(new ErrorInformation(e.getMessage()))
+					.build());
+		}
+	}
+
+
 	/**
 	 * Looks up and returns metadata for specified object.
 	 * 
