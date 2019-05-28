@@ -314,6 +314,8 @@ public class EmilObjectData extends EmilRest {
 					e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(defaultArchive))
 			).filter(
 					e -> !e.equals("default")
+			).filter(
+					e -> !(!defaultArchive.equals("default") && e.equals("zero conf")) // remove zero conf archive is usercontext is available
 			).collect(Collectors.toList());
 			ObjectArchivesResponse response = new ObjectArchivesResponse();
 			response.setArchives(archives);
@@ -421,7 +423,7 @@ public class EmilObjectData extends EmilRest {
 				archive.objects().registerUserArchive(archiveId);
 				objArchives = new HashSet<>(archive.objects().getArchives());
 			}
-			return authenticatedUser.getUsername();
+			return USER_ARCHIVE_PREFIX + authenticatedUser.getUsername();
 		}
 		return archiveId;
 	}
