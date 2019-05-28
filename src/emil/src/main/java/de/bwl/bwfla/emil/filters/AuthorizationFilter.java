@@ -78,12 +78,21 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     }
 
     private void checkPermissions(List<Role> allowedRoles) throws Exception {
-       if(authenticatedUser == null)
-           throw new BWFLAException("no auth context");
+        if (authenticatedUser == null)
+            throw new BWFLAException("no auth context");
 
-       for(Role r : allowedRoles)
-       {
-           System.out.println("allowed role " +  r.name());
-       }
+        for (Role r : allowedRoles) {
+            if (authenticatedUser.getUsername().equals("01")) {
+                if (r != Role.PUBLIC) {
+                    throw new BWFLAException("unauthorized");
+                }
+            }
+            if (r == Role.ADMIN) {
+                if (!authenticatedUser.getUsername().equals("00")) {
+                    throw new BWFLAException("unauthorized");
+                }
+            }
+            System.out.println("allowed role " + r.name());
+        }
     }
 }
