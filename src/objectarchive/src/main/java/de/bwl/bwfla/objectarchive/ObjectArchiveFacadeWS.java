@@ -40,24 +40,10 @@ public class ObjectArchiveFacadeWS
 	 * @return list of object IDs
 	 */
 
-	public List<String> getObjectList(String archive) throws BWFLAException {
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			LOG.severe("ObjectArchive not configured");
-			return null;
-		}
+	// todo: make it a configuration option
+	private static String USERARCHIVEPRIFIX = "user_archive";
 
-		if(archive == null)
-			archive = "default";
-
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
-		if(a == null)
-			throw new BWFLAException("Object archive " + archive + " not found");
-		return a.getObjectList();
-	}
-
-
-	public ObjectFileCollection getObjectHandle(String archive, String id)
+	private DigitalObjectArchive getArchive(String archive) throws BWFLAException
 	{
 		if(!ObjectArchiveSingleton.confValid)
 		{
@@ -68,8 +54,28 @@ public class ObjectArchiveFacadeWS
 		if(archive == null)
 			archive = "default";
 
-		LOG.info("archive: " + archive);
 		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
+		if(a != null)
+			return a;
+
+		if(!archive.startsWith(USERARCHIVEPRIFIX))
+		{
+			// try harder, use user_archive prefix
+			archive = USERARCHIVEPRIFIX + archive;
+			return getArchive(archive);
+		}
+		throw new BWFLAException("Object archive " + archive + " not found");
+	}
+
+	public List<String> getObjectList(String archive) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
+		return a.getObjectList();
+	}
+
+
+	public ObjectFileCollection getObjectHandle(String archive, String id) throws BWFLAException
+	{
+		DigitalObjectArchive a = getArchive(archive);
 		return a.getObjectHandle(id);
 	}
 
@@ -78,114 +84,39 @@ public class ObjectArchiveFacadeWS
 	 * @return object reference as PID / PURL
 	 */
 	public String getObjectReference(String archive, String id) throws BWFLAException {
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			LOG.severe("ObjectArchive not configured");
-			return null;
-		}
-
+		DigitalObjectArchive a = getArchive(archive);
 		if(id == null)
 		{
-			LOG.warning("request for object with invalid objectId " + id);
-			return null;
+			throw new BWFLAException("request for object with invalid objectId " + id);
 		}
 
-		if(archive == null)
-			archive = "default";
-
-		LOG.info("archive: " + archive);
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
-		if(a == null)
-			throw new BWFLAException("archive " + archive + " not found!");
 		try {
 			FileCollection fc = a.getObjectReference(id);
 			if(fc == null)
-			{
-				LOG.warning("could not find object");
-				return null;
-			}
+				throw new BWFLAException("could not find object");
 			return fc.value();
 		} catch (JAXBException e) {
-			// TODO Auto-generated catch block
-			LOG.log(Level.WARNING, e.getMessage(), e);
-			return null;
+			throw new BWFLAException(e);
 		}
 	}
 
-	public boolean importObject(String archive, ObjectFileCollection collection)
-	{
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			LOG.severe("ObjectArchive not configured");
-			return false;
-		}
-
-		if(archive == null)
-			archive = "default";
-
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
-		if(a == null)
-			return false;
-
-		try {
-			a.importObject(collection);
-		} catch (BWFLAException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return false;
-		}
-
-		return true;
+	public void importObject(String archive, ObjectFileCollection collection) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
+		a.importObject(collection);
 	}
 
 	public void delete(String archive, String id) throws BWFLAException {
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			throw new BWFLAException("ObjectArchive not configured");
-		}
-
-		if(archive == null)
-			archive = "default";
-
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
-		if(a == null)
-			throw new BWFLAException("archive " + archive + " not found");
-
+		DigitalObjectArchive a = getArchive(archive);
 		a.delete(id);
 	}
 
-	public DigitalObjectMetadata getObjectMetadata(String archive, String id)
-	{
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			LOG.severe("ObjectArchive not configured");
-			return null;
-		}
-
-		if(archive == null)
-			archive = "default";
-		
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
-		if(a == null)
-			return null;
-		
+	public DigitalObjectMetadata getObjectMetadata(String archive, String id) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
 		return a.getMetadata(id);
 	}
 
-	public int getNumObjectSeats(String archive, String id)
-	{
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			LOG.severe("ObjectArchive not configured");
-			return 0; // todo: throw an exeception
-		}
-
-		if(archive == null)
-			archive = "default";
-
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
-		if(a == null)
-			return 0;
-
+	public int getNumObjectSeats(String archive, String id) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
 		return a.getNumObjectSeats(id);
 
 	}
@@ -195,18 +126,8 @@ public class ObjectArchiveFacadeWS
 		return ObjectArchiveSingleton.getState(id);
 	}
 
-	public TaskState syncObjects(String _archive, List<String> objectIDs)
-	{
-		if(!ObjectArchiveSingleton.confValid)
-		{
-			LOG.severe("ObjectArchive not configured");
-			return null;
-		}
-
-		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(_archive);
-		if(a == null)
-			return null ;
-
+	public TaskState syncObjects(String _archive, List<String> objectIDs) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(_archive);
 		return a.sync(objectIDs);
 	}
 
