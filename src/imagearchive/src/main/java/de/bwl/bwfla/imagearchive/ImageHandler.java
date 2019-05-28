@@ -33,6 +33,7 @@ import org.apache.commons.io.FileUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ImageInformation.QemuImageFormat;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+import org.apache.tamaya.ConfigurationProvider;
 
 
 public class ImageHandler
@@ -46,6 +47,8 @@ public class ImageHandler
 	private final HandleClient handleClient;
 	private final ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
+	private final static String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
+	private final static String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
 
 	enum ExportType {
 		NBD, HTTP
@@ -1022,7 +1025,6 @@ public class ImageHandler
 				log.severe("retrying handle... "  + b.getUrl());
 				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
 			}
-
 			String result = imageHandler.resolveLocalBackingFile(dst);
 			if (imageHandler.handleClient != null)
 				imageHandler.createOrUpdateHandle(imageid);
@@ -1036,7 +1038,10 @@ public class ImageHandler
 			try {
 				Binding b = new Binding();
 				b.setUrl(url.toString());
-				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
+				XmountOptions options = new XmountOptions();
+				if (apiKey != null && imageProxy != null)
+					options.setProxyUrl("http://jwt:" + apiKey + "@" + imageProxy);
+				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
 				QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");
