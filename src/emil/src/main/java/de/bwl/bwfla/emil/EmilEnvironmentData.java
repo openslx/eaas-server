@@ -32,6 +32,7 @@ import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
@@ -100,7 +101,7 @@ public class EmilEnvironmentData extends EmilRest {
 		init();
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -123,7 +124,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/{envId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -165,7 +166,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 *
 	 * @return
 	 */
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/init")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -178,7 +179,7 @@ public class EmilEnvironmentData extends EmilRest {
 	}
 
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/objectDependencies")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -195,9 +196,9 @@ public class EmilEnvironmentData extends EmilRest {
 			return new ArrayList<>();
 		}
 	}
-	
 
-	@Secured
+
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/delete")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -234,7 +235,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("delete success!");
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/exportEnvsToPath")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -309,7 +310,7 @@ public class EmilEnvironmentData extends EmilRest {
 //		}
 //	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/getDatabaseContent")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -326,7 +327,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/createEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -373,7 +374,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/getEnvironmentTemplates")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -461,7 +462,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @param desc A JSON object containing description changes.
 	 * @return A JSON object containing the result message.
 	 */
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/updateDescription")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -590,7 +591,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.createResponse(Status.OK, json);
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/defaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -606,7 +607,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/setDefaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -619,7 +620,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("forkRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -651,7 +652,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("forked environment: " + req.getId());
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("revertRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -704,7 +705,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("operatingSystemMetadata")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -736,7 +737,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return metaData;
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -746,7 +747,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("syncing archives ");
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/overrideObjectCharacterization")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -763,7 +764,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/importImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -817,7 +818,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(request, LOG)));
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/getNameIndexes")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -849,7 +850,7 @@ public class EmilEnvironmentData extends EmilRest {
 //				req.getEnvId(), req.isExportObjectEmbedded())));
 //	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/replicateImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -909,7 +910,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return response;
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/taskState")
 	@Produces(MediaType.APPLICATION_JSON)

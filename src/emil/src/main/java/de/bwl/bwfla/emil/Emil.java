@@ -52,8 +52,8 @@ public class Emil extends EmilRest
 		}
 	}
 
-	@Secured
 	@GET
+	@Secured({Role.RESTRCITED})
 	@Path("/userInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public UserInfoResponse userInfo() {
@@ -70,7 +70,7 @@ public class Emil extends EmilRest
 
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/serverLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response serverLog()
@@ -85,7 +85,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/resetUsageLog")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()
@@ -106,7 +106,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/usageLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response usageLog()

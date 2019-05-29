@@ -878,9 +878,7 @@ public class ImageHandler
 				final ImageArchiveMetadata metadata = new ImageArchiveMetadata(ImageType.base);
 				metadata.setDeleteIfExists(true);
 				metadata.setImageId(imageid);
-
-
-				taskids.add(this.importImageUrl(url, metadata, metadata.isDeleteIfExists()));
+				taskids.add(this.importImageUrl(url, metadata, false));
 			}
 			catch (Exception error) {
 				log.log(Level.WARNING, "Preparing image-import from URL failed!", error);
@@ -1017,13 +1015,18 @@ public class ImageHandler
 			Binding b = new Binding();
 			b.setUrl(url.toString());
 			File dst = new File(target, imageid);
-			try {
-				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
-			} catch (BWFLAException e)
-			{
-				b.setUrl("http://hdl.handle.net/" + imageHandler.handleClient.toHandle(imageid));
-				log.severe("retrying handle... "  + b.getUrl());
-				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+
+			if(dst.exists()) {
+				log.warning("downloadind dependencies: skiip " + dst.getAbsolutePath());
+			}
+			else {
+				try {
+					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+				} catch (BWFLAException e) {
+					b.setUrl("http://hdl.handle.net/" + imageHandler.handleClient.toHandle(imageid));
+					log.severe("retrying handle... " + b.getUrl());
+					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+				}
 			}
 			String result = imageHandler.resolveLocalBackingFile(dst);
 			if (imageHandler.handleClient != null)
@@ -1042,6 +1045,10 @@ public class ImageHandler
 				if (apiKey != null && imageProxy != null)
 					options.setProxyUrl("http://jwt:" + apiKey + "@" + imageProxy);
 				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
+
+				if(!destImgFile.exists()) {
+					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
+				}
 				QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");

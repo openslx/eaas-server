@@ -6,6 +6,8 @@ import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment;
 import de.bwl.bwfla.emil.datatypes.UserSessionResponse;
+import de.bwl.bwfla.emil.datatypes.UserSessions;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
@@ -34,13 +36,16 @@ public class EmilUserSession extends EmilRest {
     @Inject
     private EmilEnvironmentRepository emilEnvRepo;
 
+    @Inject
+    private UserSessions userSessions;
+
     @PostConstruct
     private void initialize() {
         envHelper = new EnvironmentsAdapter(imageArchive, apiAuthenticationToken);
     }
 
     @GET
-    @Secured
+    @Secured({Role.RESTRCITED})
     @Path("delete")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete(@QueryParam("sessionId") String id) {
@@ -58,14 +63,14 @@ public class EmilUserSession extends EmilRest {
 
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response userSessionList()
     {
         List<EmilSessionEnvironment> sessions;
 
-        sessions = emilEnvRepo.getEmilSessionEnvironments();
+        sessions = userSessions.toList();
         try {
             JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
             json.beginObject();
@@ -100,7 +105,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/session")
     @Produces(MediaType.APPLICATION_JSON)
     public UserSessionResponse getUserSession(@QueryParam("userId") String userId, @QueryParam("objectId") String objectId) {
