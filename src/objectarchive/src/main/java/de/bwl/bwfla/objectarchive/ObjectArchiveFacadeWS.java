@@ -60,7 +60,7 @@ public class ObjectArchiveFacadeWS
 
 		if(!archive.startsWith(USERARCHIVEPRIFIX))
 		{
-			// try harder, use user_archive prefix
+			LOG.warning("trying harder: " + archive);
 			archive = USERARCHIVEPRIFIX + archive;
 			return getArchive(archive);
 		}
