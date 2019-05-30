@@ -125,9 +125,9 @@ public class ObjectArchiveHelper {
 		return fc;
 	}
 
-	public boolean importObject(String _archive, ObjectFileCollection collection) throws BWFLAException {
+	public void importObject(String _archive, ObjectFileCollection collection) throws BWFLAException {
 		connectArchive();
-		return archive.importObject(_archive, collection);
+		archive.importObject(_archive, collection);
 	}
 	
 	public void sync(String _archive) throws BWFLAException

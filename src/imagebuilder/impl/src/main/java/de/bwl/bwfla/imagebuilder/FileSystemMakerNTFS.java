@@ -28,14 +28,23 @@ import java.util.logging.Logger;
 
 public class FileSystemMakerNTFS implements IFileSystemMaker
 {
+	private String label;
+
 	public void execute(Path device, Logger log) throws BWFLAException
 	{
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("mkfs.ntfs");
+		if(label != null)
+			process.addArguments("-L", label);
 		process.addArgument("--force");
 		process.addArgument(device.toString());
 		if (!process.execute())
 			throw new BWFLAException("Creating NTFS-filesystem failed!");
+	}
+
+	@Override
+	public void setLabel(String label) {
+		this.label = label;
 	}
 }

@@ -11,7 +11,7 @@
       <module name="deployment.eaas-server.ear.imageproposer-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.eaas-proxy-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.softwarearchive-0.0.1-SNAPSHOT.war" services="import"/>
-      <module name="deployment.eaas-server.ear.nbd-server-impl-0.0.1-SNAPSHOT.war" services="import"/>
+      <!-- <module name="deployment.eaas-server.ear.nbd-server-impl-0.0.1-SNAPSHOT.war" services="import"/> -->
       <module name="deployment.eaas-server.ear.metadata-oaipmh-0.0.1-SNAPSHOT.war" services="import"/>
     </dependencies>
   </deployment>
