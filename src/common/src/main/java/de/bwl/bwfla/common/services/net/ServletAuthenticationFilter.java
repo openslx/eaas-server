@@ -14,6 +14,8 @@ import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Logger;
 
 public class ServletAuthenticationFilter  implements Filter {
@@ -28,6 +30,7 @@ public class ServletAuthenticationFilter  implements Filter {
     private static final int STATUS_CODE_UNAUTHORIZED = 401;
 
     private String apiSecret;
+    private List<String> excludeUrls;
 
     @Override
     public void init( FilterConfig filterConfig ) throws ServletException {
@@ -35,6 +38,8 @@ public class ServletAuthenticationFilter  implements Filter {
 
         final Configuration config = ConfigurationProvider.getConfiguration();
         this.apiSecret = config.get("ws.apiSecret");
+        String excludePattern = filterConfig.getInitParameter("excludedUrls");
+        excludeUrls = Arrays.asList(excludePattern.split(","));
     }
 
     @Override
@@ -45,8 +50,10 @@ public class ServletAuthenticationFilter  implements Filter {
         HttpServletResponse response=(HttpServletResponse) servletResponse;
 
         String path = httpRequest.getServletPath();
-        // System.out.println("XXX " + path + " ---  " + httpRequest.getQueryString());
-        if(path.contains("ImageArchiveWS") && httpRequest.getQueryString() != null && httpRequest.getQueryString().equalsIgnoreCase("wsdl"))
+        if(httpRequest.getQueryString() != null && !httpRequest.getQueryString().isEmpty())
+            path += "?" + httpRequest.getQueryString();
+
+        if(excludeUrls.contains(path))
             excludePath = true;
 
         if(apiSecret != null && !excludePath) {

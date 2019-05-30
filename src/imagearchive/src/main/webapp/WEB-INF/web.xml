@@ -19,6 +19,11 @@
  <filter>
   <filter-name>ServletAuthenticationFilter</filter-name>
   <filter-class>de.bwl.bwfla.common.services.net.ServletAuthenticationFilter</filter-class>
+  <init-param>
+   <param-name>excludedUrls</param-name>
+   <!-- Comma separated list of excluded servlets  -->
+   <param-value>/ImageArchiveWS?wsdl</param-value>
+  </init-param>
  </filter>
 
  <filter-mapping>
