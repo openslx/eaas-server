@@ -45,6 +45,7 @@ import javax.xml.bind.JAXBException;
 import de.bwl.bwfla.api.eaas.ComponentGroupElement;
 import de.bwl.bwfla.api.emucomp.GetControlUrlsResponse;
 import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.session.NetworkSession;
 import de.bwl.bwfla.emil.session.Session;
@@ -81,7 +82,7 @@ public class Networks {
     protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
 
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
     public NetworkResponse createNetwork(NetworkRequest network, @Context final HttpServletResponse response) {
@@ -164,7 +165,7 @@ public class Networks {
     }
 
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
     public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -186,7 +187,7 @@ public class Networks {
     }
 
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
     public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -208,7 +209,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured
+    @Secured({Role.RESTRCITED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
@@ -232,7 +233,7 @@ public class Networks {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{id}/wsConnection")
     public String wsConnection(@PathParam("id") String id)
     {
@@ -254,7 +255,7 @@ public class Networks {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{id}")
     public Collection<GroupComponent> listComponents(@PathParam("id") String id) {
         try {
@@ -308,7 +309,7 @@ public class Networks {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Produces(MediaType.APPLICATION_JSON)
     public Collection<Session> getAllGroupIds() {
             return sessions.list();

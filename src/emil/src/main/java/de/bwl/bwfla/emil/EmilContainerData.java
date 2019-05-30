@@ -33,6 +33,7 @@ import de.bwl.bwfla.common.utils.InputStreamDataSource;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.*;
@@ -111,7 +112,7 @@ public class EmilContainerData extends EmilRest {
      * 
      * @return List of Container Runtimes
      */
-    @Secured
+    @Secured({Role.PUBLIC})
     @GET
     @Path("/getOriginRuntimeList")
     @Produces(MediaType.APPLICATION_JSON)
@@ -140,7 +141,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/updateContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -199,7 +200,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("update successful");
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/importContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -212,7 +213,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/importEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -225,7 +226,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/updateLatestEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -233,7 +234,7 @@ public class EmilContainerData extends EmilRest {
         envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
@@ -277,7 +278,7 @@ public class EmilContainerData extends EmilRest {
     }
 
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @GET
     @Path("/taskState")
     @Produces(MediaType.APPLICATION_JSON)
@@ -307,7 +308,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/saveImportedContainer")
     @Produces(MediaType.APPLICATION_JSON)
@@ -375,7 +376,7 @@ public class EmilContainerData extends EmilRest {
         return archive;
     }
 
-    @Secured
+    @Secured({Role.PUBLIC})
     @POST
     @Path("/uploadUserInput")
     @Consumes("multipart/form-data")

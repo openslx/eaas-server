@@ -21,6 +21,7 @@ package de.bwl.bwfla.emil.session;
 
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.*;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.session.rest.DetachRequest;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
@@ -142,7 +143,7 @@ public class Sessions
 	}
 
 	@POST
-	@Secured
+	@Secured({Role.PUBLIC})
 	@Path("/{id}/keepalive")
 	public void keepalive(@PathParam("id") String id) {
 		final Session session = sessions.get(id);
