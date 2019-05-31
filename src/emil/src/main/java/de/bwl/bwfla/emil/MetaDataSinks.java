@@ -21,8 +21,8 @@ package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -49,6 +49,12 @@ public class MetaDataSinks
 	{
 		return new MetaDataSink()
 				.set(new EmilEnvironmentSink(environmentRepository));
+	}
+
+	public static MetaDataSink software(String archive, /*FIXME*/ Object db)
+	{
+		return new MetaDataSink()
+				.set(new SoftwareSink(archive, db));
 	}
 
 
@@ -152,6 +158,56 @@ public class MetaDataSinks
 
 			if (!numfailed.isPresent())
 				return;
+
+			if (numfailed.get() > 0)
+				throw new BWFLAException("Inserting " + numfailed.get() + " item(s) failed!");
+		}
+	}
+
+	private static class SoftwareSink implements ItemSink
+	{
+		private final Logger log = Logger.getLogger(this.getClass().getName());
+		private final Object db; /*FIXME*/
+		private final String archive;
+
+		public SoftwareSink(String archive, /*FIXME*/ Object db)
+		{
+			this.archive = archive;
+			this.db = db;
+		}
+
+		@Override
+		public void insert(ItemDescription item) throws BWFLAException
+		{
+			try {
+				final SoftwarePackage software = SoftwarePackage.fromValue(item.getMetaData());
+				/* FIXME: db.importSoftware(archive, software); */
+			}
+			catch (Exception error) {
+				throw new BWFLAException(error);
+			}
+		}
+
+		@Override
+		public void insert(Stream<ItemDescription> items) throws BWFLAException
+		{
+			final Function<ItemDescription, Integer> inserter = (item) -> {
+				try {
+					this.insert(item);
+				}
+				catch (Exception error) {
+					log.log(Level.WARNING, "Inserting item '" + item.getIdentifier().getId() + "' failed!", error);
+					return 1;
+				}
+
+				return 0;
+			};
+
+			final Optional<Integer> numfailed = items.map(inserter)
+					.reduce((i1, i2) -> i1 + i2);
+
+			if (!numfailed.isPresent())
+				return;   // Stream was empty, no items inserted!
 
 			if (numfailed.get() > 0)
 				throw new BWFLAException("Inserting " + numfailed.get() + " item(s) failed!");
