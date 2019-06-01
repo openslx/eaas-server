@@ -22,6 +22,7 @@ package de.bwl.bwfla.objectarchive.impl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.*;
+import gov.loc.mets.Mets;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
 
@@ -155,6 +156,15 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	@Override
 	public void delete(String id) throws BWFLAException {
 		throw new BWFLAException("not supported");
+	}
+
+	@Override
+	public Mets getMetsMetadata(String id) throws BWFLAException {
+		MetsObject o = objects.get(id);
+		if(o == null)
+			throw new BWFLAException("object ID " + id + " not found");
+
+		return o.getMets();
 	}
 
 	@Override

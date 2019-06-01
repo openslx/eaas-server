@@ -252,6 +252,7 @@ public class EmilObjectData extends EmilRest {
 			FileCollection fc = FileCollection.fromValue(chosenObjRef);
 			resp.setMediaItems(fc);
 			resp.setMetadata(archive.objects().getObjectMetadata(archiveId, objectId));
+			resp.setMetsdata(archive.objects().getMetsdata(archiveId, objectId));
 
 			resp.setObjectEnvironments(archive.getEnvironmentsForObject(archiveId, objectId, updateClassification, updateProposal));
 			return resp;

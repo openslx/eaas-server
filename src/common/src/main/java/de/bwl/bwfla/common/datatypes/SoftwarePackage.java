@@ -39,12 +39,10 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.transform.stream.StreamSource;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbValidator;
+import gov.loc.mets.Mets;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes",
-	propOrder = { "name", "description", "releaseDate", "infoSource", "location",
-	              "licence", "numSeats", "QID", "language", "documentation", "archive",
-	              "objectId", "supportedFileFormats", "isOperatingSystem" })
+@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes")
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class SoftwarePackage
 {
@@ -67,6 +65,9 @@ public class SoftwarePackage
 	
 	@XmlElement(required = true)
 	private String objectId;
+
+	@XmlElement
+	private String mets;
 
 	/** List of supported document/file formats */
 	@XmlElement(name = "supportedFileFormat")
@@ -221,5 +222,13 @@ public class SoftwarePackage
 
 	public void setIsOperatingSystem(boolean isOperatingSystem) {
 		this.isOperatingSystem = isOperatingSystem;
+	}
+
+	public String getMets() {
+		return mets;
+	}
+
+	public void setMets(String mets) {
+		this.mets = mets;
 	}
 }

@@ -8,6 +8,8 @@
 
 package gov.loc.mets;
 
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.bind.annotation.XmlAccessType;
@@ -169,7 +171,7 @@ import javax.xml.datatype.XMLGregorianCalendar;
 @XmlSeeAlso({
     Mets.class
 })
-public class MetsType {
+public class MetsType extends JaxbType {
 
     protected MetsType.MetsHdr metsHdr;
     protected List<MdSecType> dmdSec;

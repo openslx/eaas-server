@@ -26,6 +26,10 @@ public class MetsObject {
 
     protected final Logger log = Logger.getLogger(this.getClass().getName());
 
+    public Mets getMets() {
+        return metsRoot;
+    }
+
     public enum Context {
         INSTALLATION("Installation"),
         USAGE("Configured Usage");
