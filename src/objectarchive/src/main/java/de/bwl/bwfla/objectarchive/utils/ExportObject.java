@@ -1,4 +1,4 @@
-package de.bwl.bwfla.objectarchive;
+package de.bwl.bwfla.objectarchive.utils;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;

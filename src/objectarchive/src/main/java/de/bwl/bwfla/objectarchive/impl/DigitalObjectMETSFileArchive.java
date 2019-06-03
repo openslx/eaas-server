@@ -29,8 +29,10 @@ import org.apache.tamaya.inject.api.Config;
 import javax.inject.Inject;
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -40,7 +42,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	protected final Logger log	= Logger.getLogger(this.getClass().getName());
 
 	final private String name;
-	final private String metaDataPath;
+	final private File metaDataDir;
 	final private String dataPath;
 	private boolean defaultArchive;
 
@@ -53,35 +55,45 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive)
 	{
 		this.name = name;
-		this.metaDataPath = metaDataPath;
+		this.metaDataDir = new File(metaDataPath);
+		if(!metaDataDir.exists() && !metaDataDir.isDirectory())
+		{
+			throw new IllegalStateException("METS metadataPath " + metaDataPath + " does not exist");
+		}
 		this.dataPath = dataPath;
 		this.defaultArchive = defaultArchive;
+		this.objects = new HashMap<>();
 		ConfigurationInjection.getConfigurationInjector().configure(this);
 
 		load();
 	}
 
+	@Override
+	public void importObject(String metsdata) throws BWFLAException {
+		MetsObject o = new MetsObject(metsdata);
+		if(o.getId() == null || o.getId().isEmpty())
+			throw new BWFLAException("invalid object id " + o.getId());
+		Path dst = this.metaDataDir.toPath().resolve(o.getId());
+		try {
+			Files.write( dst, metsdata.getBytes("UTF-8"), StandardOpenOption.CREATE);
+		} catch (IOException e) {
+			throw new BWFLAException(e);
+		}
+		objects.put(o.getId(), o);
+	}
+
 	private void load()
 	{
-		HashMap<String, MetsObject> _objects = new HashMap<>();
-
-		File objectDir = new File(metaDataPath);
-		if(!objectDir.exists() && !objectDir.isDirectory())
-		{
-			log.info("metadataPath " + metaDataPath + " does not exist");
-		}
-
-		for(File mets: objectDir.listFiles())
+		for(File mets: metaDataDir.listFiles())
 		{
 			log.severe("parsing: " + mets.getAbsolutePath());
 			try {
 				MetsObject obj = new MetsObject(mets);
-				_objects.put(obj.getId(), obj);
+				objects.put(obj.getId(), obj);
 			} catch (BWFLAException e) {
 				e.printStackTrace();
 			}
 		}
-		this.objects = _objects;
 	}
 
 	@Override
@@ -118,7 +130,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	@Override
 	public void importObject(ObjectFileCollection fc) throws BWFLAException {
-
+		throw new BWFLAException("not supported");
 	}
 
 	@Override

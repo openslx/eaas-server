@@ -8,7 +8,7 @@
 
  <servlet>
   <servlet-name>Object Archive Servlet</servlet-name>
-  <servlet-class>de.bwl.bwfla.objectarchive.ExportObject</servlet-class>
+  <servlet-class>de.bwl.bwfla.objectarchive.utils.ExportObject</servlet-class>
  </servlet>
  
  <servlet-mapping>

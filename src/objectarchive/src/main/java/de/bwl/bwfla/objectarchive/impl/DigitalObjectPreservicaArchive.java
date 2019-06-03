@@ -290,6 +290,11 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	}
 
 	@Override
+	public void importObject(String metsdata) throws BWFLAException {
+
+	}
+
+	@Override
 	public String getName() {
 		return archiveLabel;
 	}

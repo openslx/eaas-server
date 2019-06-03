@@ -12,8 +12,10 @@ import org.w3c.dom.Element;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.stream.StreamSource;
 import java.awt.*;
 import java.io.File;
+import java.io.StringReader;
 import java.math.BigInteger;
 import java.net.URLEncoder;
 import java.util.ArrayList;
@@ -233,6 +235,20 @@ public class MetsObject {
         return wikiId;
     }
 
+
+    public MetsObject(String metsdata) throws BWFLAException
+    {
+        JAXBContext jc = null;
+        try {
+            jc = JAXBContext.newInstance(Mets.class);
+            Unmarshaller unmarshaller = jc.createUnmarshaller();
+            this.metsRoot = (Mets) unmarshaller.unmarshal(new StreamSource(new StringReader(metsdata)));
+        } catch (JAXBException e) {
+            throw new BWFLAException(e);
+        }
+
+        init();
+    }
 
     public MetsObject(File metsFile) throws BWFLAException {
 
