@@ -127,8 +127,10 @@ public class ImageNameIndex extends JaxbType
 			return entry;
 		else {
 			Alias alias = aliases.get(ImageNameIndex.toIndexKey(name, version));
-			if (alias == null)
-				throw new IllegalArgumentException("Emulator is not found!");
+			if (alias == null) {
+				log.warning("Emulator is not found! " + name + " " + version);
+				return null;
+			}
 			return entries.get(ImageNameIndex.toIndexKey(name, alias.getVersion()));
 		}
 	}

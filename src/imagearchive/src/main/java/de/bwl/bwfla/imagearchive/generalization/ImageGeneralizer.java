@@ -3,14 +3,20 @@ package de.bwl.bwfla.imagearchive.generalization;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.DiskPartitionDescription;
+import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageArchiveBackend;
 import de.bwl.bwfla.imagearchive.ImageHandler;
+import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 public class ImageGeneralizer {
@@ -26,12 +32,11 @@ public class ImageGeneralizer {
      * @throws BWFLAException
      * @throws IOException
      */
-    public static void  applyScriptIfCompatible(ImageHandler handler, File imgFile, MachineConfigurationTemplate templateEnv) throws BWFLAException, IOException {
+    public static void  applyScriptIfCompatible(File imgFile, MachineConfigurationTemplate templateEnv, String emulatorArchiveprefix, String apiKey, String imageProxy) throws BWFLAException, IOException {
         ImageMounter image = null;
         try {
             image = new ImageMounter(imgFile.toPath());
-
-            //creation of ddFile
+            image.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
             image.mountDD();
 
             List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), templateEnv);
@@ -43,22 +48,33 @@ public class ImageGeneralizer {
             }
 
             for (DiskPartitionDescription.DiskPartition partition : partitions) {
-                image.remountDDWithOffset(partition.getBegin(), partition.getSize());
-                image.mountFileSystem(FileSystemType.fromString(partition.getFsType()));
+                File patch = null;
+                try {
+                    image.remountDDWithOffset(partition.getBegin(), partition.getSize());
+                    image.mountFileSystem(FileSystemType.fromString(partition.getFsType()));
 
-                File target = handler.getMetaDataTargetPath("template");
-                String patchPath = target.getAbsoluteFile().toString() + "/" + templateEnv.getId() + "/" + templateEnv.getImageGeneralization().getModificationScript();
-                File[] fsList = image.getFsDir().toFile().listFiles();
-                if (fsList == null)
-                    throw new BWFLAException("mount failed: mounted dir is null");
+                    patch  = new File("/tmp/patch-" + UUID.randomUUID());
 
-                if (isScriptCompatible(templateEnv, image.getFsDir().toFile())) {
-                    patchPartition(image.getFsDir().toFile(), patchPath);
-                    break;
-                } else {
-                    image.completeUnmount();
+                    InputStream is = EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/patch/" + templateEnv.getImageGeneralization().getModificationScript()), "GET", "metadata", "true", apiKey, imageProxy);
+                    FileUtils.copyInputStreamToFile(is, patch);
+
+                    if (!patch.setExecutable(true)) {
+                        throw new BWFLAException("failed to make patch executable!");
+                    }
+                    File[] fsList = image.getFsDir().toFile().listFiles();
+                    if (fsList == null)
+                        throw new BWFLAException("mount failed: mounted dir is null");
+
+                    if (isScriptCompatible(templateEnv, image.getFsDir().toFile())) {
+                        patchPartition(image.getFsDir().toFile(), patch.toString());
+                        break;
+                    } else {
+                        image.completeUnmount();
+                    }
+                    log.warning("Script is not compatible with partition: \n" + " Flags: " + partition.getFlags() + " PartitionName " + partition.getPartitionName());
+                } finally {
+                   if(patch != null && patch.exists()) patch.delete();
                 }
-                log.warning("Script is not compatible with partition: \n" + " Flags: " + partition.getFlags() + " PartitionName " + partition.getPartitionName());
             }
             image.completeUnmount();
             image = null;
@@ -66,7 +82,6 @@ public class ImageGeneralizer {
             if (image != null)
                 image.completeUnmount();
         }
-
     }
 
 

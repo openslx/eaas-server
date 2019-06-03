@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.activation.DataHandler;
+import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
@@ -33,6 +35,7 @@ import org.apache.commons.io.FileUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ImageInformation.QemuImageFormat;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+import org.apache.commons.io.IOUtils;
 import org.apache.tamaya.ConfigurationProvider;
 
 
@@ -314,7 +317,7 @@ public class ImageHandler
 	
 		ConcurrentHashMap<String, Environment> map = cache.get(ImageType.valueOf("tmp"));
 		if(map == null)
-			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<String, Environment>());
+			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<>());
 		else
 			map.clear();
 	}
@@ -888,16 +891,46 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected void createPatchedCow(String parentId, String cowId, String templateId, String type) throws IOException, BWFLAException {
+	protected String createPatchedCow(String parentId, String cowId, String templateId, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
+
+		if (parentId == null) {
+			throw new BWFLAException("imageID is null, aborting");
+		}
+
+		// check if template requires generalization
+		MachineConfigurationTemplate tempEnv = null;
+		try {
+			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.template + "/" + templateId), "GET", "metadata","true", apiKey, imageProxy);
+			String envStr = IOUtils.toString(is, StandardCharsets.UTF_8);
+
+			tempEnv = MachineConfigurationTemplate.fromValue(envStr);
+		} catch (IOException | JAXBException e) {
+			e.printStackTrace();
+			throw new BWFLAException(e);
+		}
+
+		if (tempEnv == null)
+			throw new BWFLAException("invalid template");
+
+		if (tempEnv.getImageGeneralization() == null || tempEnv.getImageGeneralization().getModificationScript() == null)
+			return parentId;
+
 		String newBackingFile = getArchivePrefix() + parentId;
 		File target = getImageTargetPath(type);
 		File destImgFile = new File(target, cowId);
 
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
+		String proxyUrl = null;
+		if (apiKey != null && imageProxy != null) {
+			proxyUrl = "http://jwt:" + apiKey + "@" + imageProxy;
+			options.setProxyUrl(proxyUrl);
+		}
+
+
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) getEnvById(templateId);
-		ImageGeneralizer.applyScriptIfCompatible(this, destImgFile, tempEnv.copy());
+		ImageGeneralizer.applyScriptIfCompatible(destImgFile, tempEnv.copy(), emulatorArchiveprefix, apiKey, imageProxy);
+		return cowId;
 	}
 
 	private void createOrUpdateHandle(String imageId) throws BWFLAException

@@ -30,7 +30,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
 		return this.getEnvironments(this.getDefaultBackendName(), type);
 	}
-
+	// replace hardcoded EMULATOR_DEFAULT_ARCHIVE with something nicer
 	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
 	public List<Environment> getEnvironments(String backend, String type) throws BWFLAException, JAXBException {
@@ -236,7 +236,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
 	public ImageArchiveBinding generalizedImport(String backend, String imageId, ImageType type, String templateId) throws BWFLAException {
 		connectArchive();
-		String id = archive.generalizedImport(backend, imageId, type, templateId);
+		String id = archive.generalizedImport(backend, imageId, type, templateId, EMULATOR_DEFAULT_ARCHIVE);
 		return new ImageArchiveBinding(backend, this.getExportPrefix(), id, type.value());
 	}
 
