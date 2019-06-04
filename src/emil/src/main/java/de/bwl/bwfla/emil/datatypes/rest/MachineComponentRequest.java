@@ -57,6 +57,12 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false, defaultValue = "latest")
     private String emulatorVersion = "latest";
 
+    @XmlElement(required = false)
+    private String userContainerEnvironment;
+
+    @XmlElement(required = false, defaultValue = "default")
+    private String userContainerArchive = "default";
+
     public String getEnvironment() {
         return environment;
     }
@@ -127,5 +133,21 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     public void setObjectArchive(String objectArchive) {
         this.objectArchive = objectArchive;
+    }
+
+    public String getUserContainerEnvironment() {
+        return userContainerEnvironment;
+    }
+
+    public void setUserContainerEnvironment(String userContainerEnvironment) {
+        this.userContainerEnvironment = userContainerEnvironment;
+    }
+
+    public String getUserContainerArchive() {
+        return userContainerArchive;
+    }
+
+    public void setUserContainerArchive(String userContainerArchive) {
+        this.userContainerArchive = userContainerArchive;
     }
 }
