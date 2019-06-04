@@ -311,7 +311,7 @@ public class ImageHandler
 	
 		ConcurrentHashMap<String, Environment> map = cache.get(ImageType.valueOf("tmp"));
 		if(map == null)
-			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<String, Environment>());
+			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<>());
 		else
 			map.clear();
 	}
@@ -885,7 +885,7 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected void createPatchedCow(String parentId, String cowId, String templateId, String type) throws IOException, BWFLAException {
+	protected void createPatchedCow(String parentId, String cowId, MachineConfigurationTemplate template, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
 		String newBackingFile = getArchivePrefix() + parentId;
 		File target = getImageTargetPath(type);
 		File destImgFile = new File(target, cowId);
@@ -893,8 +893,7 @@ public class ImageHandler
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) getEnvById(templateId);
-		ImageGeneralizer.applyScriptIfCompatible(this, destImgFile, tempEnv.copy());
+		ImageGeneralizer.applyScriptIfCompatible(destImgFile, template.copy(), emulatorArchiveprefix);
 	}
 
 	private void createOrUpdateHandle(String imageId) throws BWFLAException
