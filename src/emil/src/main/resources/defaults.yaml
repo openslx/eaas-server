@@ -29,7 +29,7 @@ ws:
     apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZlbG9wZXIiLCJuYW1lIjoiRWFhUyIsImlhdCI6MTUxNjIzOTAyMn0.p4ZD7kxyou09xxTZnTieQR8EFxDMopkv88nHLH-mzm8
     apiSecret: eaas
 rest:
-    blobstore: http://localhost:8080/blobstore/api/v1/blobs
+    blobstore: http://eaas:8080/blobstore/api/v1/blobs
 
 metadata_repositories:
   - name: public-images
