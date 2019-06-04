@@ -704,6 +704,19 @@ public class Components {
                 binding.setFileSystemType(imageDescription.getFileSystemType());
                 binding.setId("eaas-job");
 
+                ImageArchiveBinding rootfs = null;
+                for(AbstractDataResource r : ociConf.getDataResources())
+                {
+                    if(r.getId().equals("rootfs"))
+                        rootfs = ((ImageArchiveBinding)r);
+                }
+                if(rootfs == null)
+                    throw new BadRequestException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .build());
+
+                this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
                 this.addBindingToEnvironment(config, binding, this.toDriveType(MediumType.HDD));
             }
             else {
