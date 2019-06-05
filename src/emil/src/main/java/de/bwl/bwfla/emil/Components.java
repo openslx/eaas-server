@@ -718,9 +718,9 @@ public class Components {
                             .status(Response.Status.BAD_REQUEST)
                             .entity(new ErrorInformation("coud not find rootfs "))
                             .build());
-
                 rootfs.setFileSystemType(null);
                 this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
+
 
                 this.addBindingToEnvironment(config, binding, this.toDriveType(MediumType.HDD));
             }
