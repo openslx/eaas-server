@@ -16,6 +16,7 @@ public class UpdateContainerRequest extends EmilRequestType {
     private String outputFolder;
     private String inputFolder;
     private String author;
+    private String containerRuntimeId;
 
     private ArrayList<String> processArgs;
     private ArrayList<String> processEnvs;
@@ -83,5 +84,13 @@ public class UpdateContainerRequest extends EmilRequestType {
 
     public void setAuthor(String author) {
         this.author = author;
+    }
+
+    public String getContainerRuntimeId() {
+        return containerRuntimeId;
+    }
+
+    public void setContainerRuntimeId(String containerRuntimeId) {
+        this.containerRuntimeId = containerRuntimeId;
     }
 }

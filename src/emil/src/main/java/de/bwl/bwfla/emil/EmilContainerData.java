@@ -2,8 +2,6 @@ package de.bwl.bwfla.emil;
 
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,11 +15,6 @@ import javax.naming.NamingException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-import de.bwl.bwfla.api.imagearchive.*;
-import de.bwl.bwfla.api.imagebuilder.DockerImport;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilderMetadata;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -30,26 +23,18 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.InputStreamDataSource;
-import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
-import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
-import de.bwl.bwfla.imagebuilder.api.ImageDescription;
-import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
-import org.apache.tamaya.inject.api.WithPropertyConverter;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
 import javax.naming.InitialContext;
-import javax.xml.bind.JAXBException;
-import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 
 @Path("EmilContainerData")
@@ -187,6 +172,7 @@ public class EmilContainerData extends EmilRest {
         env.setArgs(req.getProcessArgs());
         env.setEnv(req.getProcessEnvs());
         env.setAuthor(req.getAuthor());
+        env.setRuntimeId(req.getContainerRuntimeId());
 
         try {
             emilEnvRepo.save(env, false);

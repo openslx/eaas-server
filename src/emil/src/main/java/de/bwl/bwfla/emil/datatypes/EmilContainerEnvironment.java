@@ -25,6 +25,9 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     @XmlElement
     private List<String> env;
 
+    @XmlElement
+    private String runtimeId;
+
     public String getInput() {
         return input;
     }
@@ -61,5 +64,13 @@ public class EmilContainerEnvironment extends EmilEnvironment {
             this.env = new ArrayList<>();
             this.env.addAll(env);
         }
+    }
+
+    public String getRuntimeId() {
+        return runtimeId;
+    }
+
+    public void setRuntimeId(String runtimeId) {
+        this.runtimeId = runtimeId;
     }
 }

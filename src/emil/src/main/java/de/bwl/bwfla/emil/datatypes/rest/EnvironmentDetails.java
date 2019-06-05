@@ -140,6 +140,9 @@ public class EnvironmentDetails {
     @XmlElement
     private List<String> processEnvs;
 
+    @XmlElement
+    private String runtimeId;
+
     EnvironmentDetails() {}
 
     public EnvironmentDetails(EmilEnvironment emilenv, MachineConfiguration machineConf, List<EmilEnvironment> parents) {
@@ -194,6 +197,7 @@ public class EnvironmentDetails {
             EmilContainerEnvironment cEnv = (EmilContainerEnvironment) emilenv;
             this.input = cEnv.getInput();
             this.output = cEnv.getOutput();
+            this.runtimeId = cEnv.getRuntimeId();
 
             this.processArgs = cEnv.getArgs();
             this.processEnvs = cEnv.getEnv();

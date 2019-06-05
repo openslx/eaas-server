@@ -437,9 +437,12 @@ public class Components {
     private BlobHandle prepareMetadata(OciContainerConfiguration config) throws IOException, BWFLAException {
         String metadata = createContainerMetadata(config);
         File tmpfile = File.createTempFile("metadata.json", null, null);
+        Files.write( tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
 
         BlobDescription blobDescription = new BlobDescription();
         blobDescription.setDataFromFile(tmpfile.toPath())
+                .setNamespace("random")
+                .setDescription("random")
                 .setName("metadata")
                 .setType(".json");
 
@@ -703,6 +706,21 @@ public class Components {
                 binding.setPartitionOffset(imageDescription.getPartitionOffset());
                 binding.setFileSystemType(imageDescription.getFileSystemType());
                 binding.setId("eaas-job");
+
+                ImageArchiveBinding rootfs = null;
+                for(AbstractDataResource r : ociConf.getDataResources())
+                {
+                    if(r.getId().equals("rootfs"))
+                        rootfs = ((ImageArchiveBinding)r);
+                }
+                if(rootfs == null)
+                    throw new BadRequestException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .build());
+
+                rootfs.setFileSystemType(null);
+                this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
 
                 this.addBindingToEnvironment(config, binding, this.toDriveType(MediumType.HDD));
             }
