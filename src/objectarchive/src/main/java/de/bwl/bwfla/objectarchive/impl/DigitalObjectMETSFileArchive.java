@@ -22,11 +22,17 @@ package de.bwl.bwfla.objectarchive.impl;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.*;
+import gov.loc.mets.FileType;
 import gov.loc.mets.Mets;
+import gov.loc.mets.MetsType;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.inject.Inject;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Unmarshaller;
+import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.file.Files;
@@ -172,11 +178,53 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	@Override
 	public Mets getMetsMetadata(String id) throws BWFLAException {
+
+		log.warning("getMetsmedatadata " + dataPath);
+
 		MetsObject o = objects.get(id);
 		if(o == null)
 			throw new BWFLAException("object ID " + id + " not found");
 
-		return o.getMets();
+		Mets metsOrig = o.getMets();
+
+		if(dataPath == null)
+			return metsOrig;
+
+		// hard copy!
+		Mets metsCopy = null;
+		JAXBContext jc = null;
+		try {
+			String metsCopyStr = metsOrig.value();
+			jc = JAXBContext.newInstance(Mets.class);
+			Unmarshaller unmarshaller = jc.createUnmarshaller();
+			metsCopy = (Mets) unmarshaller.unmarshal(new StreamSource(new StringReader(metsCopyStr)));
+			String exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8");
+			if (metsCopy.getFileSec() != null) {
+				List<MetsType.FileSec.FileGrp> fileGrpList = metsCopy.getFileSec().getFileGrp();
+				for (MetsType.FileSec.FileGrp fileGrp : fileGrpList) {
+					for (FileType file : fileGrp.getFile()) {
+						List<FileType.FLocat> locationList = file.getFLocat();
+						if(locationList == null)
+							continue;
+						for (FileType.FLocat fLocat : locationList) {
+							if (fLocat.getLOCTYPE() != null && fLocat.getLOCTYPE().equals("URL")) {
+								if (fLocat.getHref() != null) {
+									if (!fLocat.getHref().startsWith("http")) {
+										fLocat.setHref(exportPrefix + "/" + fLocat.getHref());
+										log.warning("updating location");
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		} catch (JAXBException | UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		log.warning(metsCopy.toString());
+
+		return metsCopy;
 	}
 
 	@Override
