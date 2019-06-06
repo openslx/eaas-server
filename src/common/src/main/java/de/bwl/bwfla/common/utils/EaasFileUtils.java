@@ -25,6 +25,10 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.ProtocolException;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -187,5 +191,12 @@ public class EaasFileUtils
 		}
 		
 		return tmpfile;
+	}
+
+	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue) throws IOException {
+		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.setRequestMethod(requestMethod);
+		connection.setRequestProperty(requestProperty, requestValue);
+		return connection.getInputStream();
 	}
 }

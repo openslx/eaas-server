@@ -56,7 +56,7 @@ public class EmilEnvironmentRepository {
 
 	protected final static Logger LOG = Logger.getLogger(EmilEnvironmentRepository.class.getName());
 
-	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+	static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
 	@Inject
 	@Config(value = "commonconf.serverdatadir")

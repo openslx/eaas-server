@@ -5,6 +5,7 @@ import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
+import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
@@ -71,9 +72,8 @@ public class ImportImageTask extends AbstractTask<Object> {
             if (binding == null)
                 return new BWFLAException("ImportImageTask: import image failed. Could not create binding");
 
-            // binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
-            //        iaMd.getType(), request.templateId);
-
+            binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
+                    iaMd.getType(), pEnv.getId());
             binding.setId("main_hdd");
             env.getAbstractDataResource().add(binding);
 

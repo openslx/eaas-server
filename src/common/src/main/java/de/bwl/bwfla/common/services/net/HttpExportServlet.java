@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.common.services.net;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ByteRange;
 import de.bwl.bwfla.common.utils.FileRangeIterator;
 import org.apache.tamaya.inject.api.Config;
@@ -69,6 +70,7 @@ public abstract class HttpExportServlet extends HttpServlet
 
 
 	public abstract File resolveRequest(String path);
+	public abstract File resolveMetaData(String path) throws ServletException;
 
 	@Override
     protected void doHead(HttpServletRequest request, HttpServletResponse response)
@@ -84,18 +86,32 @@ public abstract class HttpExportServlet extends HttpServlet
 		this.respond(request, response, true);
 	}
 
+
 	private void respond(HttpServletRequest request, HttpServletResponse response, boolean sendFileData)
 			throws ServletException, IOException
 	{
-		final File file = this.doResolveRequest(request.getPathInfo());
+		File file = null;
+		boolean isMetadata = request.getHeader("metadata") != null && request.getHeader("metadata").equals("true");
+
+		if (isMetadata)
+			file = this.resolveMetaData(request.getPathInfo());
+		else
+			file = this.doResolveRequest(request.getPathInfo());
+
 		if (file == null || !file.exists()) {
 			log.severe("looking for :" + request.getPathInfo());
 			response.sendError(HttpServletResponse.SC_NOT_FOUND);
 			return;
 		}
 
-		// We assume here, that we always export a block-device image!
-		final long length = HttpUtils.computeBlockDeviceLength(file.length());
+		long length = 0;
+
+		if (isMetadata)
+			length = file.length();
+		else {
+			// We assume here, that we always export a block-device image!
+			length = HttpUtils.computeBlockDeviceLength(file.length());
+		}
 
 		try {
 			if (HttpUtils.hasRangeHeader(request)) {
