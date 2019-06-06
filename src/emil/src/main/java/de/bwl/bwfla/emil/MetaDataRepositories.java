@@ -117,6 +117,10 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 					this.registerImagesRepository(name, mode, sources, sinks);
 					break;
 
+				case RepoType.SOFTWARE:
+					this.registerSoftwareRepository(name, mode, sources, sinks);
+					break;
+
 				default:
 					throw new ConfigException("Unknown repository type: " + type);
 			}
@@ -146,11 +150,21 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 			sinks.register(name, MetaDataSinks.environments(environmentRepository));
 	}
 
+	public void registerSoftwareRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)
+	{
+		if (mode.equalsIgnoreCase(AccessMode.READ_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
+			sources.register(name, MetaDataSources.software(name, /*FIXME*/ null, executor));
+
+		if (mode.equalsIgnoreCase(AccessMode.WRITE_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
+			sinks.register(name, MetaDataSinks.software(name, /*FIXME*/ null));
+	}
+
 
 	private static final class RepoType
 	{
 		private static final String ENVIRONMENTS  = "environments";
 		private static final String IMAGES        = "images";
+		private static final String SOFTWARE      = "software";
 	}
 
 	private static final class AccessMode

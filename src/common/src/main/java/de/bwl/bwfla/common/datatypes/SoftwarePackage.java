@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -42,10 +43,15 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbValidator;
 import gov.loc.mets.Mets;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes")
+@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes",
+	propOrder = { "name", "description", "releaseDate", "infoSource", "location",
+	              "licence", "numSeats", "QID", "language", "documentation", "archive",
+	              "objectId", "supportedFileFormats", "isOperatingSystem", "timestamp" })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class SoftwarePackage
 {
+	private static final String ID_SEPARATOR = "/";
+
 	@XmlElement(required = true)
 	private String name;
 	
@@ -66,13 +72,17 @@ public class SoftwarePackage
 	@XmlElement(required = true)
 	private String objectId;
 
-	@XmlElement
-	private String mets;
-
 	/** List of supported document/file formats */
 	@XmlElement(name = "supportedFileFormat")
 	private List<String> supportedFileFormats;
-	
+
+	@XmlElement(name = "timestamp")
+	protected String timestamp = Instant.now().toString();
+
+	public String getId() {
+		return this.getArchive() + ID_SEPARATOR + this.getObjectId();
+	}
+
 	public String getName() {
 		return name;
 	}
@@ -125,6 +135,9 @@ public class SoftwarePackage
 		return QID;
 	}
 
+	public String getTimestamp() {
+		return  timestamp;
+	}
 
 	public void setName(String name) {
 		this.name = name;
@@ -181,6 +194,10 @@ public class SoftwarePackage
 
 	public void setQID(String QID) {
 		this.QID = QID;
+	}
+
+	public void setTimestamp(String timestamp) {
+		this.timestamp = timestamp;
 	}
 
 	public String value() throws JAXBException {

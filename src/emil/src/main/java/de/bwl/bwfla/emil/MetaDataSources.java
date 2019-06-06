@@ -20,6 +20,7 @@
 package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
+import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -51,6 +52,13 @@ public class MetaDataSources
 				.set(new EmilEnvironmentIdentifierSource(environmentRepository, executor))
 				.set(new EmilEnvironmentSource(environmentRepository, executor));
     }
+
+	public static MetaDataSource software(String archive, /*FIXME*/ Object db, Executor executor)
+	{
+		return new MetaDataSource()
+				.set(new SoftwareIdentifierSource(archive, db, executor))
+				.set(new SoftwareSource(archive, db, executor));
+	}
 
 
     // ========== MetaDataSource Implementations =========================
@@ -268,6 +276,117 @@ public class MetaDataSources
 		{
 			return super.listEnvironments(options)
 					.thenApply((environments) -> environments.map(MAPPER));
+		}
+	}
+
+	private static class AbstractSoftwareSource
+	{
+		private final String archive;
+		private final Executor executor;
+		private final Object db; /*FIXME*/
+
+		protected AbstractSoftwareSource(String archive, /*FIXME*/ Object db, Executor executor)
+		{
+			this.archive = archive;
+			this.executor = executor;
+			this.db = db;
+		}
+
+		protected CompletableFuture<SoftwarePackage> findSoftware(String id)
+		{
+			final Supplier<SoftwarePackage> supplier = () -> {
+				try {
+					/* FIXME: return db.getSofwarePackage(archive, id); */
+					return null;
+				}
+				catch (Exception error) {
+					throw new CompletionException("Finding software failed!", error);
+				}
+			};
+
+			return CompletableFuture.supplyAsync(supplier, executor);
+		}
+
+		protected CompletableFuture<Stream<SoftwarePackage>> listSoftware(QueryOptions options)
+		{
+			final Supplier<Stream<SoftwarePackage>> supplier = () -> {
+				final MongodbEaasConnector.FilterBuilder filter = new MongodbEaasConnector.FilterBuilder();
+				if (options.hasFrom())
+					filter.withFromTime(Environment.Fields.TIMESTAMP, options.from());
+
+				if (options.hasUntil())
+					filter.withUntilTime(Environment.Fields.TIMESTAMP, options.until(), true);
+
+				/* FIXME: return db.listSoftwarePackages(archive, options.offset(), options.count(), filter); */
+				return null;
+			};
+
+			return CompletableFuture.supplyAsync(supplier, executor);
+		}
+
+		public CompletableFuture<Integer> count()
+		{
+			/* FIXME: return CompletableFuture.supplyAsync(() -> (int) db.countSoftwarePackages(archive), executor); */
+			return null;
+		}
+	}
+
+	private static class SoftwareIdentifierSource extends AbstractSoftwareSource implements ItemIdentifierSource
+	{
+		private static final Function<SoftwarePackage, ItemIdentifierDescription> MAPPER = (software) -> {
+			return new ItemIdentifierDescription(software.getId())
+					.setTimestamp(software.getTimestamp());
+		};
+
+		public SoftwareIdentifierSource(String archive, /*FIXME*/ Object db, Executor executor)
+		{
+			super(archive, db, executor);
+		}
+
+		@Override
+		public CompletableFuture<ItemIdentifierDescription> get(String id)
+		{
+			return super.findSoftware(id)
+					.thenApply(MAPPER);
+		}
+
+		@Override
+		public CompletableFuture<Stream<ItemIdentifierDescription>> list(QueryOptions options)
+		{
+			return super.listSoftware(options)
+					.thenApply((software) -> software.map(MAPPER));
+		}
+	}
+
+	private static class SoftwareSource extends AbstractSoftwareSource implements ItemSource
+	{
+		private static final Function<SoftwarePackage, ItemDescription> MAPPER = (software) -> {
+			try {
+				return new ItemDescription(SoftwareIdentifierSource.MAPPER.apply(software))
+						.setMetaData(software.value());
+			}
+			catch (Exception error) {
+				throw new CompletionException("Constructing ItemDescription failed!", error);
+			}
+		};
+
+		public SoftwareSource(String archive, /*FIXME*/ Object db, Executor executor)
+		{
+			super(archive, db, executor);
+		}
+
+		@Override
+		public CompletableFuture<ItemDescription> get(String id)
+		{
+			return super.findSoftware(id)
+					.thenApply(MAPPER);
+		}
+
+		@Override
+		public CompletableFuture<Stream<ItemDescription>> list(QueryOptions options)
+		{
+			return super.listSoftware(options)
+					.thenApply((software) -> software.map(MAPPER));
 		}
 	}
 
