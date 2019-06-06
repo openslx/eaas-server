@@ -1,11 +1,10 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
-import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import java.util.HashMap;
 
-public class DigitalObjectMetadata extends JaxbType {
+public class DigitalObjectMetadata extends JaxbType{
 
 	private String id;
 	private String title;
@@ -13,10 +12,6 @@ public class DigitalObjectMetadata extends JaxbType {
 	private String thumbnail;
 	private String summary;
 	private String wikiDataId;
-
-	private boolean softwareObject;
-	private SoftwareMetadata softwareMetadata;
-
 	private HashMap<String, String> customData;
 
 	DigitalObjectMetadata() {}
@@ -79,21 +74,5 @@ public class DigitalObjectMetadata extends JaxbType {
 
 	public void setWikiDataId(String wikiDataId) {
 		this.wikiDataId = wikiDataId;
-	}
-
-	public boolean isSoftwareObject() {
-		return softwareObject;
-	}
-
-	public void setSoftwareObject(boolean softwareObject) {
-		this.softwareObject = softwareObject;
-	}
-
-	public SoftwareMetadata getSoftwareMetadata() {
-		return softwareMetadata;
-	}
-
-	public void setSoftwareMetadata(SoftwareMetadata softwareMetadata) {
-		this.softwareMetadata = softwareMetadata;
 	}
 }
