@@ -249,7 +249,7 @@ public class EmilSoftwareData extends EmilRest {
 				}
 
 				LOG.severe("got archive: " + swo.getArchiveId() + " for " + swo.getObjectId());
-				if(archiveName == null || !archiveName.equals("default"))
+				if(archiveName == null || archiveName.startsWith("user"))
 				{
 					LOG.severe("importing object");
 					ObjectFileCollection object = objHelper.getObjectHandle(archiveName, swo.getObjectId());
