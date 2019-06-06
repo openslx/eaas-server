@@ -240,12 +240,5 @@ public class SoftwarePackage
 	public void setIsOperatingSystem(boolean isOperatingSystem) {
 		this.isOperatingSystem = isOperatingSystem;
 	}
-
-	public String getMets() {
-		return mets;
-	}
-
-	public void setMets(String mets) {
-		this.mets = mets;
-	}
+	
 }
