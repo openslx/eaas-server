@@ -43,6 +43,7 @@ public class ImportImageTask extends AbstractTask<Object> {
         public String templateId;
         public String destArchive;
         public File romFile;
+        public String patchId;
 
         public void validate() throws BWFLAException
         {
@@ -71,10 +72,11 @@ public class ImportImageTask extends AbstractTask<Object> {
             ImageArchiveBinding binding = importState.getBinding(60 * 60 * 60); // wait an hour
             if (binding == null)
                 return new BWFLAException("ImportImageTask: import image failed. Could not create binding");
-
+            if (request.patchId != null) {
             binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
-                    iaMd.getType(), pEnv.getId());
+                    iaMd.getType(), request.patchId);
             binding.setId("main_hdd");
+            }
             env.getAbstractDataResource().add(binding);
 
             env.getDescription().setTitle(request.label);

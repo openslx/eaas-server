@@ -58,6 +58,9 @@ public class ContainerUtil {
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
 
+    private final static String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
+    private final static String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
+
     private ImageDescription defaultContainerImage() {
         return new ImageDescription()
                 .setMediumType(MediumType.HDD)
@@ -69,6 +72,7 @@ public class ContainerUtil {
     private ImageBuilderResult createImageFromDescription(ImageDescription description) throws BWFLAException
     {
         final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
+        description.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
         return ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay);
     }
 
@@ -166,16 +170,15 @@ public class ContainerUtil {
             default:
                 throw new BWFLAException("unknown imageType " + emulatorRequest.getImageType());
         }
-
-        if (imageUrl == null)
-            if(result.getBlobHandle() == null)
+        if (imageUrl == null) {
+            if (result.getBlobHandle() == null)
                 throw new BWFLAException("Image blob unavailable");
-        try {
-            imageUrl = new URL(result.getBlobHandle().toRestUrl(blobStoreRestAddress, false));
-        } catch (MalformedURLException e) {
-            throw  new BWFLAException(e);
+            try {
+                imageUrl = new URL(result.getBlobHandle().toRestUrl(blobStoreRestAddress, false));
+            } catch (MalformedURLException e) {
+                throw new BWFLAException(e);
+            }
         }
-
 
         if(result.getMetadata() == null)
             throw new BWFLAException("no metadata available");
@@ -187,6 +190,7 @@ public class ContainerUtil {
         ImageArchiveBinding binding;
         importState = envHelper.importImage(getEmulatorArchive(), imageUrl, meta, true);
         binding = importState.getBinding(60 * 60 * 60); //wait an hour
+
 
         de.bwl.bwfla.api.imagearchive.ImageDescription iD = new de.bwl.bwfla.api.imagearchive.ImageDescription();
         envHelper.extractMetadata(binding.getImageId());

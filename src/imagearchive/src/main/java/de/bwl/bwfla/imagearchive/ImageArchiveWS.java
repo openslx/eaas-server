@@ -118,10 +118,9 @@ public class ImageArchiveWS
 				.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String backend, String imageId, ImageType type, String templateId, String emulatorArchiveName) throws BWFLAException {
+	public String generalizedImport(String backend, String imageId, ImageType type, String patchId, String emulatorArchiveName) throws BWFLAException {
 			return this.lookup(backend)
-					.generalizedImport(imageId, type, templateId, this.lookup(emulatorArchiveName).getConfig().getHttpPrefix());
-
+					.generalizedImport(imageId, type,  patchId, this.lookup(emulatorArchiveName).getConfig().getHttpPrefix());
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException

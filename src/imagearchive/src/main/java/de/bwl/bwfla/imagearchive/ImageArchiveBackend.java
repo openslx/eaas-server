@@ -131,6 +131,9 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 				if (t.equals(ImageType.template))
 					continue;
 
+				if (t.equals(ImageType.patches))
+					continue;
+
 				if (t.equals(ImageType.tmp))
 					continue;
 
@@ -199,14 +202,14 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String imageId, ImageType type, String templateId, String emulatorArchiveprefix) throws BWFLAException
+	public String generalizedImport(String imageId, ImageType type, String patchId, String emulatorArchiveprefix) throws BWFLAException
 	{
 
 		log.warning("emulatorArchiveprefix: " + emulatorArchiveprefix);
 
 		try {
 			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-			return imageHandler.createPatchedCow(imageId, cowId, templateId, type.name(), emulatorArchiveprefix);
+			return imageHandler.createPatchedCow(imageId, cowId, patchId, type.name(), emulatorArchiveprefix);
 		}
 		catch (IOException e) {
 			throw new BWFLAException(e);

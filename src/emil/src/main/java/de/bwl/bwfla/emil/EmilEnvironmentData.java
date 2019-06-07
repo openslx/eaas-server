@@ -436,6 +436,29 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured({Role.RESTRCITED})
+	@GET
+	@Path("/getPatches")
+	@Produces(MediaType.APPLICATION_JSON)
+	/**
+	 *
+	 * @return
+	 *
+	 * 		{"status": "0", "systems": [{"id": "abc", "label": "Windows XP
+	 *         SP1", "native_config": "test", "properties": [{"name":
+	 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
+	 *         "In 1936, the Russians made a computer that ran on water"}]}]}
+	 */
+	public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
+		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
+		try {
+			List<GeneralizationPatch> envs = environmentHelper.getPatches();
+			return envs;
+		} catch (Throwable t) {
+			throw t;
+		}
+	}
+
 
 	/**
 	 * Updates the description of a specified Emil environment. This method
@@ -776,6 +799,7 @@ public class EmilEnvironmentData extends EmilRest {
 	public TaskStateResponse importImage(ImportImageRequest imageReq) {
 
 		ImportImageTaskRequest request = new ImportImageTaskRequest();
+
 		URL url;
 		try {
 			url = new URL(imageReq.getUrlString());
@@ -807,6 +831,7 @@ public class EmilEnvironmentData extends EmilRest {
 		request.nativeConfig = imageReq.getNativeConfig();
 		request.environmentHelper = envHelper;
 		request.imageProposer = imageProposer;
+		request.patchId = imageReq.getPatchId();
 
 		try {
 			request.validate();

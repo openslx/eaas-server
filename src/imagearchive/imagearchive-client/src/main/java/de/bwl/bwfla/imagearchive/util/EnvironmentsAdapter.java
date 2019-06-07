@@ -107,6 +107,23 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.getTemplates(EMULATOR_DEFAULT_ARCHIVE);
 	}
 
+	public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
+		return this.getPatches(EMULATOR_DEFAULT_ARCHIVE);
+	}
+
+	public List<GeneralizationPatch> getPatches(String backend) throws BWFLAException, JAXBException {
+		connectArchive();
+		List<GeneralizationPatch> patches = new ArrayList<>();
+
+		List<String> patchList = archive.getEnvironments(backend, "patches");
+		for (String patch : patchList) {
+			GeneralizationPatch emuEnv = GeneralizationPatch.fromValue(patch);
+			if (emuEnv != null)
+				patches.add(emuEnv);
+		}
+		return patches;
+	}
+
 	public List<MachineConfigurationTemplate> getTemplates(String backend) throws BWFLAException {
 		connectArchive();
 
@@ -230,13 +247,13 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
 	}
 
-	public ImageArchiveBinding generalizedImport(String imageId, ImageType type, String templateId) throws BWFLAException {
-		return this.generalizedImport(this.getDefaultBackendName(), imageId, type, templateId);
+	public ImageArchiveBinding generalizedImport(String imageId, ImageType type, String patchId) throws BWFLAException {
+		return this.generalizedImport(this.getDefaultBackendName(), imageId, type, patchId);
 	}
 
-	public ImageArchiveBinding generalizedImport(String backend, String imageId, ImageType type, String templateId) throws BWFLAException {
+	public ImageArchiveBinding generalizedImport(String backend, String imageId, ImageType type, String patchId) throws BWFLAException {
 		connectArchive();
-		String id = archive.generalizedImport(backend, imageId, type, templateId, EMULATOR_DEFAULT_ARCHIVE);
+		String id = archive.generalizedImport(backend, imageId, type, patchId, EMULATOR_DEFAULT_ARCHIVE);
 		return new ImageArchiveBinding(backend, this.getExportPrefix(), id, type.value());
 	}
 

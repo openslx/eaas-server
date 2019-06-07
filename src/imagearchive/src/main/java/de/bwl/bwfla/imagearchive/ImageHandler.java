@@ -335,6 +335,7 @@ public class ImageHandler
 
 	public File getMetaDataTargetPath(String type) {
 		File target = new File(iaConfig.getMetaDataPath(), type);
+
 		if (target.isDirectory())
 			return target;
 		else
@@ -816,6 +817,8 @@ public class ImageHandler
 
 		ImageMounter image = new ImageMounter(imgFile.toPath());
 
+		image.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
+
 		image.mountDD();
 		// todo: read from metadata
 		image.mountFileSystem(FileSystemType.EXT4);
@@ -835,23 +838,19 @@ public class ImageHandler
 			return;
 		}
 
-		Path templates = metadata.resolve("templates");
-		if(Files.exists(templates))
-		{
-			File dst = getMetaDataTargetPath("template");
-			try {
-				FileUtils.copyDirectory(templates.toFile(), dst);
-			} catch (IOException e) {
-				e.printStackTrace();
-				image.completeUnmount();
-				throw new BWFLAException(e);
-			}
-		}
 
-		Path environments = metadata.resolve("environments");
+		copyMetaData(metadata, image, ImageType.template.name(),ImageType.template.name() );
+		copyMetaData(metadata, image, "environments",ImageType.base.name() );
+		copyMetaData(metadata, image, ImageType.patches.name(),ImageType.patches.name() );
+		image.completeUnmount();
+	}
+
+	private void copyMetaData(Path metadata, ImageMounter image,  String metadataType, String metadataTarget) throws BWFLAException {
+
+		Path environments = metadata.resolve(metadataType);
 		if(Files.exists(environments))
 		{
-			File dst = getMetaDataTargetPath("base");
+			File dst = getMetaDataTargetPath(metadataTarget);
 			try {
 				FileUtils.copyDirectory(environments.toFile(), dst);
 			} catch (IOException e) {
@@ -860,7 +859,6 @@ public class ImageHandler
 				throw new BWFLAException(e);
 			}
 		}
-		image.completeUnmount();
 	}
 
 
@@ -891,28 +889,26 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected String createPatchedCow(String parentId, String cowId, String templateId, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
+	protected String createPatchedCow(String parentId, String cowId, String patchId, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
 
 		if (parentId == null) {
 			throw new BWFLAException("imageID is null, aborting");
 		}
 
 		// check if template requires generalization
-		MachineConfigurationTemplate tempEnv = null;
+		GeneralizationPatch generalization = null;
 		try {
-			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.template + "/" + templateId), "GET", "metadata","true", apiKey, imageProxy);
-			String envStr = IOUtils.toString(is, StandardCharsets.UTF_8);
 
-			tempEnv = MachineConfigurationTemplate.fromValue(envStr);
+			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.patches + "/" + patchId), "GET", "metadata","true", apiKey, imageProxy);
+			String generalizationStr = IOUtils.toString(is, StandardCharsets.UTF_8);
+
+			generalization = GeneralizationPatch.fromValue(generalizationStr);
 		} catch (IOException | JAXBException e) {
 			e.printStackTrace();
 			throw new BWFLAException(e);
 		}
 
-		if (tempEnv == null)
-			throw new BWFLAException("invalid template");
-
-		if (tempEnv.getImageGeneralization() == null || tempEnv.getImageGeneralization().getModificationScript() == null)
+		if (generalization.getImageGeneralization() == null || generalization.getImageGeneralization().getModificationScript() == null)
 			return parentId;
 
 		String newBackingFile = getArchivePrefix() + parentId;
@@ -929,7 +925,7 @@ public class ImageHandler
 
 
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		ImageGeneralizer.applyScriptIfCompatible(destImgFile, tempEnv.copy(), emulatorArchiveprefix, apiKey, imageProxy);
+		ImageGeneralizer.applyScriptIfCompatible(destImgFile, generalization, emulatorArchiveprefix, apiKey, imageProxy);
 		return cowId;
 	}
 

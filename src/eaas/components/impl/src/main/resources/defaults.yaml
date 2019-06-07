@@ -42,7 +42,7 @@ components:
         gid: 1000
 
     containers:
-        blobstore: http://localhost:8080
+        blobstore: http://eaas:8080
         usernamespace:
             enabled: false
             user: bwfla
@@ -63,4 +63,4 @@ emucomp:
     rompath: /eaas/roms
     alsa_card: PCH
 
-ws.imagearchive: http://localhost:8080
+ws.imagearchive: http://eaas:8080
