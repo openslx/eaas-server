@@ -36,9 +36,15 @@ metadata_repositories:
   - name: public-environments
     type: environments
     mode: R
+  - name: public-software
+    type: software
+    mode: R
   - name: remote-images
     type: images
     mode: W
   - name: remote-environments
     type: environments
+    mode: W
+  - name: remote-software
+    type: software
     mode: W

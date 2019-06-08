@@ -238,6 +238,9 @@ public class MetsObject {
 
     public MetsObject(String metsdata) throws BWFLAException
     {
+        if(metsdata == null)
+            throw new BWFLAException("no mets data available: null");
+
         JAXBContext jc = null;
         try {
             jc = JAXBContext.newInstance(Mets.class);

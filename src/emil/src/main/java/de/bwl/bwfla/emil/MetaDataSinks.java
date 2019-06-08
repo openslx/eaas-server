@@ -23,6 +23,7 @@ import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -51,10 +52,10 @@ public class MetaDataSinks
 				.set(new EmilEnvironmentSink(environmentRepository));
 	}
 
-	public static MetaDataSink software(String archive, /*FIXME*/ Object db)
+	public static MetaDataSink software(EmilSoftwareData swData)
 	{
 		return new MetaDataSink()
-				.set(new SoftwareSink(archive, db));
+				.set(new SoftwareSink(swData));
 	}
 
 
@@ -167,21 +168,21 @@ public class MetaDataSinks
 	private static class SoftwareSink implements ItemSink
 	{
 		private final Logger log = Logger.getLogger(this.getClass().getName());
-		private final Object db; /*FIXME*/
-		private final String archive;
+		private final EmilSoftwareData softwareData;
 
-		public SoftwareSink(String archive, /*FIXME*/ Object db)
+		public SoftwareSink(EmilSoftwareData softwareData)
 		{
-			this.archive = archive;
-			this.db = db;
+			this.softwareData = softwareData;
 		}
 
 		@Override
 		public void insert(ItemDescription item) throws BWFLAException
 		{
 			try {
-				final SoftwarePackage software = SoftwarePackage.fromValue(item.getMetaData());
-				/* FIXME: db.importSoftware(archive, software); */
+				log.warning("insert software got: " + item.getMetaData());
+				final EaasiSoftwareObject software = EaasiSoftwareObject.fromValue(item.getMetaData(), EaasiSoftwareObject.class);
+				if(software.getMetsData() != null)
+					softwareData.importSoftware(software);
 			}
 			catch (Exception error) {
 				throw new BWFLAException(error);

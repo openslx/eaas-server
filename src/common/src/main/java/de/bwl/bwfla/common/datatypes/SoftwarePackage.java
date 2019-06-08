@@ -39,6 +39,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.transform.stream.StreamSource;
 
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.utils.jaxb.JaxbValidator;
 import gov.loc.mets.Mets;
 
@@ -48,7 +49,7 @@ import gov.loc.mets.Mets;
 	              "licence", "numSeats", "QID", "language", "documentation", "archive",
 	              "objectId", "supportedFileFormats", "isOperatingSystem", "timestamp" })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
-public class SoftwarePackage
+public class SoftwarePackage extends JaxbType
 {
 	private static final String ID_SEPARATOR = "/";
 
@@ -200,39 +201,6 @@ public class SoftwarePackage
 		this.timestamp = timestamp;
 	}
 
-	public String value() throws JAXBException {
-    	StringWriter writer = new StringWriter();
-    	this.writeTo(writer);
-    	return writer.toString();
-    }
-	
-	public boolean writeTo(Writer writer) throws JAXBException {
-    	JAXBContext jc = JAXBContext.newInstance(this.getClass());
-    	Marshaller marshaller = jc.createMarshaller();
-    	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-    	marshaller.marshal(this, writer);
-    	return true;
-    }
-	
-	public static SoftwarePackage fromValue(String data)
-    {
-		return SoftwarePackage.fromValue(new StringReader(data));
-    }
-	
-	public static SoftwarePackage fromValue(Reader reader)
-    {
-		try {
-			JAXBContext jc = JAXBContext.newInstance(SoftwarePackage.class);
-			Unmarshaller unmarshaller = jc.createUnmarshaller();
-			StreamSource stream = new StreamSource(reader);
-			SoftwarePackage result = (SoftwarePackage) unmarshaller.unmarshal(stream);
-			JaxbValidator.validate(result);
-			return result;
-		} catch (Throwable t) {
-			throw new IllegalArgumentException("passed 'data' metadata cannot be parsed by 'JAX-B', check input contents");
-		}
-    }
-
 	public boolean getIsOperatingSystem() {
 		return isOperatingSystem;
 	}
@@ -240,5 +208,4 @@ public class SoftwarePackage
 	public void setIsOperatingSystem(boolean isOperatingSystem) {
 		this.isOperatingSystem = isOperatingSystem;
 	}
-	
 }

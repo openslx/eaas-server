@@ -81,6 +81,11 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 			throw new BWFLAException("invalid object id " + o.getId());
 		Path dst = this.metaDataDir.toPath().resolve(o.getId());
 		try {
+			if(Files.exists(dst))
+			{
+				log.warning("METS object with id " + o.getId() + " exists. skipping...");
+				return;
+			}
 			Files.write( dst, metsdata.getBytes("UTF-8"), StandardOpenOption.CREATE);
 		} catch (IOException e) {
 			throw new BWFLAException(e);

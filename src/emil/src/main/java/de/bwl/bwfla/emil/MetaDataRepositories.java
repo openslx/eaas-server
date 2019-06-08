@@ -20,6 +20,7 @@
 package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.utils.ConfigHelpers;
+import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
 import de.bwl.bwfla.metadata.repository.IMetaDataRepositoryAPI;
 import de.bwl.bwfla.metadata.repository.MetaDataRepositoryAPI;
 import de.bwl.bwfla.metadata.repository.MetaDataSinkRegistry;
@@ -54,6 +55,9 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 
 	@Inject
 	private EmilEnvironmentRepository environmentRepository = null;
+
+	@Inject
+	private EmilSoftwareData softwareData = null;
 
 
 	// ========== MetaDataRepository API =========================
@@ -153,10 +157,10 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 	public void registerSoftwareRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)
 	{
 		if (mode.equalsIgnoreCase(AccessMode.READ_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
-			sources.register(name, MetaDataSources.software(name, /*FIXME*/ null, executor));
+			sources.register(name, MetaDataSources.software(softwareData, executor));
 
 		if (mode.equalsIgnoreCase(AccessMode.WRITE_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
-			sinks.register(name, MetaDataSinks.software(name, /*FIXME*/ null));
+			sinks.register(name, MetaDataSinks.software(softwareData));
 	}
 
 
