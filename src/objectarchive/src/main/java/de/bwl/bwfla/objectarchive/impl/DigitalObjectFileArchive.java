@@ -33,13 +33,12 @@ import java.util.logging.Logger;
 import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
 import javax.inject.Inject;
-import javax.xml.bind.JAXBException;
 
-import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection.ObjectFileCollectionHandle;
 
+import gov.loc.mets.Mets;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
@@ -50,7 +49,7 @@ import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
-import de.bwl.bwfla.objectarchive.DefaultDriveMapper;
+import de.bwl.bwfla.objectarchive.utils.DefaultDriveMapper;
 
 
 // FIXME: this class should be implemented in a style of a "Builder" pattern
@@ -261,7 +260,13 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		for(ObjectFileCollectionHandle entry : fc.getFiles())
 			importObjectFile(fc.getId(), entry);
 	}
-	
+
+	@Override
+	public void importObject(String metsdata) throws BWFLAException {
+
+
+	}
+
 	public List<String> getObjectList()
 	{	
 		List<String> objects = new ArrayList<String>();
@@ -336,6 +341,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			throw new BWFLAException(e);
 		}
 
+	}
+
+	@Override
+	public Mets getMetsMetadata(String id) {
+		return null;
 	}
 
 	public FileCollection getObjectReference(String objectId)

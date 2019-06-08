@@ -20,6 +20,7 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
+import gov.loc.mets.Mets;
 
 import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveName;
 
@@ -105,9 +106,28 @@ public class ObjectArchiveFacadeWS
 		a.importObject(collection);
 	}
 
+	public void importObjectFromMetadata(String archive, String metadata) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
+		a.importObject(metadata);
+	}
+
 	public void delete(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		a.delete(id);
+	}
+
+	public String getMetsMetadata(String archive, String id) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
+		Mets metsdata = a.getMetsMetadata(id);
+		if(metsdata == null)
+			return null;
+		String result = null;
+		try {
+			result = metsdata.value(true);
+		} catch (JAXBException e) {
+			throw new BWFLAException(e);
+		}
+		return result;
 	}
 
 	public DigitalObjectMetadata getObjectMetadata(String archive, String id) throws BWFLAException {

@@ -74,6 +74,18 @@ public class ObjectArchiveHelper {
 		connectArchive();
 		return archive.getObjectMetadata(_archive, id);
 	}
+
+	public String getMetsdata(String _archive, String id) throws BWFLAException
+	{
+		connectArchive();
+		return archive.getMetsMetadata(_archive, id);
+	}
+
+	public void importFromMetadata(String _archive, String metadata) throws BWFLAException
+	{
+		connectArchive();
+		archive.importObjectFromMetadata(_archive, metadata);
+	}
 	
 	public List<String> getObjectList(String _archive) throws BWFLAException
 	{
