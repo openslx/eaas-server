@@ -23,6 +23,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
+import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
@@ -31,15 +32,21 @@ import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
+import org.apache.commons.io.IOUtils;
 
 import javax.activation.DataHandler;
+import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
+import java.net.URLConnection;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -192,14 +199,27 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String imageId, ImageType type, String templateId) throws BWFLAException
+	public String generalizedImport(String imageId, ImageType type, String templateId, String emulatorArchiveprefix) throws BWFLAException
 	{
+
+		log.warning("emulatorArchiveprefix: " + emulatorArchiveprefix);
+
 		if (imageId == null) {
 			throw new BWFLAException("imageID is null, aborting");
 		}
 
 		// check if template requires generalization
-		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) imageHandler.getEnvById(templateId);
+		MachineConfigurationTemplate tempEnv = null;
+		try {
+			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.template + "/" + templateId), "GET", "metadata","true");
+			String envStr = IOUtils.toString(is, StandardCharsets.UTF_8);
+
+			tempEnv = MachineConfigurationTemplate.fromValue(envStr);
+		} catch (IOException | JAXBException  e) {
+			e.printStackTrace();
+			throw new BWFLAException(e);
+		}
+
 		if (tempEnv == null)
 			throw new BWFLAException("invalid template");
 
@@ -208,7 +228,7 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 
 		try {
 			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-			imageHandler.createPatchedCow(imageId, cowId, templateId, type.name());
+			imageHandler.createPatchedCow(imageId, cowId, tempEnv, type.name(), emulatorArchiveprefix);
 			return cowId;
 		}
 		catch (IOException e) {

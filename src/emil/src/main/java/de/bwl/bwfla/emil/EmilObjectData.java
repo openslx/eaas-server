@@ -189,6 +189,34 @@ public class EmilObjectData extends EmilRest {
 		}
 	}
 
+	@Secured
+	@DELETE
+	@Path("/{objectArchive}/{objectId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response delete(@PathParam("objectId") String objectId,
+						   @PathParam("objectArchive") String archiveId) {
+		if(archiveId == null || archiveId.equals("default")) {
+			try {
+				archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				archiveId = "default";
+			}
+		}
+
+		try {
+			archive.objects().delete(archiveId, objectId);
+			return Response.status(Response.Status.OK).build();
+		}
+		catch (BWFLAException e)
+		{
+			throw new BadRequestException(Response
+					.status(Response.Status.BAD_REQUEST)
+					.entity(new ErrorInformation(e.getMessage()))
+					.build());
+		}
+	}
+
+
 	/**
 	 * Looks up and returns metadata for specified object.
 	 * 
@@ -224,6 +252,7 @@ public class EmilObjectData extends EmilRest {
 			FileCollection fc = FileCollection.fromValue(chosenObjRef);
 			resp.setMediaItems(fc);
 			resp.setMetadata(archive.objects().getObjectMetadata(archiveId, objectId));
+			resp.setMetsdata(archive.objects().getMetsdata(archiveId, objectId));
 
 			resp.setObjectEnvironments(archive.getEnvironmentsForObject(archiveId, objectId, updateClassification, updateProposal));
 			return resp;
@@ -286,6 +315,8 @@ public class EmilObjectData extends EmilRest {
 					e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(defaultArchive))
 			).filter(
 					e -> !e.equals("default")
+			).filter(
+					e -> !(!defaultArchive.equals("default") && e.equals("zero conf")) // remove zero conf archive is usercontext is available
 			).collect(Collectors.toList());
 			ObjectArchivesResponse response = new ObjectArchivesResponse();
 			response.setArchives(archives);
@@ -393,7 +424,7 @@ public class EmilObjectData extends EmilRest {
 				archive.objects().registerUserArchive(archiveId);
 				objArchives = new HashSet<>(archive.objects().getArchives());
 			}
-			return authenticatedUser.getUsername();
+			return USER_ARCHIVE_PREFIX + authenticatedUser.getUsername();
 		}
 		return archiveId;
 	}

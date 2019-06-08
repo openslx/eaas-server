@@ -11,6 +11,7 @@ import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollectionEntry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
+import gov.loc.mets.Mets;
 import org.apache.commons.io.IOUtils;
 
 import com.google.gson.GsonBuilder;
@@ -81,6 +82,11 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 	}
 
 	@Override
+	public void importObject(String metsdata) throws BWFLAException {
+
+	}
+
+	@Override
 	public String getName() {
 		return "emil-rosetta";
 	}
@@ -122,5 +128,10 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 	@Override
 	public void delete(String id) throws BWFLAException {
 		throw new BWFLAException("not supported");
+	}
+
+	@Override
+	public Mets getMetsMetadata(String id) {
+		return null;
 	}
 }

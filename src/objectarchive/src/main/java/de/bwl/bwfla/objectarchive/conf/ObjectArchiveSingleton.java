@@ -36,6 +36,7 @@ import javax.naming.NamingException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -73,6 +74,9 @@ public class ObjectArchiveSingleton
 
 	public static final String tmpArchiveDir = "emil-temp-objects";
 	public static final String tmpArchiveName = "emil-temp-objects";
+	public static final String remoteArchiveName = "Remote Objects";
+
+	public static final String remoteMetsObjects = "metsRemoteMetadata";
 
 	private static AsyncIoTaskManager taskManager;
 
@@ -128,6 +132,10 @@ public class ObjectArchiveSingleton
 		// add internal upload archive
 		File tempObjectPath = new File(serverdatadir, tmpArchiveDir);
 		archives.add(new DigitalObjectFileArchive(tmpArchiveName, tempObjectPath.getAbsolutePath(), false));
+
+		// add mets remote
+		File remoteMetsMd = new File(serverdatadir, remoteMetsObjects);
+		archives.add(new DigitalObjectMETSFileArchive(remoteArchiveName, remoteMetsMd.getAbsolutePath(), null, false));
 		
 		ObjectArchiveSingleton.archiveMap = new ConcurrentHashMap<>();
 		for(DigitalObjectArchive a : archives)

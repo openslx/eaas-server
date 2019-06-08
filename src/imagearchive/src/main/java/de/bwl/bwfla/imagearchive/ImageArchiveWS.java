@@ -27,9 +27,12 @@ import javax.activation.DataHandler;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.jws.WebService;
+import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
@@ -115,10 +118,10 @@ public class ImageArchiveWS
 				.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String backend, String imageId, ImageType type, String templateId) throws BWFLAException
-	{
-		return this.lookup(backend)
-				.generalizedImport(imageId, type, templateId);
+	public String generalizedImport(String backend, String imageId, ImageType type, String templateId, String emulatorArchiveName) throws BWFLAException {
+			return this.lookup(backend)
+					.generalizedImport(imageId, type, templateId, this.lookup(emulatorArchiveName).getConfig().getHttpPrefix());
+
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException

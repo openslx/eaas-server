@@ -6,6 +6,7 @@ import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment;
 import de.bwl.bwfla.emil.datatypes.UserSessionResponse;
+import de.bwl.bwfla.emil.datatypes.UserSessions;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
@@ -33,6 +34,9 @@ public class EmilUserSession extends EmilRest {
 
     @Inject
     private EmilEnvironmentRepository emilEnvRepo;
+
+    @Inject
+    private UserSessions userSessions;
 
     @PostConstruct
     private void initialize() {
@@ -65,7 +69,7 @@ public class EmilUserSession extends EmilRest {
     {
         List<EmilSessionEnvironment> sessions;
 
-        sessions = emilEnvRepo.getEmilSessionEnvironments();
+        sessions = userSessions.toList();
         try {
             JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
             json.beginObject();

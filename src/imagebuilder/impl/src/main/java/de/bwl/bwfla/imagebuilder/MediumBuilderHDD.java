@@ -134,7 +134,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			// Prepare filesystem on the partition
 			final FileSystemType fstype = description.getFileSystemType();
 			if(backingFile == null){
-				this.makefs(fstype, rawimg, log);
+				this.makefs(fstype, rawimg, description.getLabel(), log);
 			}
 			MediumBuilderHDD.sync(rawmnt, log);
 			MediumBuilderHDD.lklmount(rawimg, fusemnt, fstype, log);
@@ -174,7 +174,7 @@ public class MediumBuilderHDD extends MediumBuilder
 
 		for(ImageContentDescription e : description.getContentEntries())
 		{
-			if(!e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
+			if(e.getArchiveFormat() == null || !e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
 			{
 				continue;
 			}
@@ -230,7 +230,7 @@ public class MediumBuilderHDD extends MediumBuilder
 		ptmaker.execute(device, partStartOffset, fsType, log);
 	}
 
-	private void makefs(FileSystemType fstype, Path device, Logger log) throws BWFLAException
+	private void makefs(FileSystemType fstype, Path device, String label, Logger log) throws BWFLAException
 	{
 		final IFileSystemMaker fsmaker = fsMakers.get(fstype);
 		if (fsmaker == null) {
@@ -238,6 +238,8 @@ public class MediumBuilderHDD extends MediumBuilder
 			throw new BWFLAException(message);
 		}
 
+		if(label != null)
+			fsmaker.setLabel(label);
 		fsmaker.execute(device, log);
 	}
 

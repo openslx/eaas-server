@@ -315,6 +315,8 @@ public class Drive
                 case "Q495265":
                 case "Q877050":
                     return CDROM;
+                case "Q493576":
+                    return FLOPPY;
                 default:
                     System.out.println("unknow qid " + qid);
                     return null;

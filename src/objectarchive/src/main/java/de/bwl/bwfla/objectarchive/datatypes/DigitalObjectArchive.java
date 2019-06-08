@@ -26,6 +26,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
+import gov.loc.mets.Mets;
 
 /**
  * 
@@ -41,6 +42,7 @@ public interface DigitalObjectArchive
 	public FileCollection getObjectReference(String objectId);
 	public ObjectFileCollection getObjectHandle(String objectId);
 	public void importObject(ObjectFileCollection fc) throws BWFLAException;
+	void importObject(String metsdata) throws BWFLAException;
 	String getName();
 	Path getLocalPath();
 	DigitalObjectMetadata getMetadata(String objectId);
@@ -54,4 +56,6 @@ public interface DigitalObjectArchive
     TaskState sync(List<String> objectId);
 
     void delete(String id) throws BWFLAException;
+
+    Mets getMetsMetadata(String id) throws BWFLAException;
 }

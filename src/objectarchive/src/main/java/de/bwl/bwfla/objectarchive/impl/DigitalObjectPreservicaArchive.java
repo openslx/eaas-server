@@ -23,6 +23,7 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import gov.loc.mets.Mets;
 import solutions.emulation.preservica.client.*;
 import solutions.emulation.preservica.client.Manifestation.DigitalFileContent;
 import solutions.emulation.preservica.client.SDBRestSession.SDBRestSessionException;
@@ -289,6 +290,11 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	}
 
 	@Override
+	public void importObject(String metsdata) throws BWFLAException {
+
+	}
+
+	@Override
 	public String getName() {
 		return archiveLabel;
 	}
@@ -405,6 +411,11 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	@Override
 	public void delete(String id) throws BWFLAException {
 		throw new BWFLAException("not supported");
+	}
+
+	@Override
+	public Mets getMetsMetadata(String id) {
+		return null;
 	}
 
 }

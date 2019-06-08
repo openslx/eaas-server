@@ -19,6 +19,8 @@ public class EmilSessionEnvironment extends EmilObjectEnvironment {
     private String userId;
     @XmlElement(required = false)
     private long creationDate;
+    @XmlElement(defaultValue = "0")
+    private long lastAccess = 0;
 
     public EmilSessionEnvironment() {}
 
@@ -38,6 +40,7 @@ public class EmilSessionEnvironment extends EmilObjectEnvironment {
         this.baseEnv = template.baseEnv;
         this.userId = template.userId;
         this.creationDate = template.creationDate;
+        this.lastAccess = template.lastAccess;
     }
 
     public String getBaseEnv() {
@@ -62,6 +65,16 @@ public class EmilSessionEnvironment extends EmilObjectEnvironment {
 
     public void setCreationDate(long creationDate) {
         this.creationDate = creationDate;
+    }
+
+    public long getLastAccess() {
+        if(lastAccess < creationDate)
+            return creationDate;
+        return lastAccess;
+    }
+
+    public void setLastAccess(long lastAccess) {
+        this.lastAccess = lastAccess;
     }
 
     @Override

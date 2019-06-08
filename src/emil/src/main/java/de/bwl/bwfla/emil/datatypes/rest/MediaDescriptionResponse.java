@@ -21,6 +21,9 @@ public class MediaDescriptionResponse extends EmilResponseType {
     private DigitalObjectMetadata metadata;
 
     @XmlElement
+    private String metsdata;
+
+    @XmlElement
     private ClassificationResult objectEnvironments;
 
     public MediaDescriptionResponse ()
@@ -56,5 +59,13 @@ public class MediaDescriptionResponse extends EmilResponseType {
 
     public void setObjectEnvironments(ClassificationResult objectEnvironments) {
         this.objectEnvironments = objectEnvironments;
+    }
+
+    public String getMetsdata() {
+        return metsdata;
+    }
+
+    public void setMetsdata(String metsdata) {
+        this.metsdata = metsdata;
     }
 }

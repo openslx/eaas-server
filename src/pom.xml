@@ -271,7 +271,7 @@
 		<module>softwarearchive/softwarearchive-client</module>
 		<module>eaas</module>
 		<module>emil</module>
-		<module>nbd-server</module>
+		<!-- <module>nbd-server</module> -->
 		<!-- <module>shibboleth</module> -->
 		<module>preservica-client</module>
 		<module>metadata-oaipmh</module>
@@ -586,6 +586,7 @@
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>
+			<!--
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>nbd-server-resource-api</artifactId>
@@ -611,6 +612,7 @@
 				<version>${project.version}</version>
 				<type>war</type>
 			</dependency>
+			-->
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>ReadWikidata</artifactId>

@@ -147,6 +147,7 @@
 					<artifactId>imagearchive</artifactId>
 					<type>war</type>
 				</dependency>
+				<!--
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>nbd-server-impl</artifactId>
@@ -164,6 +165,7 @@
 					<scope>compile</scope>
 					<type>rar</type>
 				</dependency>			
+				-->
 			</dependencies>
 		</profile>
 

@@ -20,6 +20,7 @@
 package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
+import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -51,6 +52,13 @@ public class MetaDataSources
 				.set(new EmilEnvironmentIdentifierSource(environmentRepository, executor))
 				.set(new EmilEnvironmentSource(environmentRepository, executor));
     }
+
+	public static MetaDataSource software(EmilSoftwareData softwareData, Executor executor)
+	{
+		return new MetaDataSource()
+				.set(new SoftwareIdentifierSource(softwareData, executor))
+				.set(new SoftwareSource(softwareData, executor));
+	}
 
 
     // ========== MetaDataSource Implementations =========================
@@ -268,6 +276,108 @@ public class MetaDataSources
 		{
 			return super.listEnvironments(options)
 					.thenApply((environments) -> environments.map(MAPPER));
+		}
+	}
+
+	private static class AbstractSoftwareSource
+	{
+		private final EmilSoftwareData softwareData;
+		private final Executor executor;
+
+
+		protected AbstractSoftwareSource(EmilSoftwareData softwareData, Executor executor)
+		{
+			this.softwareData = softwareData;
+			this.executor = executor;
+		}
+
+		protected CompletableFuture<EaasiSoftwareObject> findSoftware(String id)
+		{
+			final Supplier<EaasiSoftwareObject> supplier = () -> {
+				try {
+					EaasiSoftwareObject object =  softwareData.getSoftwareCollection().getId(id);
+					return object;
+				}
+				catch (Exception error) {
+					throw new CompletionException("Finding software failed!", error);
+				}
+			};
+
+			return CompletableFuture.supplyAsync(supplier, executor);
+		}
+
+		protected CompletableFuture<Stream<EaasiSoftwareObject>> listSoftware(QueryOptions options)
+		{
+			final Supplier<Stream<EaasiSoftwareObject>> supplier = () -> {
+				/* FIXME: we are currently returning always the full stream */
+				return softwareData.getSoftwareCollection().toStream();
+			};
+
+			return CompletableFuture.supplyAsync(supplier, executor);
+		}
+
+		public CompletableFuture<Integer> count()
+		{
+			return CompletableFuture.supplyAsync(() -> softwareData.getSoftwareCollection().size());
+		}
+	}
+
+	private static class SoftwareIdentifierSource extends AbstractSoftwareSource implements ItemIdentifierSource
+	{
+		private static final Function<EaasiSoftwareObject, ItemIdentifierDescription> MAPPER = (eaasiSoftwareObject) -> {
+			return new ItemIdentifierDescription(eaasiSoftwareObject.getSoftwarePackage().getId())
+					.setTimestamp(eaasiSoftwareObject.getSoftwarePackage().getTimestamp());
+		};
+
+		public SoftwareIdentifierSource(EmilSoftwareData emilSoftwareData, Executor executor)
+		{
+			super(emilSoftwareData, executor);
+		}
+
+		@Override
+		public CompletableFuture<ItemIdentifierDescription> get(String id)
+		{
+			return super.findSoftware(id)
+					.thenApply(MAPPER);
+		}
+
+		@Override
+		public CompletableFuture<Stream<ItemIdentifierDescription>> list(QueryOptions options)
+		{
+			return super.listSoftware(options)
+					.thenApply((software) -> software.map(MAPPER));
+		}
+	}
+
+	private static class SoftwareSource extends AbstractSoftwareSource implements ItemSource
+	{
+		private static final Function<EaasiSoftwareObject, ItemDescription> MAPPER = (software) -> {
+			try {
+				return new ItemDescription(SoftwareIdentifierSource.MAPPER.apply(software))
+						.setMetaData(software.value());
+			}
+			catch (Exception error) {
+				throw new CompletionException("Constructing ItemDescription failed!", error);
+			}
+		};
+
+		public SoftwareSource(EmilSoftwareData softwareData, Executor executor)
+		{
+			super(softwareData, executor);
+		}
+
+		@Override
+		public CompletableFuture<ItemDescription> get(String id)
+		{
+			return super.findSoftware(id)
+					.thenApply(MAPPER);
+		}
+
+		@Override
+		public CompletableFuture<Stream<ItemDescription>> list(QueryOptions options)
+		{
+			return super.listSoftware(options)
+					.thenApply((software) -> software.map(MAPPER));
 		}
 	}
 

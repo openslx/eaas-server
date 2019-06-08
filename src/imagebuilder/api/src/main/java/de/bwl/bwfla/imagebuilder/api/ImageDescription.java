@@ -53,6 +53,9 @@ public class ImageDescription
 	@XmlElement(required = true)
 	private FileSystemType filesystem;
 
+	@XmlElement
+	private String label;
+
 	@XmlElement(name = "content", required = true)
 	private List<ImageContentDescription> entries;
 
@@ -196,5 +199,13 @@ public class ImageDescription
 	public String toShortSummary()
 	{
 		return medium.name() + " (" + partTable.name() + "+" + filesystem.name() + ")";
+	}
+
+	public String getLabel() {
+		return label;
+	}
+
+	public void setLabel(String label) {
+		this.label = label;
 	}
 }

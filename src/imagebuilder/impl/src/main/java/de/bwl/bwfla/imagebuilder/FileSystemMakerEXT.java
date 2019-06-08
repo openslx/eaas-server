@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 public class FileSystemMakerEXT implements IFileSystemMaker
 {
 	private final FileSystemType fstype;
-
+	private String label;
 
 	public FileSystemMakerEXT(FileSystemType fstype)
 	{
@@ -51,9 +51,18 @@ public class FileSystemMakerEXT implements IFileSystemMaker
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("mkfs." + fstype.toString().toLowerCase());
+		if(label != null)
+		{
+			process.addArguments("-L", label);
+		}
 		process.addArgument("-F");
 		process.addArgument(device.toString());
 		if (!process.execute())
 			throw new BWFLAException("Creating " + fstype.toString() + "-filesystem failed!");
+	}
+
+	@Override
+	public void setLabel(String label) {
+		this.label = label;
 	}
 }

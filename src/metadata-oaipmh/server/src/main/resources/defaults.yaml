@@ -37,6 +37,24 @@ metadata_provider:
             max_num_records: 50
             max_num_sets: 100
 
+      - name: 'software'
+
+          # Repository information (see http://www.openarchives.org/OAI/2.0/openarchivesprotocol.htm#Identify)
+        identity:
+          repository_name: 'EaaS software repository'
+          # Date format according to https://docs.oracle.com/javase/8/docs/api/java/util/Date.html
+          earliest_date: '2018-11-01T00:00:00Z'
+          admin_email: 'admin@dummy.com'
+
+          # Source for item+set lookups
+        source:
+          base_url: 'http://localhost:8080/emil/metadata-repositories/public-software'
+
+        response_limits:
+          max_num_identifiers: 500
+          max_num_records: 500
+          max_num_sets: 500
+
 metadata_harvester:
     base_url: 'http://localhost:8080/oaipmh/harvesters'
    
