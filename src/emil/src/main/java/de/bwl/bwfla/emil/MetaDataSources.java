@@ -296,8 +296,6 @@ public class MetaDataSources
 			final Supplier<EaasiSoftwareObject> supplier = () -> {
 				try {
 					EaasiSoftwareObject object =  softwareData.getSoftwareCollection().getId(id);
-					if(object != null)
-						System.out.println(object.value());
 					return object;
 				}
 				catch (Exception error) {

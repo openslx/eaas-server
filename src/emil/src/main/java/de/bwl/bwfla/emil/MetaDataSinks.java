@@ -179,7 +179,6 @@ public class MetaDataSinks
 		public void insert(ItemDescription item) throws BWFLAException
 		{
 			try {
-				log.warning("insert software got: " + item.getMetaData());
 				final EaasiSoftwareObject software = EaasiSoftwareObject.fromValue(item.getMetaData(), EaasiSoftwareObject.class);
 				if(software.getMetsData() != null)
 					softwareData.importSoftware(software);

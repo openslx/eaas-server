@@ -313,10 +313,10 @@ public class EmilSoftwareData extends EmilRest {
 		softwarePackage.setArchive("Remote Objects");
 
 		try {
-			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getId());
+			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getObjectId());
 			if(software != null)
 			{
-				LOG.warning("software with id " + softwarePackage.getId() + " present. skipping...");
+				LOG.warning("software with id " + softwarePackage.getObjectId() + " present. skipping...");
 				return;
 			}
 		} catch (BWFLAException e) {
