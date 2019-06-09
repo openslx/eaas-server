@@ -1,7 +1,10 @@
 package de.bwl.bwfla.emil;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Spliterator;
+import java.util.function.Consumer;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -18,6 +21,8 @@ import javax.ws.rs.core.Response.Status;
 
 import de.bwl.bwfla.api.objectarchive.ObjectFileCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
+import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
@@ -35,7 +40,6 @@ import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 public class EmilSoftwareData extends EmilRest {
     SoftwareArchiveHelper swHelper;
     ObjectArchiveHelper objHelper;
-
 
     @Inject
     @Config(value = "ws.softwarearchive")
@@ -249,7 +253,7 @@ public class EmilSoftwareData extends EmilRest {
 				}
 
 				LOG.severe("got archive: " + swo.getArchiveId() + " for " + swo.getObjectId());
-				if(archiveName == null || !archiveName.equals("default"))
+				if(archiveName == null || archiveName.startsWith("user"))
 				{
 					LOG.severe("importing object");
 					ObjectFileCollection object = objHelper.getObjectHandle(archiveName, swo.getObjectId());
@@ -297,5 +301,30 @@ public class EmilSoftwareData extends EmilRest {
 			return authenticatedUser.getUsername();
 		}
 		return archiveId;
+	}
+
+	public SoftwareCollection getSoftwareCollection()
+	{
+		return new SoftwareCollection(objHelper, swHelper);
+	}
+
+	public void importSoftware(EaasiSoftwareObject swo) throws BWFLAException {
+		SoftwarePackage softwarePackage = swo.getSoftwarePackage();
+		softwarePackage.setArchive("Remote Objects");
+
+		try {
+			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getObjectId());
+			if(software != null)
+			{
+				LOG.warning("software with id " + softwarePackage.getObjectId() + " present. skipping...");
+				return;
+			}
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+			return;
+		}
+
+		objHelper.importFromMetadata("Remote Objects", swo.getMetsData());
+		swHelper.addSoftwarePackage(softwarePackage);
 	}
 }

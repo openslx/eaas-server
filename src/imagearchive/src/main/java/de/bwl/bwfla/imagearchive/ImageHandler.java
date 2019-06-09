@@ -311,7 +311,7 @@ public class ImageHandler
 	
 		ConcurrentHashMap<String, Environment> map = cache.get(ImageType.valueOf("tmp"));
 		if(map == null)
-			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<String, Environment>());
+			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<>());
 		else
 			map.clear();
 	}
@@ -581,7 +581,6 @@ public class ImageHandler
 			if ((env = loadMetaDataFile(fileEntry)) != null) {
 				Environment emuEnv = null;
 				try {
-					// log.info("env \n" + env);
 					emuEnv = Environment.fromValue(env);
 				} catch (Throwable t) {
 					log.info("loadMetadata: failed to parse environment: " + t.getMessage());
@@ -876,9 +875,7 @@ public class ImageHandler
 				final ImageArchiveMetadata metadata = new ImageArchiveMetadata(ImageType.base);
 				metadata.setDeleteIfExists(true);
 				metadata.setImageId(imageid);
-
-
-				taskids.add(this.importImageUrl(url, metadata, metadata.isDeleteIfExists()));
+				taskids.add(this.importImageUrl(url, metadata, false));
 			}
 			catch (Exception error) {
 				log.log(Level.WARNING, "Preparing image-import from URL failed!", error);
@@ -888,7 +885,7 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected void createPatchedCow(String parentId, String cowId, String templateId, String type) throws IOException, BWFLAException {
+	protected void createPatchedCow(String parentId, String cowId, MachineConfigurationTemplate template, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
 		String newBackingFile = getArchivePrefix() + parentId;
 		File target = getImageTargetPath(type);
 		File destImgFile = new File(target, cowId);
@@ -896,8 +893,7 @@ public class ImageHandler
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) getEnvById(templateId);
-		ImageGeneralizer.applyScriptIfCompatible(this, destImgFile, tempEnv.copy());
+		ImageGeneralizer.applyScriptIfCompatible(destImgFile, template.copy(), emulatorArchiveprefix);
 	}
 
 	private void createOrUpdateHandle(String imageId) throws BWFLAException
@@ -1015,13 +1011,18 @@ public class ImageHandler
 			Binding b = new Binding();
 			b.setUrl(url.toString());
 			File dst = new File(target, imageid);
-			try {
-				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
-			} catch (BWFLAException e)
-			{
-				b.setUrl("http://hdl.handle.net/" + imageHandler.handleClient.toHandle(imageid));
-				log.severe("retrying handle... "  + b.getUrl());
-				EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+
+			if(dst.exists()) {
+				log.warning("downloadind dependencies: skiip " + dst.getAbsolutePath());
+			}
+			else {
+				try {
+					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+				} catch (BWFLAException e) {
+					b.setUrl("http://hdl.handle.net/" + imageHandler.handleClient.toHandle(imageid));
+					log.severe("retrying handle... " + b.getUrl());
+					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
+				}
 			}
 
 			String result = imageHandler.resolveLocalBackingFile(dst);
@@ -1037,7 +1038,10 @@ public class ImageHandler
 			try {
 				Binding b = new Binding();
 				b.setUrl(url.toString());
-				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
+				if(!destImgFile.exists()) {
+					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
+				}
+				
 				QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");

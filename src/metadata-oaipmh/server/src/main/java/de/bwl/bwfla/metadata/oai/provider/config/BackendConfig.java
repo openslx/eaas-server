@@ -158,7 +158,7 @@ public class BackendConfig extends BaseConfig
 		@Config("max_num_records")
 		public void setMaxNumRecords(int number)
 		{
-			ConfigHelpers.check(number, 1, 200, "Max. number of records is invalid!");
+			ConfigHelpers.check(number, 1, 500, "Max. number of records is invalid!");
 			this.maxNumRecords = number;
 		}
 

@@ -1,4 +1,4 @@
-package de.bwl.bwfla.objectarchive;
+package de.bwl.bwfla.objectarchive.utils;
 
 import java.io.File;
 import java.io.UnsupportedEncodingException;
@@ -6,10 +6,13 @@ import java.net.URLDecoder;
 import java.nio.file.Path;
 import java.util.logging.Level;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.net.HttpExportServlet;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileCache;
+
+import javax.servlet.ServletException;
 
 
 public class ExportObject extends HttpExportServlet
@@ -54,5 +57,10 @@ public class ExportObject extends HttpExportServlet
 
 		return new File(localPath.toFile(), objPath);
 	}
-	
+
+	@Override
+	public File resolveMetaData(String path) throws ServletException {
+		throw new ServletException("Method is not implemented");
+	}
+
 }

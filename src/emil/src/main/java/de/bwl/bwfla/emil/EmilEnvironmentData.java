@@ -14,12 +14,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.servlet.http.HttpServletResponse;
+import javax.ws.rs.*;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -51,6 +48,7 @@ import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
+import jdk.nashorn.internal.objects.annotations.Getter;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
@@ -76,8 +74,6 @@ public class EmilEnvironmentData extends EmilRest {
 	@Inject
 	private ArchiveAdapter archive;
 
-	private ObjectArchiveHelper objHelper;
-
 	private AsyncIoTaskManager taskManager;
 	private ImageProposer imageProposer;
 
@@ -92,13 +88,75 @@ public class EmilEnvironmentData extends EmilRest {
 	private void initialize() {
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
-		} catch (IllegalArgumentException e) {}
+		} catch (IllegalArgumentException e) {
+		}
 
-		objHelper = new ObjectArchiveHelper(objectArchive);
 		try {
 			taskManager = new AsyncIoTaskManager();
 		} catch (NamingException e) {
 			throw new IllegalStateException("failed to create AsyncIoTaskManager");
+		}
+
+		init();
+	}
+
+	@Secured
+	@GET
+	@Path("/")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getEnvironments(@Context final HttpServletResponse response)
+	{
+		try {
+			List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
+			List<EnvironmentListItem> result = new ArrayList<>();
+
+			for (EmilEnvironment emilenv : environments) {
+				result.add(new EnvironmentListItem(emilenv));
+			}
+
+			return Response.status(Response.Status.OK).entity(result).build();
+		} catch (Throwable t) {
+			throw new BadRequestException(Response
+				.status(Response.Status.BAD_REQUEST)
+				.entity(new ErrorInformation(t.getMessage()))
+				.build());
+		}
+	}
+
+	@Secured
+	@GET
+	@Path("/{envId}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getEnvironment(@PathParam("envId") String envId,
+									   @Context final HttpServletResponse response) {
+
+		EmilEnvironment emilenv = emilEnvRepo.getEmilEnvironmentById(envId);
+		if(emilenv == null)
+		{
+			throw new BadRequestException(Response
+					.status(Response.Status.BAD_REQUEST)
+					.entity(new ErrorInformation("environment id not found " + envId))
+					.build());
+		}
+
+		try {
+		// Add all environments to the response...
+			MachineConfiguration machineConf = null;
+
+			Environment env = envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+			if (env instanceof MachineConfiguration)
+				machineConf = (MachineConfiguration) env;
+
+			List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
+			EnvironmentDetails result = new EnvironmentDetails(emilenv, machineConf, parents);
+			return Response.status(Response.Status.OK).entity(result).build();
+
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+			throw new BadRequestException(Response
+					.status(Response.Status.BAD_REQUEST)
+					.entity(new ErrorInformation("failed retrieving data"))
+					.build());
 		}
 	}
 
@@ -174,82 +232,6 @@ public class EmilEnvironmentData extends EmilRest {
 
 		imageProposer.refreshIndex();
 		return Emil.successMessageResponse("delete success!");
-	}
-
-	/**
-	 * Looks up and returns all possible environments. A JSON response will be
-	 * returned, containing:
-	 * <p>
-	 * <pre>
-	 * {
-	 *      "status": "0",
-	 *      "environments": [
-	 *          { "id": &ltEnvironment's ID&gt, "label": "Environment's label" },
-	 *          ...
-	 *      ]
-	 * }
-	 * </pre>
-	 * <p>
-	 * In case of an error a JSON response containing the corresponding message
-	 * will be returned:
-	 * <p>
-	 * <pre>
-	 * {
-	 *      "status": "1",
-	 *      "message": "Error message."
-	 * }
-	 * </pre>
-	 *
-	 * @return A JSON object with supported environments when found, else an
-	 * error message.
-	 */
-	@Secured
-	@GET
-	@Path("/getAllEnvironments")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getAllEnvironments() {
-		try {
-			List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
-			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-			json.beginObject();
-			json.add("status", "0");
-			json.name("environments");
-			json.beginArray();
-
-			for (EmilEnvironment env : environments) {
-				json.beginObject();
-				json.add("id", env.getEnvId());
-				json.add("label", env.getTitle());
-				json.endObject();
-			}
-
-			json.endArray();
-			json.endObject();
-			json.finish();
-
-			return Emil.createResponse(Status.OK, json.toString());
-		} catch (Throwable t) {
-			return Emil.errorMessageResponse(t.getMessage());
-		}
-	}
-
-
-	/**
-	 * returns Environment with given ID
-	 * @param id
-	 * @return
-	 */
-	@Secured
-	@GET
-	@Path("/getEnvById")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response getEnvById(@QueryParam("id") String id) {
-		try {
-			EmilEnvironment env = emilEnvRepo.getEmilEnvironmentById(id);
-			return Emil.createResponse(Status.OK, env.jsonValueWithoutRoot(false));
-		} catch (Throwable t) {
-			return Emil.errorMessageResponse(t.getMessage());
-		}
 	}
 
 	@Secured
@@ -341,195 +323,6 @@ public class EmilEnvironmentData extends EmilRest {
 		} catch (ClassNotFoundException | BWFLAException e) {
 			LOG.warning("getDatabaseContent failed!\n" + e.getMessage());
 			return Emil.internalErrorResponse(e);
-		}
-	}
-
-	/**
-	 * Looks up and returns a list of all Emil's environments as a JSON object:
-	 * <p>
-	 * <pre>
-	 * {
-	 *      "status": "0",
-	 *      "environments": [
-	 *          {
-	 *              "envId": &ltEnvironment's ID&gt,
-	 *              "os": "Environment's OS name",
-	 *              "title": "Environment's title",
-	 *              "description": "Environment's description",
-	 *              "version": "Environment's version",
-	 *              "emulator": "Environment's emulator"
-	 *          },
-	 *          ...
-	 *      ]
-	 * }
-	 * </pre>
-	 *
-	 * @return A JSON object containing the environment descriptions.
-	 */
-	@Secured
-	@GET
-	@Path("/list")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response list() {
-		List<EmilEnvironment> environments = null;
-
-
-		try{
-			environments = emilEnvRepo.getEmilEnvironments();
-			if (environments != null && environments.size() == 0) {
-				init();
-				environments = emilEnvRepo.getEmilEnvironments();
-			}
-		} catch (Exception exception) {
-			return Emil.internalErrorResponse(exception);
-		}
-
-		try {
-			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-			json.beginObject();
-			json.add("status", "0");
-			json.name("environments");
-			json.beginArray();
-
-			// Add all environments to the response...
-			for (EmilEnvironment emilenv : environments) {
-				MachineConfiguration machineConf = null;
-				try {
-					Environment env =  envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
-
-					if(!(env instanceof MachineConfiguration))
-						continue;
-
-					machineConf = (MachineConfiguration)env;
-				} catch (BWFLAException e) {
-					LOG.warning("skipping env: " + emilenv.getArchive() + " " + emilenv.getEnvId() + " " + e.getMessage());
-					continue;
-				}
-
-				String envType = "base";
-				json.beginObject();
-
-				json.add("parentEnvId", emilenv.getParentEnvId());
-				json.add("envId", emilenv.getEnvId());
-				json.add("title", emilenv.getTitle());
-				json.add("description", emilenv.getDescription());
-				json.add("version", emilenv.getVersion());
-				json.add("emulator", emilenv.getEmulator());
-				json.add("helpText", emilenv.getHelpText());
-				json.add("enableRelativeMouse", emilenv.isEnableRelativeMouse());
-				json.add("enablePrinting", emilenv.isEnablePrinting());
-				json.add("shutdownByOs", emilenv.isShutdownByOs());
-				json.add("timeContext", emilenv.getTimeContext());
-				json.add("serverMode", emilenv.isServerMode());
-				json.add("localServerMode", emilenv.isLocalServerMode());
-				json.add("enableSocks", emilenv.isEnableSocks());
-				json.add("serverPort", emilenv.getServerPort());
-				json.add("serverIp", emilenv.getServerIp());
-				json.add("gwPrivateIp", emilenv.getGwPrivateIp());
-				json.add("gwPrivateMask", emilenv.getGwPrivateMask());
-				json.add("enableInternet", emilenv.isEnableInternet());
-				json.add("connectEnvs", emilenv.isConnectEnvs());
-				json.add("author", emilenv.getAuthor());
-				json.add("canProcessAdditionalFiles", emilenv.isCanProcessAdditionalFiles());
-				json.add("archive", emilenv.getArchive());
-				json.add("xpraEncoding", emilenv.getXpraEncoding());
-
-				if( emilenv.getOwner() != null)
-					json.add("owner" , emilenv.getOwner().getUsername());
-				else
-					json.add("owner", "shared");
-
-				if(emilenv instanceof EmilObjectEnvironment)
-				{
-					EmilObjectEnvironment emilObjEnv = (EmilObjectEnvironment) emilenv;
-					json.add("objectId", emilObjEnv.getObjectId());
-					json.add("objectArchive", emilObjEnv.getObjectArchiveId());
-					envType = "object";
-				}
-
-				if(emilenv instanceof EmilContainerEnvironment)
-				{
-					envType = "container";
-					EmilContainerEnvironment cEnv = (EmilContainerEnvironment) emilenv;
-					json.add("input", cEnv.getInput());
-					json.add("output", cEnv.getOutput());
-
-					json.name("processArgs");
-					json.beginArray();
-					if(cEnv.getArgs() != null)
-					for(String _arg : cEnv.getArgs())
-						json.value(_arg);
-					json.endArray();
-
-					json.name("processEnvs");
-					json.beginArray();
-					if(cEnv.getEnv() != null)
-						for(String _env : cEnv.getEnv())
-						json.value(_env);
-					json.endArray();
-				}
-
-
-				List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
-				if (parents.size() > 0) {
-					json.name("revisions");
-					json.beginArray();
-					for(EmilEnvironment parentEnv : parents)
-					{
-						json.beginObject();
-						json.add("id", parentEnv.getEnvId());
-						json.add("text", parentEnv.getDescription());
-						json.add("archive", parentEnv.getArchive());
-						json.endObject();
-					}
-					json.endArray();
-				}
-
-				// Add installed software IDs to the response
-				if (machineConf != null) {
-					json.name("installedSoftwareIds");
-					json.beginArray();
-					for (String softwareId : machineConf.getInstalledSoftwareIds())
-						json.value(softwareId);
-
-					json.endArray();
-
-					json.add("userTag", machineConf.getUserTag());
-					json.add("os", machineConf.getOperatingSystemId());
-
-					if(machineConf.getNativeConfig() != null)
-						json.add("nativeConfig", machineConf.getNativeConfig().getValue());
-
-					if(machineConf.getUiOptions() != null && machineConf.getUiOptions().getForwarding_system() != null)
-					{
-						if (machineConf.getUiOptions().getForwarding_system().equalsIgnoreCase("xpra"))
-							json.add("useXpra", true);
-                    }
-					else
-						json.add("useXpra", false);
-
-					if (machineConf.getEmulator().getBean() != null) {
-						json.add("emulator", machineConf.getEmulator().getBean());
-					}
-
-					if (machineConf.getEmulator().getContainerName() != null) {
-						json.add("containerName", machineConf.getEmulator().getContainerName());
-					}
-
-					if (machineConf.getEmulator().getContainerVersion() != null) {
-						json.add("containerVersion", machineConf.getEmulator().getContainerVersion());
-					}
-				}
-				json.add("envType", envType);
-				json.endObject();
-			}
-			json.endArray(); // environments array
-			json.endObject();
-			json.finish();
-
-			return Emil.createResponse(Status.OK, json.toString());
-		} catch (Throwable t) {
-			return Emil.internalErrorResponse(t);
 		}
 	}
 
@@ -716,6 +509,8 @@ public class EmilEnvironmentData extends EmilRest {
 
 				machineConfiguration.getUiOptions().getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
+				machineConfiguration.setDrive(desc.getDrives());
+
 				if(desc.isEnableInternet())
 				{
 					List<Nic> nics = machineConfiguration.getNic();
@@ -822,19 +617,6 @@ public class EmilEnvironmentData extends EmilRest {
 		} catch (BWFLAException e) {
 			return new EmilResponseType(e);
 		}
-	}
-
-	@Secured
-	@GET
-	@Path("/environment")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response environment(@QueryParam("envId") String envId) {
-		EmilEnvironment env = emilEnvRepo.getEmilEnvironmentById(envId);
-
-		if(env == null) {
-			return Emil.errorMessageResponse("Environment ID not found or null.");
-		}
-		return Emil.createResponse(Status.OK, env);
 	}
 
 	@Secured
@@ -962,35 +744,6 @@ public class EmilEnvironmentData extends EmilRest {
 		envHelper.sync();
 		init();
 		return Emil.successMessageResponse("syncing archives ");
-	}
-
-	@Secured
-	@GET
-	@Path("/environmentMetaData")
-	@Produces(MediaType.APPLICATION_JSON)
-	public EnvironmentMetaData getEnvironmentMetaData(@QueryParam("archive") String archive, @QueryParam("envId") String envId)
-	{
-		if(envId == null || archive == null)
-			return new EnvironmentMetaData(new BWFLAException("environment ID / archive was null"));
-
-		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
-		try {
-			MachineConfiguration machineConfiguration = (MachineConfiguration)envHelper.getEnvironmentById(archive, envId);
-
-			if(machineConfiguration.getEmulator() == null)
-				return new EnvironmentMetaData(new BWFLAException("invalid machine metadata: " + machineConfiguration.toString()));
-			final String bean = machineConfiguration.getEmulator().getBean();
-
-			EnvironmentMetaData emd = new EnvironmentMetaData();
-			emd.setMediaChangeSupport(EmulationEnvironmentHelper.beanSupportsMediaChange(bean, null));
-
-			return emd;
-
-		} catch (BWFLAException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new EnvironmentMetaData(e);
-		}
-
 	}
 
 	@Secured

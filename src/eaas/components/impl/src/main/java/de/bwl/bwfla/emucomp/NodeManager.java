@@ -188,6 +188,7 @@ public class NodeManager {
 
             if (configuration instanceof MachineConfiguration) {
                 component = EmulatorBean.createEmulatorBean((MachineConfiguration) configuration);
+                component.setEnvironmentId(((MachineConfiguration)configuration).getId());
             } else if (configuration instanceof ContainerConfiguration) {
                 component = ContainerBean.createContainerBean((ContainerConfiguration) configuration);
             } else if (configuration instanceof VdeSlirpConfiguration) {

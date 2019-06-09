@@ -29,7 +29,7 @@
 		<guacamole.version>0.9.4</guacamole.version>
 		<snakeyaml.version>1.16</snakeyaml.version>
 		<jackson.version>1.9.13</jackson.version>
-		<jackson2.version>2.5.4</jackson2.version>
+		<jackson2.version>2.9.8</jackson2.version>
 		<junit.version>4.12</junit.version>
 		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
@@ -271,7 +271,7 @@
 		<module>softwarearchive/softwarearchive-client</module>
 		<module>eaas</module>
 		<module>emil</module>
-		<module>nbd-server</module>
+		<!-- <module>nbd-server</module> -->
 		<!-- <module>shibboleth</module> -->
 		<module>preservica-client</module>
 		<module>metadata-oaipmh</module>
@@ -586,6 +586,7 @@
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>
+			<!--
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>nbd-server-resource-api</artifactId>
@@ -611,6 +612,7 @@
 				<version>${project.version}</version>
 				<type>war</type>
 			</dependency>
+			-->
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>ReadWikidata</artifactId>

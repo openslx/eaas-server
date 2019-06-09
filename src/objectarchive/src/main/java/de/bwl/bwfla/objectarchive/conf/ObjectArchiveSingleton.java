@@ -20,6 +20,7 @@
 package de.bwl.bwfla.objectarchive.conf;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -35,6 +36,7 @@ import javax.naming.NamingException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -72,6 +74,9 @@ public class ObjectArchiveSingleton
 
 	public static final String tmpArchiveDir = "emil-temp-objects";
 	public static final String tmpArchiveName = "emil-temp-objects";
+	public static final String remoteArchiveName = "Remote Objects";
+
+	public static final String remoteMetsObjects = "metsRemoteMetadata";
 
 	private static AsyncIoTaskManager taskManager;
 
@@ -117,29 +122,37 @@ public class ObjectArchiveSingleton
 		if(!confValid)
 			throw new ObjectArchiveInitException("no valid configuration found");
 
-		List<DigitalObjectArchive> archives = null;
-		archives = DigitalObjectArchiveFactory.createFromJson(new File(objArchiveConfDir));
-		
-//		if(archives.size() == 0)
-//		{
-			File defaultObjectsPath = new File(defaultLocalFilePath);
-			if(!defaultObjectsPath.exists())
-				throw new ObjectArchiveInitException("no archive configuration found");
-			
-			archives.add(new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, true));	
-//		}
+		List<DigitalObjectArchive> archives = new ArrayList<>();
+		archives.addAll(DigitalObjectArchiveFactory.createFromJson(new File(objArchiveConfDir)));
+
+		File defaultObjectsPath = new File(defaultLocalFilePath);
+		if(!defaultObjectsPath.exists())
+			throw new ObjectArchiveInitException("no archive configuration found");
 
 		// add internal upload archive
 		File tempObjectPath = new File(serverdatadir, tmpArchiveDir);
 		archives.add(new DigitalObjectFileArchive(tmpArchiveName, tempObjectPath.getAbsolutePath(), false));
+
+		// add mets remote
+		File remoteMetsMd = new File(serverdatadir, remoteMetsObjects);
+		archives.add(new DigitalObjectMETSFileArchive(remoteArchiveName, remoteMetsMd.getAbsolutePath(), null, false));
 		
 		ObjectArchiveSingleton.archiveMap = new ConcurrentHashMap<>();
 		for(DigitalObjectArchive a : archives)
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
-			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default"))
+			LOG.info("adding object archive" + a.getName());
+			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default")) {
 				ObjectArchiveSingleton.archiveMap.put("default", a);
-		}	
+				LOG.warning("setting archive " + a.getName() + " as default");
+			}
+		}
+
+		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
+		archiveMap.put(_a.getName(), _a);
+		if(!archiveMap.containsKey("default")) {
+			ObjectArchiveSingleton.archiveMap.put("default", _a);
+		}
 	}
 
 	public static TaskState submitTask(AbstractTask<Object> task)
