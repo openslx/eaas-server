@@ -184,7 +184,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 	private static WebRTCBin createWebRtcBin(Pipeline pipeline, BlockingQueue<String> outqueue, Logger log)
 	{
 		final WebRTCBin webrtc = new WebRTCBin("webrtc");
-		webrtc.setStunServer("stun://stun.services.mozilla.com");
+		webrtc.setStunServer("stun://stun.l.google.com:19302");
 
 		final CREATE_OFFER onOfferCreated = (offer) -> {
 			webrtc.setLocalDescription(offer);
