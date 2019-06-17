@@ -510,6 +510,7 @@ public class EmilEnvironmentData extends EmilRest {
 				machineConfiguration.getUiOptions().getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
 				machineConfiguration.setDrive(desc.getDrives());
+				machineConfiguration.setLinuxRuntime(desc.isLinuxRuntime());
 
 				if(desc.isEnableInternet())
 				{
@@ -568,6 +569,7 @@ public class EmilEnvironmentData extends EmilRest {
 		newEnv.setServerPort(desc.getServerPort());
 		newEnv.setCanProcessAdditionalFiles(desc.canProcessAdditionalFiles());
 		newEnv.setXpraEncoding(desc.getXpraEncoding());
+		newEnv.setLinuxRuntime(desc.isLinuxRuntime());
 
 		if (desc.getTime() != null) {
 			newEnv.setTimeContext(desc.getTime());

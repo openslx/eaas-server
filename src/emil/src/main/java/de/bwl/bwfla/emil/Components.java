@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.emil;
 
-import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
@@ -48,14 +46,11 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
@@ -70,7 +65,6 @@ import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -88,7 +82,6 @@ import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.api.eaas.EaasWS;
@@ -100,12 +93,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 
 @ApplicationScoped
@@ -381,40 +371,27 @@ public class Components {
         }
     }
 
-    String createContainerMetadata(OciContainerConfiguration config)
-    {
-        List<String> args = new ArrayList<>();
+    String createContainerMetadata(OciContainerConfiguration config) throws BWFLAException {
+        ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
+        final String inputDir = "container-input";
+        final String outputDir = "container-output";
 
         metadata.setProcess("/bin/sh");
         args.add("-c");
-        args.add("emucon-cgen \"$@\"; runc run eaas-job");
+        args.add("mkdir " + outputDir + " && emucon-cgen \"$@\"; runc run eaas-job");
         args.add("");
 
         // cgen args...
+        // add more stuff here
 
         args.add("--output");
         args.add("config.json");
 
-//        // Container's inputs
-//        if (config.hasInputs()) {
-//            for (ContainerConfiguration.Input input : config.getInputs()) {
-//                final String src = bindings.lookup(input.getBinding());
-//                final String dst = input.getDestination();
-//                if(src!= null && dst != null) {
-//                    cgen.addArgument("--mount");
-//                    cgen.addArgument(src, ":", dst, ":bind:ro");
-//                }
-//            }
-//        }
-//
-//        // Container's output directory mount
-//        if (config.hasOutputPath()) {
-//            final String src = this.getOutputDir().toString();
-//            final String dst = config.getOutputPath();
-//            cgen.addArgument("--mount");
-//            cgen.addArgument(src, ":", dst, ":bind:rw");
-//        }
+        args.add("--mount");
+        args.add(getMountStr(inputDir, config.getInput(), true));
+        args.add("--mount");
+        args.add(getMountStr(outputDir, config.getOutputPath(), false));
 
         // Add environment variables
         if(config.getProcess().getEnvironmentVariables() != null) {
@@ -434,6 +411,14 @@ public class Components {
         return metadata.jsonValueWithoutRoot(true);
     }
 
+    private String getMountStr(String src, String dst, boolean isReadonly) throws BWFLAException {
+        if (src != null && dst != null) {
+            return src + ":" + dst + ":bind:" + (isReadonly ? "ro" : "rw");
+        } else {
+            throw new BWFLAException("src or dst is null! src:" + src + " dst:" + dst);
+        }
+    }
+
     private BlobHandle prepareMetadata(OciContainerConfiguration config) throws IOException, BWFLAException {
         String metadata = createContainerMetadata(config);
         File tmpfile = File.createTempFile("metadata.json", null, null);
@@ -449,23 +434,47 @@ public class Components {
         return blobstore.put(blobDescription);
     }
 
-    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config) throws IOException, BWFLAException {
+    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
+        if (inputMedia.size() != 1)
+            throw new BWFLAException("Size of Input drives cannot exceed 1");
+
+        ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
+        final FileSystemType fileSystemType = FileSystemType.EXT4;
+        int sizeInMb = medium.getSizeInMb();
+        if (sizeInMb <= 0)
+            sizeInMb = 1024;
 
         final ImageDescription description = new ImageDescription()
                 .setMediumType(MediumType.HDD)
                 .setPartitionTableType(PartitionTableType.NONE)
                 .setPartitionStartBlock(0)
-                .setFileSystemType("ext4")
+                .setFileSystemType(fileSystemType)
                 .setLabel("eaas-job")
-                .setSizeInMb(128);
+                .setSizeInMb(sizeInMb);
 
         BlobHandle mdBlob = prepareMetadata(config);
-
-        ImageContentDescription entry = new ImageContentDescription();
-        entry.setAction(ImageContentDescription.Action.COPY)
+        final ImageContentDescription metadataEntry = new ImageContentDescription();
+        metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
                 .setName("metadata.json");
-        description.addContentEntry(entry);
+        description.addContentEntry(metadataEntry);
+
+
+        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(extfile.getAction())
+                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
+                    .setURL(new URL(extfile.getUrl()))
+                    .setSubdir("container-input");
+
+
+            if (extfile.getName() == null || extfile.getName().isEmpty())
+                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
+            else
+                entry.setName(extfile.getName());
+
+            description.addContentEntry(entry);
+        }
 
         return description;
     }
@@ -695,7 +704,7 @@ public class Components {
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = prepareContainerRuntimeImage(ociConf);
+                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getInputMedia());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -723,6 +732,7 @@ public class Components {
 
 
                 this.addBindingToEnvironment(config, binding, this.toDriveType(MediumType.HDD));
+                config.setOutputBindingId(binding.getId());
             }
             else {
                 // Wrap external input files into images

@@ -1,8 +1,10 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
 import javax.persistence.Entity;
+import javax.xml.bind.annotation.XmlElement;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import de.bwl.bwfla.emucomp.api.Drive;
 
 import java.util.List;
@@ -42,6 +44,15 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean enableSocks;
 	private boolean canProcessAdditionalFiles;
 	private List<Drive> drives;
+	private boolean isLinuxRuntime;
+
+	public boolean isLinuxRuntime() {
+		return isLinuxRuntime;
+	}
+
+	public void setLinuxRuntime(boolean islinuxRuntime) {
+		isLinuxRuntime = islinuxRuntime;
+	}
 
 	public String getEnvId() {
 		return envId;

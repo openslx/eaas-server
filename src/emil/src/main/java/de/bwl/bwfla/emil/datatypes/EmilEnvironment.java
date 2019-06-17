@@ -46,6 +46,9 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private String author;
 
 	@XmlElement(required = false)
+	private boolean isLinuxRuntime;
+
+	@XmlElement(required = false)
 	private String type = getClass().getCanonicalName();
 
 	@XmlElement(required = false)
@@ -372,7 +375,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		this.owner = owner;
 	}
 
+	public boolean isLinuxRuntime() {
+		return isLinuxRuntime;
+	}
 
+	public void setLinuxRuntime(boolean linuxRuntime) {
+		isLinuxRuntime = linuxRuntime;
+	}
 
 	public String getAuthor() {
 		return author;

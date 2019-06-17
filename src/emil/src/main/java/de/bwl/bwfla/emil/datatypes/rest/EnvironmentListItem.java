@@ -38,6 +38,9 @@ public class EnvironmentListItem {
     private String envType;
 
     @XmlElement
+    private boolean isLinuxRuntime;
+
+    @XmlElement
     private boolean networkEnabled;
 
     public EnvironmentListItem(EmilEnvironment emilenv) {
@@ -46,6 +49,7 @@ public class EnvironmentListItem {
         this.title = emilenv.getTitle();
         this.archive = emilenv.getArchive();
         this.envType = "base";
+        this.isLinuxRuntime = emilenv.isLinuxRuntime();
         this.networkEnabled = (emilenv.isConnectEnvs() || emilenv.isEnableInternet() || emilenv.isServerMode() || emilenv.isLocalServerMode());
 
         if( emilenv.getOwner() != null)
@@ -65,6 +69,14 @@ public class EnvironmentListItem {
         {
             this.envType = "container";
         }
+    }
+
+    public boolean isLinuxRuntime() {
+        return isLinuxRuntime;
+    }
+
+    public void setLinuxRuntime(boolean linuxRuntime) {
+        isLinuxRuntime = linuxRuntime;
     }
 
     public String getEnvId() {

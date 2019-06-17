@@ -52,6 +52,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
         "abstractDataResource",
         "nativeConfig",
         "outputBindingId",
+        "isLinuxRuntime"
 })
 @XmlRootElement(name="emulationEnvironment", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class MachineConfiguration
@@ -72,6 +73,8 @@ public class MachineConfiguration
     protected List<Nic> nic;
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
     protected String outputBindingId;
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    protected boolean isLinuxRuntime;
 
     @XmlElementRefs({
   	   @XmlElementRef(name="binding", type=Binding.class, namespace = "http://bwfla.bwl.de/common/datatypes"),
@@ -216,6 +219,14 @@ public class MachineConfiguration
 
     public String getOutputBindingId() {
         return outputBindingId;
+    }
+
+    public boolean isLinuxRuntime() {
+        return isLinuxRuntime;
+    }
+
+    public void setLinuxRuntime(boolean linuxRuntime) {
+        isLinuxRuntime = linuxRuntime;
     }
 
     public void setOutputBindingId(String bindingId) {

@@ -123,6 +123,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	@Resource(lookup = "java:jboss/ee/concurrency/factory/default")
 	protected ManagedThreadFactory workerThreadFactory;
+
+	private final String containerOutput = "container-output";
     
 	protected final TunnelConfig tunnelConfig = new TunnelConfig();
 
@@ -818,6 +820,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				// cleanup will be performed later by EmulatorBean.destroy()
 
+				if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
+					try {
+						this.processOutput();
+					} catch (BWFLAException e) {
+						e.printStackTrace();
+					}
+				}
+
 				synchronized (emuBeanState) {
 					if (EmulatorBean.this.isLocalModeEnabled()) {
 						// In local-mode emulator will be terminated by the user,
@@ -900,8 +910,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		this.stopInternal();
 
-		if (this.isOutputAvailable())
-			this.processOutput();
+		if (this.isOutputAvailable() && !emuEnvironment.isLinuxRuntime())
+				this.processOutput();
 
 		emuBeanState.update(EmuCompState.EMULATOR_STOPPED);
 	}
@@ -946,8 +956,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				// Mount partition's filesystem
 				EmulatorUtils.mountFileSystem(rawimg, fusemnt, fsType);
 
-				 output = workdir.resolve("output.zip");
-				Zip32Utils.zip(output.toFile(), fusemnt.toFile());
+				output = workdir.resolve("output.zip");
+				if (emuEnvironment.isLinuxRuntime())
+					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
+				else
+					Zip32Utils.zip(output.toFile(), fusemnt.toFile());
+
 				type = ".zip";
 
 				blob.setDataFromFile(output);

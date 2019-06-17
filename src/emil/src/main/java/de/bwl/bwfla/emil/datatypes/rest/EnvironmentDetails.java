@@ -143,6 +143,9 @@ public class EnvironmentDetails {
     @XmlElement
     private String runtimeId;
 
+    @XmlElement
+    private boolean isLinuxRuntime;
+
     EnvironmentDetails() {}
 
     public EnvironmentDetails(EmilEnvironment emilenv, MachineConfiguration machineConf, List<EmilEnvironment> parents) {
@@ -172,6 +175,7 @@ public class EnvironmentDetails {
         this.canProcessAdditionalFiles = emilenv.isCanProcessAdditionalFiles();
         this.archive = emilenv.getArchive();
         this.xpraEncoding = emilenv.getXpraEncoding();
+        this.isLinuxRuntime = emilenv.isLinuxRuntime();
 
         if(machineConf != null)
             this.drives = machineConf.getDrive();
