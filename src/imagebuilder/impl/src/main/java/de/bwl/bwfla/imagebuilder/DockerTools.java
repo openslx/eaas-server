@@ -9,6 +9,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.logging.Logger;
+
 
 class DockerTools {
 
@@ -46,6 +48,11 @@ class DockerTools {
 
         System.out.println("got digest " + ds.digest);
 
+        //XXXXX
+        PRINT_MOUNTS();
+        RUN_DF();
+        //XXXXX
+
         DeprecatedProcessRunner skopeoRunner = new DeprecatedProcessRunner();
         skopeoRunner.setCommand("skopeo");
         skopeoRunner.addArgument("--insecure-policy");
@@ -53,6 +60,9 @@ class DockerTools {
         skopeoRunner.addArgument( ds.imageRef + "@" + ds.digest);
         skopeoRunner.addArgument("oci:" + ds.dockerDir);
         if (!skopeoRunner.execute()) {
+            //XXXXX
+            RUN_DF();
+            //XXXXX
             try {
                 Files.deleteIfExists(ds.dockerDir);
             } catch (IOException e) {
@@ -61,6 +71,10 @@ class DockerTools {
             ds.dockerDir = null;
             throw new BWFLAException("Skopeo failed to fetch image from DockerHub");
         }
+
+        //XXXXX
+        RUN_DF();
+        //XXXXX
 
         ds.emulatorType = getLabel(".Labels.EAAS_EMULATOR_TYPE");
         System.out.println("get label emulator -" + ds.emulatorType + "-");
@@ -80,6 +94,10 @@ class DockerTools {
             throw new BWFLAException(e);
         }
 
+        //XXXXX
+        RUN_DF();
+        //XXXXX
+
         DeprecatedProcessRunner ociRunner = new DeprecatedProcessRunner();
         ociRunner.setCommand("oci-image-tool");
         ociRunner.addArgument("unpack");
@@ -87,6 +105,9 @@ class DockerTools {
         ociRunner.addArgument(ds.dockerDir.toString());
         ociRunner.addArgument(ds.rootfs.toString());
         if (!ociRunner.execute()) {
+            //XXXXX
+            RUN_DF();
+            //XXXXX
             try {
                 Files.deleteIfExists(ds.rootfs);
             } catch (IOException e) {
@@ -96,6 +117,37 @@ class DockerTools {
             throw new BWFLAException("Skopeo failed to unpack image from DockerHub");
         }
         ds.layers = getLayer();
+
+        //XXXXX
+        RUN_DF();
+        //XXXXX
+    }
+
+    private void PRINT_MOUNTS() {
+        Logger log = Logger.getLogger(this.getClass().getName());
+        log.info("===== BEGIN: MOUNTS ======================================");
+        DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+        process.setLogger(log);
+        process.setCommand("mount");
+        process.execute();
+        log.info("===== END: MOUNTS ======================================");
+    }
+
+    private void RUN_DF() {
+        Logger log = Logger.getLogger(this.getClass().getName());
+        log.info("===== BEGIN: DF ======================================");
+        DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+        process.setLogger(log);
+
+        process.setCommand("df");
+        process.addArguments("-a", "-h");
+        process.execute();
+
+        process.setCommand("df");
+        process.addArguments("-a", "-i");
+        process.execute();
+
+        log.info("===== END: DF ======================================");
     }
 
     private String getLabel(String l) throws BWFLAException
