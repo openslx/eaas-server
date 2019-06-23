@@ -429,6 +429,12 @@ public class EmulationEnvironmentHelper {
 		for (Drive drive : env.getDrive()) {
 			++driveId; // hack: fix me
 
+			if(drive.getType() == null)
+			{
+				log.warning("invalid drive data: drive type empty");
+				continue;
+			}
+
 			if (drive.getType().equals(driveType) && (drive.getData() == null || drive.getData().isEmpty())) {
 				drive.setData(dataUrl);
 				break;
