@@ -379,7 +379,7 @@ public class Components {
 
         metadata.setProcess("/bin/sh");
         args.add("-c");
-        args.add("mkdir " + outputDir + " && emucon-cgen \"$@\"; runc run eaas-job");
+        args.add("/bin/pwd && mkdir " + outputDir + " && emucon-cgen \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
         args.add("");
 
         // cgen args...
