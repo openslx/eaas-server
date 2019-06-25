@@ -970,6 +970,8 @@ public class Components {
                              @Context HttpServletResponse servletResponse) {
         try {
             final ComponentSession session = sessions.get(componentId);
+            if(session == null)
+                throw new BWFLAException("session not found");
             final ComponentRequest request = session.getRequest();
             if (request instanceof MachineComponentRequest) {
                 final Machine machine = componentClient.getMachinePort(eaasGw);
@@ -1407,7 +1409,6 @@ public class Components {
             for(EventObserver eo : observerList) {
                 eventTask = scheduler.scheduleAtFixedRate(
                 () -> {
-                    System.out.println(eo.getName());
                     for(String m : eo.messages()) {
                         sink.send(sse.newEventBuilder().name(eo.getName())
                                 .data(String.class, m).build());

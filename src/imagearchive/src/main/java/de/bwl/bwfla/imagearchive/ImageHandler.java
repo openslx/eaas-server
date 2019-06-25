@@ -830,7 +830,7 @@ public class ImageHandler
 		if(!Files.exists(metadata))
 		{
 			image.completeUnmount();
-			log.severe("no metedata directory found");
+			log.severe("no metadata directory found");
 			return;
 		}
 

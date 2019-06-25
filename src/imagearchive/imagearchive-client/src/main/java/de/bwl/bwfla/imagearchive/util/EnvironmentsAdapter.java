@@ -103,6 +103,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException {
+		archive.reload(EMULATOR_DEFAULT_ARCHIVE);
 		return this.getTemplates(EMULATOR_DEFAULT_ARCHIVE);
 	}
 
