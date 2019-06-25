@@ -93,7 +93,7 @@ public class ImageSorter
 	{
 		final Configuration config = ConfigurationProvider.getConfiguration();
 
-		this.imageArchive = new EnvironmentsAdapter(config.get("ws.imagearchive"), config.get("ws.apikey"));
+		this.imageArchive = new EnvironmentsAdapter(config.get("ws.imagearchive"));
 
 		// Load configuration for image-sorting, if possible...
 		final String sortingConfigFile = config.get("imageproposer.sorting_config_file");

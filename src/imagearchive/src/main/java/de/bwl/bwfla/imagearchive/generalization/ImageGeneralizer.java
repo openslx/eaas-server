@@ -29,16 +29,13 @@ public class ImageGeneralizer {
      * @param imgFile
      * @param generalization
      * @param emulatorArchiveprefix
-     * @param apiKey
-     * @param imageProxy
      * @throws BWFLAException
      * @throws IOException
      */
-    public static void  applyScriptIfCompatible(File imgFile, GeneralizationPatch generalization, String emulatorArchiveprefix, String apiKey, String imageProxy) throws BWFLAException, IOException {
+    public static void  applyScriptIfCompatible(File imgFile, GeneralizationPatch generalization, String emulatorArchiveprefix) throws BWFLAException, IOException {
         ImageMounter image = null;
         try {
             image = new ImageMounter(imgFile.toPath());
-            image.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
             image.mountDD();
 
             List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), generalization);
@@ -57,7 +54,7 @@ public class ImageGeneralizer {
 
                     patch  = new File("/tmp/patch-" + UUID.randomUUID());
 
-                    InputStream is = EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/patch/" + generalization.getImageGeneralization().getModificationScript()), "GET", "metadata", "true", apiKey, imageProxy);
+                    InputStream is = EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/patch/" + generalization.getImageGeneralization().getModificationScript()), "GET", "metadata", "true");
                     FileUtils.copyInputStreamToFile(is, patch);
 
                     if (!patch.setExecutable(true)) {

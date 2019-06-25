@@ -1,4 +1,6 @@
-package de.bwl.bwfla.imagearchive.util;
+package de.bwl.bwfla.common.services.security;
+
+import de.bwl.bwfla.common.services.security.SOAPClientAuthenticationHandler;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -50,10 +50,6 @@ public class ArchiveAdapter {
     private String imageArchive;
 
     @Inject
-    @Config(value = "ws.apikey")
-    private String apiAuthenticationToken;
-
-    @Inject
     @Config(value = "emil.classificationservice")
     private String classificationService;
 
@@ -89,7 +85,7 @@ public class ArchiveAdapter {
     @PostConstruct
     public void init()  {
         objHelper = new ObjectArchiveHelper(objectArchive);
-        envHelper = new EnvironmentsAdapter(imageArchive, apiAuthenticationToken);
+        envHelper = new EnvironmentsAdapter(imageArchive);
         imageClassifier = new ImageClassifier(classificationService + "/imageclassifier");
         try {
             imageProposer = new ImageProposer(imageProposerService + "/imageproposer");

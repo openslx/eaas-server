@@ -118,10 +118,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Config(value = "ws.imagearchive")
 	private String imageArchiveAddress = null;
 
-	@Inject
-	@Config(value = "ws.apikey")
-	private String apiAuthenticationToken;
-
     @Resource(lookup = "java:jboss/ee/concurrency/executor/io")
     protected ExecutorService ioTaskExecutor;
 
@@ -448,7 +444,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				if (!isRootFsFound) {
 					// Not found, try to get latest image ID as configured by the archive
-					final EnvironmentsAdapter archive = new EnvironmentsAdapter(imageArchiveAddress, apiAuthenticationToken);
+					final EnvironmentsAdapter archive = new EnvironmentsAdapter(imageArchiveAddress);
 					final String name = EMUCON_ROOTFS_BINDING_ID + "/" + this.getEmuContainerName(env);
 					final ImageArchiveBinding image;
 					if (env.getEmulator().getContainerName() != null && env.getEmulator().getContainerVersion() != null) {

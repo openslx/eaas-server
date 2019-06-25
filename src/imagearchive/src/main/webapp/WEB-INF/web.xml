@@ -18,7 +18,7 @@
 
  <filter>
   <filter-name>ServletAuthenticationFilter</filter-name>
-  <filter-class>de.bwl.bwfla.common.services.net.ServletAuthenticationFilter</filter-class>
+  <filter-class>de.bwl.bwfla.common.services.security.ServletAuthenticationFilter</filter-class>
   <init-param>
    <param-name>excludedUrls</param-name>
    <!-- Comma separated list of excluded servlets  -->

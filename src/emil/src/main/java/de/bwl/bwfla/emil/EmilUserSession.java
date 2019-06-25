@@ -41,7 +41,7 @@ public class EmilUserSession extends EmilRest {
 
     @PostConstruct
     private void initialize() {
-        envHelper = new EnvironmentsAdapter(imageArchive, apiAuthenticationToken);
+        envHelper = new EnvironmentsAdapter(imageArchive);
     }
 
     @GET
