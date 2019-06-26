@@ -371,7 +371,7 @@ public class Components {
         }
     }
 
-    String createContainerMetadata(OciContainerConfiguration config) throws BWFLAException {
+    String createContainerMetadata(OciContainerConfiguration config, boolean requiresInputFiles) throws BWFLAException {
         ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
         final String inputDir = "container-input";
@@ -382,14 +382,12 @@ public class Components {
         args.add("/bin/pwd && mkdir " + outputDir + " && emucon-cgen \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
         args.add("");
 
-        // cgen args...
-        // add more stuff here
-
         args.add("--output");
         args.add("config.json");
-
-        args.add("--mount");
-        args.add(getMountStr(inputDir, config.getInput(), true));
+        if(requiresInputFiles) {
+            args.add("--mount");
+            args.add(getMountStr(inputDir, config.getInput(), true));
+        }
         args.add("--mount");
         args.add(getMountStr(outputDir, config.getOutputPath(), false));
 
@@ -419,10 +417,10 @@ public class Components {
         }
     }
 
-    private BlobHandle prepareMetadata(OciContainerConfiguration config) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config);
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean requiresInputFiles) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, requiresInputFiles);
         File tmpfile = File.createTempFile("metadata.json", null, null);
-        Files.write( tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
+        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
 
         BlobDescription blobDescription = new BlobDescription();
         blobDescription.setDataFromFile(tmpfile.toPath())
@@ -452,7 +450,7 @@ public class Components {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        BlobHandle mdBlob = prepareMetadata(config);
+        BlobHandle mdBlob = prepareMetadata(config, medium.getExtFiles().size() > 0);
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
