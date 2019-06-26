@@ -132,7 +132,6 @@ public class EmilContainerData extends EmilRest {
     @Produces(MediaType.APPLICATION_JSON)
     public Response updateContainer(UpdateContainerRequest req)
     {
-
         final String curEnvId = req.getId();
         if(curEnvId == null)
             return Emil.errorMessageResponse("Id was null");
@@ -173,6 +172,7 @@ public class EmilContainerData extends EmilRest {
         env.setEnv(req.getProcessEnvs());
         env.setAuthor(req.getAuthor());
         env.setRuntimeId(req.getContainerRuntimeId());
+        env.setNetworking(req.getNetworking());
 
         try {
             emilEnvRepo.save(env, false);

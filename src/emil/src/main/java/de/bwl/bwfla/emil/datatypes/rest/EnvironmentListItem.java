@@ -50,7 +50,9 @@ public class EnvironmentListItem {
         this.archive = emilenv.getArchive();
         this.envType = "base";
         this.isLinuxRuntime = emilenv.isLinuxRuntime();
-        this.networkEnabled = (emilenv.isConnectEnvs() || emilenv.isEnableInternet() || emilenv.isServerMode() || emilenv.isLocalServerMode());
+        if (emilenv.getNetworking() != null)
+            this.networkEnabled = (emilenv.getNetworking().isConnectEnvs() || emilenv.getNetworking().isEnableInternet() || emilenv.getNetworking().isServerMode() || emilenv.getNetworking().isLocalServerMode());
+        else this.networkEnabled = false;
 
         if( emilenv.getOwner() != null)
            this.owner = emilenv.getOwner().getUsername();

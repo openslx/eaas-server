@@ -24,11 +24,6 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private String os;
 	private String nativeConfig;
 
-	private String serverPort;
-	private String serverIp;
-	private String gwPrivateIp;
-	private String gwPrivateMask;
-
 	private String containerEmulatorVersion;
 	private String containerEmulatorName;
 
@@ -37,11 +32,6 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean shutdownByOs;
 	private boolean useXpra;
 	private String xpraEncoding;
-	private boolean enableInternet;
-	private boolean connectEnvs;
-	private boolean serverMode;
-	private boolean localServerMode;
-	private boolean enableSocks;
 	private boolean canProcessAdditionalFiles;
 	private List<Drive> drives;
 	private boolean isLinuxRuntime;
@@ -153,62 +143,6 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 		this.xpraEncoding = xpraEncoding;
 	}
 
-	public boolean isEnableInternet() {
-		return enableInternet;
-	}
-
-	public void setEnableInternet(boolean enableInternet) {
-		this.enableInternet = enableInternet;
-	}
-
-	public boolean isServerMode() {
-		return serverMode;
-	}
-
-	public void setServerMode(boolean serverMode) {
-		this.serverMode = serverMode;
-	}
-
-	public boolean isLocalServerMode() {
-		return localServerMode;
-	}
-
-	public void setLocalServerMode(boolean localServerMode) {
-		this.localServerMode = localServerMode;
-	}
-
-	public boolean isEnableSocks() {
-		return enableSocks;
-	}
-
-	public void setEnableSocks(boolean enableSocks) {
-		this.enableSocks = enableSocks;
-	}
-
-	public String getServerPort() {
-		return serverPort;
-	}
-
-	public void setServerPort(String serverPort) {
-		this.serverPort = serverPort;
-	}
-
-	public String getServerIp() {
-		return serverIp;
-	}
-
-	public void setServerIp(String serverIp) {
-		this.serverIp = serverIp;
-	}
-
-	public String getGwPrivateIp() {
-		return gwPrivateIp;
-	}
-
-	public void setGwPrivateIp(String gwPrivateIp) {
-		this.gwPrivateIp = gwPrivateIp;
-	}
-
 	public String getContainerEmulatorVersion() {
 		return containerEmulatorVersion;
 	}
@@ -223,22 +157,6 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setContainerEmulatorName(String containerEmulatorName) {
 		this.containerEmulatorName = containerEmulatorName;
-	}
-
-	public String getGwPrivateMask() {
-		return gwPrivateMask;
-	}
-
-	public void setGwPrivateMask(String gwPrivateMask) {
-		this.gwPrivateMask = gwPrivateMask;
-	}
-
-	public boolean canConnectEnvs() {
-		return connectEnvs;
-	}
-
-	public void setConnectEnvs(boolean connectEnvs) {
-		this.connectEnvs = connectEnvs;
 	}
 
 	public String getAuthor() {

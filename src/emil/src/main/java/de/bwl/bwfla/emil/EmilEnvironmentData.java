@@ -116,6 +116,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 			return Response.status(Response.Status.OK).entity(result).build();
 		} catch (Throwable t) {
+			t.printStackTrace();
 			throw new BadRequestException(Response
 				.status(Response.Status.BAD_REQUEST)
 				.entity(new ErrorInformation(t.getMessage()))
@@ -512,7 +513,7 @@ public class EmilEnvironmentData extends EmilRest {
 				machineConfiguration.setDrive(desc.getDrives());
 				machineConfiguration.setLinuxRuntime(desc.isLinuxRuntime());
 
-				if(desc.isEnableInternet())
+				if(desc.getNetworking().isEnableInternet())
 				{
 					List<Nic> nics = machineConfiguration.getNic();
 					if (nics.size() == 0) {
@@ -554,19 +555,10 @@ public class EmilEnvironmentData extends EmilRest {
 		newEnv.setTitle(desc.getTitle());
 		newEnv.setAuthor(desc.getAuthor());
 		newEnv.setDescription(desc.getDescription());
-		newEnv.setHelpText(desc.getHelpText());
 		newEnv.setEnablePrinting(desc.isEnablePrinting());
 		newEnv.setEnableRelativeMouse(desc.isEnableRelativeMouse());
 		newEnv.setShutdownByOs(desc.isShutdownByOs());
-		newEnv.setEnableInternet(desc.isEnableInternet());
-		newEnv.setConnectEnvs(desc.canConnectEnvs());
-		newEnv.setServerMode(desc.isServerMode());
-		newEnv.setLocalServerMode(desc.isLocalServerMode());
-		newEnv.setEnableSocks(desc.isEnableSocks());
-		newEnv.setGwPrivateIp(desc.getGwPrivateIp());
-		newEnv.setGwPrivateMask(desc.getGwPrivateMask());
-		newEnv.setServerIp(desc.getServerIp());
-		newEnv.setServerPort(desc.getServerPort());
+		newEnv.setNetworking(desc.getNetworking());
 		newEnv.setCanProcessAdditionalFiles(desc.canProcessAdditionalFiles());
 		newEnv.setXpraEncoding(desc.getXpraEncoding());
 		newEnv.setLinuxRuntime(desc.isLinuxRuntime());

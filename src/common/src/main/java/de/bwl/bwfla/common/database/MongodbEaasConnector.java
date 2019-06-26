@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.common.database;
 
+import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
+
 import com.mongodb.BasicDBObject;
 import com.mongodb.Function;
 import com.mongodb.MongoException;
@@ -43,6 +45,8 @@ import org.bson.conversions.Bson;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.xml.bind.JAXBException;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
 import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.*;
@@ -168,18 +172,21 @@ public class MongodbEaasConnector {
 				throw new NoSuchElementException();
 
 			String classname = (String) result.get(classNameKey);
+			Class<T> klass = null;
 			try {
-				final Class<T> klass = (Class<T>) Class.forName(classname);
+				klass = (Class<T>) Class.forName(classname);
 				return T.fromJsonValueWithoutRoot(result.toJson(), klass);
 			}
 			catch (ClassNotFoundException e) {
 				classname = "de.bwl.bwfla.emil.datatypes." + classname;
 				try {
-					Class<T> klass = (Class<T>) Class.forName(classname);
+					klass = (Class<T>) Class.forName(classname);
 					return T.fromJsonValueWithoutRoot(result.toJson(), klass);
 				} catch (ClassNotFoundException e1) {
 					throw new BWFLAException("failed to create object from JSON");
 				}
+			} catch (BWFLAException e) {
+				return checkForDeprecatedData(result, klass, e);
 			}
 		}
 
@@ -208,19 +215,23 @@ public class MongodbEaasConnector {
 			final ArrayList<T> objects = new ArrayList<>();
 			for (Document result : results) {
 				String classname = (String) result.get(classNameDBKey);
+				Class<T> klass = null;
 				try {
-					Class<T> klass = (Class<T>) Class.forName(classname);
+					klass = (Class<T>) Class.forName(classname);
 					objects.add(T.fromJsonValueWithoutRoot(result.toJson(), klass));
 				}
 				catch (ClassNotFoundException e) {
 					classname = "de.bwl.bwfla.emil.datatypes." + classname;
 					try {
-						Class<T> klass = (Class<T>) Class.forName(classname);
+						klass = (Class<T>) Class.forName(classname);
 						objects.add(T.fromJsonValueWithoutRoot(result.toJson(), klass));
 					} catch (ClassNotFoundException e1) {
 						e1.printStackTrace();
 						continue;
 					}
+				}
+				catch (BWFLAException e1){
+					objects.add(checkForDeprecatedData(result, klass, e1));
 				}
 			}
 			return objects;
@@ -344,6 +355,9 @@ public class MongodbEaasConnector {
 						continue;
 					}
 				}
+				catch (BWFLAException e1){
+					objects.add(checkForDeprecatedData(result, klass, e1));
+				}
 			}
 			return objects;
 		}
@@ -413,8 +427,7 @@ public class MongodbEaasConnector {
 				try {
 					return T.fromJsonValueWithoutRoot(document.toJson(), clazz);
 				} catch (BWFLAException e1) {
-					e1.printStackTrace();
-					throw new MongoException("Deserializing document failed!", e1);
+					return checkForDeprecatedData(document, clazz, e1);
 				}
 			};
 
@@ -447,8 +460,7 @@ public class MongodbEaasConnector {
 				try {
 					return T.fromJsonValueWithoutRoot(document.toJson(), clazz);
 				} catch (BWFLAException e1) {
-					e1.printStackTrace();
-					throw new MongoException("Deserializing document failed!", e1);
+					return checkForDeprecatedData(document, clazz, e1);
 				}
 			};
 
@@ -483,6 +495,33 @@ public class MongodbEaasConnector {
 			UpdateResult result = collection.updateMany(filter, query);
 
 			log.info("ensure timestamp: " + collectionName + " modified items: " + result.getModifiedCount());
+		}
+
+		/**
+		 * Helper method to ensure DB content compatibility. Ideally, all entries in oldStyleDB will be re-saved in new format
+		 * @param document
+		 * @param clazz
+		 * @param e1
+		 * @param <T>
+		 * @return
+		 */
+		private  <T extends JaxbType> T checkForDeprecatedData(Document document, Class<T> clazz, Exception e1){
+			if (e1.getCause() instanceof UnrecognizedPropertyException) {
+				// check if content of database has deprecated networking entries
+				String[] networkingValues = {"gwPrivateMask", "gwPrivateIp", "serverIp", "serverPort", "connectEnvs", "enableSocks", "localServerMode", "serverMode", "enableInternet", "helpText"};
+				for (String networkValue : networkingValues) {
+					Document subDocument = new Document();
+					subDocument.put(networkValue, document.get(networkValue));
+					document.put("networking", subDocument);
+					document.remove(networkValue);
+				}
+				try {
+					return T.fromJsonValueWithoutRoot(document.toJson(), clazz);
+				} catch (BWFLAException e) {
+					throw new MongoException("Deserializing document failed!", e);
+				}
+			} else
+				throw new MongoException("Deserializing document failed!", e1);
 		}
 	}
 
