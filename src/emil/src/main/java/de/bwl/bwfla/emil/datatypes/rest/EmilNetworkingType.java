@@ -17,6 +17,7 @@ public class EmilNetworkingType {
     private boolean localServerMode;
     @XmlElement(required = false)
     private boolean enableSocks;
+    @XmlElement(required = false)
     private String serverPort;
     @XmlElement(required = false)
     private String serverIp;
