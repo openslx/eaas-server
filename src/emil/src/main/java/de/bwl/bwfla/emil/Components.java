@@ -379,7 +379,7 @@ public class Components {
         metadata.setDhcp(isDHCPenabled);
         metadata.setProcess("/bin/sh");
         args.add("-c");
-        args.add("/bin/pwd && mkdir " + outputDir + " && emucon-cgen \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
+        args.add("/bin/pwd && mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
         args.add("");
 
         args.add("--output");
@@ -694,15 +694,15 @@ public class Components {
 
             int numInputImages = 1;
 
-            if(machineDescription.getLinuxRuntime() != null && machineDescription.getLinuxRuntime().getUserContainerEnvironment() != null && !machineDescription.getLinuxRuntime().getUserContainerEnvironment().isEmpty())
+            if(machineDescription.getLinuxRuntimeData() != null && machineDescription.getLinuxRuntimeData().getUserContainerEnvironment() != null && !machineDescription.getLinuxRuntimeData().getUserContainerEnvironment().isEmpty())
             {
-                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getLinuxRuntime().getUserContainerArchive(),
-                        machineDescription.getLinuxRuntime().getUserContainerEnvironment());
+                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getLinuxRuntimeData().getUserContainerArchive(),
+                        machineDescription.getLinuxRuntimeData().getUserContainerEnvironment());
                 LOG.warning(ociConf.jsonValueWithoutRoot(true));
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntime(), machineDescription.getInputMedia());
+                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
