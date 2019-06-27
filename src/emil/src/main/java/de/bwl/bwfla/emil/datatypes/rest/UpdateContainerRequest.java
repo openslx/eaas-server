@@ -2,6 +2,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 
@@ -20,7 +21,17 @@ public class UpdateContainerRequest extends EmilRequestType {
 
     private ArrayList<String> processArgs;
     private ArrayList<String> processEnvs;
+    @XmlElement(required = false)
+    private EmilContainerNetworkingType networking;
 
+    @Override
+    public EmilContainerNetworkingType getNetworking() {
+        return networking;
+    }
+
+    public void setNetworking(EmilContainerNetworkingType networking) {
+        this.networking = networking;
+    }
 
     public String getId() {
         return id;

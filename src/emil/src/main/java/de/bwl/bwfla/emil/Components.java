@@ -371,12 +371,12 @@ public class Components {
         }
     }
 
-    String createContainerMetadata(OciContainerConfiguration config, boolean requiresInputFiles) throws BWFLAException {
+    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
         ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
         final String inputDir = "container-input";
         final String outputDir = "container-output";
-
+        metadata.setDhcp(isDHCPenabled);
         metadata.setProcess("/bin/sh");
         args.add("-c");
         args.add("/bin/pwd && mkdir " + outputDir + " && emucon-cgen \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
@@ -417,8 +417,8 @@ public class Components {
         }
     }
 
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean requiresInputFiles) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config, requiresInputFiles);
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
         File tmpfile = File.createTempFile("metadata.json", null, null);
         Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
 
@@ -432,7 +432,7 @@ public class Components {
         return blobstore.put(blobDescription);
     }
 
-    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
+    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
         if (inputMedia.size() != 1)
             throw new BWFLAException("Size of Input drives cannot exceed 1");
 
@@ -450,7 +450,7 @@ public class Components {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        BlobHandle mdBlob = prepareMetadata(config, medium.getExtFiles().size() > 0);
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
@@ -694,15 +694,15 @@ public class Components {
 
             int numInputImages = 1;
 
-            if(machineDescription.getUserContainerEnvironment() != null && !machineDescription.getUserContainerEnvironment().isEmpty())
+            if(machineDescription.getLinuxRuntime() != null && machineDescription.getLinuxRuntime().getUserContainerEnvironment() != null && !machineDescription.getLinuxRuntime().getUserContainerEnvironment().isEmpty())
             {
-                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getUserContainerArchive(),
-                        machineDescription.getUserContainerEnvironment());
+                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getLinuxRuntime().getUserContainerArchive(),
+                        machineDescription.getLinuxRuntime().getUserContainerEnvironment());
                 LOG.warning(ociConf.jsonValueWithoutRoot(true));
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getInputMedia());
+                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntime(), machineDescription.getInputMedia());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

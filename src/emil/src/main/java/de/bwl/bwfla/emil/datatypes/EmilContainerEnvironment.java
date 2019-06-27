@@ -1,6 +1,7 @@
 package de.bwl.bwfla.emil.datatypes;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.bwl.bwfla.emil.datatypes.rest.EmilContainerNetworkingType;
+import de.bwl.bwfla.emil.datatypes.rest.EmilNetworkingType;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -27,6 +28,9 @@ public class EmilContainerEnvironment extends EmilEnvironment {
 
     @XmlElement
     private String runtimeId;
+
+    @XmlElement
+    private EmilContainerNetworkingType networking;
 
     public String getInput() {
         return input;
@@ -73,4 +77,15 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     public void setRuntimeId(String runtimeId) {
         this.runtimeId = runtimeId;
     }
+
+    @Override
+    public EmilContainerNetworkingType getNetworking() {
+        return this.networking;
+
+    }
+
+    public void setNetworking(EmilContainerNetworkingType networking) {
+        this.networking = networking;
+    }
+
 }

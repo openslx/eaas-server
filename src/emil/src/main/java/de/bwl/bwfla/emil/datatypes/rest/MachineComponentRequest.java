@@ -58,10 +58,7 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     private String emulatorVersion = "latest";
 
     @XmlElement(required = false)
-    private String userContainerEnvironment;
-
-    @XmlElement(required = false, defaultValue = "default")
-    private String userContainerArchive = "default";
+    private LinuxRuntimeContainerReq linuxRuntime;
 
     public String getEnvironment() {
         return environment;
@@ -135,19 +132,11 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         this.objectArchive = objectArchive;
     }
 
-    public String getUserContainerEnvironment() {
-        return userContainerEnvironment;
+    public LinuxRuntimeContainerReq getLinuxRuntime() {
+        return linuxRuntime;
     }
 
-    public void setUserContainerEnvironment(String userContainerEnvironment) {
-        this.userContainerEnvironment = userContainerEnvironment;
-    }
-
-    public String getUserContainerArchive() {
-        return userContainerArchive;
-    }
-
-    public void setUserContainerArchive(String userContainerArchive) {
-        this.userContainerArchive = userContainerArchive;
+    public void setLinuxRuntime(LinuxRuntimeContainerReq linuxRuntime) {
+        this.linuxRuntime = linuxRuntime;
     }
 }
