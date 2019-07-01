@@ -507,7 +507,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			emuBeanState.set(EmuCompState.EMULATOR_UNDEFINED);
 		}
-
 		this.stopInternal();
 
 		// free container IDs and remove corresp. files
@@ -820,14 +819,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				// cleanup will be performed later by EmulatorBean.destroy()
 
-				if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
-					try {
-						this.processOutput();
-					} catch (BWFLAException e) {
-						e.printStackTrace();
-					}
-				}
-
 				synchronized (emuBeanState) {
 					if (EmulatorBean.this.isLocalModeEnabled()) {
 						// In local-mode emulator will be terminated by the user,
@@ -840,6 +831,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 							// FIXME: setting here also to STOPPED, since there is currently no reliable way
 							// to determine (un-)successful termination depending on application exit code
 							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
+						}
+					}
+					// create containers output
+					if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
+						try {
+							this.processOutput();
+						} catch (BWFLAException e) {
+							e.printStackTrace();
 						}
 					}
 				}
