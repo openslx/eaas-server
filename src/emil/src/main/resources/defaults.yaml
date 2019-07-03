@@ -1,33 +1,35 @@
 emil:
-    cachedclassificationpath: /home/bwfla/classification-cache/
-    exportpath: /home/bwfla/export/
-    emilenvironmentspath: /home/bwfla/emil-environments/
-    inputpathtodelete: /tmp/toDelete/
-    dockerTmpBuildFiles: /tmp/docker-tmp-build-files/
-    classificationservice: http://localhost:8080/
-    imageproposerservice: http://localhost:8080
-    emilobjectenvironmentspaths: /home/bwfla/emil-object-environments/
-    usersessionretention: 10080
-    containerdata:
-        imagebuilder:
-            timeout: 15 mins
-            delay: 3 secs
-    authEnabled: false
-    authSecret: ''
-    imagesDatabase: images
-    emilDatabase: emil
-    classificationDatabase: classification
+  cachedclassificationpath: /home/bwfla/classification-cache/
+  exportpath: /home/bwfla/export/
+  emilenvironmentspath: /home/bwfla/emil-environments/
+  inputpathtodelete: /tmp/toDelete/
+  dockerTmpBuildFiles: /tmp/docker-tmp-build-files/
+  classificationservice: http://eaas:8080/
+  imageproposerservice: http://eaas:8080
+  emilobjectenvironmentspaths: /home/bwfla/emil-object-environments/
+  usersessionretention: 10080
+  containerdata:
+    imagebuilder:
+      timeout: 15 mins
+      delay: 3 secs
+  authEnabled: false
+  authSecret: ''
+  imagesDatabase: images
+  emilDatabase: emil
+  classificationDatabase: classification
 
 ws:
-    blobstore: http://localhost:8080/
-    imagebuilder: http://localhost:8080/
-    imagearchive: http://localhost:8080/
-    eaasgw:  http://localhost:8080/
-    embedgw: http://localhost:8080/
-    objectarchive: http://localhost:8080/
-    softwarearchive: http://localhost:8080/
+  blobstore: http://eaas:8080/
+  imagebuilder: http://eaas:8080/
+  imagearchive: http://eaas:8080/
+  eaasgw:  http://eaas:8080/
+  embedgw: http://eaas:8080/
+  objectarchive: http://eaas:8080/
+  softwarearchive: http://eaas:8080/
+  apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZlbG9wZXIiLCJuYW1lIjoiRWFhUyIsImlhdCI6MTUxNjIzOTAyMn0.p4ZD7kxyou09xxTZnTieQR8EFxDMopkv88nHLH-mzm8
+  apiSecret: eaas
 rest:
-    blobstore: http://localhost:8080/blobstore/api/v1/blobs
+  blobstore: http://eaas:8080/blobstore/api/v1/blobs
 
 metadata_repositories:
   - name: public-images

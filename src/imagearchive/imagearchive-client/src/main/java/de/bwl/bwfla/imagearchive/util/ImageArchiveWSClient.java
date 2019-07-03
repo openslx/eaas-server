@@ -39,6 +39,7 @@ abstract class ImageArchiveWSClient implements Serializable
 	
 	protected ImageArchiveWS archive = null;
 	protected String wsHost;
+	protected String authenticationToken;
 
 	private String defaultBackendName = null;
 	private String defaultExportPrefix = null;
@@ -48,9 +49,10 @@ abstract class ImageArchiveWSClient implements Serializable
 		return wsHost;
 	}
 	
-	protected ImageArchiveWSClient(String wsHost) 
+	protected ImageArchiveWSClient(String wsHost, String authenticationToken)
 	{
 		this.wsHost = wsHost;
+		this.authenticationToken = authenticationToken;
 	}
 	
 	protected void connectArchive() throws BWFLAException
@@ -58,9 +60,9 @@ abstract class ImageArchiveWSClient implements Serializable
 		if(archive != null)
 			return;
 		
-		archive = getImageArchiveCon(wsHost);
+		archive = getImageArchiveCon(wsHost, authenticationToken);
 		if(archive == null)
-			throw new BWFLAException("could not connect to image archive @" + wsHost);
+			throw new BWFLAException("could not connect to image archive @" + wsHost + " using token " + authenticationToken);
 	}
 
 	public String getDefaultBackendName() throws BWFLAException
@@ -91,7 +93,7 @@ abstract class ImageArchiveWSClient implements Serializable
 		return archive.getExportPrefix(imageArchiveName);
 	}
 	
-	private static ImageArchiveWS getImageArchiveCon(String host)
+	private static ImageArchiveWS getImageArchiveCon(String host, String authenticationToken)
 	{
 		URL wsdl = null;
 		ImageArchiveWS archive;
@@ -116,6 +118,7 @@ abstract class ImageArchiveWSClient implements Serializable
 		try 
 		{
 			ImageArchiveWSService service = new ImageArchiveWSService(wsdl);
+			service.setHandlerResolver(new SOAPClientAuthenticationHandlerResolver(authenticationToken));
 			archive = service.getImageArchiveWSPort();
 		} 
 		catch (Throwable t) 

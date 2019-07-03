@@ -12,7 +12,8 @@ public class ImportImageRequest extends JaxbType{
 	private String label;
 	private String nativeConfig;
 	private String rom;
-	
+	private String patchId;
+
 	public String getUrlString() {
 		return urlString;
 	}
@@ -44,5 +45,9 @@ public class ImportImageRequest extends JaxbType{
 
 	public void setRom(String rom) {
 		this.rom = rom;
+	}
+
+	public String getPatchId() {
+		return patchId;
 	}
 }

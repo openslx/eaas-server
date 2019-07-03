@@ -56,7 +56,7 @@ public class EmilEnvironmentRepository {
 
 	protected final static Logger LOG = Logger.getLogger(EmilEnvironmentRepository.class.getName());
 
-	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+	static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
 	@Inject
 	@Config(value = "commonconf.serverdatadir")
@@ -350,6 +350,7 @@ public class EmilEnvironmentRepository {
 	}
 
 	synchronized public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
+		EmilEnvironment _env = getEmilEnvironmentById(env.getEnvId());
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
 
 			String collection = null;
@@ -394,8 +395,8 @@ public class EmilEnvironmentRepository {
 				parent = p.getParentEnvId();
 			}
 		}
-		env.setArchive(destArchive);
-		save(env, false);
+		_env.setArchive(destArchive);
+		save(_env, false);
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {

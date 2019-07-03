@@ -16,15 +16,12 @@ public class ExportObject extends HttpExportServlet
 	@Inject
 	private ImageArchiveRegistry backends = null;
 
+
+
 	private File resolveFile(String imageArchiveName, String filename)
 	{
-		final ImageArchiveBackend backend = backends.lookup(imageArchiveName);
-		if(backend == null) {
-			log.severe("backend for " + imageArchiveName + " not found");
-			return null;
-		}
 		for (ImageType type : ImageType.values()) {
-			File f = new File(backend.getConfig().getImagePath() + "/" + type.name() + filename);
+			File f = new File(getImageArchiveBackend(imageArchiveName).getConfig().getImagePath() + "/" + type.name() + filename);
 			if (f.exists())
 				return f;
 		}
@@ -56,10 +53,49 @@ public class ExportObject extends HttpExportServlet
 		return image;
 	}
 
+	/**
+	 * Expected :
+	 * /{archive-name}/{metadata-type}/{id}
+	 *
+	 * @param path
+	 * @return
+	 */
+	@Override
+	public File resolveMetaData(String path) {
+		// (?<=/) means split for "/", without removing "/" delimiter
+		String[] pathElements = path.split("(?<=/)");
+		String id = pathElements[3];
+		String type = pathElements[2];
+
+		// first path element without last letter ("/")
+		String imageArchiveName = pathElements[1].substring(0, pathElements[1].length() - 1);;
+
+		if (type.equals("patch/"))
+			type = "patches/patchesFiles/";
+
+		File metaDataFile = new File(getImageArchiveBackend(imageArchiveName).getConfig().getMetaDataPath() +"/"+ type + id);
+
+		log.warning("metaDataPath: " + metaDataFile.toPath());
+		log.warning("metaDataFile.exists(): " + metaDataFile.exists());
+		if (metaDataFile.exists())
+			return metaDataFile;
+		else
+			return null;
+	}
+
 	private static String parseImageArchiveName(String url)
 	{
 		// Expected URL:  /{archive-name}/{image-id}
 		final int pos = url.indexOf("/", 1);
 		return url.substring(1, pos);
+	}
+
+	private ImageArchiveBackend getImageArchiveBackend(String imageArchiveName){
+		final ImageArchiveBackend backend = backends.lookup(imageArchiveName);
+		if(backend == null) {
+			log.severe("backend for " + imageArchiveName + " not found");
+			return null;
+		}
+		return backend;
 	}
 }

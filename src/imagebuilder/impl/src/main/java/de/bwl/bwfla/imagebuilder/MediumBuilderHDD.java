@@ -113,6 +113,9 @@ public class MediumBuilderHDD extends MediumBuilder
 
 			// Mount it as raw disk-image
 			final XmountOptions xmoptions = new XmountOptions();
+			if (description.getXmountProxy() != null) {
+				xmoptions.setProxyUrl(description.getXmountProxy());
+			}
 			final Path rawimg = EmulatorUtils.xmount(qcow.toString(), rawmnt, xmoptions, log);
 			tasks.add(() -> {
 				MediumBuilderHDD.sync(rawmnt, log);
@@ -185,7 +188,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			if(ds.imageArchiveHost == null || ds.layers == null)
 				continue;
 
-			EnvironmentsAdapter envHelper = new EnvironmentsAdapter(ds.imageArchiveHost);
+			EnvironmentsAdapter envHelper = new EnvironmentsAdapter(ds.imageArchiveHost, ds.authenticationToken);
 			try {
 				ImageNameIndex index = envHelper.getNameIndexes("emulators");
 				if(index.getEntries() == null)

@@ -61,6 +61,10 @@ public class ImageIndexHandle
 	@Config(value="ws.softwarearchive")
 	private String softwareArchive;
 
+	@Inject
+	@Config(value = "ws.apikey")
+	private String apiAuthenticationToken;
+
 	private ImageIndexBuilder builder;
 	private ImageIndex index;
 
@@ -73,7 +77,7 @@ public class ImageIndexHandle
 	public void init() {
 		// this.stopwatch = new StopWatch();
 		this.rebuildInterval = rebuildInterval;
-		this.builder = new ImageIndexBuilder(imageArchive, softwareArchive);
+		this.builder = new ImageIndexBuilder(imageArchive, softwareArchive, apiAuthenticationToken);
 		this.builder.loadDefaultsFromResource("ImagesMetaDataDefaults.json");
 		this.index = builder.build();
 		System.out.println("building from init");
@@ -154,9 +158,9 @@ public class ImageIndexHandle
 		private final SoftwareArchiveHelper swHelper;
 		private final HashMap<String, OperatingSystemInformation> operatingSystems;
 
-		public ImageIndexBuilder(String imageArchive, String softwareArchive)
+		public ImageIndexBuilder(String imageArchive, String softwareArchive, String apiKey)
 		{
-			this.envHelper = new EnvironmentsAdapter(imageArchive);
+			this.envHelper = new EnvironmentsAdapter(imageArchive, apiKey);
 			this.swHelper = new SoftwareArchiveHelper(softwareArchive);
 			this.operatingSystems = new HashMap<>();
 		}

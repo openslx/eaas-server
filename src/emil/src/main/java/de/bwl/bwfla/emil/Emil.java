@@ -17,6 +17,7 @@ import de.bwl.bwfla.common.utils.*;
 
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.jboss.resteasy.specimpl.ResponseBuilderImpl;
@@ -33,7 +34,7 @@ public class Emil extends EmilRest
 	private UserContext authenticatedUser;
 
 	@GET
-	@Secured
+	@Secured({Role.PUBLIC})
 	@Path("/buildInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response buildInfo()
@@ -51,8 +52,8 @@ public class Emil extends EmilRest
 		}
 	}
 
-	@Secured
 	@GET
+	@Secured({Role.RESTRCITED})
 	@Path("/userInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public UserInfoResponse userInfo() {
@@ -69,7 +70,7 @@ public class Emil extends EmilRest
 
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/serverLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response serverLog()
@@ -84,7 +85,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/resetUsageLog")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()
@@ -105,7 +106,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/usageLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response usageLog()

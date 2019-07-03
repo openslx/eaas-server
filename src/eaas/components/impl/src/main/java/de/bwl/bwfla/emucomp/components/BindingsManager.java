@@ -80,6 +80,7 @@ public class BindingsManager
 	private static final String ID_SEPARATOR = "/_____";
 
 	private final String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
+	private final String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
 
 	public BindingsManager()
 	{
@@ -233,7 +234,7 @@ public class BindingsManager
 
 			if(resource instanceof ImageArchiveBinding) {
 				if (imageProxy != null)
-					xmountOpts.setProxyUrl(imageProxy);
+					xmountOpts.setProxyUrl("http://jwt:" + apiKey + "@" +  imageProxy);
 			}
 
 			resourcePath = EmulatorUtils.connectBinding(resource, outdir, xmountOpts);

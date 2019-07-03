@@ -6,6 +6,7 @@ import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -15,6 +16,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.activation.DataHandler;
+import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
@@ -33,6 +35,8 @@ import org.apache.commons.io.FileUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ImageInformation.QemuImageFormat;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+import org.apache.commons.io.IOUtils;
+import org.apache.tamaya.ConfigurationProvider;
 
 
 public class ImageHandler
@@ -46,6 +50,8 @@ public class ImageHandler
 	private final HandleClient handleClient;
 	private final ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
+	private final static String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
+	private final static String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
 
 	enum ExportType {
 		NBD, HTTP
@@ -311,7 +317,7 @@ public class ImageHandler
 	
 		ConcurrentHashMap<String, Environment> map = cache.get(ImageType.valueOf("tmp"));
 		if(map == null)
-			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<String, Environment>());
+			cache.put(ImageType.valueOf("tmp"), new ConcurrentHashMap<>());
 		else
 			map.clear();
 	}
@@ -329,6 +335,7 @@ public class ImageHandler
 
 	public File getMetaDataTargetPath(String type) {
 		File target = new File(iaConfig.getMetaDataPath(), type);
+
 		if (target.isDirectory())
 			return target;
 		else
@@ -810,6 +817,8 @@ public class ImageHandler
 
 		ImageMounter image = new ImageMounter(imgFile.toPath());
 
+		image.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
+
 		image.mountDD();
 		// todo: read from metadata
 		image.mountFileSystem(FileSystemType.EXT4);
@@ -829,23 +838,19 @@ public class ImageHandler
 			return;
 		}
 
-		Path templates = metadata.resolve("templates");
-		if(Files.exists(templates))
-		{
-			File dst = getMetaDataTargetPath("template");
-			try {
-				FileUtils.copyDirectory(templates.toFile(), dst);
-			} catch (IOException e) {
-				e.printStackTrace();
-				image.completeUnmount();
-				throw new BWFLAException(e);
-			}
-		}
 
-		Path environments = metadata.resolve("environments");
+		copyMetaData(metadata, image, ImageType.template.name(),ImageType.template.name() );
+		copyMetaData(metadata, image, "environments",ImageType.base.name() );
+		copyMetaData(metadata, image, ImageType.patches.name(),ImageType.patches.name() );
+		image.completeUnmount();
+	}
+
+	private void copyMetaData(Path metadata, ImageMounter image,  String metadataType, String metadataTarget) throws BWFLAException {
+
+		Path environments = metadata.resolve(metadataType);
 		if(Files.exists(environments))
 		{
-			File dst = getMetaDataTargetPath("base");
+			File dst = getMetaDataTargetPath(metadataTarget);
 			try {
 				FileUtils.copyDirectory(environments.toFile(), dst);
 			} catch (IOException e) {
@@ -854,7 +859,6 @@ public class ImageHandler
 				throw new BWFLAException(e);
 			}
 		}
-		image.completeUnmount();
 	}
 
 
@@ -885,16 +889,44 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected void createPatchedCow(String parentId, String cowId, String templateId, String type) throws IOException, BWFLAException {
+	protected String createPatchedCow(String parentId, String cowId, String patchId, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
+
+		if (parentId == null) {
+			throw new BWFLAException("imageID is null, aborting");
+		}
+
+		// check if template requires generalization
+		GeneralizationPatch generalization = null;
+		try {
+
+			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.patches + "/" + patchId), "GET", "metadata","true", apiKey, imageProxy);
+			String generalizationStr = IOUtils.toString(is, StandardCharsets.UTF_8);
+
+			generalization = GeneralizationPatch.fromValue(generalizationStr);
+		} catch (IOException | JAXBException e) {
+			e.printStackTrace();
+			throw new BWFLAException(e);
+		}
+
+		if (generalization.getImageGeneralization() == null || generalization.getImageGeneralization().getModificationScript() == null)
+			return parentId;
+
 		String newBackingFile = getArchivePrefix() + parentId;
 		File target = getImageTargetPath(type);
 		File destImgFile = new File(target, cowId);
 
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
+		String proxyUrl = null;
+		if (apiKey != null && imageProxy != null) {
+			proxyUrl = "http://jwt:" + apiKey + "@" + imageProxy;
+			options.setProxyUrl(proxyUrl);
+		}
+
+
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		MachineConfigurationTemplate tempEnv = (MachineConfigurationTemplate) getEnvById(templateId);
-		ImageGeneralizer.applyScriptIfCompatible(this, destImgFile, tempEnv.copy());
+		ImageGeneralizer.applyScriptIfCompatible(destImgFile, generalization, emulatorArchiveprefix, apiKey, imageProxy);
+		return cowId;
 	}
 
 	private void createOrUpdateHandle(String imageId) throws BWFLAException
@@ -1025,7 +1057,6 @@ public class ImageHandler
 					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
 				}
 			}
-
 			String result = imageHandler.resolveLocalBackingFile(dst);
 			if (imageHandler.handleClient != null)
 				imageHandler.createOrUpdateHandle(imageid);
@@ -1039,10 +1070,14 @@ public class ImageHandler
 			try {
 				Binding b = new Binding();
 				b.setUrl(url.toString());
+				XmountOptions options = new XmountOptions();
+				if (apiKey != null && imageProxy != null)
+					options.setProxyUrl("http://jwt:" + apiKey + "@" + imageProxy);
+				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
+
 				if(!destImgFile.exists()) {
 					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
 				}
-				
 				QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");

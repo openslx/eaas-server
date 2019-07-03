@@ -3,14 +3,20 @@ package de.bwl.bwfla.imagearchive.generalization;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.DiskPartitionDescription;
+import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageArchiveBackend;
 import de.bwl.bwfla.imagearchive.ImageHandler;
+import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
+import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.logging.Logger;
 
 public class ImageGeneralizer {
@@ -20,45 +26,57 @@ public class ImageGeneralizer {
 
     /**
      * Mount
-     *
      * @param imgFile
-     * @param templateEnv
+     * @param generalization
+     * @param emulatorArchiveprefix
+     * @param apiKey
+     * @param imageProxy
      * @throws BWFLAException
      * @throws IOException
      */
-    public static void  applyScriptIfCompatible(ImageHandler handler, File imgFile, MachineConfigurationTemplate templateEnv) throws BWFLAException, IOException {
+    public static void  applyScriptIfCompatible(File imgFile, GeneralizationPatch generalization, String emulatorArchiveprefix, String apiKey, String imageProxy) throws BWFLAException, IOException {
         ImageMounter image = null;
         try {
             image = new ImageMounter(imgFile.toPath());
-
-            //creation of ddFile
+            image.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
             image.mountDD();
 
-            List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), templateEnv);
-            String fs = templateEnv.getImageGeneralization().getPrecondition().getFileSystem();
+            List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), generalization);
+            String fs = generalization.getImageGeneralization().getPrecondition().getFileSystem();
 
             if (partitions == null) {
-                throw new BWFLAException("Partion with label: " + templateEnv.getImageGeneralization().getPrecondition().getPartitionLabel() +
+                throw new BWFLAException("Partion with label: " + generalization.getImageGeneralization().getPrecondition().getPartitionLabel() +
                         " and FileSystem " + fs + " was not found!");
             }
 
             for (DiskPartitionDescription.DiskPartition partition : partitions) {
-                image.remountDDWithOffset(partition.getBegin(), partition.getSize());
-                image.mountFileSystem(FileSystemType.fromString(partition.getFsType()));
+                File patch = null;
+                try {
+                    image.remountDDWithOffset(partition.getBegin(), partition.getSize());
+                    image.mountFileSystem(FileSystemType.fromString(partition.getFsType()));
 
-                File target = handler.getMetaDataTargetPath("template");
-                String patchPath = target.getAbsoluteFile().toString() + "/" + templateEnv.getId() + "/" + templateEnv.getImageGeneralization().getModificationScript();
-                File[] fsList = image.getFsDir().toFile().listFiles();
-                if (fsList == null)
-                    throw new BWFLAException("mount failed: mounted dir is null");
+                    patch  = new File("/tmp/patch-" + UUID.randomUUID());
 
-                if (isScriptCompatible(templateEnv, image.getFsDir().toFile())) {
-                    patchPartition(image.getFsDir().toFile(), patchPath);
-                    break;
-                } else {
-                    image.completeUnmount();
+                    InputStream is = EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/patch/" + generalization.getImageGeneralization().getModificationScript()), "GET", "metadata", "true", apiKey, imageProxy);
+                    FileUtils.copyInputStreamToFile(is, patch);
+
+                    if (!patch.setExecutable(true)) {
+                        throw new BWFLAException("failed to make patch executable!");
+                    }
+                    File[] fsList = image.getFsDir().toFile().listFiles();
+                    if (fsList == null)
+                        throw new BWFLAException("mount failed: mounted dir is null");
+
+                    if (isScriptCompatible(image.getFsDir().toFile(), generalization)) {
+                        patchPartition(image.getFsDir().toFile(), patch.toString());
+                        break;
+                    } else {
+                        image.completeUnmount();
+                    }
+                    log.warning("Script is not compatible with partition: \n" + " Flags: " + partition.getFlags() + " PartitionName " + partition.getPartitionName());
+                } finally {
+                   if(patch != null && patch.exists()) patch.delete();
                 }
-                log.warning("Script is not compatible with partition: \n" + " Flags: " + partition.getFlags() + " PartitionName " + partition.getPartitionName());
             }
             image.completeUnmount();
             image = null;
@@ -66,7 +84,6 @@ public class ImageGeneralizer {
             if (image != null)
                 image.completeUnmount();
         }
-
     }
 
 
@@ -75,8 +92,8 @@ public class ImageGeneralizer {
      * Check whether result of applied script would be successful
      * @return
      */
-    private static boolean isScriptCompatible(MachineConfigurationTemplate templateEnv, File tempMountDir) throws IOException {
-        RequiredFiles requiredFiles = templateEnv.getImageGeneralization().getPrecondition().getRequiredFiles();
+    private static boolean isScriptCompatible(File tempMountDir, GeneralizationPatch generalization) throws IOException {
+        RequiredFiles requiredFiles = generalization.getImageGeneralization().getPrecondition().getRequiredFiles();
         /*
         if required files were specified in template xml file, we need to check if they're exist
          */
@@ -125,8 +142,8 @@ public class ImageGeneralizer {
      * @throws BWFLAException
      * @throws IOException
      */
-    private static List<DiskPartitionDescription.DiskPartition> findValidPartitions(File ddFile, MachineConfigurationTemplate templateEnv) throws BWFLAException, IOException {
-        String partitionLabel = templateEnv.getImageGeneralization().getPrecondition().getPartitionLabel();
+    private static List<DiskPartitionDescription.DiskPartition> findValidPartitions(File ddFile, GeneralizationPatch generalization) throws BWFLAException, IOException {
+        String partitionLabel = generalization.getImageGeneralization().getPrecondition().getPartitionLabel();
         DiskPartitionDescription parted = new DiskPartitionDescription(ddFile);
         List<DiskPartitionDescription.DiskPartition> partitions = parted.getPartitionTable();
         List<DiskPartitionDescription.DiskPartition> validPartitions = new ArrayList<>();
@@ -136,7 +153,7 @@ public class ImageGeneralizer {
             if (partitionLabel.equals("") || partitionLabel == null) {
                 return partitions;
             } else {
-                if (ImageGeneralizationUtils.checkPartition(p, partitionLabel, templateEnv.getImageGeneralization().getPrecondition().getFileSystem()))
+                if (ImageGeneralizationUtils.checkPartition(p, partitionLabel, generalization.getImageGeneralization().getPrecondition().getFileSystem()))
                     validPartitions.add(p);
             }
         }

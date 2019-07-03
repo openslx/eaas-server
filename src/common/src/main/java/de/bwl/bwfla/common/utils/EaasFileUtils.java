@@ -25,6 +25,8 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -38,7 +40,7 @@ import java.util.Set;
 import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
-
+import org.eclipse.persistence.internal.oxm.conversion.Base64;
 
 
 public class EaasFileUtils
@@ -187,5 +189,34 @@ public class EaasFileUtils
 		}
 		
 		return tmpfile;
+	}
+
+	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue) throws IOException {
+
+		return fromUrlToInputSteam(url, requestMethod,requestProperty, requestValue, null, null);
+	}
+
+	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue, String apiKey, String imageProxy) throws IOException {
+		HttpURLConnection connection = null;
+
+		if(apiKey != null && imageProxy!= null) {
+			// TODO remove hardcoded elements
+			String encoded = new String
+					(Base64.base64Encode(("jwt:" + apiKey).getBytes()));
+			String proxyAddress = imageProxy.split(":")[0];
+			int port = Integer.parseInt(imageProxy.split(":")[1]);
+			Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, port));
+
+			connection = (HttpURLConnection) url.openConnection(proxy);
+			connection.setRequestProperty("Proxy-Authorization", "Basic " + encoded);
+
+		} else {
+			connection = (HttpURLConnection) url.openConnection();
+		}
+
+		connection.setRequestMethod(requestMethod);
+		if (requestProperty != null && requestValue != null)
+			connection.setRequestProperty(requestProperty, requestValue);
+		return connection.getInputStream();
 	}
 }

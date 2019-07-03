@@ -32,6 +32,10 @@ public class DatabaseEnvironmentsAdapter {
     private String imageArchive;
 
     @Inject
+    @Config(value = "ws.apikey")
+    private String apiAuthenticationToken;
+
+    @Inject
     private MongodbEaasConnector dbConnector;
     private MongodbEaasConnector.DatabaseInstance db;
 
@@ -41,7 +45,7 @@ public class DatabaseEnvironmentsAdapter {
 
     @PostConstruct
     public void init() {
-        environmentsAdapter = new EnvironmentsAdapter(imageArchive);
+        environmentsAdapter = new EnvironmentsAdapter(imageArchive, apiAuthenticationToken);
         db = dbConnector.getInstance(dbName);
         db.ensureTimestamp("public");
         sync();
@@ -52,8 +56,8 @@ public class DatabaseEnvironmentsAdapter {
     return environmentsAdapter.toString();
     }
 
-    public ImageArchiveBinding generalizedImport(String archive, String id, ImageType imageType, String templateId) throws BWFLAException {
-        return environmentsAdapter.generalizedImport(archive, id, imageType, templateId);
+    public ImageArchiveBinding generalizedImport(String archive, String id, ImageType imageType, String patchId) throws BWFLAException {
+        return environmentsAdapter.generalizedImport(archive, id, imageType, patchId);
     }
 
     public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
@@ -119,6 +123,10 @@ public class DatabaseEnvironmentsAdapter {
 
     public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException, JAXBException {
       return environmentsAdapter.getTemplates();
+    }
+
+    public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
+      return environmentsAdapter.getPatches();
     }
 
     public Environment getEnvironmentById(String archive, String id) throws BWFLAException {
@@ -229,6 +237,11 @@ public class DatabaseEnvironmentsAdapter {
     public String getImageArchiveHost()
     {
         return imageArchive;
+    }
+
+    public String getApiAuthenticationToken()
+    {
+        return apiAuthenticationToken;
     }
 
     public void extractMetadata(String imageId) throws BWFLAException {

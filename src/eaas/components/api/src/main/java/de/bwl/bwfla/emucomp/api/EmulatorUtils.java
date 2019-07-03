@@ -116,6 +116,7 @@ public class EmulatorUtils {
 
 				QcowOptions qcowOptions = new QcowOptions();
 				qcowOptions.setBackingFile(resUrl);
+				log.warning("setting proxy to: " + xmountOpts.getProxyUrl());
 				qcowOptions.setProxyUrl(xmountOpts.getProxyUrl());
 				EmulatorUtils.createCowFile(cowPath, qcowOptions);
 
@@ -158,6 +159,9 @@ public class EmulatorUtils {
 			process.addArgument("-f"); // fail on 404
 			process.addArgument("-S");
 			process.addArgument("-L");
+			if (xmountOpts != null && xmountOpts.getProxyUrl() != null) {
+				process.addEnvVariable("http_proxy", xmountOpts.getProxyUrl());
+			}
 			if (resource.getUsername() != null && resource.getPassword() != null) {
 				process.addArgument("-u");
 				process.addArgument(resource.getUsername() + ":" + resource.getPassword());
