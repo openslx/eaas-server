@@ -71,6 +71,7 @@ import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
@@ -671,9 +672,22 @@ public class NodeAllocatorGCE implements INodeAllocator
 					netifs.add(netif);
 				}
 
+				final Metadata metadata = new Metadata()
+						.setItems(new ArrayList<>());
+
+				// Add user-defined metadata
+				if (userdata != null) {
+					final Metadata.Items item = new Metadata.Items()
+							.setKey("user-data")
+							.setValue(userdata.apply("*"));
+
+					metadata.getItems().add(item);
+				}
+
 				// Create new VM instance
 				final Instance instance = new Instance()
 						.setName(vmname)
+						.setMetadata(metadata)
 						.setMachineType(machineTypeUrl)
 						.setCanIpForward(false)
 						.setNetworkInterfaces(netifs)
