@@ -234,29 +234,29 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("delete success!");
 	}
 
-	@Secured
-	@GET
-	@Path("/exportEnvsToPath")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response export() throws IOException {
-		List<EmilEnvironment> environments = null;
-
-		environments = emilEnvRepo.getEmilEnvironments();
-		if (environments != null && environments.size() == 0) {
-			emilEnvRepo.init();
-			environments = emilEnvRepo.getEmilEnvironments();
-		}
-
-		environments.forEach(env -> {
-			try {
-				LOG.info(env.value(true));
-				exportService.saveEnvToPath(env);
-			} catch (JAXBException | IOException e) {
-				e.printStackTrace();
-			}
-		});
-		return Emil.successMessageResponse("success!");
-	}
+//	@Secured
+//	@GET
+//	@Path("/exportEnvsToPath")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	public Response export() throws IOException {
+//		List<EmilEnvironment> environments = null;
+//
+//		environments = emilEnvRepo.getEmilEnvironments();
+//		if (environments != null && environments.size() == 0) {
+//			emilEnvRepo.init();
+//			environments = emilEnvRepo.getEmilEnvironments();
+//		}
+//
+//		environments.forEach(env -> {
+//			try {
+//				LOG.info(env.value(true));
+//				exportService.saveEnvToPath(env);
+//			} catch (JAXBException | IOException e) {
+//				e.printStackTrace();
+//			}
+//		});
+//		return Emil.successMessageResponse("success!");
+//	}
 
 	@Secured
 	@GET
@@ -586,7 +586,7 @@ public class EmilEnvironmentData extends EmilRest {
 			return Emil.internalErrorResponse(e);
 		}
 
-		final String json = "{\"status\":\"0\"}";
+		final String json = "{\"status\":\"0\", \"id\":\"" + newEnv.getEnvId() + "\"}";
 		return Emil.createResponse(Status.OK, json);
 	}
 
