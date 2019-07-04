@@ -235,7 +235,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 				log.info("VM '" + node.getName() + "' created");
 				
 				final CompletionTrigger<NodeMetadata> trigger = new CompletionTrigger<NodeMetadata>(node);
-				this.makeNodeInfo(trigger.completion(), cleanups)
+				this.makeNodeInfo(trigger.completion(), cleanups, request.getOnAllocatedCallback())
 					.thenCompose(checkReachabilityFtor)
 					.thenAccept(checkResultAction)
 					.whenComplete(checkErrorAction);
@@ -546,7 +546,8 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 		return trigger.thenApply(functor);
 	}
 
-	private CompletableFuture<NodeInfo> makeNodeInfo(CompletableFuture<NodeMetadata> trigger, CleanupHandlerChain cleanups)
+	private CompletableFuture<NodeInfo> makeNodeInfo(CompletableFuture<NodeMetadata> trigger,
+			CleanupHandlerChain cleanups, Consumer<NodeID> onNodeAllocatedCallback)
 	{
 		final Function<NodeMetadata, NodeInfo> functor = (instance) -> {
 			final String vmname = instance.getName();
@@ -560,11 +561,23 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 				throw new IllegalStateException("No external IP address for VM '" + vmname + "' found!");
 	
 			log.info("VM '" + vmname + "' is running. External IP is " + extip);
-	
+
+			// Signal that a machine is allocated
+			final NodeID nid = new NodeID(extip);
+			try {
+				onNodeAllocatedCallback.accept(nid);
+			}
+			catch (Exception error) {
+				final Throwable cause = error.getCause();
+				throw new CompletionException((cause != null) ? cause : error);
+			}
+
+			cleanups.add(() -> onDownCallback.accept(nid));
+
 			// Compute the URL for health checks and create node
 			final String urlTemplate = config.getHealthCheckUrl();
-			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, extip);
-			final Node node = new Node(new NodeID(extip), nodeCapacity);
+			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, nid.getNodeAddress());
+			final Node node = new Node(nid, nodeCapacity);
 			try {
 				final NodeInfo info = new NodeInfo(node, healthCheckUrl);
 				final Map<String, Object> metadata = info.getMetadata();

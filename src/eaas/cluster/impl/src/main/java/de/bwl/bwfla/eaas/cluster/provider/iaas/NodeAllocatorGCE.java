@@ -287,7 +287,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 				};
 
 				final CompletionTrigger<Void> trigger = new CompletionTrigger<Void>();
-				this.makeVmInstanceInsertRequest(trigger.completion(), cleanups)
+				this.makeVmInstanceInsertRequest(trigger.completion(), cleanups, request.getOnAllocatedCallback(), request.getUserMetaData())
 					.thenCompose(checkReachabilityFtor)
 					.thenAccept(checkResultAction)
 					.whenComplete(checkErrorAction);
@@ -621,7 +621,8 @@ public class NodeAllocatorGCE implements INodeAllocator
 		return specReturnStage;
 	}
 
-	private CompletableFuture<NodeInfo> makeVmInstanceInsertRequest(CompletableFuture<Void> trigger, CleanupHandlerChain cleanups)
+	private CompletableFuture<NodeInfo> makeVmInstanceInsertRequest(CompletableFuture<Void> trigger,
+			CleanupHandlerChain cleanups, Consumer<NodeID> onNodeAllocatedCallback, Function<String, String> userdata)
 	{
 		final ScheduledExecutorService scheduler = executors.scheduler();
 		final Executor executor = executors.io();
@@ -768,10 +769,22 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 			log.info("VM '" + vmname + "' is running. Internal IP is " + netif.getNetworkIP() + ", external IP is " + address);
 
+			// Signal that a machine is allocated
+			final NodeID nid = new NodeID(address);
+			try {
+				onNodeAllocatedCallback.accept(nid);
+			}
+			catch (Exception error) {
+				final Throwable cause = error.getCause();
+				throw new CompletionException((cause != null) ? cause : error);
+			}
+
+			cleanups.add(() -> onDownCallback.accept(nid));
+
 			// Compute the URL for health checks and create node
 			final String urlTemplate = config.getHealthCheckUrl();
-			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, address);
-			final Node node = new Node(new NodeID(address), nodeCapacity);
+			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, nid.getNodeAddress());
+			final Node node = new Node(nid, nodeCapacity);
 			try {
 				final NodeInfo info = new NodeInfo(node, healthCheckUrl);
 				info.getMetadata().put(MDVAR_VMNAME, vmname);

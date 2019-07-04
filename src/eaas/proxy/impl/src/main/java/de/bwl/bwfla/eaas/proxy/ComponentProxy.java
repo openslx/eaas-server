@@ -101,7 +101,7 @@ public class ComponentProxy implements Component {
     @Override
     public Return getControlUrls(String componentId) throws BWFLAException {
         final SessionRegistry.Entry session = sessions.lookup(componentId);
-        final String componentHost = session.getResourceHandle().getNodeID().getNodeHost();
+        final String componentHost = session.getResourceHandle().getNodeID().getNodeAddress();
         final URI hostURI = URI.create(componentHost);
 
         Return r = getComponent(componentId).getControlUrls(componentId);
