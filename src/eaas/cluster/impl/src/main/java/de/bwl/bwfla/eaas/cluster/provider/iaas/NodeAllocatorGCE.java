@@ -257,12 +257,8 @@ public class NodeAllocatorGCE implements INodeAllocator
 					request.getOnUpCallback().accept(node);
 				}
 				else {
-					// Node seems to be unreachable, remove the corresponding VM!
-					log.info("Node '" + nid + "' is unreachable after boot!");
-					final CompletionTrigger<Void> trigger = new CompletionTrigger<Void>();
-					this.makeVmInstanceDeleteRequest(trigger.completion(), info);
-					trigger.submit(executors.io());
-					result.onNodeFailure();
+					final String message = "Node '" + nid + "' is unreachable after boot!";
+					throw new CompletionException(new IllegalStateException(message));
 				}
 
 				long duration = System.currentTimeMillis() - startTimestamp;

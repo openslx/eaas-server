@@ -146,7 +146,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 		if (request.getSpec() == null)
 			throw new IllegalArgumentException("No ResourceSpec specified!");
 
-		if (request.getOnErrorCallback() == null || request.getOnErrorCallback() == null)
+		if (request.getOnUpCallback() == null || request.getOnErrorCallback() == null)
 			throw new IllegalArgumentException("No callbacks specified!");
 
 		final long startTimestamp = System.currentTimeMillis();
@@ -192,12 +192,8 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 					request.getOnUpCallback().accept(node);
 				}
 				else {
-					// Node seems to be unreachable, remove the corresponding VM!
-					log.info("Node '" + nid + "' is unreachable after boot!");
-					final CompletionTrigger<NodeInfo> trigger = new CompletionTrigger<NodeInfo>(info);
-					this.makeVmDeleteRequest(trigger.completion());
-					trigger.submit(executors.io());
-					result.onNodeFailure();
+					final String message = "Node '" + nid + "' is unreachable after boot!";
+					throw new CompletionException(new IllegalStateException(message));
 				}
 				
 				long duration = System.currentTimeMillis() - startTimestamp;
