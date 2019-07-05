@@ -1047,12 +1047,16 @@ public class Components {
                 throw new NotFoundException();
 
             // Actual result's location
-            final String location = handle.toRestUrl(blobStoreRestAddress);
+            String location = "";
+            if (blobStoreRestAddress.contains("http://eaas:8080"))
+                location = handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
+            else
+                location = handle.toRestUrl(blobStoreRestAddress);
 
             // Set response headers...
             final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
                     .header("Access-Control-Allow-Origin", "*")
-                    .location(new URI(location))
+                    .header("Location", new URI(location))
                     .build();
 
             return response;

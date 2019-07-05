@@ -897,10 +897,10 @@ public class EmilEnvironmentData extends EmilRest {
 			}
 			try {
 				Environment e = envHelper.getEnvironmentById(emilEnvironment.getArchive(), envId);
-				if(!(e instanceof MachineConfiguration))
-					continue;
-				env = (MachineConfiguration)e;
-				importRequest.env = env;
+//				if(!(e instanceof MachineConfiguration))
+//					continue;
+//				env = e;
+				importRequest.env = e;
 
 				importRequest.repository = emilEnvRepo;
 				importRequest.emilEnvironment = emilEnvironment;
