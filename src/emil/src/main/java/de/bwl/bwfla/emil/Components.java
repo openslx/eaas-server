@@ -380,17 +380,24 @@ public class Components {
         metadata.setDhcp(isDHCPenabled);
         metadata.setProcess("/bin/sh");
         args.add("-c");
-        args.add("/bin/pwd && mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
+        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
         args.add("");
 
         args.add("--output");
         args.add("config.json");
+
+
         if(requiresInputFiles) {
             args.add("--mount");
             args.add(getMountStr(inputDir, config.getInput(), true));
         }
         args.add("--mount");
         args.add(getMountStr(outputDir, config.getOutputPath(), false));
+
+        if (config.getCustomSubdir() != null) {
+            args.add("--rootfs");
+            args.add("rootfs/" + config.getCustomSubdir());
+        }
 
         // Add environment variables
         if(config.getProcess().getEnvironmentVariables() != null) {
