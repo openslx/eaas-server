@@ -6,6 +6,7 @@ import java.nio.channels.FileChannel;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -31,6 +32,9 @@ public class Emil extends EmilRest
 	@Inject
 	@AuthenticatedUser
 	private UserContext authenticatedUser;
+
+	@Inject
+	private EmilEnvironmentRepository environmentRepository;
 
 	@GET
 	@Secured
@@ -116,6 +120,18 @@ public class Emil extends EmilRest
 		builder.entity(logfile);
 		builder.header("Content-Disposition",
 				"attachment; filename=\"sessions.csv\"");
+		return builder.build();
+	}
+
+	@GET
+	@Secured
+	@Path("/exportMetadata")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response exportMetadata()
+	{
+		environmentRepository.export();
+		Response.ResponseBuilder builder = new ResponseBuilderImpl();
+		builder.status(Status.OK);
 		return builder.build();
 	}
 }
