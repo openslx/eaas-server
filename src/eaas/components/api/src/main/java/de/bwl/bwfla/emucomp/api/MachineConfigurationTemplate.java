@@ -12,12 +12,13 @@ import java.util.logging.Logger;
 
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "emulationEnvironmentTemplate", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
-		"imageGeneralization"
-})
+@XmlType(name = "emulationEnvironmentTemplate", namespace = "http://bwfla.bwl.de/common/datatypes")
 @XmlRootElement(name="emulationEnvironmentTemplate", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class MachineConfigurationTemplate extends  MachineConfiguration
 {
+
+	@XmlElement(required = false, defaultValue = "0")
+	private int templateVersion;
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
 	private ImageGeneralization imageGeneralization;

@@ -42,10 +42,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -211,6 +208,7 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		// check if template requires generalization
 		MachineConfigurationTemplate tempEnv = null;
 		try {
+			String encodedTemplateId = URLEncoder.encode(templateId, "UTF-8");
 			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.template + "/" + templateId), "GET", "metadata","true");
 			String envStr = IOUtils.toString(is, StandardCharsets.UTF_8);
 
