@@ -1037,7 +1037,7 @@ public class ImageHandler
 			File dst = new File(target, imageid);
 
 			if(dst.exists()) {
-				log.warning("downloadind dependencies: skiip " + dst.getAbsolutePath());
+				log.warning("downloading dependencies: skip " + dst.getAbsolutePath());
 			}
 			else {
 				try {
@@ -1061,8 +1061,9 @@ public class ImageHandler
 			try {
 				Binding b = new Binding();
 				b.setUrl(url.toString());
-				XmountOptions options = new XmountOptions();
-				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
+
+				// XmountOptions options = new XmountOptions();
+				// EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
 
 				if(!destImgFile.exists()) {
 					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);

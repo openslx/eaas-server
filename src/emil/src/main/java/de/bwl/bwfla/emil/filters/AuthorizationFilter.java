@@ -44,7 +44,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
 
         if(!authEnabled)
             return;
-        
+
         // Get the resource class which matches with the requested URL
         // Extract the roles declared by it
         Class<?> resourceClass = resourceInfo.getResourceClass();
