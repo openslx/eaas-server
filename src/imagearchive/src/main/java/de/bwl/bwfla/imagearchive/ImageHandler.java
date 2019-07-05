@@ -372,7 +372,7 @@ public class ImageHandler
 
 		if (destImgFile.exists()) {
 			if (!delete) {
-				throw new BWFLAException("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
+				log.warning("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
 
 			} else
 				destImgFile.delete();
@@ -397,7 +397,7 @@ public class ImageHandler
 		File destImgFile = new File(target, importId);
 		if (destImgFile.exists()) {
 			if (!iaMd.isDeleteIfExists()) {
-				throw new BWFLAException("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
+				log.warning("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
 			} else
 				destImgFile.delete();
 		}
@@ -835,7 +835,7 @@ public class ImageHandler
 		}
 
 
-		copyMetaData(metadata, image, ImageType.template.name(),ImageType.template.name() );
+		copyMetaData(metadata, image, "templates",ImageType.template.name() );
 		copyMetaData(metadata, image, "environments",ImageType.base.name() );
 		copyMetaData(metadata, image, ImageType.patches.name(),ImageType.patches.name() );
 		image.completeUnmount();
