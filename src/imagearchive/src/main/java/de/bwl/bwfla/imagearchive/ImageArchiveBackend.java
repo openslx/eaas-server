@@ -42,10 +42,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -206,7 +203,6 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 	{
 
 		log.warning("emulatorArchiveprefix: " + emulatorArchiveprefix);
-
 		try {
 			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
 			return imageHandler.createPatchedCow(imageId, cowId, patchId, type.name(), emulatorArchiveprefix);

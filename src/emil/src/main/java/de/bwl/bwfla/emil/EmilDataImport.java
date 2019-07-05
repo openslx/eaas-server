@@ -74,49 +74,58 @@ public class EmilDataImport {
         }
     }
 
-    private <T extends JaxbType> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JAXBException {
+    private <T extends JaxbType> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JAXBException, BWFLAException {
         if (!Files.exists(envpath))
             throw new IOException("file not found");
 
-        return JaxbType.fromJsonValue(FileUtils.readFileToString(envpath.toFile(), StandardCharsets.UTF_8), klass);
+        return JaxbType.fromJsonValueWithoutRoot(FileUtils.readFileToString(envpath.toFile(), StandardCharsets.UTF_8), klass);
 
         // try (Reader reader = Files.newBufferedReader(envpath, StandardCharsets.UTF_8)) {
         //    return GSON.fromJson(reader, klass);
         // }
     }
 
-
-    public HashMap<String, List<EmilEnvironment>> importFromFolder()
+    public HashMap<String, List<EmilEnvironment>> importFromFolder(String directory)
     {
         HashMap<String, List<EmilEnvironment>> result = new HashMap<>();
-        Path importPath = Paths.get(serverdatadir).resolve("import-envs");
+        Path importPath = Paths.get(serverdatadir).resolve(directory);
         if(!Files.exists(importPath)) {
             LOG.severe("import path not found: " + importPath);
             return result;
         }
 
         try {
-            DirectoryStream<Path> stream = Files.newDirectoryStream(importPath);
-            for (Path entry : stream) {
-
-                LOG.severe("user " + entry);
-                Path emilEnvs = entry.resolve("emil-environments");
-                if (Files.exists(emilEnvs)) {
-                    LOG.severe("loading emil environments");
-                    List<EmilEnvironment> envs = importEnvByPath(EmilEnvironment.class, emilEnvs);
-                    result.put(entry.getFileName().toString(), envs);
-                }
-
-                Path emilObjEnvs = entry.resolve("emil-object-environments");
-                if (Files.exists(emilObjEnvs))
-                {
-                    LOG.severe("loading emil obj environments");
-                    List<EmilObjectEnvironment> envs = importEnvByPath(EmilObjectEnvironment.class, emilObjEnvs);
-                    List<EmilEnvironment> _envs = new ArrayList<>();
-                    _envs.addAll(envs);
-                    result.put(entry.getFileName().toString(), _envs);
+            Path emilEnvs = importPath.resolve("emil-environments");
+            if(Files.exists(emilEnvs))
+            {
+                DirectoryStream<Path> collectionStream  = Files.newDirectoryStream(emilEnvs);
+                for (Path collectionPath: collectionStream) {
+                    String collection = collectionPath.getFileName().toString();
+                    if(collection.startsWith("."))
+                        continue;
+                    List<EmilEnvironment> envs = importEnvByPath(EmilEnvironment.class, collectionPath);
+                    result.put(collection, envs);
                 }
             }
+
+            Path emilObjEnvs = importPath.resolve("emil-object-environments");
+            if (Files.exists(emilObjEnvs))
+            {
+                DirectoryStream<Path> collectionStream  = Files.newDirectoryStream(emilObjEnvs);
+                for (Path collectionPath: collectionStream) {
+                    String collection = collectionPath.toString();
+                    if(collection.startsWith("."))
+                        continue;
+
+                    List<EmilObjectEnvironment> envs = importEnvByPath(EmilObjectEnvironment.class, collectionPath);
+                    List<EmilEnvironment> _envs = result.get(collection);
+                    if (_envs == null)
+                        _envs = new ArrayList<>();
+                    _envs.addAll(envs);
+                    result.put(collection, _envs);
+                }
+            }
+            // FileUtils.deleteDirectory(importPath.toFile());
         }
         catch (IOException e)
         {
@@ -158,6 +167,10 @@ public class EmilDataImport {
     private <T extends EmilEnvironment> List<T> importEnvByPath(final Class<T> klass, Path... paths) throws IOException {
         final List<T> environments = new ArrayList<>();
         for (Path path : paths) {
+            LOG.warning("import env by path " + path.getFileName());
+            if(path.getFileName().startsWith("."))
+                continue;
+
             if (!Files.exists(path)) {
                 continue;
             }
@@ -189,7 +202,7 @@ public class EmilDataImport {
             if (obsoleteEnvsDir.toFile().exists()) {
                 obsoleteEnvsDir = Paths.get(obsoleteEnvsDir + UUID.randomUUID().toString());
             }
-            // Files.move(path, obsoleteEnvsDir);
+            Files.move(path, obsoleteEnvsDir);
         }
         return environments;
 

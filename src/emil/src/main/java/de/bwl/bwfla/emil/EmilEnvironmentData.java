@@ -70,9 +70,6 @@ public class EmilEnvironmentData extends EmilRest {
 	private EmilEnvironmentRepository emilEnvRepo;
 
 	@Inject
-	private EmilDataExport exportService;
-
-	@Inject
 	private ArchiveAdapter archive;
 
 	private AsyncIoTaskManager taskManager;
@@ -233,30 +230,6 @@ public class EmilEnvironmentData extends EmilRest {
 
 		imageProposer.refreshIndex();
 		return Emil.successMessageResponse("delete success!");
-	}
-
-	@Secured({Role.RESTRCITED})
-	@GET
-	@Path("/exportEnvsToPath")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response export() throws IOException {
-		List<EmilEnvironment> environments = null;
-
-		environments = emilEnvRepo.getEmilEnvironments();
-		if (environments != null && environments.size() == 0) {
-			emilEnvRepo.init();
-			environments = emilEnvRepo.getEmilEnvironments();
-		}
-
-		environments.forEach(env -> {
-			try {
-				LOG.info(env.value(true));
-				exportService.saveEnvToPath(env);
-			} catch (JAXBException | IOException e) {
-				e.printStackTrace();
-			}
-		});
-		return Emil.successMessageResponse("success!");
 	}
 
 //	@Secured
@@ -610,7 +583,7 @@ public class EmilEnvironmentData extends EmilRest {
 			return Emil.internalErrorResponse(e);
 		}
 
-		final String json = "{\"status\":\"0\"}";
+		final String json = "{\"status\":\"0\", \"id\":\"" + newEnv.getEnvId() + "\"}";
 		return Emil.createResponse(Status.OK, json);
 	}
 
