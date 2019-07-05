@@ -5,6 +5,7 @@ import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.Priority;
 import javax.inject.Inject;
@@ -34,9 +35,16 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     @AuthenticatedUser
     private UserContext authenticatedUser = null;
 
+    @Inject
+    @Config(value = "emil.authEnabled")
+    private boolean authEnabled;
+
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
 
+        if(!authEnabled)
+            return;
+        
         // Get the resource class which matches with the requested URL
         // Extract the roles declared by it
         Class<?> resourceClass = resourceInfo.getResourceClass();
