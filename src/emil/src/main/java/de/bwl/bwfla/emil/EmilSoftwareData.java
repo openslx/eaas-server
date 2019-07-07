@@ -315,11 +315,11 @@ public class EmilSoftwareData extends EmilRest {
 
 		try {
 			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getObjectId());
-			if(software != null)
-			{
-				LOG.warning("software with id " + softwarePackage.getObjectId() + " present. skipping...");
-				return;
-			}
+//			if(software != null)
+//			{
+//				LOG.warning("software with id " + softwarePackage.getObjectId() + " present. skipping...");
+//				return;
+//			}
 		} catch (BWFLAException e) {
 			e.printStackTrace();
 			return;
