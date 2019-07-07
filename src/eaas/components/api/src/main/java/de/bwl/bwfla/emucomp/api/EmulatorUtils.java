@@ -269,6 +269,7 @@ public class EmulatorUtils {
 		}
 
 		if(options.getProxyUrl() != null && options.getProxyUrl() != null) {
+			log.severe("using proxy " +  options.getProxyUrl());
 			process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			process.addEnvVariable("http_proxy", options.getProxyUrl());
 		}
