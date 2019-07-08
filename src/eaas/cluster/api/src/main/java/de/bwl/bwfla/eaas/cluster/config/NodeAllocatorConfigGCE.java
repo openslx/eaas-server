@@ -496,7 +496,6 @@ public class NodeAllocatorConfigGCE extends NodeAllocatorConfig
 		this.setNodeNamePrefix(nodeNamePrefix);
 		this.setServiceAccountCredentialsFile(serviceAccountCredentialsFile);
 		this.setVmType(vmType);
-		this.setVmMinCpuPlatform(vmMinCpuPlatform);
 		this.setVmPersistentDiskType(vmPersistentDiskType);
 		this.setVmPersistentDiskSize(vmPersistentDiskSize);
 		this.setVmPersistentDiskImageUrl(vmPersistentDiskImageUrl);

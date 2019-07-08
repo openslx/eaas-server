@@ -71,6 +71,7 @@ import com.google.api.services.compute.model.AttachedDisk;
 import com.google.api.services.compute.model.AttachedDiskInitializeParams;
 import com.google.api.services.compute.model.Instance;
 import com.google.api.services.compute.model.MachineType;
+import com.google.api.services.compute.model.Metadata;
 import com.google.api.services.compute.model.Network;
 import com.google.api.services.compute.model.NetworkInterface;
 import com.google.api.services.compute.model.Operation;
@@ -130,6 +131,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 	private final AtomicInteger numAllocationRequests;
 
 	protected static final HttpTransport HTTP_TRANSPORT;
+
 	static {
 		try {
 			HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
@@ -146,7 +148,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 	{
 		final PrefixLoggerContext logContext = new PrefixLoggerContext(parentLogContext)
 				.add("NA", "gce");
-		
+
 		// Initialize common member fields
 		this.gce = NodeAllocatorGCE.newComputeService(config);
 		this.log = new PrefixLogger(this.getClass().getName(), logContext);
@@ -206,7 +208,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 	{
 		return nodeCapacity;
 	}
-	
+
 	@Override
 	public ResourceSpec allocate(NodeAllocationRequest request)
 	{
@@ -255,14 +257,10 @@ public class NodeAllocatorGCE implements INodeAllocator
 					request.getOnUpCallback().accept(node);
 				}
 				else {
-					// Node seems to be unreachable, remove the corresponding VM!
-					log.info("Node '" + nid + "' is unreachable after boot!");
-					final CompletionTrigger<Void> trigger = new CompletionTrigger<Void>();
-					this.makeVmInstanceDeleteRequest(trigger.completion(), info);
-					trigger.submit(executors.io());
-					result.onNodeFailure();
+					final String message = "Node '" + nid + "' is unreachable after boot!";
+					throw new CompletionException(new IllegalStateException(message));
 				}
-				
+
 				long duration = System.currentTimeMillis() - startTimestamp;
 				duration = TimeUnit.MILLISECONDS.toSeconds(duration);
 				log.info("Allocating node '" + nid + "' took " + duration + " second(s)");
@@ -284,13 +282,13 @@ public class NodeAllocatorGCE implements INodeAllocator
 					result.onNodeFailure();
 					cleanups.execute();
 				};
-				
+
 				final CompletionTrigger<Void> trigger = new CompletionTrigger<Void>();
-				this.makeVmInstanceInsertRequest(trigger.completion(), cleanups)
+				this.makeVmInstanceInsertRequest(trigger.completion(), cleanups, request.getOnAllocatedCallback(), request.getUserMetaData())
 					.thenCompose(checkReachabilityFtor)
 					.thenAccept(checkResultAction)
 					.whenComplete(checkErrorAction);
-				
+
 				trigger.submit(executors.io());
 			}
 		};
@@ -306,7 +304,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 			throw new IllegalArgumentException("Invalid node ID specified!");
 
 		final CompletableFuture<Boolean> result = new CompletableFuture<Boolean>();
-		
+
 		final Runnable task = () -> {
 			NodeInfo info = nodes.remove(nid);
 			if (info == null) {
@@ -316,18 +314,18 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 			final String name = (String) info.getMetadata().get(MDVAR_VMNAME);
 			log.info("Releasing node '" + nid + "' (" + name + ")...");
-			
+
 			final CompletionTrigger<Void> trigger = new CompletionTrigger<Void>();
 			this.makeVmInstanceDeleteRequest(trigger.completion(), info)
 				.whenComplete((value, error) -> result.complete(value != null));
-			
+
 			trigger.submit(executors.io());
 		};
 
 		this.submit(task);
 		return result;
 	}
-	
+
 	@Override
 	public boolean terminate()
 	{
@@ -335,14 +333,14 @@ public class NodeAllocatorGCE implements INodeAllocator
 		final String zone = config.getZoneName();
 		final BatchRequest batch = gce.batch();
 		final NavigableSet<String> failedVmNames = new TreeSet<String>();
-		
+
 		final String vmDeleteBatchDescription = "batch of requests for deleting all VMs";
 		log.info("Preparing " + vmDeleteBatchDescription + "...");
 		if (vmNameRegistry.size() == 0) {
 			log.info("No VMs found to be deleted");
 			return true;
 		}
-		
+
 		for (String vmname : vmNameRegistry) {
 			try {
 				final Compute.Instances.Delete request = gce.instances().delete(project, zone, vmname);
@@ -354,7 +352,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 				failedVmNames.add(vmname);
 			}
 		}
-	
+
 		final int numBatchedRequests = batch.size();
 		if (numBatchedRequests > 0) {
 			try {
@@ -369,7 +367,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 		else {
 			log.warning("Skipping sending an empty batch to GCE!");
 		}
-	
+
 		final StringBuilder sb = new StringBuilder(2048);
 		final int numFailedRequests = failedVmNames.size();
 		final boolean batchWasExecuted = batch.size() != numBatchedRequests;
@@ -382,7 +380,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 				.append("To retry manually, run:\n")
 				.append("    $ gcloud compute instances delete \\\n");
 
-			int  counter = 0;
+			int counter = 0;
 			final String spacer = "          ";
 			for (String vmname : failedVmNames) {
 				sb.append(spacer).append(vmname);
@@ -393,14 +391,14 @@ public class NodeAllocatorGCE implements INodeAllocator
 			sb.append(" \n");
 			log.warning(sb.toString());
 		}
-		
+
 		// VM summary message...
 		{
 			sb.setLength(0);
-			
+
 			final int numVmNamesPerLine = 4;
 			int counter = 0;
-			
+
 			sb.append("Complete list of VMs managed by this node allocator:\n    ");
 			for (String vmname : vmNameRegistry) {
 				sb.append(vmname).append(' ');
@@ -409,11 +407,11 @@ public class NodeAllocatorGCE implements INodeAllocator
 					counter = 0;
 				}
 			}
-			
+
 			sb.append('\n');
 			log.info(sb.toString());
 		}
-		
+
 		return (batchWasExecuted && (numFailedRequests == 0));
 	}
 
@@ -421,7 +419,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 	public void dump(JsonGenerator json, DumpConfig dconf, int flags)
 	{
 		final DumpTrigger trigger = new DumpTrigger(dconf);
-		
+
 		trigger.setSubResourceDumpHandler(() -> {
 			final String segment = dconf.nextUrlSegment();
 			switch (segment)
@@ -437,7 +435,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 						final NodeInfo node = nodes.get(new NodeID(nid));
 						if (node == null)
 							throw new NotFoundException("Node '" + nid + "' was not found!");
-						
+
 						node.dump(json, dconf, flags);
 					}
 					else {
@@ -445,17 +443,17 @@ public class NodeAllocatorGCE implements INodeAllocator
 						json.writeStartArray();
 						for (NodeInfo node : nodes.values())
 							node.dump(json, dconf, flags);
-	
+
 						json.writeEnd();
 					}
-					
+
 					break;
 
 				default:
 					DumpHelpers.notfound(segment);
 			}
 		});
-		
+
 		trigger.setResourceDumpHandler(() -> {
 			final ObjectDumper dumper = new ObjectDumper(json, dconf, flags, this.getClass());
 
@@ -486,7 +484,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 				vmNameRegistry.forEach((name) -> json.write(name));
 				json.writeEnd();
 			});
-			
+
 			dumper.run();
 		});
 
@@ -497,7 +495,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 			log.log(Level.WARNING, "Dumping internal state failed!", exception);
 		}
 	}
-	
+
 	private static class DumpFields
 	{
 		private static final String CONFIG         = "config";
@@ -558,8 +556,8 @@ public class NodeAllocatorGCE implements INodeAllocator
 		final Function<Void, CompletableFuture<Network>> netGetFtor = (unused) -> {
 			final ComputeRequestWrapper<Network> request =
 					new ComputeRequestWrapper.Builder<Network>(reqInitializer)
-					.setRequest(() -> gce.networks().get(project, netname))
-					.build();
+							.setRequest(() -> gce.networks().get(project, netname))
+							.build();
 
 			return ComputeRequestTrigger.submit(request, executor, scheduler);
 		};
@@ -596,8 +594,8 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 			final ComputeRequestWrapper<MachineType> request =
 					new ComputeRequestWrapper.Builder<MachineType>(reqInitializer)
-					.setRequest(constructor)
-					.build();
+							.setRequest(constructor)
+							.build();
 
 			return ComputeRequestTrigger.submit(request, executor, scheduler);
 		};
@@ -620,7 +618,8 @@ public class NodeAllocatorGCE implements INodeAllocator
 		return specReturnStage;
 	}
 
-	private CompletableFuture<NodeInfo> makeVmInstanceInsertRequest(CompletableFuture<Void> trigger, CleanupHandlerChain cleanups)
+	private CompletableFuture<NodeInfo> makeVmInstanceInsertRequest(CompletableFuture<Void> trigger,
+			CleanupHandlerChain cleanups, Consumer<NodeID> onNodeAllocatedCallback, Function<String, String> userdata)
 	{
 		final ScheduledExecutorService scheduler = executors.scheduler();
 		final Executor executor = executors.io();
@@ -630,7 +629,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 		vmNameRegistry.add(vmname);
 		cleanups.add(() -> vmNameRegistry.remove(vmname));
-		
+
 		// Functor definitions for the computation graph's steps...
 
 		final Function<Void, CompletableFuture<Operation>> vmInsertFtor = (unused) -> {
@@ -669,9 +668,22 @@ public class NodeAllocatorGCE implements INodeAllocator
 					netifs.add(netif);
 				}
 
+				final Metadata metadata = new Metadata()
+						.setItems(new ArrayList<>());
+
+				// Add user-defined metadata
+				if (userdata != null) {
+					final Metadata.Items item = new Metadata.Items()
+							.setKey("user-data")
+							.setValue(userdata.apply("*"));
+
+					metadata.getItems().add(item);
+				}
+
 				// Create new VM instance
 				final Instance instance = new Instance()
 						.setName(vmname)
+						.setMetadata(metadata)
 						.setMachineType(machineTypeUrl)
 						.setCanIpForward(false)
 						.setNetworkInterfaces(netifs)
@@ -721,32 +733,32 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 		final Function<Operation, CompletableFuture<Instance>> vmGetFtor = (operation) -> {
 			log.info("VM '" + vmname + "' created");
-			
+
 			// Register a cleanup handler for VM instance
 			{
 				final Callable<CompletableFuture<Void>> handler = () -> {
 					final ComputeOperationWrapper request =
 							new ComputeOperationWrapper.Builder(opInitializer)
-							.setRequest(() -> gce.instances().delete(project, zone, vmname))
-							.build();
-	
+									.setRequest(() -> gce.instances().delete(project, zone, vmname))
+									.build();
+
 					log.info("Deleting VM '" + vmname + "'...");
 					return ComputeOperationPollTrigger.submit(request, executor)
 							.thenAccept((unused) -> log.info("VM '" + vmname + "' deleted"));
 				};
-				
+
 				cleanups.add(handler);
 			}
-			
+
 			log.info("Waiting for VM '" + vmname + "' to reach running state...");
 
 			final ComputeRequestWrapper<Instance> request =
 					new ComputeRequestWrapper.Builder<Instance>(reqInitializer)
-					.setRequest(() -> gce.instances().get(project, zone, vmname))
-					.setRetryInterval(config.getVmBootPollInterval(), TimeUnit.MILLISECONDS)
-					.setRetryIntervalDelta(config.getVmBootPollIntervalDelta(), TimeUnit.MILLISECONDS)
-					.setMaxNumRetries(config.getVmMaxNumBootPolls())
-					.build();
+							.setRequest(() -> gce.instances().get(project, zone, vmname))
+							.setRetryInterval(config.getVmBootPollInterval(), TimeUnit.MILLISECONDS)
+							.setRetryIntervalDelta(config.getVmBootPollIntervalDelta(), TimeUnit.MILLISECONDS)
+							.setMaxNumRetries(config.getVmMaxNumBootPolls())
+							.build();
 
 			final Predicate<Instance> predicate = (instance) -> {
 				return instance.getStatus().contentEquals("RUNNING");
@@ -767,10 +779,22 @@ public class NodeAllocatorGCE implements INodeAllocator
 
 			log.info("VM '" + vmname + "' is running. Internal IP is " + netif.getNetworkIP() + ", external IP is " + address);
 
+			// Signal that a machine is allocated
+			final NodeID nid = new NodeID(address);
+			try {
+				onNodeAllocatedCallback.accept(nid);
+			}
+			catch (Exception error) {
+				final Throwable cause = error.getCause();
+				throw new CompletionException((cause != null) ? cause : error);
+			}
+
+			cleanups.add(() -> onDownCallback.accept(nid));
+
 			// Compute the URL for health checks and create node
 			final String urlTemplate = config.getHealthCheckUrl();
-			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, address);
-			final Node node = new Node(new NodeID(address), nodeCapacity);
+			final String healthCheckUrl = urlTemplate.replace(TVAR_ADDRESS, nid.getNodeAddress());
+			final Node node = new Node(nid, nodeCapacity);
 			try {
 				final NodeInfo info = new NodeInfo(node, healthCheckUrl);
 				info.getMetadata().put(MDVAR_VMNAME, vmname);
@@ -800,8 +824,8 @@ public class NodeAllocatorGCE implements INodeAllocator
 		final Function<Void, CompletableFuture<Operation>> vmDeleteFtor = (unused) -> {
 			final ComputeOperationWrapper request =
 					new ComputeOperationWrapper.Builder(opInitializer)
-					.setRequest(() -> gce.instances().delete(project, zone, vmname))
-					.build();
+							.setRequest(() -> gce.instances().delete(project, zone, vmname))
+							.build();
 
 			log.info("Deleting VM '" + vmname + "'...");
 			return ComputeOperationPollTrigger.submit(request, executor, scheduler);
@@ -835,19 +859,19 @@ public class NodeAllocatorGCE implements INodeAllocator
 			trigger.run();
 		}
 	}
-	
-	
+
+
 	private static class ShutdownBatchCallback extends JsonBatchCallback<Operation>
 	{
 		private final NavigableSet<String> failedVmNames;
-		private final String vmname; 
-		
+		private final String vmname;
+
 		public ShutdownBatchCallback(String vmname, NavigableSet<String> failedVmNames)
 		{
 			this.failedVmNames = failedVmNames;
 			this.vmname = vmname;
 		}
-		
+
 		@Override
 		public void onSuccess(Operation operation, HttpHeaders responseHeaders) throws IOException
 		{
@@ -859,5 +883,5 @@ public class NodeAllocatorGCE implements INodeAllocator
 		{
 			failedVmNames.add(vmname);
 		}
-	};
+	}
 }

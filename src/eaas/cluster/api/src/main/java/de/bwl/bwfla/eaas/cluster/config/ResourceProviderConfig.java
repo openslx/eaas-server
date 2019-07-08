@@ -85,7 +85,7 @@ public class ResourceProviderConfig extends BaseConfig
 	private String domain = null;
 
 	@Config("protocol")
-	private String protocol = "";
+	private String protocol = null;
 	
 	@Config("deferred_allocations_gc_interval")
 	@WithPropertyConverter(DurationPropertyConverter.class)
@@ -143,6 +143,11 @@ public class ResourceProviderConfig extends BaseConfig
 	public String getDomain()
 	{
 		return this.domain;
+	}
+
+	public String getProtocol()
+	{
+		return protocol;
 	}
 
 	public NodeAllocatorConfig getNodeAllocatorConfig()
@@ -419,10 +424,6 @@ public class ResourceProviderConfig extends BaseConfig
 		});
 		
 		trigger.run();
-	}
-
-	public String getProtocol() {
-		return protocol;
 	}
 
 	private static class DumpFields
