@@ -23,6 +23,7 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -38,14 +39,20 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.transform.stream.StreamSource;
 
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.utils.jaxb.JaxbValidator;
 import gov.loc.mets.Mets;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes")
+@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes",
+	propOrder = { "name", "description", "releaseDate", "infoSource", "location",
+	              "licence", "numSeats", "QID", "language", "documentation", "archive",
+	              "objectId", "supportedFileFormats", "isOperatingSystem", "timestamp" })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
-public class SoftwarePackage
+public class SoftwarePackage extends JaxbType
 {
+	private static final String ID_SEPARATOR = "/";
+
 	@XmlElement(required = true)
 	private String name;
 	
@@ -66,13 +73,17 @@ public class SoftwarePackage
 	@XmlElement(required = true)
 	private String objectId;
 
-	@XmlElement
-	private String mets;
-
 	/** List of supported document/file formats */
 	@XmlElement(name = "supportedFileFormat")
 	private List<String> supportedFileFormats;
-	
+
+	@XmlElement(name = "timestamp")
+	protected String timestamp = Instant.now().toString();
+
+	public String getId() {
+		return this.getArchive() + ID_SEPARATOR + this.getObjectId();
+	}
+
 	public String getName() {
 		return name;
 	}
@@ -125,6 +136,9 @@ public class SoftwarePackage
 		return QID;
 	}
 
+	public String getTimestamp() {
+		return  timestamp;
+	}
 
 	public void setName(String name) {
 		this.name = name;
@@ -183,38 +197,9 @@ public class SoftwarePackage
 		this.QID = QID;
 	}
 
-	public String value() throws JAXBException {
-    	StringWriter writer = new StringWriter();
-    	this.writeTo(writer);
-    	return writer.toString();
-    }
-	
-	public boolean writeTo(Writer writer) throws JAXBException {
-    	JAXBContext jc = JAXBContext.newInstance(this.getClass());
-    	Marshaller marshaller = jc.createMarshaller();
-    	marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, true);
-    	marshaller.marshal(this, writer);
-    	return true;
-    }
-	
-	public static SoftwarePackage fromValue(String data)
-    {
-		return SoftwarePackage.fromValue(new StringReader(data));
-    }
-	
-	public static SoftwarePackage fromValue(Reader reader)
-    {
-		try {
-			JAXBContext jc = JAXBContext.newInstance(SoftwarePackage.class);
-			Unmarshaller unmarshaller = jc.createUnmarshaller();
-			StreamSource stream = new StreamSource(reader);
-			SoftwarePackage result = (SoftwarePackage) unmarshaller.unmarshal(stream);
-			JaxbValidator.validate(result);
-			return result;
-		} catch (Throwable t) {
-			throw new IllegalArgumentException("passed 'data' metadata cannot be parsed by 'JAX-B', check input contents");
-		}
-    }
+	public void setTimestamp(String timestamp) {
+		this.timestamp = timestamp;
+	}
 
 	public boolean getIsOperatingSystem() {
 		return isOperatingSystem;
@@ -222,13 +207,5 @@ public class SoftwarePackage
 
 	public void setIsOperatingSystem(boolean isOperatingSystem) {
 		this.isOperatingSystem = isOperatingSystem;
-	}
-
-	public String getMets() {
-		return mets;
-	}
-
-	public void setMets(String mets) {
-		this.mets = mets;
 	}
 }

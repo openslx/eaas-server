@@ -24,10 +24,7 @@ import java.io.Reader;
 import java.io.Serializable;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.DirectoryStream;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
@@ -37,6 +34,8 @@ import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.softwarearchive.ISoftwareArchive;
 import de.bwl.bwfla.wikidata.reader.QIDsFinder;
+
+import javax.xml.bind.JAXBException;
 
 
 public class SoftwareFileArchive implements Serializable, ISoftwareArchive
@@ -73,14 +72,14 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 				log.log(Level.SEVERE, exception.getMessage(), exception);
 			}
 		}
-		
-		try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
-			return software.writeTo(writer);
-		}
-		catch (Exception exception) {
+		try {
+			Files.write( path, software.value(true).getBytes("UTF-8"), StandardOpenOption.CREATE);
+		} catch (IOException | JAXBException e) {
+			e.printStackTrace();
 			log.warning("Writing software package '" + path.toString() + "' failed!");
 			return false;
 		}
+		return true;
 	}
 	
 	@Override
@@ -116,8 +115,9 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		if (formats == null) {
 			formats = new ArrayList<String>();
 		}
-		if(QID  != null)
-		QIDsFinder.extendSupportedFormats(QID, formats);
+
+		// if(QID  != null)
+		//	QIDsFinder.extendSupportedFormats(QID, formats);
 		return sp;
 	}
 
@@ -168,8 +168,9 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 	
 	private synchronized SoftwarePackage getSoftwarePackageByPath(Path path)
 	{
-		try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
-			return SoftwarePackage.fromValue(reader);
+		try {
+			byte[] encoded = Files.readAllBytes(path);
+			return SoftwarePackage.fromValue(new String(encoded, StandardCharsets.UTF_8), SoftwarePackage.class);
 		}
 		catch (Exception exception) {
 			log.warning("Reading software package '" + path.toString() + "' failed!");

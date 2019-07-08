@@ -21,9 +21,8 @@ import de.bwl.bwfla.emucomp.api.*;
 
 public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
-	public EnvironmentsAdapter(String wsHost, String authenticationToken) {
-		super(wsHost, authenticationToken);
-		log.warning("inititalize with token: " + authenticationToken);
+	public EnvironmentsAdapter(String wsHost) {
+		super(wsHost);
 	}
 
 	public List<Environment> getEnvironments(String type) throws BWFLAException, JAXBException {
@@ -104,6 +103,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException {
+		archive.reload(EMULATOR_DEFAULT_ARCHIVE);
 		return this.getTemplates(EMULATOR_DEFAULT_ARCHIVE);
 	}
 

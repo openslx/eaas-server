@@ -42,6 +42,7 @@ public interface DigitalObjectArchive
 	public FileCollection getObjectReference(String objectId);
 	public ObjectFileCollection getObjectHandle(String objectId);
 	public void importObject(ObjectFileCollection fc) throws BWFLAException;
+	void importObject(String metsdata) throws BWFLAException;
 	String getName();
 	Path getLocalPath();
 	DigitalObjectMetadata getMetadata(String objectId);

@@ -20,6 +20,7 @@ import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
@@ -36,7 +37,6 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ImageInformation.QemuImageFormat;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import org.apache.commons.io.IOUtils;
-import org.apache.tamaya.ConfigurationProvider;
 
 
 public class ImageHandler
@@ -50,8 +50,6 @@ public class ImageHandler
 	private final HandleClient handleClient;
 	private final ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
-	private final static String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
-	private final static String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
 
 	enum ExportType {
 		NBD, HTTP
@@ -816,8 +814,6 @@ public class ImageHandler
 
 		ImageMounter image = new ImageMounter(imgFile.toPath());
 
-		image.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
-
 		image.mountDD();
 		// todo: read from metadata
 		image.mountFileSystem(FileSystemType.EXT4);
@@ -833,7 +829,7 @@ public class ImageHandler
 		if(!Files.exists(metadata))
 		{
 			image.completeUnmount();
-			log.severe("no metedata directory found");
+			log.severe("no metadata directory found");
 			return;
 		}
 
@@ -897,7 +893,7 @@ public class ImageHandler
 		GeneralizationPatch generalization = null;
 		try {
 
-			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.patches + "/" + patchId), "GET", "metadata","true", apiKey, imageProxy);
+			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.patches + "/" + patchId), "GET", "metadata","true");
 			String generalizationStr = IOUtils.toString(is, StandardCharsets.UTF_8);
 
 			generalization = GeneralizationPatch.fromValue(generalizationStr);
@@ -915,15 +911,10 @@ public class ImageHandler
 
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
-		String proxyUrl = null;
-		if (apiKey != null && imageProxy != null) {
-			proxyUrl = "http://jwt:" + apiKey + "@" + imageProxy;
-			options.setProxyUrl(proxyUrl);
-		}
-
+		options.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
 
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		ImageGeneralizer.applyScriptIfCompatible(destImgFile, generalization, emulatorArchiveprefix, apiKey, imageProxy);
+		ImageGeneralizer.applyScriptIfCompatible(destImgFile, generalization, emulatorArchiveprefix);
 		return cowId;
 	}
 
@@ -1044,7 +1035,7 @@ public class ImageHandler
 			File dst = new File(target, imageid);
 
 			if(dst.exists()) {
-				log.warning("downloadind dependencies: skiip " + dst.getAbsolutePath());
+				log.warning("downloading dependencies: skip " + dst.getAbsolutePath());
 			}
 			else {
 				try {
@@ -1068,10 +1059,9 @@ public class ImageHandler
 			try {
 				Binding b = new Binding();
 				b.setUrl(url.toString());
-				XmountOptions options = new XmountOptions();
-				if (apiKey != null && imageProxy != null)
-					options.setProxyUrl("http://jwt:" + apiKey + "@" + imageProxy);
-				EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
+
+				// XmountOptions options = new XmountOptions();
+				// EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
 
 				if(!destImgFile.exists()) {
 					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);

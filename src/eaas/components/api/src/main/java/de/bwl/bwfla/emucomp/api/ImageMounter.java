@@ -2,6 +2,7 @@ package de.bwl.bwfla.emucomp.api;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 
 import java.io.File;
 import java.io.IOException;
@@ -20,7 +21,6 @@ public class ImageMounter {
 	private long size = -1;
 	private final Deque<Runnable> unmountTasks = new ArrayDeque<Runnable>();
 	private boolean isReverseUnmount = true;
-	private String xmountProxy = null;
 
 	private Path ddFile = null;
 	private Path fsDir = null;
@@ -49,9 +49,6 @@ public class ImageMounter {
 				xmountOptions.setOffset(offset);
 			if(size >= 0)
 				xmountOptions.setSize(size);
-
-			if (this.xmountProxy != null)
-				xmountOptions.setProxyUrl(xmountProxy);
 
 			ddFile = EmulatorUtils.xmount(imagePath.toString(), ddDir, xmountOptions);
 			unmountTasks.add(() -> unmount(ddDir));
@@ -188,14 +185,6 @@ public class ImageMounter {
 	/*
 	Setters and Getters
 	 */
-
-	public String getXmountProxy() {
-		return xmountProxy;
-	}
-
-	public void setXmountProxy(String xmountProxy) {
-		this.xmountProxy = xmountProxy;
-	}
 
 	public long getSize() {
 		return size;

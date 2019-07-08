@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emucomp.api;
 
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 
 import java.util.logging.Logger;
@@ -78,20 +79,12 @@ public class XmountOptions {
 			process.addArguments("--morphopts", morphOpts);
 		}
 
+		String proxyUrl = MachineTokenProvider.getAuthenticationProxy();
 		if(proxyUrl != null) {
 			log.warning("using http_proxy " + proxyUrl);
 
-	// 		process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
-
+	 		process.addEnvVariable("no_proxy", "nginx");
 			process.addEnvVariable("http_proxy", proxyUrl);
 		}
-	}
-
-	public String getProxyUrl() {
-		return proxyUrl;
-	}
-
-	public void setProxyUrl(String proxyUrl) {
-		this.proxyUrl = proxyUrl;
 	}
 }

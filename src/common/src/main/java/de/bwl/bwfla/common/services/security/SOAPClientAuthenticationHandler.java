@@ -1,4 +1,4 @@
-package de.bwl.bwfla.imagearchive.util;
+package de.bwl.bwfla.common.services.security;
 
 import javax.servlet.http.HttpServletResponse;
 import javax.xml.namespace.QName;

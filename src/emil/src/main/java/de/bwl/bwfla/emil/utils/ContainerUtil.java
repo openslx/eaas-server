@@ -58,9 +58,6 @@ public class ContainerUtil {
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
 
-    private final static String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
-    private final static String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
-
     private ImageDescription defaultContainerImage() {
         return new ImageDescription()
                 .setMediumType(MediumType.HDD)
@@ -72,7 +69,6 @@ public class ContainerUtil {
     private ImageBuilderResult createImageFromDescription(ImageDescription description) throws BWFLAException
     {
         final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
-        description.setXmountProxy("http://jwt:" + apiKey + "@" + imageProxy);
         return ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay);
     }
 
@@ -138,7 +134,6 @@ public class ContainerUtil {
                 = new ImageContentDescription.DockerDataSource(dockerName, tag);
 
         dockerDataSource.imageArchiveHost = envHelper.getImageArchiveHost();
-        dockerDataSource.authenticationToken = envHelper.getApiAuthenticationToken();
         dockerDataSource.digest = digest;
         entry.setDataFromDockerSource(dockerDataSource);
         description.addContentEntry(entry);

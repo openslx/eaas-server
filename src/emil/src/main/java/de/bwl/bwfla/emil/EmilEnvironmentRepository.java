@@ -394,8 +394,6 @@ public class EmilEnvironmentRepository {
 				parent = p.getParentEnvId();
 			}
 		}
-		env.setArchive(destArchive);
-		save(env, false);
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
@@ -495,15 +493,7 @@ public class EmilEnvironmentRepository {
 //			LOG.warning(__env.isVisible() + "yyy");
 //		}
 
-//		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder();
-//		for(String user : _result.keySet()) {
-//			List<EmilEnvironment> envs = _result.get(user);
-//			for (EmilEnvironment e : envs)
-//			{
-//				LOG.severe("saving " + user + " -> " + e.jsonValueWithoutRoot(true));
-//				db.saveDoc(user, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
-//			}
-//		}
+		importFromFolder("import");
 
 		Collection<String> archives = environmentsAdapter.listBackendNames();
 		for(String a : archives) {
@@ -564,6 +554,44 @@ public class EmilEnvironmentRepository {
 			}
 		}
 		return counter;
+	}
+
+	private void importFromFolder(String directory) throws BWFLAException {
+		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder(directory);
+		for(String collection : _result.keySet()) {
+			List<EmilEnvironment> envs = _result.get(collection);
+			for (EmilEnvironment e : envs)
+			{
+				LOG.severe("saving " + collection + " -> " + e.jsonValueWithoutRoot(true));
+				db.saveDoc(collection, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
+			}
+		}
+	}
+
+	void export()
+	{
+		List<String> collections = db.getCollections();
+		try {
+			EmilDataExport emilDataExport = new EmilDataExport();
+			for(String collection : collections) {
+				try {
+					Stream<EmilEnvironment> all = db.find(collection, new MongodbEaasConnector.FilterBuilder(), "type");
+					all.forEach(emilEnvironment -> {
+						try {
+							emilDataExport.saveEnvToPath(collection, emilEnvironment);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					});
+				} catch (Exception e) {
+					e.printStackTrace();
+					LOG.warning("failed to export collection: " + collection);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			LOG.severe("failed to initialize export");
+		}
 	}
 
 	private void saveImport(Environment env, EmilEnvironment ee) throws JAXBException, BWFLAException {

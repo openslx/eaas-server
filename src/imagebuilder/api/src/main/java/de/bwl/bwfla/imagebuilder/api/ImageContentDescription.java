@@ -276,9 +276,6 @@ public class ImageContentDescription
 		@XmlElement
 		public String imageArchiveHost;
 
-		@XmlElement
-		public String authenticationToken;
-
 		/* transient members, only used internally */
 		public Path rootfs;
 

@@ -24,11 +24,7 @@ import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 import com.mongodb.BasicDBObject;
 import com.mongodb.Function;
 import com.mongodb.MongoException;
-import com.mongodb.client.FindIterable;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.ReplaceOptions;
@@ -408,13 +404,30 @@ public class MongodbEaasConnector {
 			collection.drop();
 		}
 
+		public List<String> getCollections()
+		{
+			List<String> result = new ArrayList<>();
+			MongoCursor<String> cursor = db.listCollectionNames().iterator();
+			while(cursor.hasNext()) {
+				String collectionName = cursor.next();
+				if(collectionName.equals("system.indexes"))
+					continue;
+				result.add(collectionName);
+			}
+
+			return result;
+		}
+
 		public <T extends JaxbType> Stream<T> find(String colname, FilterBuilder filter, String clazzkey)
 		{
 			final Function<Document, T> mapper = (document) -> {
 
 				Class<T> clazz = null;
 				try {
-					clazz = (Class<T>) Class.forName(document.getString(clazzkey));
+					String className = document.getString(clazzkey);
+					if(className == null)
+						throw new ClassNotFoundException();
+					clazz = (Class<T>) Class.forName(className);
 				} catch (ClassNotFoundException e) {
 					try {
 						clazz = (Class<T>) Class.forName("de.bwl.bwfla.emil.datatypes." + document.getString(clazzkey));

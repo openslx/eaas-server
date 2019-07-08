@@ -106,6 +106,11 @@ public class ObjectArchiveFacadeWS
 		a.importObject(collection);
 	}
 
+	public void importObjectFromMetadata(String archive, String metadata) throws BWFLAException {
+		DigitalObjectArchive a = getArchive(archive);
+		a.importObject(metadata);
+	}
+
 	public void delete(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		a.delete(id);

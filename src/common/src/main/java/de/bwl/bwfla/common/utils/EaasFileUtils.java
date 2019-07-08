@@ -39,6 +39,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import de.bwl.bwfla.common.services.security.AuthenticatedUrlConnection;
 import org.apache.commons.io.IOUtils;
 import org.eclipse.persistence.internal.oxm.conversion.Base64;
 
@@ -192,28 +193,7 @@ public class EaasFileUtils
 	}
 
 	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue) throws IOException {
-
-		return fromUrlToInputSteam(url, requestMethod,requestProperty, requestValue, null, null);
-	}
-
-	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue, String apiKey, String imageProxy) throws IOException {
-		HttpURLConnection connection = null;
-
-		if(apiKey != null && imageProxy!= null) {
-			// TODO remove hardcoded elements
-			String encoded = new String
-					(Base64.base64Encode(("jwt:" + apiKey).getBytes()));
-			String proxyAddress = imageProxy.split(":")[0];
-			int port = Integer.parseInt(imageProxy.split(":")[1]);
-			Proxy proxy = new Proxy(Proxy.Type.HTTP, new InetSocketAddress(proxyAddress, port));
-
-			connection = (HttpURLConnection) url.openConnection(proxy);
-			connection.setRequestProperty("Proxy-Authorization", "Basic " + encoded);
-
-		} else {
-			connection = (HttpURLConnection) url.openConnection();
-		}
-
+		HttpURLConnection connection = AuthenticatedUrlConnection.getConnection(url);
 		connection.setRequestMethod(requestMethod);
 		if (requestProperty != null && requestValue != null)
 			connection.setRequestProperty(requestProperty, requestValue);

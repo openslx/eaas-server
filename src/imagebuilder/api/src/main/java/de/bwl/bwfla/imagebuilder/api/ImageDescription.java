@@ -212,12 +212,4 @@ public class ImageDescription
 		this.label = label;
 		return this;
 	}
-
-	public String getXmountProxy() {
-		return xmountProxy;
-	}
-
-	public void setXmountProxy(String xmountProxy) {
-		this.xmountProxy = xmountProxy;
-	}
 }

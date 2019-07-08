@@ -41,10 +41,6 @@ abstract class EmilRest {
 	protected String imageArchive;
 
 	@Inject
-	@Config(value = "ws.apikey")
-	protected String apiAuthenticationToken;
-
-	@Inject
 	@Config(value = "emil.exportpath")
 	protected String exportPath;
 
