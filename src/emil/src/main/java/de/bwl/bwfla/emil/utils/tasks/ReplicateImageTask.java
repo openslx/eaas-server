@@ -35,6 +35,16 @@ public class ReplicateImageTask extends AbstractTask<Object> {
         this.log = log;
     }
 
+    // TODO: refactor
+    static final Map<String, String> emulatorContainerMap = new HashMap<String, String>() {{
+        put("Qemu", "qemu-system");
+        put("BasiliskII", "basiliskII");
+        put("Beebem", "beebem");
+        put("Hatari", "hatari");
+        put("Sheepshaver", "sheepshaver");
+        put("ViceC64", "vice-sdl");
+    }};
+
     public static class ReplicateImageTaskRequest {
 
         public DatabaseEnvironmentsAdapter environmentHelper;
@@ -64,8 +74,13 @@ public class ReplicateImageTask extends AbstractTask<Object> {
 
         // ensure the published environments have emulator info
         if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
-            if(request.env.getEmulator().getContainerName() == null || request.env.getEmulator().getContainerName().isEmpty())
-                throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first");
+            if(request.env.getEmulator().getContainerName() == null || request.env.getEmulator().getContainerName().isEmpty()) {
+                String containerName = emulatorContainerMap.get(request.env.getEmulator().getBean());
+                if(containerName == null)
+                    throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first");
+
+                request.env.getEmulator().setContainerName("emucon-rootfs/" + containerName);
+            }
             ImageNameIndex index = request.environmentHelper.getNameIndexes();
 
             if(request.env.getEmulator().getOciSourceUrl() == null || request.env.getEmulator().getOciSourceUrl().isEmpty()) {
