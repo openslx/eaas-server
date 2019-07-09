@@ -26,8 +26,8 @@ ws:
   embedgw: http://eaas:8080/
   objectarchive: http://eaas:8080/
   softwarearchive: http://eaas:8080/
-  apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZlbG9wZXIiLCJuYW1lIjoiRWFhUyIsImlhdCI6MTUxNjIzOTAyMn0.p4ZD7kxyou09xxTZnTieQR8EFxDMopkv88nHLH-mzm8
-  apiSecret: eaas
+  apikey:
+  apiSecret:
 rest:
   blobstore: http://eaas:8080/blobstore/api/v1/blobs
 

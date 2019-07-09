@@ -393,6 +393,8 @@ public class EmilEnvironmentRepository {
 				}
 				parent = p.getParentEnvId();
 			}
+			env.setArchive(destArchive);
+			save(env, false);
 		}
 	}
 

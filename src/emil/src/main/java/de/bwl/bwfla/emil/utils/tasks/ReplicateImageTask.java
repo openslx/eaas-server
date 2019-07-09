@@ -33,6 +33,16 @@ public class ReplicateImageTask extends AbstractTask<Object> {
         this.log = log;
     }
 
+    // TODO: refactor
+    static final Map<String, String> emulatorContainerMap = new HashMap<String, String>() {{
+        put("Qemu", "qemu-system");
+        put("BasiliskII", "basiliskII");
+        put("Beebem", "beebem");
+        put("Hatari", "hatari");
+        put("Sheepshaver", "sheepshaver");
+        put("ViceC64", "vice-sdl");
+    }};
+
     public static class ReplicateImageTaskRequest {
 
         public DatabaseEnvironmentsAdapter environmentHelper;
@@ -66,24 +76,30 @@ public class ReplicateImageTask extends AbstractTask<Object> {
 
 
         // ensure the published environments have emulator info
-        if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
-            if(emulatorSpec != null) {
-                if (emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty())
+        if (request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
+
+            if (emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty()) {
+                String containerName = emulatorContainerMap.get(emulatorSpec.getBean());
+                if (containerName == null)
                     throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first");
-                ImageNameIndex index = request.environmentHelper.getNameIndexes();
 
-                if (emulatorSpec.getOciSourceUrl() == null || emulatorSpec.getOciSourceUrl().isEmpty()) {
-                    Entry entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
+                emulatorSpec.setContainerName("emucon-rootfs/" + containerName);
+            }
+            ImageNameIndex index = request.environmentHelper.getNameIndexes();
 
-                    if (entry == null)
-                        throw new BWFLAException("emulator entry not found. can't publish this environment");
 
-                    emulatorSpec.setContainerVersion(entry.getVersion());
-                    emulatorSpec.setOciSourceUrl(entry.getProvenance().getOciSourceUrl());
-                    emulatorSpec.setDigest(entry.getDigest());
-                }
+            if (emulatorSpec.getOciSourceUrl() == null || emulatorSpec.getOciSourceUrl().isEmpty()) {
+                Entry entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
+
+                if (entry == null)
+                    throw new BWFLAException("emulator entry not found. can't publish this environment");
+
+                emulatorSpec.setContainerVersion(entry.getVersion());
+                emulatorSpec.setOciSourceUrl(entry.getProvenance().getOciSourceUrl());
+                emulatorSpec.setDigest(entry.getDigest());
             }
         }
+
 
         if(request.env instanceof MachineConfiguration && request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
             if(emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty())

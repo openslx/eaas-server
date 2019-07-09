@@ -66,7 +66,7 @@ public class Node implements Comparable<Node>, IDumpable
 	
 	public String getAddress()
 	{
-		return id.toString();
+		return id.getNodeAddress();
 	}
 	
 	public ResourceSpec getCapacity()

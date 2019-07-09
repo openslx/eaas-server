@@ -20,42 +20,66 @@
 package de.bwl.bwfla.eaas.cluster;
 
 
-import java.util.UUID;
-
 public class NodeID implements Comparable<NodeID>
 {
-	private final String id;
+	private final String ip;
 	private String fqdn = null;
 	private String protocol = "";
 	
-	public NodeID(String id)
+	public NodeID(String ip)
 	{
-		if (id == null || id.isEmpty())
-			throw new IllegalArgumentException("Node ID is invalid!");
+		if (ip == null || ip.isEmpty())
+			throw new IllegalArgumentException("Node IP is invalid!");
 		
-		this.id = id;
+		this.ip = ip;
 	}
-	
-    public String getNodeHost() {
-		if(fqdn != null)
-			return fqdn;
-        return protocol + id;
+
+	public NodeID setProtocol(String protocol)
+	{
+		this.protocol = protocol;
+		return this;
+	}
+
+	public String getIpAddress()
+	{
+		return ip;
+	}
+
+	public String getDomainName()
+	{
+		return fqdn;
+	}
+
+	public NodeID setDomainName(String fqdn)
+	{
+		this.fqdn = fqdn;
+		return this;
+	}
+
+    public String getNodeAddress()
+	{
+		return protocol + ((fqdn != null) ? fqdn : ip);
     }
 
-    public String toString() {
-        return id;
+    public String toString()
+	{
+		String nid = ip;
+		if (fqdn != null)
+			nid += " (" + fqdn + ")";
+
+        return nid;
     }
 	
 	@Override
 	public int compareTo(NodeID other)
 	{
-		return id.compareTo(other.id);
+		return ip.compareTo(other.ip);
 	}
 
 	@Override
 	public int hashCode()
 	{
-		return id.hashCode();
+		return ip.hashCode();
 	}
 
 	@Override
@@ -65,13 +89,6 @@ public class NodeID implements Comparable<NodeID>
 		if (other == null) return false;
 		if (this.getClass() != other.getClass()) return false;
 
-		return id.equals(((NodeID) other).id);
-	}
-
-	public void setFqdn(String fqdn) {
-		this.fqdn = fqdn;
-	}
-	public void setProtocol(String proto) {
-		this.protocol = proto;
+		return ip.equals(((NodeID) other).ip);
 	}
 }

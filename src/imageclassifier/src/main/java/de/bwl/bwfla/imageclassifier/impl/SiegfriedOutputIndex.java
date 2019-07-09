@@ -57,7 +57,7 @@ public class SiegfriedOutputIndex extends IdentificationOutputIndex<Siegfried.Fi
             String value = policy.get(type);
             if (value == null)
                 value = defaultValue;
-            SoftwareQIDs softwareQIDs = QIDsFinder.findQIDs(type);
+            // SoftwareQIDs softwareQIDs = QIDsFinder.findQIDs(type);
 
             final List<String> fileNames = new ArrayList<String>(files.size());
             for(Siegfried.File sf : files)
@@ -82,7 +82,7 @@ public class SiegfriedOutputIndex extends IdentificationOutputIndex<Siegfried.Fi
                     toDate = time;
             }
             ClassificationEntry cf = new ClassificationEntry(type, value, fileNames,
-                    softwareQIDs.getReadQIDs(), softwareQIDs.getWriteQIDs(), FILETYPE_NAMES.get(type));
+                    new ArrayList<>(), new ArrayList<>(), FILETYPE_NAMES.get(type));
 
             cf.setFromDate(fromDate);
             cf.setToDate(toDate);

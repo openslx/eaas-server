@@ -68,7 +68,7 @@ public class NodeAllocatorBLADES implements INodeAllocator
 	protected final SequentialExecutor tasks;
 	
 	
-	public NodeAllocatorBLADES(NodeAllocatorConfigBLADES config, Consumer<NodeID> onDownCallback,
+	public NodeAllocatorBLADES(String protocol, NodeAllocatorConfigBLADES config, Consumer<NodeID> onDownCallback,
 			ClusterManagerExecutors executors, PrefixLoggerContext parentLogContext) throws MalformedURLException
 	{
 		final PrefixLoggerContext logContext = new PrefixLoggerContext(parentLogContext)
@@ -87,7 +87,8 @@ public class NodeAllocatorBLADES implements INodeAllocator
 		final String urlTemplate = config.getHealthCheckUrl();
 		
 		for (String address : config.getNodeAddresses()) {
-			Node node = new Node(new NodeID(address), nodeCapacity);
+			final NodeID id = new NodeID(address).setProtocol(protocol);
+			final Node node = new Node(id, nodeCapacity);
 			String healthCheckUrl = urlTemplate.replace(VAR_ADDRESS, node.getAddress());
 			freeNodes.add(new NodeInfo(node, healthCheckUrl));
 		}

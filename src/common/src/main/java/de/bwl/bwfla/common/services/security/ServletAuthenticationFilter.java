@@ -55,7 +55,7 @@ public class ServletAuthenticationFilter  implements Filter {
         if(excludeUrls.contains(path))
             excludePath = true;
 
-        if(apiSecret != null && !excludePath) {
+        if(apiSecret != null && !apiSecret.equals("null") && !apiSecret.isEmpty() && !excludePath) {
             String jwt = getBearerToken(httpRequest);
             try{
                 validateToken(jwt);

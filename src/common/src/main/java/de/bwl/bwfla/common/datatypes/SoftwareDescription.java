@@ -48,14 +48,15 @@ public class SoftwareDescription extends JaxbType
 
 	public SoftwareDescription()
 	{
-		this(null, null, false);
+		this(null, null, false, null);
 	}
 	
-	public SoftwareDescription(String id, String label, boolean isOs)
+	public SoftwareDescription(String id, String label, boolean isOs, String archiveId)
 	{
 		this.softwareId = id;
 		this.label = label;
 		this.isOperatingSystem = isOs;
+		this.archiveId = archiveId;
 	}
 	
 	public String getSoftwareId()

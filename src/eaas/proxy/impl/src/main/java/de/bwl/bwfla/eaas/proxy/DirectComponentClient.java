@@ -43,7 +43,7 @@ public class DirectComponentClient extends ComponentClient {
     }
     
     public <P> P getPort(NodeID nodeId, Class<P> port) throws BWFLAException {
-        return getPort(nodeId.getNodeHost(), port);
+        return getPort(nodeId.getNodeAddress(), port);
     }
     
     public Component getComponentPort(NodeID nodeId) throws BWFLAException {
