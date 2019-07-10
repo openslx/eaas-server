@@ -14,6 +14,9 @@ public class ContainerMetadata extends JaxbType {
     private boolean dhcp;
 
     @XmlElement
+    private boolean telnet;
+
+    @XmlElement
     private String process;
 
     @XmlElement
@@ -41,5 +44,13 @@ public class ContainerMetadata extends JaxbType {
 
     public void setArgs(List<String> args) {
         this.args = args;
+    }
+
+    public boolean isTelnet() {
+        return telnet;
+    }
+
+    public void setTelnet(boolean telnet) {
+        this.telnet = telnet;
     }
 }

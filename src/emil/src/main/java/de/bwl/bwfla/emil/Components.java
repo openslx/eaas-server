@@ -378,6 +378,7 @@ public class Components {
         final String inputDir = "container-input";
         final String outputDir = "container-output";
         metadata.setDhcp(isDHCPenabled);
+        metadata.setTelnet(true);
         metadata.setProcess("/bin/sh");
         args.add("-c");
         args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
