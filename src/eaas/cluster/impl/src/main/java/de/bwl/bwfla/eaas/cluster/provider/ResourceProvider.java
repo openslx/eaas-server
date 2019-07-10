@@ -20,15 +20,16 @@
 package de.bwl.bwfla.eaas.cluster.provider;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 
@@ -75,6 +76,8 @@ public class ResourceProvider implements IResourceProvider
 	private static final int PRIORITY_ALLOCATE  = PRIORITY_DEFAULT + 10;
 	private static final int PRIORITY_RELEASE   = PRIORITY_DEFAULT + 11;
 	private static final int PRIORITY_NODEMGMNT = PRIORITY_DEFAULT + 20;
+
+	private static final int DNS_TRANSACTION_RETRIES_NUM = 5;
 
 	private final static String DNS_REGISTER_SCRIPT = "/libexec/register-dns";
 	private final static String DNS_UNREGISTER_SCRIPT = "/libexec/unregister-dns";
@@ -539,7 +542,6 @@ public class ResourceProvider implements IResourceProvider
 					this.addDnsRecord(nid);
 				}
 				catch (Exception error) {
-					log.log(Level.WARNING, "Registering node '" + nid.toString() + "' in DNS failed!\n", error);
 					throw new RuntimeException(error);
 				}
 			};
@@ -634,14 +636,22 @@ public class ResourceProvider implements IResourceProvider
 		if (config.getDomain() == null)
 			return;
 
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-		runner.setCommand(DNS_UNREGISTER_SCRIPT);
-		runner.addArgument(nid.getDomainName());
-		runner.addArgument(nid.getIpAddress());
-		runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
-		runner.redirectStdErrToStdOut(true);
-		runner.setLogger(log);
-		runner.execute();
+		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+		for (int i = 0; i < DNS_TRANSACTION_RETRIES_NUM; ++i) {
+			runner.setCommand(DNS_UNREGISTER_SCRIPT);
+			runner.addArgument(nid.getDomainName());
+			runner.addArgument(nid.getIpAddress());
+			runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
+			runner.redirectStdErrToStdOut(true);
+			runner.setLogger(log);
+			if (runner.execute())
+				return;  // success!
+
+			log.warning("Removing DNS record for node '" + nid + "' failed! Retrying...");
+			ResourceProvider.sleep(ResourceProvider.nextDnsRetryDelay());
+		}
+
+		log.warning("Removing DNS record for node '" + nid + "' failed!");
 	}
 
 	private void addDnsRecord(NodeID nid) throws BWFLAException
@@ -651,15 +661,22 @@ public class ResourceProvider implements IResourceProvider
 
 		nid.setDomainName(nodeNameGenerator.next() + "." + config.getDomain());
 
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-		runner.setCommand(DNS_REGISTER_SCRIPT);
-		runner.addArgument(nid.getDomainName());
-		runner.addArgument(nid.getIpAddress());
-		runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
-		runner.redirectStdErrToStdOut(true);
-		runner.setLogger(log);
-		if (!runner.execute())
-			throw new BWFLAException("DNS registration failed: " + nid);
+		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+		for (int i = 0; i < DNS_TRANSACTION_RETRIES_NUM; ++i) {
+			runner.setCommand(DNS_REGISTER_SCRIPT);
+			runner.addArgument(nid.getDomainName());
+			runner.addArgument(nid.getIpAddress());
+			runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
+			runner.redirectStdErrToStdOut(true);
+			runner.setLogger(log);
+			if (runner.execute())
+				return;  // success!
+
+			log.warning("Adding DNS record for node '" + nid + "' failed! Retrying...");
+			ResourceProvider.sleep(ResourceProvider.nextDnsRetryDelay());
+		}
+
+		throw new BWFLAException("DNS registration failed for node: " + nid);
 	}
 	
 	private void registerNode(Node node)
@@ -791,7 +808,23 @@ public class ResourceProvider implements IResourceProvider
 		spec.min(config.getPreAllocationMaxBound());
 		return spec;
 	}
-	
+
+	private static long nextDnsRetryDelay()
+	{
+		final Random random = new Random();
+		return (long) (500 + random.nextInt(1500));
+	}
+
+	private static void sleep(long timeout)
+	{
+		try {
+			Thread.sleep(timeout);
+		}
+		catch (Exception error) {
+			// Ignore it!
+		}
+	}
+
 	
 	private class ShutdownTask implements Runnable
 	{
