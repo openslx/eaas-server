@@ -41,7 +41,6 @@ import de.bwl.bwfla.api.emucomp.ComponentService;
 import de.bwl.bwfla.api.emucomp.Machine;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
-import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.eaas.acl.EnvironmentLock;
 import de.bwl.bwfla.eaas.acl.IAccessControlList;
 import de.bwl.bwfla.eaas.cluster.IClusterManager;
@@ -49,12 +48,15 @@ import de.bwl.bwfla.eaas.cluster.ResourceHandle;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec.CpuUnit;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec.MemoryUnit;
+import de.bwl.bwfla.eaas.cluster.config.util.ConfigHelpers;
 import de.bwl.bwfla.eaas.cluster.exception.MalformedLabelSelectorException;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelectorParser;
 import de.bwl.bwfla.eaas.proxy.DirectComponentClient;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.api.Environment;
+import org.apache.tamaya.Configuration;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 
@@ -89,9 +91,18 @@ public class EaasWS
 	@Deprecated
 	private static Machine			    emulatorPort;
 
+	private ResourceSpec defaultSessionSpec = null;
+
 	@PostConstruct
 	private void postConstruct()
 	{
+		// Get resource spec to use per session by default
+		{
+			final Configuration config = ConfigurationProvider.getConfiguration();
+			final Configuration newconfig = ConfigHelpers.filter(config, "ws.session_resources.");
+			defaultSessionSpec = ConfigHelpers.toResourceSpec(newconfig);
+		}
+
 		try
 		{
 	        final String proxyWsdl    = eaasGw + "/eaas/ComponentProxy?wsdl";
@@ -158,7 +169,8 @@ public class EaasWS
 
             ResourceSpec spec = null;
             if (config instanceof Environment) {
-            	spec = ResourceSpec.create(500, CpuUnit.MILLICORES, 512, MemoryUnit.MEGABYTES);
+				// TODO: use per environment spec!
+				spec = defaultSessionSpec;
 			}
             else
             	spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
