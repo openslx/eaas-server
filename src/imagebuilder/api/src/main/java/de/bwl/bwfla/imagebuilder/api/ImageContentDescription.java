@@ -98,6 +98,9 @@ public class ImageContentDescription
 	@XmlElement(required = false)
 	private URL fileURL;
 
+	@XmlElement(required = false)
+	private String subdir;
+
 	@XmlElement
 	private DockerDataSource dockerDataSource = null;
 
@@ -160,6 +163,16 @@ public class ImageContentDescription
 	{
 		ImageContentDescription.checkName(name);
 		this.name = name;
+		return this;
+	}
+
+	public String getSubdir() {
+		return subdir;
+	}
+
+	public ImageContentDescription setSubdir(String subdir) {
+		ImageContentDescription.checkName(subdir);
+		this.subdir = subdir;
 		return this;
 	}
 

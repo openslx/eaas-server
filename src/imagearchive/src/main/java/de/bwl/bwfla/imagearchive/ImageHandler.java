@@ -373,7 +373,6 @@ public class ImageHandler
 		if (destImgFile.exists()) {
 			if (!delete) {
 				log.warning("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
-
 			} else
 				destImgFile.delete();
 		}
@@ -842,7 +841,6 @@ public class ImageHandler
 	}
 
 	private void copyMetaData(Path metadata, ImageMounter image,  String metadataType, String metadataTarget) throws BWFLAException {
-
 		Path environments = metadata.resolve(metadataType);
 		if(Files.exists(environments))
 		{

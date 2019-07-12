@@ -2,11 +2,12 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 
 @XmlRootElement
-@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = false)
 public class UpdateContainerRequest extends EmilRequestType {
 
 
@@ -16,10 +17,21 @@ public class UpdateContainerRequest extends EmilRequestType {
     private String outputFolder;
     private String inputFolder;
     private String author;
+    private String containerRuntimeId;
 
     private ArrayList<String> processArgs;
     private ArrayList<String> processEnvs;
+    @XmlElement(required = false)
+    private EmilContainerNetworkingType networking;
 
+    @Override
+    public EmilContainerNetworkingType getNetworking() {
+        return networking;
+    }
+
+    public void setNetworking(EmilContainerNetworkingType networking) {
+        this.networking = networking;
+    }
 
     public String getId() {
         return id;
@@ -83,5 +95,13 @@ public class UpdateContainerRequest extends EmilRequestType {
 
     public void setAuthor(String author) {
         this.author = author;
+    }
+
+    public String getContainerRuntimeId() {
+        return containerRuntimeId;
+    }
+
+    public void setContainerRuntimeId(String containerRuntimeId) {
+        this.containerRuntimeId = containerRuntimeId;
     }
 }

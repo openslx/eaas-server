@@ -49,7 +49,6 @@ public interface EmulatorComponent extends ClusterComponent
 	
 	public String getEmulatorState();
 
-
 	/* ==================== EmuCon API ==================== */
 
 	public DataHandler checkpoint() throws BWFLAException;

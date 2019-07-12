@@ -182,7 +182,6 @@ public class DatabaseEnvironmentsAdapter {
 
 
     public String importMetadata(String archive, Environment environment, ImageArchiveMetadata iaMd, boolean preserveId) throws BWFLAException {
-
         String id = environmentsAdapter.importMetadata(archive, environment.toString(), iaMd, preserveId);
         if (iaMd.getType() != ImageType.TMP && iaMd.getType() != ImageType.TEMPLATE) {
             Environment newEnv = environmentsAdapter.getEnvironmentById(archive, id);

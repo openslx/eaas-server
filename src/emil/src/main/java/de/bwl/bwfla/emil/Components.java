@@ -19,8 +19,8 @@
 
 package de.bwl.bwfla.emil;
 
-import java.awt.*;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
@@ -38,7 +38,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
@@ -47,14 +46,11 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
@@ -65,6 +61,7 @@ import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
@@ -86,7 +83,6 @@ import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.api.eaas.EaasWS;
@@ -98,12 +94,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 
 @ApplicationScoped
@@ -208,6 +201,9 @@ public class Components {
     @Resource(lookup = "java:jboss/ee/concurrency/executor/io")
     protected ExecutorService executor;
 
+    private ImageBuilder imagebuilder;
+    private BlobStore blobstore;
+
     @PostConstruct
     private void init() {
         swHelper = new SoftwareArchiveHelper(softwareArchive);
@@ -228,6 +224,10 @@ public class Components {
         try {
             this.eaas = eaasClient.getEaasWSPort(eaasGw);
             this.component = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class);
+
+            this.imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
+            this.blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
+
         }
         catch (Exception error) {
             throw new RuntimeException("Constructing web-services failed!", error);
@@ -372,6 +372,120 @@ public class Components {
         }
     }
 
+    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
+        ArrayList<String> args = new ArrayList<String>();
+        ContainerMetadata metadata = new ContainerMetadata();
+        final String inputDir = "container-input";
+        final String outputDir = "container-output";
+        metadata.setDhcp(isDHCPenabled);
+        metadata.setTelnet(true);
+        metadata.setProcess("/bin/sh");
+        args.add("-c");
+        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
+        args.add("");
+
+        args.add("--output");
+        args.add("config.json");
+
+
+        if(requiresInputFiles) {
+            args.add("--mount");
+            args.add(getMountStr(inputDir, config.getInput(), true));
+        }
+        args.add("--mount");
+        args.add(getMountStr(outputDir, config.getOutputPath(), false));
+
+        if (config.getCustomSubdir() != null) {
+            args.add("--rootfs");
+            args.add("rootfs/" + config.getCustomSubdir());
+        }
+
+        // Add environment variables
+        if(config.getProcess().getEnvironmentVariables() != null) {
+            for (String env : config.getProcess().getEnvironmentVariables()) {
+                args.add("--env");
+                args.add(env);
+            }
+        }
+
+        // Add emulator's command
+        args.add("--");
+        for (String arg : config.getProcess().getArguments())
+            args.add(arg);
+
+        metadata.setArgs(args);
+
+        return metadata.jsonValueWithoutRoot(true);
+    }
+
+    private String getMountStr(String src, String dst, boolean isReadonly) throws BWFLAException {
+        if (src != null && dst != null) {
+            return src + ":" + dst + ":bind:" + (isReadonly ? "ro" : "rw");
+        } else {
+            throw new BWFLAException("src or dst is null! src:" + src + " dst:" + dst);
+        }
+    }
+
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
+        File tmpfile = File.createTempFile("metadata.json", null, null);
+        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
+
+        BlobDescription blobDescription = new BlobDescription();
+        blobDescription.setDataFromFile(tmpfile.toPath())
+                .setNamespace("random")
+                .setDescription("random")
+                .setName("metadata")
+                .setType(".json");
+
+        return blobstore.put(blobDescription);
+    }
+
+    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
+        if (inputMedia.size() != 1)
+            throw new BWFLAException("Size of Input drives cannot exceed 1");
+
+        ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
+        final FileSystemType fileSystemType = FileSystemType.EXT4;
+        int sizeInMb = medium.getSizeInMb();
+        if (sizeInMb <= 0)
+            sizeInMb = 1024;
+
+        final ImageDescription description = new ImageDescription()
+                .setMediumType(MediumType.HDD)
+                .setPartitionTableType(PartitionTableType.NONE)
+                .setPartitionStartBlock(0)
+                .setFileSystemType(fileSystemType)
+                .setLabel("eaas-job")
+                .setSizeInMb(sizeInMb);
+
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
+        final ImageContentDescription metadataEntry = new ImageContentDescription();
+        metadataEntry.setAction(ImageContentDescription.Action.COPY)
+                .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
+                .setName("metadata.json");
+        description.addContentEntry(metadataEntry);
+
+
+        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(extfile.getAction())
+                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
+                    .setURL(new URL(extfile.getUrl()))
+                    .setSubdir("container-input");
+
+
+            if (extfile.getName() == null || extfile.getName().isEmpty())
+                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
+            else
+                entry.setName(extfile.getName());
+
+            description.addContentEntry(entry);
+        }
+
+        return description;
+    }
+
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
         if (desc.getEnvironment() == null) {
             throw new BadRequestException(Response
@@ -390,8 +504,6 @@ public class Components {
             }
 
             final ContainerConfiguration config = (ContainerConfiguration) chosenEnv;
-            final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
-            final BlobStore blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
 
             int numInputImages = 1;
 
@@ -485,6 +597,79 @@ public class Components {
         }
     }
 
+    private BlobStoreBinding buildExternalFilesMedia(ComponentWithExternalFilesRequest.InputMedium medium,
+                                           TaskStack cleanups,
+                                           int index) throws BWFLAException {
+        int sizeInMb = medium.getSizeInMb();
+        if (sizeInMb <= 0)
+            sizeInMb = 1024;
+
+        final ImageDescription description = new ImageDescription();
+        description.setMediumType(medium.getMediumType());
+
+        if (description.getMediumType() == MediumType.HDD) {
+            description.setPartitionTableType(medium.getPartitiionTableType())
+                    .setPartitionStartBlock(2048)
+                    .setFileSystemType(medium.getFileSystemType())
+                    .setSizeInMb(sizeInMb);
+        }
+        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(extfile.getAction())
+                    .setArchiveFormat(extfile.getCompressionFormat());
+//                            .setDataFromUrl(new URL(extfile.getUrl()));
+
+//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
+
+            try {
+                entry.setURL(new URL(extfile.getUrl()));
+            } catch (MalformedURLException e) {
+                throw new BWFLAException(e);
+            }
+//                    else
+//                        entry.setURL(null);
+
+            if (extfile.getName() == null || extfile.getName().isEmpty())
+                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
+            else
+                entry.setName(extfile.getName());
+
+            description.addContentEntry(entry);
+        }
+
+        // Build input image
+        final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
+        // since cdrom is read-only entity, we return user ISO directly
+        if (description.getMediumType() != MediumType.CDROM) {
+            final Runnable cleanup = () -> {
+                try {
+                    blobstore.delete(blob);
+                } catch (Exception error) {
+                    LOG.log(Level.WARNING, "Deleting container's input image failed!\n", error);
+                }
+            };
+
+            cleanups.push(cleanup);
+        }
+        // Add input image to machine's config
+
+        final BlobStoreBinding binding = new BlobStoreBinding();
+        binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
+        if (description.getMediumType() != MediumType.CDROM)
+            binding.setPartitionOffset(description.getPartitionOffset());
+        binding.setFileSystemType(description.getFileSystemType());
+        binding.setId("input-" + index);
+
+        //FIXME remove if else and make it more elegant (maybe unite?)
+        if (medium.getMediumType() == MediumType.CDROM)
+            binding.setResourceType(Binding.ResourceType.ISO);
+        else if (medium.getMediumType() == MediumType.HDD) {
+            binding.setResourceType(Binding.ResourceType.DISK);
+        }
+
+        return binding;
+    }
+
     protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer) {
         if (machineDescription.getEnvironment() == null) {
             throw new BadRequestException(Response
@@ -516,81 +701,57 @@ public class Components {
             if(emilEnv != null && emilEnv.isEnableRelativeMouse())
                 EmulationEnvironmentHelper.enableRelativeMouse(config);
 
-            final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
-            final BlobStore blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
-
             int numInputImages = 1;
 
-            // Wrap external input files into images
-            for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
-                int sizeInMb = medium.getSizeInMb();
-                if (sizeInMb <= 0)
-                    sizeInMb = 1024;
+            if(machineDescription.getLinuxRuntimeData() != null && machineDescription.getLinuxRuntimeData().getUserContainerEnvironment() != null && !machineDescription.getLinuxRuntimeData().getUserContainerEnvironment().isEmpty())
+            {
+                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getLinuxRuntimeData().getUserContainerArchive(),
+                        machineDescription.getLinuxRuntimeData().getUserContainerEnvironment());
+                LOG.warning(ociConf.jsonValueWithoutRoot(true));
 
-                final ImageDescription description = new ImageDescription();
-                description.setMediumType(medium.getMediumType());
-
-                if (description.getMediumType() == MediumType.HDD) {
-                    description.setPartitionTableType(medium.getPartitiionTableType())
-                            .setPartitionStartBlock(2048)
-                            .setFileSystemType(medium.getFileSystemType())
-                            .setSizeInMb(sizeInMb);
+                ImageDescription imageDescription = null;
+                try {
+                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
-                    final ImageContentDescription entry = new ImageContentDescription()
-                            .setAction(extfile.getAction())
-                            .setArchiveFormat(extfile.getCompressionFormat());
-//                            .setDataFromUrl(new URL(extfile.getUrl()));
-
-//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
-                    entry.setURL(new URL(extfile.getUrl()));
-//                    else
-//                        entry.setURL(null);
-
-                    if (extfile.getName() == null || extfile.getName().isEmpty())
-                        entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-                    else
-                        entry.setName(extfile.getName());
-
-                    description.addContentEntry(entry);
-                }
-
-                // Build input image
-                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
-                // since cdrom is read-only entity, we return user ISO directly
-                if (description.getMediumType() != MediumType.CDROM) {
-                    final Runnable cleanup = () -> {
-                        try {
-                            blobstore.delete(blob);
-                        } catch (Exception error) {
-                            LOG.log(Level.WARNING, "Deleting container's input image failed!\n", error);
-                        }
-                    };
-
-                    cleanups.push(cleanup);
-                }
-                // Add input image to machine's config
+                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, imageDescription, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
 
                 final BlobStoreBinding binding = new BlobStoreBinding();
                 binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
-                if (description.getMediumType() != MediumType.CDROM)
-                    binding.setPartitionOffset(description.getPartitionOffset());
-                binding.setFileSystemType(description.getFileSystemType());
-                binding.setId("input-" + numInputImages++);
+                binding.setPartitionOffset(imageDescription.getPartitionOffset());
+                binding.setFileSystemType(imageDescription.getFileSystemType());
+                binding.setId("eaas-job");
 
-                //FIXME remove if else and make it more elegant (maybe unite?)
-                if (medium.getMediumType() == MediumType.CDROM)
-                    binding.setResourceType(Binding.ResourceType.ISO);
-                else if (medium.getMediumType() == MediumType.HDD) {
-                    binding.setResourceType(Binding.ResourceType.DISK);
+                ImageArchiveBinding rootfs = null;
+                for(AbstractDataResource r : ociConf.getDataResources())
+                {
+                    if(r.getId().equals("rootfs"))
+                        rootfs = ((ImageArchiveBinding)r);
                 }
+                if(rootfs == null)
+                    throw new BadRequestException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .build());
+                rootfs.setFileSystemType(null);
+                this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
 
-                this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
 
+                this.addBindingToEnvironment(config, binding, this.toDriveType(MediumType.HDD));
                 config.setOutputBindingId(binding.getId());
+            }
+            else {
+                // Wrap external input files into images
+                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
 
-                // TODO: Extend MachineConfiguration to support multiple input/output-images!
-                break;
+                    BlobStoreBinding binding = buildExternalFilesMedia(medium, cleanups, numInputImages++);
+                    this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
+                    config.setOutputBindingId(binding.getId());
+
+                    // TODO: Extend MachineConfiguration to support multiple input/output-images!
+                    break;
+                }
             }
 
             Integer driveId = null;
@@ -894,12 +1055,16 @@ public class Components {
                 throw new NotFoundException();
 
             // Actual result's location
-            final String location = handle.toRestUrl(blobStoreRestAddress);
+            String location = "";
+            if (blobStoreRestAddress.contains("http://eaas:8080"))
+                location = handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
+            else
+                location = handle.toRestUrl(blobStoreRestAddress);
 
             // Set response headers...
             final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
                     .header("Access-Control-Allow-Origin", "*")
-                    .location(new URI(location))
+                    .header("Location", new URI(location))
                     .build();
 
             return response;

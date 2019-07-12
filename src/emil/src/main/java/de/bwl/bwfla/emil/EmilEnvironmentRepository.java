@@ -320,8 +320,10 @@ public class EmilEnvironmentRepository {
 		if (envid == null)
 			return null;
 
+
 		try {
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
+
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				return getSharedEmilEnvironmentById(envid);
 

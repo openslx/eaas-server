@@ -125,6 +125,15 @@ public abstract class MediumBuilder
 				handler = entry.getData();
 			}
 
+			if(entry.getSubdir() != null){
+				Path subdirPath = dstdir.resolve(entry.getSubdir());
+				if(dstdir.resolve(subdirPath).toFile().mkdir()) {
+					dstdir = subdirPath;
+				} else {
+					throw new BWFLAException("failed to create subdirecoty!");
+				}
+			}
+
 			switch (entry.getAction()) {
 				case COPY:
 					if (entry.getName() == null || entry.getName().isEmpty())

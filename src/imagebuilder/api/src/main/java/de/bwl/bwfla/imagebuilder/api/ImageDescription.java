@@ -208,7 +208,8 @@ public class ImageDescription
 		return label;
 	}
 
-	public void setLabel(String label) {
+	public ImageDescription setLabel(String label) {
 		this.label = label;
+		return this;
 	}
 }
