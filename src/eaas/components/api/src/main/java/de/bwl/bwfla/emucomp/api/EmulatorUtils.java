@@ -660,7 +660,7 @@ public class EmulatorUtils {
 			final String check = "ps -o command -C xmount,lklfuse | grep -q " + mntpoint.toString() + "$";
 
 			boolean failed = true;
-			for (int i = 0; i < 20; ++i) {
+			for (int i = 0; i < 60; ++i) {
 				process.setCommand("/bin/sh");
 				process.addArguments("-c", check);
 				if (!process.execute()) {
@@ -670,7 +670,7 @@ public class EmulatorUtils {
 				}
 
 				try {
-					Thread.sleep(1000L);
+					Thread.sleep(5000L);
 				}
 				catch (Exception error) {
 					// Ignore it!
