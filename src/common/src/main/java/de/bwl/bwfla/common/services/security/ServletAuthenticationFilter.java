@@ -13,6 +13,7 @@ import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
@@ -30,6 +31,7 @@ public class ServletAuthenticationFilter  implements Filter {
 
     private String apiSecret;
     private List<String> excludeUrls;
+    private List<String> excludePaths;
 
     @Override
     public void init( FilterConfig filterConfig ) throws ServletException {
@@ -38,12 +40,21 @@ public class ServletAuthenticationFilter  implements Filter {
         final Configuration config = ConfigurationProvider.getConfiguration();
         this.apiSecret = config.get("ws.apiSecret");
         String excludePattern = filterConfig.getInitParameter("excludedUrls");
-        excludeUrls = Arrays.asList(excludePattern.split(","));
+        if(excludePattern == null)
+            excludeUrls = new ArrayList<>();
+        else
+            excludeUrls = Arrays.asList(excludePattern.split(","));
+
+        String excludePathsParam = filterConfig.getInitParameter("excludePaths");
+        if(excludePathsParam == null)
+            excludePaths = new ArrayList<>();
+        else
+            excludePaths = Arrays.asList(excludePathsParam.split(","));
     }
 
     @Override
-    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
-
+    public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain)
+            throws IOException, ServletException {
         boolean excludePath = false;
         HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
         HttpServletResponse response=(HttpServletResponse) servletResponse;
@@ -54,6 +65,9 @@ public class ServletAuthenticationFilter  implements Filter {
 
         if(excludeUrls.contains(path))
             excludePath = true;
+
+        for(String p : excludePaths)
+            if(path.startsWith(p)) excludePath = true;
 
         if(apiSecret != null && !apiSecret.equals("null") && !apiSecret.isEmpty() && !excludePath) {
             String jwt = getBearerToken(httpRequest);
