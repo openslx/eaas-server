@@ -81,7 +81,8 @@ public class NodeTcpBean extends EaasComponentBean {
         runner.addArgument(extPort + "");
         runner.addArgument(this.getWorkingDir().resolve(switchName).toString());
         runner.addArgument(NetworkUtils.getRandomHWAddress());
-        runner.addArgument(nodeConfig.getPrivateNetIp() + "/" + nodeConfig.getPrivateNetMask());
+        runner.addArgument("dhcp");
+        // runner.addArgument(nodeConfig.getPrivateNetIp() + "/" + nodeConfig.getPrivateNetMask());
 
         String info = null;
         if(nodeConfig.isSocksMode()) {
