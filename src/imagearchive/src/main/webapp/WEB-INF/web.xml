@@ -27,7 +27,7 @@
   <init-param>
    <param-name>excludePaths</param-name>
    <!-- Comma separated list of excluded servlets  -->
-   <param-value>/imagearchive/public</param-value>
+   <param-value>/public</param-value>
   </init-param>
  </filter>
 

@@ -11,26 +11,32 @@ import java.io.UnsupportedEncodingException;
 import java.util.Date;
 
 public class MachineTokenProvider {
-
-    // private static final String apiKey = ConfigurationProvider.getConfiguration().get("ws.apikey");
     private static final String authProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
-    private static final String apiSecret = ConfigurationProvider.getConfiguration().get("ws.apiSecret");
+    private static String apiSecret;
+
+    static {
+        apiSecret = ConfigurationProvider.getConfiguration().get("ws.apiSecret");
+        if(apiSecret != null && (apiSecret.isEmpty() || apiSecret.equals("null")))
+            apiSecret = null;
+    }
+
+    static String getApiSecret()
+    {
+        return apiSecret;
+    }
 
     public static String getApiKey()
     {
-        /*
-        if(apiKey != null && (apiKey.isEmpty() || apiKey.equals("null")))
+       if(apiSecret == null)
             return null;
-        return apiKey;
-         */
 
-        try {
+       try {
             Algorithm algorithm = Algorithm.HMAC256(apiSecret);
             String token = JWT.create()
                     .withIssuer("eaasi")
                     .withExpiresAt(new Date(System.currentTimeMillis() + (2 * 60 * 60 * 1000))) // 2h
                     .sign(algorithm);
-            System.out.println("Token: token");
+           // System.out.println("Token:"  + token);
             return token;
         } catch (JWTCreationException | UnsupportedEncodingException exception){
             exception.printStackTrace();

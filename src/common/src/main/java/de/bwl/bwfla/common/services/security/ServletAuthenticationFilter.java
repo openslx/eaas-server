@@ -29,7 +29,7 @@ public class ServletAuthenticationFilter  implements Filter {
 
     private static final int STATUS_CODE_UNAUTHORIZED = 401;
 
-    private String apiSecret;
+    private String apiSecret = MachineTokenProvider.getApiSecret();
     private List<String> excludeUrls;
     private List<String> excludePaths;
 
@@ -38,7 +38,7 @@ public class ServletAuthenticationFilter  implements Filter {
         LOG.info( "JwtAuthenticationFilter initialized" );
 
         final Configuration config = ConfigurationProvider.getConfiguration();
-        this.apiSecret = config.get("ws.apiSecret");
+
         String excludePattern = filterConfig.getInitParameter("excludedUrls");
         if(excludePattern == null)
             excludeUrls = new ArrayList<>();
@@ -66,19 +66,26 @@ public class ServletAuthenticationFilter  implements Filter {
         if(excludeUrls.contains(path))
             excludePath = true;
 
-        for(String p : excludePaths)
-            if(path.startsWith(p)) excludePath = true;
+        String pathInfo = httpRequest.getPathInfo();
+        if(pathInfo != null && !pathInfo.isEmpty()) {
+            for(String p : excludePaths) {
+                if (pathInfo.startsWith(p))
+                    excludePath = true;
+            }
+        }
 
-        if(apiSecret != null && !apiSecret.equals("null") && !apiSecret.isEmpty() && !excludePath) {
+        if(apiSecret != null && !excludePath) {
             String jwt = getBearerToken(httpRequest);
+            // System.out.println("apiSecret " + apiSecret + " jwt " + jwt + " ");
+
             try{
                 validateToken(jwt);
             }
             catch (Exception e)
             {
                 // e.printStackTrace();
+                System.out.println("not authenticated " + httpRequest.getContextPath() + " " + httpRequest.getPathInfo() + " " + httpRequest.getServletPath());
                 response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                // System.out.println("not authenticated");
                 return;
             }
         }
