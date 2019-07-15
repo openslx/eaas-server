@@ -3,7 +3,9 @@ package de.bwl.bwfla.emil.utils;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.emil.filters.AuthenticationFilter;
 
 import javax.enterprise.context.RequestScoped;
 import javax.enterprise.event.Observes;
@@ -18,7 +20,15 @@ public class AuthenticatedUserProducer {
 
     public AuthenticatedUserProducer() {}
 
-    public void handleAuthenticationEvent(@Observes @AuthenticatedUser DecodedJWT jwt) {
+    public void handleAuthenticationEvent(@Observes @AuthenticatedUser AuthenticationFilter.JwtLoginEvent event) {
+
+        DecodedJWT jwt = event.getJwt();
+        if(jwt == null)
+        {
+            authenticatedUser.setRole(Role.PUBLIC);
+            authenticatedUser.setUsername("anonymous");
+            return;
+        }
 
         Claim usernameC = jwt.getClaim("sub");
         if(usernameC == null)
@@ -28,5 +38,7 @@ public class AuthenticatedUserProducer {
         Claim nameC = jwt.getClaim("name");
         if(nameC != null)
             authenticatedUser.setName(nameC.asString());
+
+        authenticatedUser.setRole(Role.RESTRCITED);
     }
 }

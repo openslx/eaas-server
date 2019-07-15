@@ -4,6 +4,7 @@ public class UserContext {
 
     private String username;
     private String name;
+    private Role role;
 
     public UserContext() {}
 
@@ -21,5 +22,13 @@ public class UserContext {
 
     public void setName(String name) {
         this.name = name;
+    }
+
+    public Role getRole() {
+        return role;
+    }
+
+    public void setRole(Role role) {
+        this.role = role;
     }
 }

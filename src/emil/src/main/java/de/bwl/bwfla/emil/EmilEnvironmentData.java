@@ -695,7 +695,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("operatingSystemMetadata")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -810,7 +810,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(request, LOG)));
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/getNameIndexes")
 	@Consumes(MediaType.APPLICATION_JSON)

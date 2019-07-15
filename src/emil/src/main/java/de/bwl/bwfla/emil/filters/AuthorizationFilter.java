@@ -65,6 +65,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             }
 
         } catch (Exception e) {
+            e.printStackTrace();
             requestContext.abortWith(
                     Response.status(Response.Status.FORBIDDEN).build());
         }
@@ -86,21 +87,16 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     }
 
     private void checkPermissions(List<Role> allowedRoles) throws Exception {
-        if (authenticatedUser == null)
+        if (authenticatedUser == null || authenticatedUser.getRole() == null)
             throw new BWFLAException("no auth context");
 
-        for (Role r : allowedRoles) {
-            if (authenticatedUser.getUsername().equals("01")) {
-                if (r != Role.PUBLIC) {
-                    throw new BWFLAException("unauthorized");
-                }
-            }
-            if (r == Role.ADMIN) {
-                if (!authenticatedUser.getUsername().equals("00")) {
-                    throw new BWFLAException("unauthorized");
-                }
-            }
-            System.out.println("allowed role " + r.name());
-        }
+        if(allowedRoles.size() < 1)
+            throw new BWFLAException("no minimum role provided");
+
+       //  System.out.println("authentication user " + authenticatedUser.getRole() + " " + authenticatedUser.getRole().ordinal());
+
+        Role minRole = allowedRoles.get(0);
+        if(minRole.ordinal() > authenticatedUser.getRole().ordinal())
+            throw new BWFLAException("min role " + minRole + " user role " + authenticatedUser.getRole());
     }
 }
