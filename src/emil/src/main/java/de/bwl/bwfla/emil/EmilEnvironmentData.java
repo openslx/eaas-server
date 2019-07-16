@@ -510,7 +510,7 @@ public class EmilEnvironmentData extends EmilRest {
 				machineConfiguration.setDrive(desc.getDrives());
 				machineConfiguration.setLinuxRuntime(desc.isLinuxRuntime());
 
-				if(desc.getNetworking().isEnableInternet())
+				if(desc.getNetworking() != null && desc.getNetworking().isEnableInternet())
 				{
 					List<Nic> nics = machineConfiguration.getNic();
 					if (nics.size() == 0) {
