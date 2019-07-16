@@ -17,6 +17,7 @@ emil:
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification
+  max_session_duration: 0 sec
 
 ws:
   blobstore: http://eaas:8080/
