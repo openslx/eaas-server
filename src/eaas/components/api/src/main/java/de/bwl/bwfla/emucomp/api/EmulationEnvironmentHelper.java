@@ -94,6 +94,8 @@ public class EmulationEnvironmentHelper {
 
 		for (Drive d : env.getDrive()) {
 			String resourceUrl = d.getData();
+			if(resourceUrl == null)
+				continue;
 			if (resourceUrl.startsWith("binding://")) {
 				resourceUrl = resourceUrl.substring("binding://".length());
 				resourceUrl = resourceUrl.substring(0,
