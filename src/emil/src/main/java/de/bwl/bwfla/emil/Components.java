@@ -56,6 +56,7 @@ import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.SessionOptions;
@@ -161,6 +162,12 @@ public class Components {
     @Config(value = "emil.containerdata.imagebuilder.timeout")
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration imageBuilderTimeout = null;
+
+    @Inject
+    @Config(value = "emil.max_session_duration")
+    @WithPropertyConverter(DurationPropertyConverter.class)
+    private Duration maxSessionDuration = null;
+
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
     private SoftwareArchiveHelper swHelper;
@@ -226,6 +233,12 @@ public class Components {
         catch (Exception error) {
             throw new RuntimeException("Constructing web-services failed!", error);
         }
+
+        if (maxSessionDuration.isZero()) {
+            LOG.info("Session duration control is disabled");
+            maxSessionDuration = Duration.ofMillis(Long.MAX_VALUE);
+        }
+        else LOG.info("Session duration control is enabled! Max. session lifetime: " + maxSessionDuration.toString());
     }
 
     @PreDestroy
@@ -1418,6 +1431,20 @@ public class Components {
                 observer.register(forwarder)
                         .start();
             }
+
+            // Send client notification when this session will expire...
+            if (maxSessionDuration.toMillis() < Long.MAX_VALUE){
+                final long duration = Components.timestamp() - this.getStartTimestamp();
+                final long lifetime = maxSessionDuration.toMillis();
+                final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                final OutboundSseEvent event = esink.newEventBuilder()
+                        .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                        .name(SessionWillExpireNotification.name())
+                        .data(notification)
+                        .build();
+
+                esink.send(event);
+            }
         }
 
         public EventSink getEventSink()
@@ -1567,11 +1594,15 @@ public class Components {
     {
         private final ComponentSession session;
         private final long timeout;
+        private final long lifetime;
+        private long nextNotificationTimeout;
 
         public ComponentSessionCleanupTrigger(ComponentSession session, Duration timeout)
         {
             this.session = session;
             this.timeout = timeout.toMillis();
+            this.lifetime = maxSessionDuration.toMillis();
+            this.nextNotificationTimeout = maxSessionDuration.minus(Duration.ofSeconds(90L)).toMillis();
         }
 
         @Override
@@ -1579,19 +1610,127 @@ public class Components {
         {
             final long curts = Components.timestamp();
             final long prevts = session.getKeepaliveTimestamp();
+            final long duration = curts - session.getStartTimestamp();
             final long elapsed = curts - prevts;
-            if (elapsed < timeout) {
+            if ((elapsed < timeout) && (duration < lifetime)) {
+                // Send client notification if session is about to expire...
+                if (session.hasEventSink() && (duration >= nextNotificationTimeout)) {
+                    final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                    final EventSink esink = session.getEventSink();
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionWillExpireNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+
+                    nextNotificationTimeout += Duration.ofSeconds(30L).toMillis();
+                }
+
                 // Component should be kept alive! Schedule this task again.
-                final long delay = timeout - elapsed + 10L;
-                scheduler.schedule(this, delay, TimeUnit.MILLISECONDS);
+                long delay = (duration < nextNotificationTimeout) ? nextNotificationTimeout - duration : lifetime - duration;
+                scheduler.schedule(this, Math.min(delay, timeout - elapsed) + 10L, TimeUnit.MILLISECONDS);
             }
             else {
-                // Timeout expired!
+                // Send client notification...
+                if (session.hasEventSink() && (duration >= lifetime)) {
+                    final SessionExpiredNotification notification = new SessionExpiredNotification(duration, lifetime);
+                    final EventSink esink = session.getEventSink();
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionExpiredNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+
+                    LOG.info("Session '" + session.getId() + "' expired after " + notification.getDuration());
+                }
 
                 // Since scheduler tasks should complete quickly and session.release()
                 // can take longer, submit a new task to an unscheduled executor for it.
                 executor.execute(() -> session.release());
             }
+        }
+    }
+
+    private static class SessionDurationNotification
+    {
+        private String duration;
+        private String maxDuration;
+
+        protected SessionDurationNotification(long duration, long maxDuration)
+        {
+            this.duration = SessionExpiredNotification.toDurationString(duration);
+            this.maxDuration = SessionExpiredNotification.toDurationString(maxDuration);
+        }
+
+        @XmlElement(name = "duration")
+        public String getDuration()
+        {
+            return duration;
+        }
+
+        @XmlElement(name = "max_duration")
+        public String getMaxDuration()
+        {
+            return maxDuration;
+        }
+
+        public static String toDurationString(long duration)
+        {
+            // Duration is serialized as 'PTnHnMnS', but this method returns 'nhnmns'
+            return Duration.ofSeconds(TimeUnit.MILLISECONDS.toSeconds(duration))
+                    .toString()
+                    .substring(2)
+                    .toLowerCase();
+        }
+    }
+
+    private static class SessionWillExpireNotification extends SessionDurationNotification
+    {
+        private String message;
+
+        public SessionWillExpireNotification(long duration, long maxDuration)
+        {
+            super(duration, maxDuration);
+
+            final String timeout = SessionDurationNotification.toDurationString(maxDuration - duration);
+            this.message = "Current session will expire in " + timeout + "!";
+        }
+
+        @XmlElement(name = "message")
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public static String name()
+        {
+            return "session-will-expire";
+        }
+    }
+
+    private static class SessionExpiredNotification extends SessionDurationNotification
+    {
+        private String message;
+
+        public SessionExpiredNotification(long duration, long maxDuration)
+        {
+            super(duration, maxDuration);
+            this.message = "Current session expired after running for " + super.getDuration() + "!";
+        }
+
+        @XmlElement(name = "message")
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public static String name()
+        {
+            return "session-expired";
         }
     }
 }
