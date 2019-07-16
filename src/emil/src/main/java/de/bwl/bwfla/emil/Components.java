@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.emil;
 
-import java.awt.*;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -35,10 +34,10 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
@@ -47,13 +46,12 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
@@ -68,6 +66,7 @@ import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
+import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -77,7 +76,6 @@ import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
-import de.bwl.bwfla.emil.utils.PrintJobObserver;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
@@ -86,7 +84,6 @@ import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.api.eaas.EaasWS;
@@ -98,12 +95,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 
 @ApplicationScoped
@@ -622,8 +616,11 @@ public class Components {
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
 
-            if(emilEnv != null && emilEnv.isEnablePrinting())
-                observer.add(new PrintJobObserver(componentClient.getMachinePort(eaasGw), sessionId));
+            // Register server-sent-event source
+            {
+                final String srcurl = component.getEventSourceUrl(sessionId);
+                observer.add(new EventObserver(srcurl, LOG));
+            }
 
             return new MachineComponentResponse(sessionId, driveId);
         }
@@ -1024,13 +1021,12 @@ public class Components {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
     {
-
-        LOG.warning("registering events");
         final ComponentSession session = sessions.get(componentId);
-        if(session == null)
+        if (session == null)
             return;
 
-        session.initializeEventLoop(sink, sse);
+        LOG.warning("Start forwarding server-sent-events for session " + componentId);
+        session.setEventSink(sink, sse);
     }
 
     @GET
@@ -1316,11 +1312,11 @@ public class Components {
         private final String id;
         private final ComponentRequest request;
         private final TaskStack tasks;
-        private final List<EventObserver> observerList;
-        private ScheduledFuture<?> eventTask;
-        private boolean finished = false;
+        private final List<EventObserver> observers;
+        private EventSink esink;
 
-        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observer)
+
+        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observers)
         {
             this.keepaliveTimestamp = new AtomicLong(0);
             this.startTimestamp = Components.timestamp();
@@ -1329,7 +1325,7 @@ public class Components {
             this.id = id;
             this.request = request;
             this.tasks = tasks;
-            this.observerList = observer;
+            this.observers = observers;
 
             LOG.info("Session for component ID '" + id + "' created");
         }
@@ -1343,13 +1339,14 @@ public class Components {
 
         public void release()
         {
-            finished = true;
-
-            if(eventTask != null)
-                eventTask.cancel(true);
-
             if (released.getAndSet(true))
                 return;  // Release was already called!
+
+            if (!observers.isEmpty())
+                LOG.info("Stopping " + observers.size() + " event-observer(s) for session '" + id + "'...");
+
+            for (EventObserver observer : observers)
+                observer.stop();
 
             LOG.info("Releasing session '" + id + "'...");
             try {
@@ -1401,20 +1398,36 @@ public class Components {
             return startTimestamp;
         }
 
-        public void initializeEventLoop(SseEventSink sink, Sse sse)
+        public void setEventSink(SseEventSink sink, Sse sse)
         {
-            if(finished || eventTask != null)
-                return;
+            this.esink = new EventSink(sink, sse);
 
-            for(EventObserver eo : observerList) {
-                eventTask = scheduler.scheduleAtFixedRate(
-                () -> {
-                    for(String m : eo.messages()) {
-                        sink.send(sse.newEventBuilder().name(eo.getName())
-                                .data(String.class, m).build());
-                    }
-                }, 0, 5, TimeUnit.SECONDS);
+            final Consumer<InboundSseEvent> forwarder = (input) -> {
+                final OutboundSseEvent output = esink.newEventBuilder()
+                        .name(input.getName())
+                        .data(input.readData())
+                        .build();
+
+                esink.send(output);
+            };
+
+            if (!observers.isEmpty())
+                LOG.info("Starting " + observers.size() + " event-observer(s) for session '" + id + "'...");
+
+            for (EventObserver observer : observers) {
+                observer.register(forwarder)
+                        .start();
             }
+        }
+
+        public EventSink getEventSink()
+        {
+            return esink;
+        }
+
+        public boolean hasEventSink()
+        {
+            return (esink != null);
         }
     }
 

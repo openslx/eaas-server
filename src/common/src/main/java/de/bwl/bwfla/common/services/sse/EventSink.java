@@ -17,26 +17,44 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emucomp.api;
+package de.bwl.bwfla.common.services.sse;
 
-import java.net.URI;
-import java.util.Map;
+import javax.ws.rs.sse.OutboundSseEvent;
+import javax.ws.rs.sse.Sse;
+import javax.ws.rs.sse.SseEventSink;
+import java.util.concurrent.CompletionStage;
 
-import de.bwl.bwfla.blobstore.api.BlobHandle;
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 
-public interface ClusterComponent {
-	public void initialize(ComponentConfiguration config) throws BWFLAException;
-	public void destroy();
+/** Wrapper around SSE sink */
+public class EventSink
+{
+	private final SseEventSink sink;
+	private final Sse sse;
 
-	public String getComponentType() throws BWFLAException;
-	
-	public ComponentState getState() throws BWFLAException;
-	public Map<String, URI> getControlUrls();
-	public URI getEventSourceUrl();
 
-	public void setKeepaliveTimestamp(long timestamp);
-	public long getKeepaliveTimestamp();
+	public EventSink(SseEventSink sink, Sse sse)
+	{
+		this.sink = sink;
+		this.sse = sse;
+	}
 
-	public BlobHandle getResult() throws BWFLAException;
+	public OutboundSseEvent.Builder newEventBuilder()
+	{
+		return sse.newEventBuilder();
+	}
+
+	public CompletionStage<?> send(OutboundSseEvent event)
+	{
+		return sink.send(event);
+	}
+
+	public void close()
+	{
+		sink.close();
+	}
+
+	public boolean isClosed()
+	{
+		return sink.isClosed();
+	}
 }
