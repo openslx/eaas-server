@@ -349,7 +349,6 @@ public class EmilEnvironmentRepository {
 
 	synchronized public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
-
 			String collection = null;
 			String username = null;
 
@@ -391,9 +390,9 @@ public class EmilEnvironmentRepository {
 				}
 				parent = p.getParentEnvId();
 			}
-			env.setArchive(destArchive);
-			save(env, false);
 		}
+		env.setArchive(destArchive);
+		save(env, false);
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
