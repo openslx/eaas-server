@@ -22,6 +22,7 @@ package de.bwl.bwfla.emucomp.ws;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Map;
+import java.util.stream.Collector;
 import java.util.stream.Collectors;
 
 import javax.annotation.Resource;
@@ -88,27 +89,35 @@ public class Component
 
     @WebMethod
     public Map<String, URI> getControlUrls(String id) throws BWFLAException {
+        final String context = ((ServletContext) wsContext.getMessageContext().get(MessageContext.SERVLET_CONTEXT))
+                .getContextPath() + "/";
+
         final AbstractEaasComponent component = nodeManager.getComponentById(id, AbstractEaasComponent.class);
-        
-        final ServletContext ctx = (ServletContext)wsContext.getMessageContext().get(MessageContext.SERVLET_CONTEXT);
-        final String context = ctx.getContextPath() + "/";
-        
         return component.getControlUrls().entrySet().stream()
-                .collect(Collectors.toMap(e -> e.getKey(), e -> {
-                    try {
-                        URI orig = e.getValue();
-                        return new URI(orig.getScheme(), orig.getAuthority(),
-                                orig.getPath().replace("{context}", context), orig.getQuery(),
-                                orig.getFragment()).normalize();
-                    } catch (URISyntaxException ex) {
-                        throw new IllegalArgumentException(ex.getMessage(), ex);
-                    }
-                }));
+                .collect(Collectors.toMap(e -> e.getKey(), e -> Component.normalize(e.getValue(), context)));
+    }
+
+    @WebMethod
+    public URI getEventSourceUrl(String id) throws BWFLAException {
+        final AbstractEaasComponent component = nodeManager.getComponentById(id, AbstractEaasComponent.class);
+        final ServletContext ctx = (ServletContext)wsContext.getMessageContext().get(MessageContext.SERVLET_CONTEXT);
+        return Component.normalize(component.getEventSourceUrl(), ctx.getContextPath() + "/");
     }
 
     @WebMethod
     public BlobHandle getResult(String id) throws BWFLAException {
         final AbstractEaasComponent component = nodeManager.getComponentById(id, AbstractEaasComponent.class);
         return component.getResult();
+    }
+
+    private static URI normalize(URI orig, String context) {
+        try {
+            final String path = orig.getPath().replace("{context}", context);
+            return new URI(orig.getScheme(), orig.getAuthority(), path, orig.getQuery(),orig.getFragment())
+                    .normalize();
+        }
+        catch (URISyntaxException error) {
+            throw new IllegalArgumentException(error.getMessage(), error);
+        }
     }
 }
