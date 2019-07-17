@@ -102,7 +102,7 @@ public class Networks {
             Session session = sessions.createNetworkSession(switchId);
             networkResponse = new NetworkResponse(session.id());
 
-            String nodeTcpId = null;
+
             if (network.hasInternet()) {
                 VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
                 String slirpMac = slirpConfig.getHwAddress();
@@ -115,7 +115,24 @@ public class Networks {
                 componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, slirpUrl);
             }
 
+            if(network.isDhcp() && !network.hasInternet())
+            {
+                NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
+                nodeConfig.setPrivateNetIp("10.0.0.1");
+                nodeConfig.setPrivateNetMask("24");
+                nodeConfig.setDhcp(true);
+                nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
+
+                String dhcpId = eaasClient.getEaasWSPort(eaasGw).createSession(nodeConfig.value(false));
+                sessions.addComponent(session, dhcpId);
+
+                Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(dhcpId));
+                String dhcpUrl = controlUrls.get("ws+ethernet+" + nodeConfig.getHwAddress()).toString();
+                componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, dhcpUrl);
+            }
+
             if(network.isTcpGateway() && network.getTcpGatewayConfig() != null) {
+                String nodeTcpId = null;
                 NetworkRequest.TcpGatewayConfig tcpGatewayConfig = network.getTcpGatewayConfig();
 
                 NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();

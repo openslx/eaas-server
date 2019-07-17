@@ -32,6 +32,15 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class NetworkRequest extends JaxbType {
+
+    public boolean isDhcp() {
+        return dhcp;
+    }
+
+    public void setDhcp(boolean dhcp) {
+        this.dhcp = dhcp;
+    }
+
     @XmlType
     @XmlAccessorType(XmlAccessType.NONE)
     public static class ComponentSpec {
@@ -123,6 +132,9 @@ public class NetworkRequest extends JaxbType {
 
     @XmlElement(name = "hasInternet", required = false, defaultValue = "false")
     private boolean internet = false;
+
+    @XmlElement(name = "enableDhcp", required = false, defaultValue = "false")
+    private boolean dhcp = false;
 
     @XmlElement(name= "hasTcpGateway", required = false, defaultValue = "false")
     private boolean tcpGateway = false;

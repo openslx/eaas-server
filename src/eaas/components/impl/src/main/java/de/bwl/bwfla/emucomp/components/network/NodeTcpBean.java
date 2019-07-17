@@ -49,12 +49,7 @@ public class NodeTcpBean extends EaasComponentBean {
 
         NodeTcpConfiguration nodeConfig = (NodeTcpConfiguration) config;
 
-        // arg1 extPort
-        // arg2 wsURL
-        // arg3 randomMac
-        // arg4 privateNetworkIp (internal)/24
-        // arg5 privateDestIp (internal server)
-        // arg6 privateDestIpPort
+
 
         String hwAddress = nodeConfig.getHwAddress();
         String switchName = "nic_" + hwAddress;
@@ -77,36 +72,50 @@ public class NodeTcpBean extends EaasComponentBean {
         vdeProcesses.add(process);
 
         runner.setCommand(nodeTcpRunner);
-     //   runner.addArgument(nodeTcpScript);
-        runner.addArgument(extPort + "");
-        runner.addArgument(this.getWorkingDir().resolve(switchName).toString());
-        runner.addArgument(NetworkUtils.getRandomHWAddress());
-        runner.addArgument("dhcp");
-        // runner.addArgument(nodeConfig.getPrivateNetIp() + "/" + nodeConfig.getPrivateNetMask());
-
         String info = null;
-        if(nodeConfig.isSocksMode()) {
-            String sockString = "socks5";
-            info = "socks/" + extPort;
-            if(nodeConfig.getSocksUser() != null && nodeConfig.getSocksPasswd() != null) {
-                sockString += ":" + nodeConfig.getSocksUser() + ":" + nodeConfig.getSocksPasswd();
-                info += "/" + nodeConfig.getSocksUser() + "/" + nodeConfig.getSocksPasswd();
-            }
-            runner.addArgument(sockString);
+        if(nodeConfig.isDhcp())     // DCHCPD hack
+        {
+            // Usage: ./eaas-proxy "" /tmp/switch1 "" 10.0.0.1/24 dhcpd
+            runner.addArgument("");
+            runner.addArgument(this.getWorkingDir().resolve(switchName).toString());
+            runner.addArgument("");
+            runner.addArgument(nodeConfig.getPrivateNetIp() + "/" + nodeConfig.getPrivateNetMask());
+            runner.addArgument("dhcpd");
         }
-        else if(nodeConfig.getDestIp() != null && nodeConfig.getDestPort() != null) {
-            runner.addArgument(nodeConfig.getDestIp());
-            runner.addArgument(nodeConfig.getDestPort());
-            info = "tcp/" + extPort;
+        else {
+            // arg1 extPort
+            // arg2 wsURL
+            // arg3 randomMac
+            // arg4 privateNetworkIp (internal)/24
+            // arg5 privateDestIp (internal server)
+            // arg6 privateDestIpPort
+            runner.addArgument(extPort + "");
+            runner.addArgument(this.getWorkingDir().resolve(switchName).toString());
+            runner.addArgument(NetworkUtils.getRandomHWAddress());
+            runner.addArgument("dhcp");
+            // runner.addArgument(nodeConfig.getPrivateNetIp() + "/" + nodeConfig.getPrivateNetMask());
+
+            if (nodeConfig.isSocksMode()) {
+                String sockString = "socks5";
+                info = "socks/" + extPort;
+                if (nodeConfig.getSocksUser() != null && nodeConfig.getSocksPasswd() != null) {
+                    sockString += ":" + nodeConfig.getSocksUser() + ":" + nodeConfig.getSocksPasswd();
+                    info += "/" + nodeConfig.getSocksUser() + "/" + nodeConfig.getSocksPasswd();
+                }
+                runner.addArgument(sockString);
+            } else if (nodeConfig.getDestIp() != null && nodeConfig.getDestPort() != null) {
+                runner.addArgument(nodeConfig.getDestIp());
+                runner.addArgument(nodeConfig.getDestPort());
+                info = "tcp/" + extPort;
+            } else
+                throw new BWFLAException("invalid node tcp config.");
+            this.addControlConnector(new InfoDummyConnector(info));
         }
-        else
-            throw new BWFLAException("invalid node tcp config.");
 
         if (!runner.start())
             throw new BWFLAException("Cannot start node process");
         vdeProcesses.add(runner);
 
-        this.addControlConnector(new InfoDummyConnector(info));
         this.addControlConnector(new EthernetConnector(hwAddress, this.getWorkingDir().resolve(switchName)));
     }
 

@@ -14,6 +14,9 @@ public class NodeTcpConfiguration extends ComponentConfiguration {
     @XmlElement(required = true, nillable = false)
     private String privateNetMask;
 
+    @XmlElement(required = true)
+    private boolean dhcp;
+
     @XmlElement
     private String destIp;
 
@@ -94,6 +97,14 @@ public class NodeTcpConfiguration extends ComponentConfiguration {
 
     public void setSocksPasswd(String socksPasswd) {
         this.socksPasswd = socksPasswd;
+    }
+
+    public boolean isDhcp() {
+        return dhcp;
+    }
+
+    public void setDhcp(boolean dhcp) {
+        this.dhcp = dhcp;
     }
 }
 

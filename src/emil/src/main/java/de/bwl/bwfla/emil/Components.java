@@ -1189,7 +1189,6 @@ public class Components {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
     {
-
         LOG.warning("registering events");
         final ComponentSession session = sessions.get(componentId);
         if(session == null)
