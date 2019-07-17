@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -51,9 +52,12 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.sse.InboundSseEvent;
+import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.SessionOptions;
@@ -65,6 +69,7 @@ import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
+import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -74,7 +79,6 @@ import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
-import de.bwl.bwfla.emil.utils.PrintJobObserver;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
@@ -160,6 +164,12 @@ public class Components {
     @Config(value = "emil.containerdata.imagebuilder.timeout")
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration imageBuilderTimeout = null;
+
+    @Inject
+    @Config(value = "emil.max_session_duration")
+    @WithPropertyConverter(DurationPropertyConverter.class)
+    private Duration maxSessionDuration = null;
+
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
     private SoftwareArchiveHelper swHelper;
@@ -232,6 +242,12 @@ public class Components {
         catch (Exception error) {
             throw new RuntimeException("Constructing web-services failed!", error);
         }
+
+        if (maxSessionDuration.isZero()) {
+            LOG.info("Session duration control is disabled");
+            maxSessionDuration = Duration.ofMillis(Long.MAX_VALUE);
+        }
+        else LOG.info("Session duration control is enabled! Max. session lifetime: " + maxSessionDuration.toString());
     }
 
     @PreDestroy
@@ -783,8 +799,11 @@ public class Components {
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
 
-            if(emilEnv != null && emilEnv.isEnablePrinting())
-                observer.add(new PrintJobObserver(componentClient.getMachinePort(eaasGw), sessionId));
+            // Register server-sent-event source
+            {
+                final String srcurl = component.getEventSourceUrl(sessionId);
+                observer.add(new EventObserver(srcurl, LOG));
+            }
 
             return new MachineComponentResponse(sessionId, driveId);
         }
@@ -1189,12 +1208,12 @@ public class Components {
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
     {
-        LOG.warning("registering events");
         final ComponentSession session = sessions.get(componentId);
-        if(session == null)
+        if (session == null)
             return;
 
-        session.initializeEventLoop(sink, sse);
+        LOG.warning("Start forwarding server-sent-events for session " + componentId);
+        session.setEventSink(sink, sse);
     }
 
     @GET
@@ -1480,11 +1499,11 @@ public class Components {
         private final String id;
         private final ComponentRequest request;
         private final TaskStack tasks;
-        private final List<EventObserver> observerList;
-        private ScheduledFuture<?> eventTask;
-        private boolean finished = false;
+        private final List<EventObserver> observers;
+        private EventSink esink;
 
-        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observer)
+
+        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observers)
         {
             this.keepaliveTimestamp = new AtomicLong(0);
             this.startTimestamp = Components.timestamp();
@@ -1493,7 +1512,7 @@ public class Components {
             this.id = id;
             this.request = request;
             this.tasks = tasks;
-            this.observerList = observer;
+            this.observers = observers;
 
             LOG.info("Session for component ID '" + id + "' created");
         }
@@ -1507,13 +1526,14 @@ public class Components {
 
         public void release()
         {
-            finished = true;
-
-            if(eventTask != null)
-                eventTask.cancel(true);
-
             if (released.getAndSet(true))
                 return;  // Release was already called!
+
+            if (!observers.isEmpty())
+                LOG.info("Stopping " + observers.size() + " event-observer(s) for session '" + id + "'...");
+
+            for (EventObserver observer : observers)
+                observer.stop();
 
             LOG.info("Releasing session '" + id + "'...");
             try {
@@ -1565,20 +1585,50 @@ public class Components {
             return startTimestamp;
         }
 
-        public void initializeEventLoop(SseEventSink sink, Sse sse)
+        public void setEventSink(SseEventSink sink, Sse sse)
         {
-            if(finished || eventTask != null)
-                return;
+            this.esink = new EventSink(sink, sse);
 
-            for(EventObserver eo : observerList) {
-                eventTask = scheduler.scheduleAtFixedRate(
-                () -> {
-                    for(String m : eo.messages()) {
-                        sink.send(sse.newEventBuilder().name(eo.getName())
-                                .data(String.class, m).build());
-                    }
-                }, 0, 5, TimeUnit.SECONDS);
+            final Consumer<InboundSseEvent> forwarder = (input) -> {
+                final OutboundSseEvent output = esink.newEventBuilder()
+                        .name(input.getName())
+                        .data(input.readData())
+                        .build();
+
+                esink.send(output);
+            };
+
+            if (!observers.isEmpty())
+                LOG.info("Starting " + observers.size() + " event-observer(s) for session '" + id + "'...");
+
+            for (EventObserver observer : observers) {
+                observer.register(forwarder)
+                        .start();
             }
+
+            // Send client notification when this session will expire...
+            if (maxSessionDuration.toMillis() < Long.MAX_VALUE){
+                final long duration = Components.timestamp() - this.getStartTimestamp();
+                final long lifetime = maxSessionDuration.toMillis();
+                final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                final OutboundSseEvent event = esink.newEventBuilder()
+                        .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                        .name(SessionWillExpireNotification.name())
+                        .data(notification)
+                        .build();
+
+                esink.send(event);
+            }
+        }
+
+        public EventSink getEventSink()
+        {
+            return esink;
+        }
+
+        public boolean hasEventSink()
+        {
+            return (esink != null);
         }
     }
 
@@ -1718,11 +1768,15 @@ public class Components {
     {
         private final ComponentSession session;
         private final long timeout;
+        private final long lifetime;
+        private long nextNotificationTimeout;
 
         public ComponentSessionCleanupTrigger(ComponentSession session, Duration timeout)
         {
             this.session = session;
             this.timeout = timeout.toMillis();
+            this.lifetime = maxSessionDuration.toMillis();
+            this.nextNotificationTimeout = maxSessionDuration.minus(Duration.ofSeconds(90L)).toMillis();
         }
 
         @Override
@@ -1730,19 +1784,127 @@ public class Components {
         {
             final long curts = Components.timestamp();
             final long prevts = session.getKeepaliveTimestamp();
+            final long duration = curts - session.getStartTimestamp();
             final long elapsed = curts - prevts;
-            if (elapsed < timeout) {
+            if ((elapsed < timeout) && (duration < lifetime)) {
+                // Send client notification if session is about to expire...
+                if (session.hasEventSink() && (duration >= nextNotificationTimeout)) {
+                    final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                    final EventSink esink = session.getEventSink();
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionWillExpireNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+
+                    nextNotificationTimeout += Duration.ofSeconds(30L).toMillis();
+                }
+
                 // Component should be kept alive! Schedule this task again.
-                final long delay = timeout - elapsed + 10L;
-                scheduler.schedule(this, delay, TimeUnit.MILLISECONDS);
+                long delay = (duration < nextNotificationTimeout) ? nextNotificationTimeout - duration : lifetime - duration;
+                scheduler.schedule(this, Math.min(delay, timeout - elapsed) + 10L, TimeUnit.MILLISECONDS);
             }
             else {
-                // Timeout expired!
+                // Send client notification...
+                if (session.hasEventSink() && (duration >= lifetime)) {
+                    final SessionExpiredNotification notification = new SessionExpiredNotification(duration, lifetime);
+                    final EventSink esink = session.getEventSink();
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionExpiredNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+
+                    LOG.info("Session '" + session.getId() + "' expired after " + notification.getDuration());
+                }
 
                 // Since scheduler tasks should complete quickly and session.release()
                 // can take longer, submit a new task to an unscheduled executor for it.
                 executor.execute(() -> session.release());
             }
+        }
+    }
+
+    private static class SessionDurationNotification
+    {
+        private String duration;
+        private String maxDuration;
+
+        protected SessionDurationNotification(long duration, long maxDuration)
+        {
+            this.duration = SessionExpiredNotification.toDurationString(duration);
+            this.maxDuration = SessionExpiredNotification.toDurationString(maxDuration);
+        }
+
+        @XmlElement(name = "duration")
+        public String getDuration()
+        {
+            return duration;
+        }
+
+        @XmlElement(name = "max_duration")
+        public String getMaxDuration()
+        {
+            return maxDuration;
+        }
+
+        public static String toDurationString(long duration)
+        {
+            // Duration is serialized as 'PTnHnMnS', but this method returns 'nhnmns'
+            return Duration.ofSeconds(TimeUnit.MILLISECONDS.toSeconds(duration))
+                    .toString()
+                    .substring(2)
+                    .toLowerCase();
+        }
+    }
+
+    private static class SessionWillExpireNotification extends SessionDurationNotification
+    {
+        private String message;
+
+        public SessionWillExpireNotification(long duration, long maxDuration)
+        {
+            super(duration, maxDuration);
+
+            final String timeout = SessionDurationNotification.toDurationString(maxDuration - duration);
+            this.message = "Current session will expire in " + timeout + "!";
+        }
+
+        @XmlElement(name = "message")
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public static String name()
+        {
+            return "session-will-expire";
+        }
+    }
+
+    private static class SessionExpiredNotification extends SessionDurationNotification
+    {
+        private String message;
+
+        public SessionExpiredNotification(long duration, long maxDuration)
+        {
+            super(duration, maxDuration);
+            this.message = "Current session expired after running for " + super.getDuration() + "!";
+        }
+
+        @XmlElement(name = "message")
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public static String name()
+        {
+            return "session-expired";
         }
     }
 }

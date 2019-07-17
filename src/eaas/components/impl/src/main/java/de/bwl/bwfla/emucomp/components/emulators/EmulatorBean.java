@@ -273,9 +273,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public String getEmulatorState()
 	{
-		if(printer != null)
-			printer.update();
-
 		final boolean isEmulatorInactive = ctlEvents.poll(EventID.CLIENT_INACTIVE);
 		synchronized (emuBeanState) {
 			if (isEmulatorInactive)
@@ -846,6 +843,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		emuObserver.start();
 
+		if (printer != null) {
+			// TODO: check stop condition of printer thread!
+			workerThreadFactory.newThread(printer)
+					.start();
+		}
+
 		if (this.isSdlBackendEnabled()) {
 			// Not in local mode?
 			if (!this.isLocalModeEnabled()) {
@@ -999,7 +1002,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			player.stop();
 
 		if(printer != null)
-			printer.release();
+			printer.stop();
 
 		if (this.isSdlBackendEnabled()) {
 			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
