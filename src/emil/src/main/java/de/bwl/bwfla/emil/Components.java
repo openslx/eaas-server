@@ -1610,17 +1610,22 @@ public class Components {
             }
 
             // Send client notification when this session will expire...
-            if (maxSessionDuration.toMillis() < Long.MAX_VALUE){
-                final long duration = Components.timestamp() - this.getStartTimestamp();
-                final long lifetime = maxSessionDuration.toMillis();
-                final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
-                final OutboundSseEvent event = esink.newEventBuilder()
-                        .mediaType(MediaType.APPLICATION_JSON_TYPE)
-                        .name(SessionWillExpireNotification.name())
-                        .data(notification)
-                        .build();
+            if (maxSessionDuration.toMillis() < Long.MAX_VALUE) {
+                final Runnable task = () -> {
+                    final long duration = Components.timestamp() - this.getStartTimestamp();
+                    final long lifetime = maxSessionDuration.toMillis();
+                    final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionWillExpireNotification.name())
+                            .data(notification)
+                            .build();
 
-                esink.send(event);
+                    esink.send(event);
+                };
+
+                final Runnable trigger = () -> executor.execute(task);
+                scheduler.schedule(trigger, 10, TimeUnit.SECONDS);
             }
         }
 
@@ -1874,7 +1879,7 @@ public class Components {
             super(duration, maxDuration);
 
             final String timeout = SessionDurationNotification.toDurationString(maxDuration - duration);
-            this.message = "Current session will expire in " + timeout + "!";
+            this.message = "Your session will expire in " + timeout + "!";
         }
 
         @XmlElement(name = "message")
@@ -1896,7 +1901,7 @@ public class Components {
         public SessionExpiredNotification(long duration, long maxDuration)
         {
             super(duration, maxDuration);
-            this.message = "Current session expired after running for " + super.getDuration() + "!";
+            this.message = "Your session has expired after " + super.getDuration() + "!";
         }
 
         @XmlElement(name = "message")
