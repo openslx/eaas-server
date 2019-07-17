@@ -366,6 +366,7 @@ public class EmilEnvironmentRepository {
 			db.deleteDoc(collection, env.getEnvId(), env.getIdDBkey());
 
 			String parent = env.getParentEnvId();
+			String lastPrivateChild = env.getEnvId();
 			while(parent != null)
 			{
 				EmilEnvironment p = getEmilEnvironmentById(collection, parent, username);
@@ -376,6 +377,9 @@ public class EmilEnvironmentRepository {
 				if(!p.getArchive().equals(destArchive))
 				{
 					Environment pe = environmentsAdapter.getEnvironmentById(p.getArchive(), p.getEnvId());
+					if(pe == null)
+						throw new BWFLAException("parent id not found! loose end: \n" + p.value(true));
+
 					ImageArchiveMetadata iam = new ImageArchiveMetadata();
 					iam.setType(ImageType.USER);
 					environmentsAdapter.importMetadata(destArchive, pe, iam, true);
@@ -389,8 +393,15 @@ public class EmilEnvironmentRepository {
 					}
 					p.setArchive(destArchive);
 					save(p, false);
+					lastPrivateChild = p.getEnvId();
+					parent = p.getParentEnvId();
 				}
-				parent = p.getParentEnvId();
+				else // first parent in dest archive, connecting
+				{
+					p.addChildEnvId(lastPrivateChild);
+					save(p, false);
+					parent  = null;
+				}
 			}
 		}
 		env.setArchive(destArchive);
