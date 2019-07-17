@@ -19,11 +19,13 @@
 
 package de.bwl.bwfla.emucomp;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.common.services.sse.EventSink;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
@@ -52,10 +54,13 @@ public class EventManager
 	{
 		try {
 			final AbstractEaasComponent component = nodemgr.getComponentById(componentId);
+			if (component.hasEventSink())
+				throw new BadRequestException("An event-sink is already registered!");
+
 			log.warning("Start sending server-sent-events for component " + componentId);
 			component.setEventSink(new EventSink(sink, sse));
 		}
-		catch (Exception error) {
+		catch (BWFLAException error) {
 			throw new NotFoundException("Component not found: " + componentId);
 		}
 	}
