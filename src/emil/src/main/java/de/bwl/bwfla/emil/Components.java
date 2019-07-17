@@ -1210,7 +1210,10 @@ public class Components {
     {
         final ComponentSession session = sessions.get(componentId);
         if (session == null)
-            return;
+            throw new NotFoundException("Session not found: " + componentId);
+
+        if (session.hasEventSink())
+            throw new BadRequestException("An event-sink is already registered!");
 
         LOG.warning("Start forwarding server-sent-events for session " + componentId);
         session.setEventSink(sink, sse);
