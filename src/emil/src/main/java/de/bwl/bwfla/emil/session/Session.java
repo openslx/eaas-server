@@ -52,6 +52,7 @@ public class Session extends JaxbType {
 	Session(String id, String groupId) {
 		this.groupId = groupId;
 		this.id = id;
+		this.lastUpdate = System.currentTimeMillis();
 	}
 
 	public String id()
