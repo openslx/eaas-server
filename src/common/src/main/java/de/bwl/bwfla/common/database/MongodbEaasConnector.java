@@ -528,7 +528,6 @@ public class MongodbEaasConnector {
 					document.remove(networkValue);
 				}
 				document.put("networking", subDocument);
-				System.out.println(document.toJson());
 				try {
 					return T.fromJsonValueWithoutRoot(document.toJson(), clazz);
 				} catch (BWFLAException e) {
