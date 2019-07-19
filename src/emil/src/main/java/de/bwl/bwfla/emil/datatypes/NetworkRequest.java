@@ -74,12 +74,6 @@ public class NetworkRequest extends JaxbType {
         @XmlElement
         private boolean socks;
 
-        @XmlElement(required = true, nillable = false)
-        private String gwPrivateIp;
-
-        @XmlElement(required = true, nillable = false)
-        private String gwPrivateMask;
-
         @XmlElement
         private String serverPort;
 
@@ -92,22 +86,6 @@ public class NetworkRequest extends JaxbType {
 
         public void setSocks(boolean socks) {
             this.socks = socks;
-        }
-
-        public String getGwPrivateIp() {
-            return gwPrivateIp;
-        }
-
-        public void setGwPrivateIp(String gwPrivateIp) {
-            this.gwPrivateIp = gwPrivateIp;
-        }
-
-        public String getGwPrivateMask() {
-            return gwPrivateMask;
-        }
-
-        public void setGwPrivateMask(String gwPrivateMask) {
-            this.gwPrivateMask = gwPrivateMask;
         }
 
         public String getServerPort() {

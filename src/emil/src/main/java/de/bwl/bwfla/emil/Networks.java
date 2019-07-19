@@ -118,8 +118,6 @@ public class Networks {
             if(network.isDhcp() && !network.hasInternet())
             {
                 NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
-                nodeConfig.setPrivateNetIp("10.0.0.1");
-                nodeConfig.setPrivateNetMask("24");
                 nodeConfig.setDhcp(true);
                 nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
 
@@ -137,9 +135,6 @@ public class Networks {
 
                 NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
                 nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
-
-                nodeConfig.setPrivateNetIp(tcpGatewayConfig.getGwPrivateIp());
-                nodeConfig.setPrivateNetMask(tcpGatewayConfig.getGwPrivateMask());
 
                 if(tcpGatewayConfig.isSocks())
                 {
