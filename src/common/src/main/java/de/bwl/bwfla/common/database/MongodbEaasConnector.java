@@ -522,12 +522,13 @@ public class MongodbEaasConnector {
 			if (e1.getCause() instanceof UnrecognizedPropertyException) {
 				// check if content of database has deprecated networking entries
 				String[] networkingValues = {"gwPrivateMask", "gwPrivateIp", "serverIp", "serverPort", "connectEnvs", "enableSocks", "localServerMode", "serverMode", "enableInternet", "helpText"};
+				Document subDocument = new Document();
 				for (String networkValue : networkingValues) {
-					Document subDocument = new Document();
 					subDocument.put(networkValue, document.get(networkValue));
-					document.put("networking", subDocument);
 					document.remove(networkValue);
 				}
+				document.put("networking", subDocument);
+				System.out.println(document.toJson());
 				try {
 					return T.fromJsonValueWithoutRoot(document.toJson(), clazz);
 				} catch (BWFLAException e) {
