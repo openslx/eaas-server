@@ -292,7 +292,10 @@ public class Networks {
 
                         Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
 
-                        String nodeInfoUrl = controlUrls.get("info").toString();
+                        URI uri = controlUrls.get("info");
+                        if(uri == null)
+                            continue;
+                        String nodeInfoUrl = uri.toString();
                         networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
 
                         result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
