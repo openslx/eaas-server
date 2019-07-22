@@ -79,8 +79,6 @@ public class BindingsManager
 
 	private static final String ID_SEPARATOR = "/_____";
 
-	private final String imageProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
-
 	public BindingsManager()
 	{
 		this(Logger.getLogger(BindingsManager.class.getName()));
@@ -230,11 +228,6 @@ public class BindingsManager
 		else {
 			if (resource.getFileSize() > 0)
 				xmountOpts.setSize(resource.getFileSize());
-
-			if(resource instanceof ImageArchiveBinding) {
-				if (imageProxy != null)
-					xmountOpts.setProxyUrl(imageProxy);
-			}
 
 			resourcePath = EmulatorUtils.connectBinding(resource, outdir, xmountOpts);
 

@@ -101,42 +101,14 @@ public class ComponentProxy implements Component {
     @Override
     public Return getControlUrls(String componentId) throws BWFLAException {
         final SessionRegistry.Entry session = sessions.lookup(componentId);
-        final String componentHost = session.getResourceHandle().getNodeID().getNodeHost();
-        final URI hostURI = URI.create(componentHost);
+        final String componentHost = session.getResourceHandle().getNodeID().getNodeAddress();
 
         Return r = getComponent(componentId).getControlUrls(componentId);
         r.getEntry().replaceAll(e -> {
+            final URI orig = URI.create(e.getValue());
             Return.Entry entry = new Return.Entry();
             entry.setKey(e.getKey());
-
-            URI orig = URI.create(e.getValue());
-            String host = hostURI.getHost() == null ? componentHost : hostURI.getHost();
-            int port = orig.getPort() < 0 ? hostURI.getPort() : orig.getPort();
-
-            // fallback to http
-            String scheme = "http";
-
-            if(orig.getScheme() == null)
-            {
-                if(hostURI.getScheme() != null)
-                    scheme = hostURI.getScheme();
-            }
-            else
-            {
-                if(orig.getScheme().startsWith("ws") && hostURI.getScheme() != null && hostURI.getScheme().startsWith("https")) {
-                    scheme = "wss";
-                }
-                else
-                    scheme = orig.getScheme();
-            }
-
-            try {
-                URI uri = new URI(scheme, orig.getUserInfo(), host, port, orig.getPath(), orig.getQuery(), orig.getFragment());
-                entry.setValue(uri.normalize().toString());
-            } catch (URISyntaxException ex) {
-                // this catch clause mimicks the behaviour of URI.create()
-                throw new IllegalArgumentException(ex.getMessage(), ex);
-            }
+            entry.setValue(ComponentProxy.normalize(orig, componentHost));
             return entry;
         });
 
@@ -144,7 +116,44 @@ public class ComponentProxy implements Component {
     }
 
     @Override
+    public String getEventSourceUrl(String componentId) throws BWFLAException {
+        final SessionRegistry.Entry session = sessions.lookup(componentId);
+        final String componentHost = session.getResourceHandle().getNodeID().getNodeAddress();
+        final String orig = this.getComponent(componentId).getEventSourceUrl(componentId);
+        return ComponentProxy.normalize(URI.create(orig), componentHost);
+    }
+
+    @Override
     public BlobHandle getResult(String componentId) throws BWFLAException {
         return getComponent(componentId).getResult(componentId);
+    }
+
+    private static String normalize(URI orig, String componentHost) {
+        final URI hostURI = URI.create(componentHost);
+        final String host = hostURI.getHost() == null ? componentHost : hostURI.getHost();
+        final int port = orig.getPort() < 0 ? hostURI.getPort() : orig.getPort();
+
+        // fallback to http
+        String scheme = "http";
+        if (orig.getScheme() == null) {
+            if (hostURI.getScheme() != null)
+                scheme = hostURI.getScheme();
+        }
+        else {
+            if (orig.getScheme().startsWith("ws") && hostURI.getScheme() != null && hostURI.getScheme().startsWith("https")) {
+                scheme = "wss";
+            }
+            else scheme = orig.getScheme();
+        }
+
+        try {
+            return new URI(scheme, orig.getUserInfo(), host, port, orig.getPath(), orig.getQuery(), orig.getFragment())
+                    .normalize()
+                    .toString();
+        }
+        catch (URISyntaxException ex) {
+            // this catch clause mimicks the behaviour of URI.create()
+            throw new IllegalArgumentException(ex.getMessage(), ex);
+        }
     }
 }

@@ -18,6 +18,8 @@ import java.util.List;
 public class EnvironmentDetails {
 
     @XmlElement
+    private EmilNetworkingType networking;
+    @XmlElement
     private String parentEnvId;
 
     @XmlElement
@@ -49,33 +51,6 @@ public class EnvironmentDetails {
 
     @XmlElement
     private String timeContext;
-
-    @XmlElement
-    private boolean serverMode;
-
-    @XmlElement
-    private boolean localServerMode;
-
-    @XmlElement
-    private boolean enableSocks;
-
-    @XmlElement
-    private String serverPort;
-
-    @XmlElement
-    private String serverIp;
-
-    @XmlElement
-    private String gwPrivateIp;
-
-    @XmlElement
-    private String gwPrivateMask;
-
-    @XmlElement
-    private boolean enableInternet;
-
-    @XmlElement
-    private boolean connectEnvs;
 
     @XmlElement
     private String author;
@@ -140,6 +115,12 @@ public class EnvironmentDetails {
     @XmlElement
     private List<String> processEnvs;
 
+    @XmlElement
+    private String runtimeId;
+
+    @XmlElement
+    private boolean isLinuxRuntime;
+
     EnvironmentDetails() {}
 
     public EnvironmentDetails(EmilEnvironment emilenv, MachineConfiguration machineConf, List<EmilEnvironment> parents) {
@@ -151,24 +132,17 @@ public class EnvironmentDetails {
         this.description =  emilenv.getDescription();
         this.version = emilenv.getVersion();
         this.emulator = emilenv.getEmulator();
-        this.helpText = emilenv.getHelpText();
         this.enableRelativeMouse = emilenv.isEnableRelativeMouse();
         this.enablePrinting = emilenv.isEnablePrinting();
         this.shutdownByOs = emilenv.isShutdownByOs();
         this.timeContext = emilenv.getTimeContext();
-        this.serverMode = emilenv.isServerMode();
-        this.localServerMode = emilenv.isLocalServerMode();
-        this.enableSocks = emilenv.isEnableSocks();
-        this.serverPort = emilenv.getServerPort();
-        this.serverIp = emilenv.getServerIp();
-        this.gwPrivateIp = emilenv.getGwPrivateIp();
-        this.gwPrivateMask = emilenv.getGwPrivateMask();
-        this.enableInternet = emilenv.isEnableInternet();
-        this.connectEnvs = emilenv.isConnectEnvs();
+        this.networking = emilenv.getNetworking();
+
         this.author = emilenv.getAuthor();
         this.canProcessAdditionalFiles = emilenv.isCanProcessAdditionalFiles();
         this.archive = emilenv.getArchive();
         this.xpraEncoding = emilenv.getXpraEncoding();
+        this.isLinuxRuntime = emilenv.isLinuxRuntime();
 
         if(machineConf != null)
             this.drives = machineConf.getDrive();
@@ -194,6 +168,7 @@ public class EnvironmentDetails {
             EmilContainerEnvironment cEnv = (EmilContainerEnvironment) emilenv;
             this.input = cEnv.getInput();
             this.output = cEnv.getOutput();
+            this.runtimeId = cEnv.getRuntimeId();
 
             this.processArgs = cEnv.getArgs();
             this.processEnvs = cEnv.getEnv();

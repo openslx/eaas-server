@@ -47,7 +47,7 @@ import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
  *   - is overall more flexible and extensible
  */
 
-@WebFilter("/*")
+@WebFilter("/components/*")
 public class FilterDispatcher implements Filter
 {
     private final Logger log = Logger.getLogger("FilterDispatcher");

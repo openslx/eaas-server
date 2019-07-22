@@ -360,7 +360,7 @@ public class ArchiveAdapter {
                 if(os != null) {
                     // sanitze: remove ':'
                     os = os.replace(':', '_');
-                    qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
+                    // qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
                 }
             } catch (BWFLAException e) {
                 e.printStackTrace();

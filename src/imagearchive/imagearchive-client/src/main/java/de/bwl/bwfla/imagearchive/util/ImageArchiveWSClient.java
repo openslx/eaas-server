@@ -31,6 +31,8 @@ import javax.xml.ws.soap.SOAPBinding;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveWS;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveWSService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
+import de.bwl.bwfla.common.services.security.SOAPClientAuthenticationHandlerResolver;
 
 abstract class ImageArchiveWSClient implements Serializable
 {		
@@ -48,7 +50,7 @@ abstract class ImageArchiveWSClient implements Serializable
 		return wsHost;
 	}
 	
-	protected ImageArchiveWSClient(String wsHost) 
+	protected ImageArchiveWSClient(String wsHost)
 	{
 		this.wsHost = wsHost;
 	}
@@ -116,6 +118,9 @@ abstract class ImageArchiveWSClient implements Serializable
 		try 
 		{
 			ImageArchiveWSService service = new ImageArchiveWSService(wsdl);
+			SOAPClientAuthenticationHandlerResolver resolver = MachineTokenProvider.getSoapAuthenticationResolver();
+			if(resolver != null)
+				service.setHandlerResolver(resolver);
 			archive = service.getImageArchiveWSPort();
 		} 
 		catch (Throwable t) 

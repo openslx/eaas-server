@@ -57,6 +57,9 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false, defaultValue = "latest")
     private String emulatorVersion = "latest";
 
+    @XmlElement(required = false)
+    private LinuxRuntimeContainerReq linuxRuntimeData;
+
     public String getEnvironment() {
         return environment;
     }
@@ -127,5 +130,13 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     public void setObjectArchive(String objectArchive) {
         this.objectArchive = objectArchive;
+    }
+
+    public LinuxRuntimeContainerReq getLinuxRuntimeData() {
+        return linuxRuntimeData;
+    }
+
+    public void setLinuxRuntimeData(LinuxRuntimeContainerReq linuxRuntimeData) {
+        this.linuxRuntimeData = linuxRuntimeData;
     }
 }

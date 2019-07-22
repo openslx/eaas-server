@@ -45,6 +45,7 @@ import javax.xml.bind.JAXBException;
 import de.bwl.bwfla.api.eaas.ComponentGroupElement;
 import de.bwl.bwfla.api.emucomp.GetControlUrlsResponse;
 import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.session.NetworkSession;
 import de.bwl.bwfla.emil.session.Session;
@@ -81,7 +82,7 @@ public class Networks {
     protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
 
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
     public NetworkResponse createNetwork(NetworkRequest network, @Context final HttpServletResponse response) {
@@ -101,10 +102,11 @@ public class Networks {
             Session session = sessions.createNetworkSession(switchId);
             networkResponse = new NetworkResponse(session.id());
 
-            String nodeTcpId = null;
+
             if (network.hasInternet()) {
                 VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
                 String slirpMac = slirpConfig.getHwAddress();
+                slirpConfig.setDhcpEnabled(false);
                 String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
                 sessions.addComponent(session, slirpId);
 
@@ -114,14 +116,26 @@ public class Networks {
                 componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, slirpUrl);
             }
 
+            if(network.isDhcp())
+            {
+                NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
+                nodeConfig.setDhcp(true);
+                nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
+
+                String dhcpId = eaasClient.getEaasWSPort(eaasGw).createSession(nodeConfig.value(false));
+                sessions.addComponent(session, dhcpId);
+
+                Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(dhcpId));
+                String dhcpUrl = controlUrls.get("ws+ethernet+" + nodeConfig.getHwAddress()).toString();
+                componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, dhcpUrl);
+            }
+
             if(network.isTcpGateway() && network.getTcpGatewayConfig() != null) {
+                String nodeTcpId = null;
                 NetworkRequest.TcpGatewayConfig tcpGatewayConfig = network.getTcpGatewayConfig();
 
                 NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
                 nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
-
-                nodeConfig.setPrivateNetIp(tcpGatewayConfig.getGwPrivateIp());
-                nodeConfig.setPrivateNetMask(tcpGatewayConfig.getGwPrivateMask());
 
                 if(tcpGatewayConfig.isSocks())
                 {
@@ -164,7 +178,7 @@ public class Networks {
     }
 
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
     public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -186,7 +200,7 @@ public class Networks {
     }
 
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
     public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -208,7 +222,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured
+    @Secured({Role.RESTRCITED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
@@ -232,7 +246,7 @@ public class Networks {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{id}/wsConnection")
     public String wsConnection(@PathParam("id") String id)
     {
@@ -254,7 +268,7 @@ public class Networks {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{id}")
     public Collection<GroupComponent> listComponents(@PathParam("id") String id) {
         try {
@@ -274,7 +288,10 @@ public class Networks {
 
                         Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
 
-                        String nodeInfoUrl = controlUrls.get("info").toString();
+                        URI uri = controlUrls.get("info");
+                        if(uri == null)
+                            continue;
+                        String nodeInfoUrl = uri.toString();
                         networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
 
                         result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
@@ -308,7 +325,7 @@ public class Networks {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Produces(MediaType.APPLICATION_JSON)
     public Collection<Session> getAllGroupIds() {
             return sessions.list();

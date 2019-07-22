@@ -24,6 +24,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.apache.tamaya.inject.api.Config;
@@ -59,7 +60,7 @@ public class EmilSoftwareData extends EmilRest {
         objHelper = new ObjectArchiveHelper(objectArchive);
     }
 
-    @Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/getSoftwareObject")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -119,7 +120,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @return A JSON response containing software package's description when found,
 	 *         else an error message.
 	 */
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/getSoftwarePackageDescription")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -174,7 +175,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @return A JSON response containing a list of descriptions
 	 *         for all software packages or an error message.
 	 */
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/getSoftwarePackageDescriptions")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -229,7 +230,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @param swo EmilSoftwareObject as JSON string
 	 * @return JSON response (error) message
 	 */
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/saveSoftwareObject")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -314,11 +315,11 @@ public class EmilSoftwareData extends EmilRest {
 
 		try {
 			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getObjectId());
-			if(software != null)
-			{
-				LOG.warning("software with id " + softwarePackage.getObjectId() + " present. skipping...");
-				return;
-			}
+//			if(software != null)
+//			{
+//				LOG.warning("software with id " + softwarePackage.getObjectId() + " present. skipping...");
+//				return;
+//			}
 		} catch (BWFLAException e) {
 			e.printStackTrace();
 			return;

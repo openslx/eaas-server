@@ -6,6 +6,7 @@ import java.nio.channels.FileChannel;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
@@ -17,6 +18,7 @@ import de.bwl.bwfla.common.utils.*;
 
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.jboss.resteasy.specimpl.ResponseBuilderImpl;
@@ -32,8 +34,11 @@ public class Emil extends EmilRest
 	@AuthenticatedUser
 	private UserContext authenticatedUser;
 
+	@Inject
+	private EmilEnvironmentRepository environmentRepository;
+
 	@GET
-	@Secured
+	@Secured({Role.PUBLIC})
 	@Path("/buildInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response buildInfo()
@@ -51,8 +56,8 @@ public class Emil extends EmilRest
 		}
 	}
 
-	@Secured
 	@GET
+	@Secured({Role.RESTRCITED})
 	@Path("/userInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public UserInfoResponse userInfo() {
@@ -69,7 +74,7 @@ public class Emil extends EmilRest
 
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/serverLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response serverLog()
@@ -84,7 +89,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/resetUsageLog")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()
@@ -105,7 +110,7 @@ public class Emil extends EmilRest
 	}
 
 	@GET
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@Path("/usageLog")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response usageLog()
@@ -116,6 +121,18 @@ public class Emil extends EmilRest
 		builder.entity(logfile);
 		builder.header("Content-Disposition",
 				"attachment; filename=\"sessions.csv\"");
+		return builder.build();
+	}
+
+	@GET
+	@Secured
+	@Path("/exportMetadata")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response exportMetadata()
+	{
+		environmentRepository.export();
+		Response.ResponseBuilder builder = new ResponseBuilderImpl();
+		builder.status(Status.OK);
 		return builder.build();
 	}
 }

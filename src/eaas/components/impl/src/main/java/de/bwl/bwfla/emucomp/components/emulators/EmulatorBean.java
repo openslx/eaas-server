@@ -124,6 +124,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	@Resource(lookup = "java:jboss/ee/concurrency/factory/default")
 	protected ManagedThreadFactory workerThreadFactory;
+
+	private final String containerOutput = "container-output";
     
 	protected final TunnelConfig tunnelConfig = new TunnelConfig();
 
@@ -272,9 +274,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public String getEmulatorState()
 	{
-		if(printer != null)
-			printer.update();
-
 		final boolean isEmulatorInactive = ctlEvents.poll(EventID.CLIENT_INACTIVE);
 		synchronized (emuBeanState) {
 			if (isEmulatorInactive)
@@ -506,7 +505,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			emuBeanState.set(EmuCompState.EMULATOR_UNDEFINED);
 		}
-
 		this.stopInternal();
 
 		// free container IDs and remove corresp. files
@@ -833,10 +831,24 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
 						}
 					}
+					// create containers output
+					if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
+						try {
+							this.processOutput();
+						} catch (BWFLAException e) {
+							e.printStackTrace();
+						}
+					}
 				}
 		});
 
 		emuObserver.start();
+
+		if (printer != null) {
+			// TODO: check stop condition of printer thread!
+			workerThreadFactory.newThread(printer)
+					.start();
+		}
 
 		if (this.isSdlBackendEnabled()) {
 			// Not in local mode?
@@ -902,8 +914,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		this.stopInternal();
 
-		if (this.isOutputAvailable())
-			this.processOutput();
+		if (this.isOutputAvailable() && !emuEnvironment.isLinuxRuntime())
+				this.processOutput();
 
 		emuBeanState.update(EmuCompState.EMULATOR_STOPPED);
 	}
@@ -948,8 +960,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				// Mount partition's filesystem
 				EmulatorUtils.mountFileSystem(rawimg, fusemnt, fsType);
 
-				 output = workdir.resolve("output.zip");
-				Zip32Utils.zip(output.toFile(), fusemnt.toFile());
+				output = workdir.resolve("output.zip");
+				if (emuEnvironment.isLinuxRuntime())
+					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
+				else
+					Zip32Utils.zip(output.toFile(), fusemnt.toFile());
+
 				type = ".zip";
 
 				blob.setDataFromFile(output);
@@ -988,7 +1004,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			player.stop();
 
 		if(printer != null)
-			printer.release();
+			printer.stop();
 
 		if (this.isSdlBackendEnabled()) {
 			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);

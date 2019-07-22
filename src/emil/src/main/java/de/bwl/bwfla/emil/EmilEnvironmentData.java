@@ -32,6 +32,7 @@ import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
@@ -69,9 +70,6 @@ public class EmilEnvironmentData extends EmilRest {
 	private EmilEnvironmentRepository emilEnvRepo;
 
 	@Inject
-	private EmilDataExport exportService;
-
-	@Inject
 	private ArchiveAdapter archive;
 
 	private AsyncIoTaskManager taskManager;
@@ -100,7 +98,7 @@ public class EmilEnvironmentData extends EmilRest {
 		init();
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -116,6 +114,7 @@ public class EmilEnvironmentData extends EmilRest {
 
 			return Response.status(Response.Status.OK).entity(result).build();
 		} catch (Throwable t) {
+			t.printStackTrace();
 			throw new BadRequestException(Response
 				.status(Response.Status.BAD_REQUEST)
 				.entity(new ErrorInformation(t.getMessage()))
@@ -123,7 +122,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/{envId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -165,7 +164,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 *
 	 * @return
 	 */
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/init")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -178,7 +177,7 @@ public class EmilEnvironmentData extends EmilRest {
 	}
 
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/objectDependencies")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -195,9 +194,9 @@ public class EmilEnvironmentData extends EmilRest {
 			return new ArrayList<>();
 		}
 	}
-	
 
-	@Secured
+
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/delete")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -234,82 +233,58 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("delete success!");
 	}
 
-	@Secured
-	@GET
-	@Path("/exportEnvsToPath")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response export() throws IOException {
-		List<EmilEnvironment> environments = null;
+//	@Secured
+//	@GET
+//	@Path("/remoteList")
+//	@Produces(MediaType.APPLICATION_JSON)
+//	public Response remoteList(@QueryParam("host") String host, @QueryParam("type") String type) {
+//		String hostUrl;
+//		try {
+//			hostUrl = URLDecoder.decode(host, "UTF-8");
+//		} catch (UnsupportedEncodingException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			return Emil.errorMessageResponse(e.getMessage());
+//		}
+//
+//		List<Environment> envs;
+//		EnvironmentsAdapter remoteArchive = new EnvironmentsAdapter(hostUrl);
+//		try {
+//			envs = remoteArchive.getEnvironments(type);
+//			LOG.info(remoteArchive.toString());
+//		} catch (BWFLAException | JAXBException e) {
+//			LOG.log(Level.SEVERE, e.getMessage(), e);
+//			return Emil.errorMessageResponse(e.getMessage());
+//		}
+//
+//		if (envs == null)
+//			return Emil.errorMessageResponse("no envs");
+//
+//
+//		try {
+//			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
+//			json.beginObject();
+//			json.add("status", "0");
+//			json.name("environments");
+//			json.beginArray();
+//
+//			for (Environment m : envs) {
+//				json.beginObject();
+//				json.add("envId", m.getId());
+//				json.endObject();
+//			}
+//
+//			json.endArray();
+//			json.endObject();
+//			json.finish();
+//
+//			return Emil.createResponse(Status.OK, json.toString());
+//
+//		} catch (Throwable t) {
+//			return Emil.internalErrorResponse(t);
+//		}
+//	}
 
-		environments = emilEnvRepo.getEmilEnvironments();
-		if (environments != null && environments.size() == 0) {
-			emilEnvRepo.init();
-			environments = emilEnvRepo.getEmilEnvironments();
-		}
-
-		environments.forEach(env -> {
-			try {
-				LOG.info(env.value(true));
-				exportService.saveEnvToPath(env);
-			} catch (JAXBException | IOException e) {
-				e.printStackTrace();
-			}
-		});
-		return Emil.successMessageResponse("success!");
-	}
-
-	@Secured
-	@GET
-	@Path("/remoteList")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response remoteList(@QueryParam("host") String host, @QueryParam("type") String type) {
-		String hostUrl;
-		try {
-			hostUrl = URLDecoder.decode(host, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return Emil.errorMessageResponse(e.getMessage());
-		}
-
-		List<Environment> envs;
-		EnvironmentsAdapter remoteArchive = new EnvironmentsAdapter(hostUrl);
-		try {
-			envs = remoteArchive.getEnvironments(type);
-			LOG.info(remoteArchive.toString());
-		} catch (BWFLAException | JAXBException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return Emil.errorMessageResponse(e.getMessage());
-		}
-
-		if (envs == null)
-			return Emil.errorMessageResponse("no envs");
-
-
-		try {
-			JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-			json.beginObject();
-			json.add("status", "0");
-			json.name("environments");
-			json.beginArray();
-
-			for (Environment m : envs) {
-				json.beginObject();
-				json.add("envId", m.getId());
-				json.endObject();
-			}
-
-			json.endArray();
-			json.endObject();
-			json.finish();
-
-			return Emil.createResponse(Status.OK, json.toString());
-
-		} catch (Throwable t) {
-			return Emil.internalErrorResponse(t);
-		}
-	}
-
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/getDatabaseContent")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -326,7 +301,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/createEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -373,7 +348,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/getEnvironmentTemplates")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -435,6 +410,29 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
+	@Secured({Role.RESTRCITED})
+	@GET
+	@Path("/getPatches")
+	@Produces(MediaType.APPLICATION_JSON)
+	/**
+	 *
+	 * @return
+	 *
+	 * 		{"status": "0", "systems": [{"id": "abc", "label": "Windows XP
+	 *         SP1", "native_config": "test", "properties": [{"name":
+	 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
+	 *         "In 1936, the Russians made a computer that ran on water"}]}]}
+	 */
+	public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
+		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
+		try {
+			List<GeneralizationPatch> envs = environmentHelper.getPatches();
+			return envs;
+		} catch (Throwable t) {
+			throw t;
+		}
+	}
+
 
 	/**
 	 * Updates the description of a specified Emil environment. This method
@@ -461,7 +459,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @param desc A JSON object containing description changes.
 	 * @return A JSON object containing the result message.
 	 */
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/updateDescription")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -510,8 +508,9 @@ public class EmilEnvironmentData extends EmilRest {
 				machineConfiguration.getUiOptions().getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
 				machineConfiguration.setDrive(desc.getDrives());
+				machineConfiguration.setLinuxRuntime(desc.isLinuxRuntime());
 
-				if(desc.isEnableInternet())
+				if(desc.getNetworking() != null && desc.getNetworking().isEnableInternet())
 				{
 					List<Nic> nics = machineConfiguration.getNic();
 					if (nics.size() == 0) {
@@ -553,21 +552,13 @@ public class EmilEnvironmentData extends EmilRest {
 		newEnv.setTitle(desc.getTitle());
 		newEnv.setAuthor(desc.getAuthor());
 		newEnv.setDescription(desc.getDescription());
-		newEnv.setHelpText(desc.getHelpText());
 		newEnv.setEnablePrinting(desc.isEnablePrinting());
 		newEnv.setEnableRelativeMouse(desc.isEnableRelativeMouse());
 		newEnv.setShutdownByOs(desc.isShutdownByOs());
-		newEnv.setEnableInternet(desc.isEnableInternet());
-		newEnv.setConnectEnvs(desc.canConnectEnvs());
-		newEnv.setServerMode(desc.isServerMode());
-		newEnv.setLocalServerMode(desc.isLocalServerMode());
-		newEnv.setEnableSocks(desc.isEnableSocks());
-		newEnv.setGwPrivateIp(desc.getGwPrivateIp());
-		newEnv.setGwPrivateMask(desc.getGwPrivateMask());
-		newEnv.setServerIp(desc.getServerIp());
-		newEnv.setServerPort(desc.getServerPort());
+		newEnv.setNetworking(desc.getNetworking());
 		newEnv.setCanProcessAdditionalFiles(desc.canProcessAdditionalFiles());
 		newEnv.setXpraEncoding(desc.getXpraEncoding());
+		newEnv.setLinuxRuntime(desc.isLinuxRuntime());
 
 		if (desc.getTime() != null) {
 			newEnv.setTimeContext(desc.getTime());
@@ -586,11 +577,11 @@ public class EmilEnvironmentData extends EmilRest {
 			return Emil.internalErrorResponse(e);
 		}
 
-		final String json = "{\"status\":\"0\"}";
+		final String json = "{\"status\":\"0\", \"id\":\"" + newEnv.getEnvId() + "\"}";
 		return Emil.createResponse(Status.OK, json);
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/defaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -606,7 +597,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/setDefaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -619,7 +610,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("forkRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -651,7 +642,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("forked environment: " + req.getId());
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("revertRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -704,7 +695,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("operatingSystemMetadata")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -736,7 +727,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return metaData;
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -746,7 +737,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return Emil.successMessageResponse("syncing archives ");
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/overrideObjectCharacterization")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -763,7 +754,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/importImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -775,6 +766,7 @@ public class EmilEnvironmentData extends EmilRest {
 	public TaskStateResponse importImage(ImportImageRequest imageReq) {
 
 		ImportImageTaskRequest request = new ImportImageTaskRequest();
+
 		URL url;
 		try {
 			url = new URL(imageReq.getUrlString());
@@ -806,6 +798,7 @@ public class EmilEnvironmentData extends EmilRest {
 		request.nativeConfig = imageReq.getNativeConfig();
 		request.environmentHelper = envHelper;
 		request.imageProposer = imageProposer;
+		request.patchId = imageReq.getPatchId();
 
 		try {
 			request.validate();
@@ -817,7 +810,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(request, LOG)));
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/getNameIndexes")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -849,7 +842,7 @@ public class EmilEnvironmentData extends EmilRest {
 //				req.getEnvId(), req.isExportObjectEmbedded())));
 //	}
 
-	@Secured
+	@Secured({Role.RESTRCITED})
 	@POST
 	@Path("/replicateImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -877,10 +870,10 @@ public class EmilEnvironmentData extends EmilRest {
 			}
 			try {
 				Environment e = envHelper.getEnvironmentById(emilEnvironment.getArchive(), envId);
-				if(!(e instanceof MachineConfiguration))
-					continue;
-				env = (MachineConfiguration)e;
-				importRequest.env = env;
+//				if(!(e instanceof MachineConfiguration))
+//					continue;
+//				env = e;
+				importRequest.env = e;
 
 				importRequest.repository = emilEnvRepo;
 				importRequest.emilEnvironment = emilEnvironment;
@@ -909,7 +902,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return response;
 	}
 
-	@Secured
+	@Secured({Role.PUBLIC})
 	@GET
 	@Path("/taskState")
 	@Produces(MediaType.APPLICATION_JSON)

@@ -25,9 +25,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.ProtocolException;
-import java.net.URL;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -41,8 +39,9 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import de.bwl.bwfla.common.services.security.AuthenticatedUrlConnection;
 import org.apache.commons.io.IOUtils;
-
+import org.eclipse.persistence.internal.oxm.conversion.Base64;
 
 
 public class EaasFileUtils
@@ -194,9 +193,10 @@ public class EaasFileUtils
 	}
 
 	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue) throws IOException {
-		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		HttpURLConnection connection = AuthenticatedUrlConnection.getConnection(url);
 		connection.setRequestMethod(requestMethod);
-		connection.setRequestProperty(requestProperty, requestValue);
+		if (requestProperty != null && requestValue != null)
+			connection.setRequestProperty(requestProperty, requestValue);
 		return connection.getInputStream();
 	}
 }

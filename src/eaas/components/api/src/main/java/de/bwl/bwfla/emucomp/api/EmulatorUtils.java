@@ -16,6 +16,7 @@ import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import org.apache.commons.io.FileUtils;
@@ -116,7 +117,9 @@ public class EmulatorUtils {
 
 				QcowOptions qcowOptions = new QcowOptions();
 				qcowOptions.setBackingFile(resUrl);
-				qcowOptions.setProxyUrl(xmountOpts.getProxyUrl());
+
+				if(MachineTokenProvider.getAuthenticationProxy() != null)
+					qcowOptions.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
 				EmulatorUtils.createCowFile(cowPath, qcowOptions);
 
 				Path fuseMountpoint = cowPath
@@ -245,7 +248,6 @@ public class EmulatorUtils {
 	 * Creates a copy-on-write wrapper (in qcow2 file format) for imgUrl at the
 	 * specified directory.
 	 *
-	 * @param imgUrl  The image url to be wrapped (any valid Qemu url)
 	 * @param cowPath Path where the qcow2 file will be created at.
 	 */
 	public static void createCowFile(Path cowPath, QcowOptions options) throws BWFLAException {
@@ -267,6 +269,7 @@ public class EmulatorUtils {
 		}
 
 		if(options.getProxyUrl() != null && options.getProxyUrl() != null) {
+			log.severe("using proxy " +  options.getProxyUrl());
 			process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			process.addEnvVariable("http_proxy", options.getProxyUrl());
 		}

@@ -20,10 +20,12 @@
 package de.bwl.bwfla.eaas.cluster.provider;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Random;
 import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.function.BiConsumer;
@@ -65,6 +67,7 @@ import de.bwl.bwfla.eaas.cluster.provider.iaas.INodeAllocator;
 import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeAllocatorBLADES;
 import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeAllocatorGCE;
 import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeAllocatorJCLOUDS;
+import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeNameGenerator;
 
 
 public class ResourceProvider implements IResourceProvider
@@ -74,12 +77,15 @@ public class ResourceProvider implements IResourceProvider
 	private static final int PRIORITY_RELEASE   = PRIORITY_DEFAULT + 11;
 	private static final int PRIORITY_NODEMGMNT = PRIORITY_DEFAULT + 20;
 
+	private static final int DNS_TRANSACTION_RETRIES_NUM = 5;
+
 	private final static String DNS_REGISTER_SCRIPT = "/libexec/register-dns";
 	private final static String DNS_UNREGISTER_SCRIPT = "/libexec/unregister-dns";
 	private final static String CLOUD_CONFIG_SCRIPT = "/libexec/get-cloud-config";
 
 	private final PrefixLogger log;
-	
+
+	private final NodeNameGenerator nodeNameGenerator;
 	private final ResourceProviderMetrics metrics;
 	private final ResourceProviderConfig config;
 	private final ScheduledExecutorService scheduler;
@@ -105,6 +111,7 @@ public class ResourceProvider implements IResourceProvider
 				.add("RP", config.getName());
 		
 		this.log = new PrefixLogger(this.getClass().getName(), logContext);
+		this.nodeNameGenerator = new NodeNameGenerator("ec-");
 		this.metrics = new ResourceProviderMetrics();
 		this.config = config;
 		this.scheduler = executors.scheduler();
@@ -131,7 +138,7 @@ public class ResourceProvider implements IResourceProvider
 		final NodeAllocatorConfig nodeConfig = config.getNodeAllocatorConfig();
 		final NodePoolScalerConfig poolScalerConfig = config.getPoolScalerConfig();
 		if (nodeConfig.getClass() == NodeAllocatorConfigBLADES.class) {
-			this.nodes = new NodeAllocatorBLADES((NodeAllocatorConfigBLADES) nodeConfig, onDownCallback, executors, logContext);
+			this.nodes = new NodeAllocatorBLADES(config.getProtocol(), (NodeAllocatorConfigBLADES) nodeConfig, onDownCallback, executors, logContext);
 			this.poolscaler = NodePoolScaler.create((HomogeneousNodePoolScalerConfig) poolScalerConfig, nodes.getNodeCapacity());
 		}
 		else if (nodeConfig.getClass() == NodeAllocatorConfigGCE.class) {
@@ -529,30 +536,24 @@ public class ResourceProvider implements IResourceProvider
 		
 		NodePoolScaler.Action action = poolscaler.execute(pool, missingResources, reqResources, usedResources);
 		if (action.getClass() == NodePoolScaler.ScaleUpAction.class) {
+			Consumer<NodeID> onAllocatedCallback = (NodeID nid) -> {
+				nid.setProtocol(config.getProtocol());
+				try {
+					this.addDnsRecord(nid);
+				}
+				catch (Exception error) {
+					throw new RuntimeException(error);
+				}
+			};
 
 			Consumer<Node> onUpCallback = (Node node) -> {
-				final Runnable dnstask = () -> {
-					// Register node in DNS first
-					try {
-						this.registerNodeDns(node);
-					}
-					catch (Exception error) {
-						final NodeID nid = node.getId();
-						log.log(Level.WARNING, "Registering node '" + nid.toString() + "' in DNS failed!\n", error);
-						nodes.release(nid);
-						return;
-					}
-
-					// Then, register node in this provider
-					final Runnable task = () -> {
-						this.registerNode(node);
-						this.processDeferredAllocations();
-					};
-
-					this.submit(PRIORITY_NODEMGMNT, task);
+				// Task for registering the node in this provider
+				final Runnable task = () -> {
+					this.registerNode(node);
+					this.processDeferredAllocations();
 				};
-				ioExecutor.execute(dnstask);
-				node.getId().setProtocol(config.getProtocol());
+
+				this.submit(PRIORITY_NODEMGMNT, task);
 			};
 			
 			Consumer<ResourceSpec> onErrorCallback = (ResourceSpec spec) -> {
@@ -572,26 +573,25 @@ public class ResourceProvider implements IResourceProvider
 			log.info(message);
 			
 			// Request more nodes!
-			NodeAllocationRequest request = new NodeAllocationRequest(scaleUpSpec, onUpCallback, onErrorCallback);
+			NodeAllocationRequest request = new NodeAllocationRequest(scaleUpSpec, onAllocatedCallback, onUpCallback, onErrorCallback);
 
-			if(config.getDomain() != null)
-			{
+			if (config.getDomain() != null) {
 				request.setUserMetaData((String name) -> {
 					DeprecatedProcessRunner processRunner = new DeprecatedProcessRunner();
-
 					processRunner.setCommand(CLOUD_CONFIG_SCRIPT);
 					processRunner.addArgument(name + "." + config.getDomain());
 					processRunner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
 					processRunner.redirectStdErrToStdOut(false);
+					processRunner.setLogger(log);
 					processRunner.execute(false, false);
 					try {
-						String userData = processRunner.getStdOutString();
-						processRunner.cleanup();
-						return userData;
+						return processRunner.getStdOutString();
 					} catch (IOException e) {
 						e.printStackTrace();
-						processRunner.cleanup();
 						return null;
+					}
+					finally {
+						processRunner.cleanup();
 					}
 				});
 			}
@@ -610,11 +610,6 @@ public class ResourceProvider implements IResourceProvider
 			for (NodeID nid : sda.getNodes()) {
 				this.unregisterNode(nid);
 				nodes.release(nid);
-
-				final Runnable dnstask = () -> {
-					unregisterNodeDns(nid);
-				};
-				ioExecutor.execute(dnstask);
 			}
 		}
 	}
@@ -636,32 +631,52 @@ public class ResourceProvider implements IResourceProvider
 		return summary;
 	}
 
-	private void unregisterNodeDns(NodeID nid)
+	private void removeDnsRecord(NodeID nid)
 	{
-		if(config.getDomain() == null)
+		if (config.getDomain() == null)
 			return;
 
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-		runner.setCommand(DNS_UNREGISTER_SCRIPT);
-		runner.addArgument(nid.getNodeHost());
-		runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
-		runner.execute();
+		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+		for (int i = 0; i < DNS_TRANSACTION_RETRIES_NUM; ++i) {
+			runner.setCommand(DNS_UNREGISTER_SCRIPT);
+			runner.addArgument(nid.getDomainName());
+			runner.addArgument(nid.getIpAddress());
+			runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
+			runner.redirectStdErrToStdOut(true);
+			runner.setLogger(log);
+			if (runner.execute())
+				return;  // success!
+
+			log.warning("Removing DNS record for node '" + nid + "' failed! Retrying...");
+			ResourceProvider.sleep(ResourceProvider.nextDnsRetryDelay());
+		}
+
+		log.warning("Removing DNS record for node '" + nid + "' failed!");
 	}
 
-	private void registerNodeDns(Node node) throws BWFLAException {
-		if(config.getDomain() == null)
+	private void addDnsRecord(NodeID nid) throws BWFLAException
+	{
+		if (config.getDomain() == null)
 			return;
 
-		String nodeName = UUID.randomUUID().toString();
-		node.getId().setFqdn(nodeName + "." + config.getDomain());
+		nid.setDomainName(nodeNameGenerator.next() + "." + config.getDomain());
 
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-		runner.setCommand(DNS_REGISTER_SCRIPT);
-		runner.addArgument(node.id.getNodeHost());
-		runner.addArgument(node.id.toString());
-		runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
-		if(!runner.execute())
-			throw new BWFLAException("DNS registration failed");
+		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+		for (int i = 0; i < DNS_TRANSACTION_RETRIES_NUM; ++i) {
+			runner.setCommand(DNS_REGISTER_SCRIPT);
+			runner.addArgument(nid.getDomainName());
+			runner.addArgument(nid.getIpAddress());
+			runner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
+			runner.redirectStdErrToStdOut(true);
+			runner.setLogger(log);
+			if (runner.execute())
+				return;  // success!
+
+			log.warning("Adding DNS record for node '" + nid + "' failed! Retrying...");
+			ResourceProvider.sleep(ResourceProvider.nextDnsRetryDelay());
+		}
+
+		throw new BWFLAException("DNS registration failed for node: " + nid);
 	}
 	
 	private void registerNode(Node node)
@@ -681,10 +696,10 @@ public class ResourceProvider implements IResourceProvider
 	{
 		log.info("Unregistering node '" + nid + "'...");
 
-		log.info("node " + nid + "  down: un-register dns.");
-		unregisterNodeDns(nid);
 		resources.unregisterNode(nid);
 		pool.unregisterNode(nid);
+
+		ioExecutor.execute(() -> this.removeDnsRecord(nid));
 	}
 
 	private boolean isMaxPoolSizeReached()
@@ -793,7 +808,23 @@ public class ResourceProvider implements IResourceProvider
 		spec.min(config.getPreAllocationMaxBound());
 		return spec;
 	}
-	
+
+	private static long nextDnsRetryDelay()
+	{
+		final Random random = new Random();
+		return (long) (500 + random.nextInt(1500));
+	}
+
+	private static void sleep(long timeout)
+	{
+		try {
+			Thread.sleep(timeout);
+		}
+		catch (Exception error) {
+			// Ignore it!
+		}
+	}
+
 	
 	private class ShutdownTask implements Runnable
 	{

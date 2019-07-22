@@ -71,11 +71,12 @@ public class ExportObject extends HttpExportServlet
 		String imageArchiveName = pathElements[1].substring(0, pathElements[1].length() - 1);;
 
 		if (type.equals("patch/"))
-			type = "template/patch/";
+			type = "patches/patchesFiles/";
 
 		File metaDataFile = new File(getImageArchiveBackend(imageArchiveName).getConfig().getMetaDataPath() +"/"+ type + id);
 
 		log.warning("metaDataPath: " + metaDataFile.toPath());
+		log.warning("metaDataFile.exists(): " + metaDataFile.exists());
 		if (metaDataFile.exists())
 			return metaDataFile;
 		else

@@ -42,10 +42,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLConnection;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -131,6 +128,9 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 				if (t.equals(ImageType.template))
 					continue;
 
+				if (t.equals(ImageType.patches))
+					continue;
+
 				if (t.equals(ImageType.tmp))
 					continue;
 
@@ -199,37 +199,13 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String imageId, ImageType type, String templateId, String emulatorArchiveprefix) throws BWFLAException
+	public String generalizedImport(String imageId, ImageType type, String patchId, String emulatorArchiveprefix) throws BWFLAException
 	{
 
 		log.warning("emulatorArchiveprefix: " + emulatorArchiveprefix);
-
-		if (imageId == null) {
-			throw new BWFLAException("imageID is null, aborting");
-		}
-
-		// check if template requires generalization
-		MachineConfigurationTemplate tempEnv = null;
-		try {
-			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.template + "/" + templateId), "GET", "metadata","true");
-			String envStr = IOUtils.toString(is, StandardCharsets.UTF_8);
-
-			tempEnv = MachineConfigurationTemplate.fromValue(envStr);
-		} catch (IOException | JAXBException  e) {
-			e.printStackTrace();
-			throw new BWFLAException(e);
-		}
-
-		if (tempEnv == null)
-			throw new BWFLAException("invalid template");
-
-		if (tempEnv.getImageGeneralization() == null || tempEnv.getImageGeneralization().getModificationScript() == null)
-			return imageId;
-
 		try {
 			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-			imageHandler.createPatchedCow(imageId, cowId, tempEnv, type.name(), emulatorArchiveprefix);
-			return cowId;
+			return imageHandler.createPatchedCow(imageId, cowId, patchId, type.name(), emulatorArchiveprefix);
 		}
 		catch (IOException e) {
 			throw new BWFLAException(e);

@@ -26,25 +26,23 @@ public class ImageGeneralizer {
 
     /**
      * Mount
-     *
      * @param imgFile
-     * @param templateEnv
+     * @param generalization
+     * @param emulatorArchiveprefix
      * @throws BWFLAException
      * @throws IOException
      */
-    public static void  applyScriptIfCompatible(File imgFile, MachineConfigurationTemplate templateEnv, String emulatorArchiveprefix) throws BWFLAException, IOException {
+    public static void  applyScriptIfCompatible(File imgFile, GeneralizationPatch generalization, String emulatorArchiveprefix) throws BWFLAException, IOException {
         ImageMounter image = null;
         try {
             image = new ImageMounter(imgFile.toPath());
-
-            //creation of ddFile
             image.mountDD();
 
-            List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), templateEnv);
-            String fs = templateEnv.getImageGeneralization().getPrecondition().getFileSystem();
+            List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), generalization);
+            String fs = generalization.getImageGeneralization().getPrecondition().getFileSystem();
 
             if (partitions == null) {
-                throw new BWFLAException("Partion with label: " + templateEnv.getImageGeneralization().getPrecondition().getPartitionLabel() +
+                throw new BWFLAException("Partion with label: " + generalization.getImageGeneralization().getPrecondition().getPartitionLabel() +
                         " and FileSystem " + fs + " was not found!");
             }
 
@@ -56,7 +54,7 @@ public class ImageGeneralizer {
 
                     patch  = new File("/tmp/patch-" + UUID.randomUUID());
 
-                    InputStream is = EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/patch/" + templateEnv.getImageGeneralization().getModificationScript()), "GET", "metadata", "true");
+                    InputStream is = EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/patch/" + generalization.getImageGeneralization().getModificationScript()), "GET", "metadata", "true");
                     FileUtils.copyInputStreamToFile(is, patch);
 
                     if (!patch.setExecutable(true)) {
@@ -66,7 +64,7 @@ public class ImageGeneralizer {
                     if (fsList == null)
                         throw new BWFLAException("mount failed: mounted dir is null");
 
-                    if (isScriptCompatible(templateEnv, image.getFsDir().toFile())) {
+                    if (isScriptCompatible(image.getFsDir().toFile(), generalization)) {
                         patchPartition(image.getFsDir().toFile(), patch.toString());
                         break;
                     } else {
@@ -83,7 +81,6 @@ public class ImageGeneralizer {
             if (image != null)
                 image.completeUnmount();
         }
-
     }
 
 
@@ -92,8 +89,8 @@ public class ImageGeneralizer {
      * Check whether result of applied script would be successful
      * @return
      */
-    private static boolean isScriptCompatible(MachineConfigurationTemplate templateEnv, File tempMountDir) throws IOException {
-        RequiredFiles requiredFiles = templateEnv.getImageGeneralization().getPrecondition().getRequiredFiles();
+    private static boolean isScriptCompatible(File tempMountDir, GeneralizationPatch generalization) throws IOException {
+        RequiredFiles requiredFiles = generalization.getImageGeneralization().getPrecondition().getRequiredFiles();
         /*
         if required files were specified in template xml file, we need to check if they're exist
          */
@@ -142,8 +139,8 @@ public class ImageGeneralizer {
      * @throws BWFLAException
      * @throws IOException
      */
-    private static List<DiskPartitionDescription.DiskPartition> findValidPartitions(File ddFile, MachineConfigurationTemplate templateEnv) throws BWFLAException, IOException {
-        String partitionLabel = templateEnv.getImageGeneralization().getPrecondition().getPartitionLabel();
+    private static List<DiskPartitionDescription.DiskPartition> findValidPartitions(File ddFile, GeneralizationPatch generalization) throws BWFLAException, IOException {
+        String partitionLabel = generalization.getImageGeneralization().getPrecondition().getPartitionLabel();
         DiskPartitionDescription parted = new DiskPartitionDescription(ddFile);
         List<DiskPartitionDescription.DiskPartition> partitions = parted.getPartitionTable();
         List<DiskPartitionDescription.DiskPartition> validPartitions = new ArrayList<>();
@@ -153,7 +150,7 @@ public class ImageGeneralizer {
             if (partitionLabel.equals("") || partitionLabel == null) {
                 return partitions;
             } else {
-                if (ImageGeneralizationUtils.checkPartition(p, partitionLabel, templateEnv.getImageGeneralization().getPrecondition().getFileSystem()))
+                if (ImageGeneralizationUtils.checkPartition(p, partitionLabel, generalization.getImageGeneralization().getPrecondition().getFileSystem()))
                     validPartitions.add(p);
             }
         }

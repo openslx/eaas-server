@@ -32,6 +32,15 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class NetworkRequest extends JaxbType {
+
+    public boolean isDhcp() {
+        return dhcp;
+    }
+
+    public void setDhcp(boolean dhcp) {
+        this.dhcp = dhcp;
+    }
+
     @XmlType
     @XmlAccessorType(XmlAccessType.NONE)
     public static class ComponentSpec {
@@ -65,12 +74,6 @@ public class NetworkRequest extends JaxbType {
         @XmlElement
         private boolean socks;
 
-        @XmlElement(required = true, nillable = false)
-        private String gwPrivateIp;
-
-        @XmlElement(required = true, nillable = false)
-        private String gwPrivateMask;
-
         @XmlElement
         private String serverPort;
 
@@ -83,22 +86,6 @@ public class NetworkRequest extends JaxbType {
 
         public void setSocks(boolean socks) {
             this.socks = socks;
-        }
-
-        public String getGwPrivateIp() {
-            return gwPrivateIp;
-        }
-
-        public void setGwPrivateIp(String gwPrivateIp) {
-            this.gwPrivateIp = gwPrivateIp;
-        }
-
-        public String getGwPrivateMask() {
-            return gwPrivateMask;
-        }
-
-        public void setGwPrivateMask(String gwPrivateMask) {
-            this.gwPrivateMask = gwPrivateMask;
         }
 
         public String getServerPort() {
@@ -123,6 +110,9 @@ public class NetworkRequest extends JaxbType {
 
     @XmlElement(name = "hasInternet", required = false, defaultValue = "false")
     private boolean internet = false;
+
+    @XmlElement(name = "enableDhcp", required = false, defaultValue = "false")
+    private boolean dhcp = false;
 
     @XmlElement(name= "hasTcpGateway", required = false, defaultValue = "false")
     private boolean tcpGateway = false;

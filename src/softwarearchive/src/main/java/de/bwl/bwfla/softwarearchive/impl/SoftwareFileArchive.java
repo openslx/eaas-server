@@ -115,8 +115,9 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		if (formats == null) {
 			formats = new ArrayList<String>();
 		}
-		if(QID  != null)
-		QIDsFinder.extendSupportedFormats(QID, formats);
+
+		// if(QID  != null)
+		//	QIDsFinder.extendSupportedFormats(QID, formats);
 		return sp;
 	}
 
@@ -143,7 +144,7 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		if (software == null)
 			return null;
 		
-		return new SoftwareDescription(id, software.getName(), software.getIsOperatingSystem());
+		return new SoftwareDescription(id, software.getName(), software.getIsOperatingSystem(), software.getArchive());
 	}
 	
 	@Override

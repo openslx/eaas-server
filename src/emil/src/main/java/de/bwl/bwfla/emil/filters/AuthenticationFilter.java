@@ -39,7 +39,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
     @Inject
     @AuthenticatedUser
-    Event<DecodedJWT> userAuthenticatedEvent;
+    Event<JwtLoginEvent> userAuthenticatedEvent;
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -63,16 +63,20 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         }
         // String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9.eyJpc3MiOiJhdXRoMCJ9.AbIJTDMFc7yUa5MhvcP03nJPyCPzZtQcGEp-zWfOkEE";
 
-        if(token == null)
-            throw new NotAuthorizedException("Authorization token must be provided");
+        if(token == null) {
+            // System.out.println("anonymous");
+            userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+        }
+        else {
 
-        try {
-            // Validate the token
-            validateToken(token);
-        } catch (Exception e) {
-            // e.printStackTrace();
-            requestContext.abortWith(
-                    Response.status(Response.Status.UNAUTHORIZED).build());
+            try {
+                // Validate the token
+                validateToken(token);
+            } catch (Exception e) {
+                e.printStackTrace();
+                requestContext.abortWith(
+                        Response.status(Response.Status.UNAUTHORIZED).build());
+            }
         }
     }
 
@@ -82,13 +86,31 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             throw new BWFLAException("no auth secret configured. configure 'emil.authSecret'");
 
         try {
+            System.out.println(" secret " + authSecret);
             Algorithm algorithm = Algorithm.HMAC256(authSecret);
             JWTVerifier verifier = JWT.require(algorithm)
                     .build(); //Reusable verifier instance
             DecodedJWT jwt = verifier.verify(token);
-            userAuthenticatedEvent.fire(jwt);
+            userAuthenticatedEvent.fire(new JwtLoginEvent(jwt));
         } catch (JWTVerificationException exception){
-            throw exception;
+            // exception.printStackTrace();
+            // throw exception;
+            // System.out.println("anonymous");
+            userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+        }
+    }
+
+    public class JwtLoginEvent
+    {
+        private final DecodedJWT jwt;
+
+        JwtLoginEvent(DecodedJWT jwt)
+        {
+            this.jwt = jwt;
+        }
+
+        public DecodedJWT getJwt() {
+            return jwt;
         }
     }
 }

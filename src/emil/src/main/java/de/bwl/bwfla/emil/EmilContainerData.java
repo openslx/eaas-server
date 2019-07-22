@@ -2,8 +2,6 @@ package de.bwl.bwfla.emil;
 
 
 import java.io.*;
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -17,11 +15,8 @@ import javax.naming.NamingException;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-import de.bwl.bwfla.api.imagearchive.*;
-import de.bwl.bwfla.api.imagebuilder.DockerImport;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilderMetadata;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
+import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
+import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -30,26 +25,19 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.InputStreamDataSource;
-import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
-import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
-import de.bwl.bwfla.imagebuilder.api.ImageDescription;
-import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
-import org.apache.tamaya.inject.api.WithPropertyConverter;
 import org.jboss.resteasy.plugins.providers.multipart.InputPart;
 import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
 
 import javax.naming.InitialContext;
-import javax.xml.bind.JAXBException;
-import java.time.Duration;
 import java.util.concurrent.ExecutionException;
 
 @Path("EmilContainerData")
@@ -111,7 +99,7 @@ public class EmilContainerData extends EmilRest {
      * 
      * @return List of Container Runtimes
      */
-    @Secured
+    @Secured({Role.PUBLIC})
     @GET
     @Path("/getOriginRuntimeList")
     @Produces(MediaType.APPLICATION_JSON)
@@ -140,57 +128,75 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/updateContainer")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response updateContainer(UpdateContainerRequest req)
-    {
-
+    public Response updateContainer(UpdateContainerRequest req) {
+        boolean imported = false;
         final String curEnvId = req.getId();
-        if(curEnvId == null)
+        if (curEnvId == null)
             return Emil.errorMessageResponse("Id was null");
 
         EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(curEnvId);
-        if(newEmilEnv == null) {
+        if (newEmilEnv == null) {
             return Emil.errorMessageResponse("No environment found with ID: " + curEnvId);
         }
 
         assert (newEmilEnv instanceof EmilContainerEnvironment);
 
-        EmilContainerEnvironment env = (EmilContainerEnvironment)newEmilEnv;
+        EmilContainerEnvironment env = (EmilContainerEnvironment) newEmilEnv;
 
         OciContainerConfiguration containerConf;
         try {
             containerConf = (OciContainerConfiguration) envHelper.getEnvironmentById(newEmilEnv.getArchive(), req.getId());
-        } catch (BWFLAException e) {
-            return Emil.internalErrorResponse(e);
-        }
+            EnvironmentDescription description = containerConf.getDescription();
+            description.setTitle(req.getTitle());
+            containerConf.setDescription(description);
 
-        EnvironmentDescription description = containerConf.getDescription();
-        description.setTitle(req.getTitle());
-        containerConf.setDescription(description);
+            OciContainerConfiguration.Process process = new OciContainerConfiguration.Process();
+            if (req.getProcessEnvs() != null && req.getProcessEnvs().size() > 0)
+                process.setEnvironmentVariables(req.getProcessEnvs());
+            process.setArguments(req.getProcessArgs());
+            containerConf.setProcess(process);
 
-        OciContainerConfiguration.Process process = new OciContainerConfiguration.Process();
-        if(req.getProcessEnvs() != null && req.getProcessEnvs().size() > 0)
-            process.setEnvironmentVariables(req.getProcessEnvs());
-        process.setArguments(req.getProcessArgs());
-        containerConf.setProcess(process);
+            containerConf.setOutputPath(req.getOutputFolder());
+            EmilContainerEnvironment newEnv = new EmilContainerEnvironment();
+            if (!env.getArchive().equals("default")) {
+                // we need to import / duplicate the env
+                ImageArchiveMetadata md = new ImageArchiveMetadata();
+                md.setType(ImageType.USER);
+                newEnv.setArchive("default");
+                String id = envHelper.importMetadata("default", containerConf, md, false);
+                newEnv.setEnvId(id);
+                newEnv.setParentEnvId(env.getEnvId());
+                env.addChildEnvId(newEnv.getEnvId());
+                imported = true;
+            } else {
+                envHelper.updateMetadata(env.getArchive(), containerConf);
+                newEnv = env;
+            }
 
-        containerConf.setOutputPath(req.getOutputFolder());
 
-        env.setTitle(req.getTitle());
-        env.setInput(req.getInputFolder());
-        env.setDescription(req.getDescription());
-        env.setOutput(req.getOutputFolder());
-        env.setArgs(req.getProcessArgs());
-        env.setEnv(req.getProcessEnvs());
-        env.setAuthor(req.getAuthor());
+            newEnv.setTitle(req.getTitle());
+            newEnv.setInput(req.getInputFolder());
+            newEnv.setDescription(req.getDescription());
+            newEnv.setOutput(req.getOutputFolder());
+            newEnv.setArgs(req.getProcessArgs());
+            newEnv.setEnv(req.getProcessEnvs());
+            newEnv.setAuthor(req.getAuthor());
+            newEnv.setRuntimeId(req.getContainerRuntimeId());
+            newEnv.setNetworking(req.getNetworking());
 
-        try {
-            emilEnvRepo.save(env, false);
-            envHelper.updateMetadata(env.getArchive(), containerConf);
+
+            if(imported) {
+                // emilEnvRepo.save(currentEnv, false);
+                emilEnvRepo.save(newEnv, true);
+            }
+            else
+                emilEnvRepo.save(newEnv, false);
+
         } catch (BWFLAException e) {
             e.printStackTrace();
             return Emil.internalErrorResponse(e);
@@ -199,7 +205,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("update successful");
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/importContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -212,7 +218,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/importEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -225,7 +231,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/updateLatestEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -233,7 +239,7 @@ public class EmilContainerData extends EmilRest {
         envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
@@ -277,7 +283,7 @@ public class EmilContainerData extends EmilRest {
     }
 
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @GET
     @Path("/taskState")
     @Produces(MediaType.APPLICATION_JSON)
@@ -307,7 +313,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured
+    @Secured({Role.RESTRCITED})
     @POST
     @Path("/saveImportedContainer")
     @Produces(MediaType.APPLICATION_JSON)
@@ -375,7 +381,7 @@ public class EmilContainerData extends EmilRest {
         return archive;
     }
 
-    @Secured
+    @Secured({Role.PUBLIC})
     @POST
     @Path("/uploadUserInput")
     @Consumes("multipart/form-data")

@@ -21,11 +21,9 @@ package de.bwl.bwfla.eaas.cluster.provider.iaas;
 
 import java.security.SecureRandom;
 
-// package-private
-
 
 /** A simple class for the node's name generation */
-class NodeNameGenerator
+public class NodeNameGenerator
 {
 	// Name-Alphabet, skipping easy to confuse chars: i, l, o
 	private static final String ALPHABET = "0123456789abcdefghjkmnpqrstuvwxyz";

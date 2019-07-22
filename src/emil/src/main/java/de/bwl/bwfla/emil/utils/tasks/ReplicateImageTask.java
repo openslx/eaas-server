@@ -8,9 +8,7 @@ import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.rest.ImportEmulatorRequest;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
-import de.bwl.bwfla.emucomp.api.AbstractDataResource;
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
@@ -35,12 +33,22 @@ public class ReplicateImageTask extends AbstractTask<Object> {
         this.log = log;
     }
 
+    // TODO: refactor
+    static final Map<String, String> emulatorContainerMap = new HashMap<String, String>() {{
+        put("Qemu", "qemu-system");
+        put("BasiliskII", "basiliskII");
+        put("Beebem", "beebem");
+        put("Hatari", "hatari");
+        put("Sheepshaver", "sheepshaver");
+        put("ViceC64", "vice-sdl");
+    }};
+
     public static class ReplicateImageTaskRequest {
 
         public DatabaseEnvironmentsAdapter environmentHelper;
         public ImageProposer imageProposer;
         public String destArchive;
-        public MachineConfiguration env;
+        public Environment env;
         public EmilEnvironment emilEnvironment;
         public EmilEnvironmentRepository repository;
         public String username;
@@ -61,38 +69,51 @@ public class ReplicateImageTask extends AbstractTask<Object> {
         iaMd.setType(ImageType.USER);
 
         System.out.println("REPLICATING IMAGE");
+        EmulatorSpec emulatorSpec = null;
+        if(request.env instanceof MachineConfiguration) {
+            emulatorSpec = ((MachineConfiguration)request.env).getEmulator();
+        }
+
 
         // ensure the published environments have emulator info
-        if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
-            if(request.env.getEmulator().getContainerName() == null || request.env.getEmulator().getContainerName().isEmpty())
-                throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first");
+        if (request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
+
+            if (emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty()) {
+                String containerName = emulatorContainerMap.get(emulatorSpec.getBean());
+                if (containerName == null)
+                    throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first");
+
+                emulatorSpec.setContainerName("emucon-rootfs/" + containerName);
+            }
             ImageNameIndex index = request.environmentHelper.getNameIndexes();
 
-            if(request.env.getEmulator().getOciSourceUrl() == null || request.env.getEmulator().getOciSourceUrl().isEmpty()) {
-                Entry entry = EmulatorRegistryUtil.getEntry(index, request.env.getEmulator().getContainerName(), request.env.getEmulator().getContainerVersion());
+
+            if (emulatorSpec.getOciSourceUrl() == null || emulatorSpec.getOciSourceUrl().isEmpty()) {
+                Entry entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
 
                 if (entry == null)
                     throw new BWFLAException("emulator entry not found. can't publish this environment");
 
-                request.env.getEmulator().setContainerVersion(entry.getVersion());
-                request.env.getEmulator().setOciSourceUrl(entry.getProvenance().getOciSourceUrl());
-                request.env.getEmulator().setDigest(entry.getDigest());
+                emulatorSpec.setContainerVersion(entry.getVersion());
+                emulatorSpec.setOciSourceUrl(entry.getProvenance().getOciSourceUrl());
+                emulatorSpec.setDigest(entry.getDigest());
             }
         }
 
-        if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
-            if(request.env.getEmulator().getContainerName() == null || request.env.getEmulator().getContainerName().isEmpty())
+
+        if(request.env instanceof MachineConfiguration && request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
+            if(emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty())
                 throw new BWFLAException("this environment cannot be imported. old metadata. set an emulator first");
 
             ImageNameIndex index = request.environmentHelper.getNameIndexes();
-            Entry entry = EmulatorRegistryUtil.getEntry(index, request.env.getEmulator().getContainerName(), request.env.getEmulator().getContainerVersion());
+            Entry entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
             if(entry == null) // we need to import the emulator
             {
-                if(request.env.getEmulator() == null)
+                if(emulatorSpec == null)
                     throw new BWFLAException("no emulator info available. fix metadata");
 
-                String ociSourceUrl = request.env.getEmulator().getOciSourceUrl();
-                String digest = request.env.getEmulator().getDigest();
+                String ociSourceUrl = emulatorSpec.getOciSourceUrl();
+                String digest = emulatorSpec.getDigest();
 
                 if(ociSourceUrl == null)
                     throw new BWFLAException("invalid emulator metadata: ociSource is mandatory");
@@ -109,8 +130,13 @@ public class ReplicateImageTask extends AbstractTask<Object> {
 
         // disable for now. for default items we only need to create a HDL. TODO
         // if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
-            List<AbstractDataResource> resources = request.env.getAbstractDataResource();
-            for (AbstractDataResource abr : resources) {
+        List<AbstractDataResource> resources = null;
+        if (request.env instanceof MachineConfiguration)
+            resources = ((MachineConfiguration) request.env).getAbstractDataResource();
+        else if (request.env instanceof OciContainerConfiguration)
+            resources = ((OciContainerConfiguration) request.env).getDataResources();
+
+        for (AbstractDataResource abr : resources) {
                 if (abr instanceof ImageArchiveBinding) {
                     List<String> images = new ArrayList<>();
                     ImageArchiveBinding iab = (ImageArchiveBinding) abr;

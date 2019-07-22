@@ -33,6 +33,7 @@ public interface ClusterComponent {
 	
 	public ComponentState getState() throws BWFLAException;
 	public Map<String, URI> getControlUrls();
+	public URI getEventSourceUrl();
 
 	public void setKeepaliveTimestamp(long timestamp);
 	public long getKeepaliveTimestamp();

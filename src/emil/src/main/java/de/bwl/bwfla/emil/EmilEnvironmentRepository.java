@@ -320,8 +320,10 @@ public class EmilEnvironmentRepository {
 		if (envid == null)
 			return null;
 
+
 		try {
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
+
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				return getSharedEmilEnvironmentById(envid);
 
@@ -349,7 +351,6 @@ public class EmilEnvironmentRepository {
 
 	synchronized public void replicate(EmilEnvironment env, String destArchive, String userctx) throws JAXBException, BWFLAException {
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
-
 			String collection = null;
 			String username = null;
 
@@ -365,6 +366,7 @@ public class EmilEnvironmentRepository {
 			db.deleteDoc(collection, env.getEnvId(), env.getIdDBkey());
 
 			String parent = env.getParentEnvId();
+			String lastPrivateChild = env.getEnvId();
 			while(parent != null)
 			{
 				EmilEnvironment p = getEmilEnvironmentById(collection, parent, username);
@@ -375,6 +377,9 @@ public class EmilEnvironmentRepository {
 				if(!p.getArchive().equals(destArchive))
 				{
 					Environment pe = environmentsAdapter.getEnvironmentById(p.getArchive(), p.getEnvId());
+					if(pe == null)
+						throw new BWFLAException("parent id not found! loose end: \n" + p.value(true));
+
 					ImageArchiveMetadata iam = new ImageArchiveMetadata();
 					iam.setType(ImageType.USER);
 					environmentsAdapter.importMetadata(destArchive, pe, iam, true);
@@ -388,8 +393,15 @@ public class EmilEnvironmentRepository {
 					}
 					p.setArchive(destArchive);
 					save(p, false);
+					lastPrivateChild = p.getEnvId();
+					parent = p.getParentEnvId();
 				}
-				parent = p.getParentEnvId();
+				else // first parent in dest archive, connecting
+				{
+					p.addChildEnvId(lastPrivateChild);
+					save(p, false);
+					parent  = null;
+				}
 			}
 		}
 		env.setArchive(destArchive);
@@ -493,15 +505,7 @@ public class EmilEnvironmentRepository {
 //			LOG.warning(__env.isVisible() + "yyy");
 //		}
 
-//		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder();
-//		for(String user : _result.keySet()) {
-//			List<EmilEnvironment> envs = _result.get(user);
-//			for (EmilEnvironment e : envs)
-//			{
-//				LOG.severe("saving " + user + " -> " + e.jsonValueWithoutRoot(true));
-//				db.saveDoc(user, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
-//			}
-//		}
+		importFromFolder("import");
 
 		Collection<String> archives = environmentsAdapter.listBackendNames();
 		for(String a : archives) {
@@ -562,6 +566,44 @@ public class EmilEnvironmentRepository {
 			}
 		}
 		return counter;
+	}
+
+	private void importFromFolder(String directory) throws BWFLAException {
+		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder(directory);
+		for(String collection : _result.keySet()) {
+			List<EmilEnvironment> envs = _result.get(collection);
+			for (EmilEnvironment e : envs)
+			{
+				LOG.severe("saving " + collection + " -> " + e.jsonValueWithoutRoot(true));
+				db.saveDoc(collection, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
+			}
+		}
+	}
+
+	void export()
+	{
+		List<String> collections = db.getCollections();
+		try {
+			EmilDataExport emilDataExport = new EmilDataExport();
+			for(String collection : collections) {
+				try {
+					Stream<EmilEnvironment> all = db.find(collection, new MongodbEaasConnector.FilterBuilder(), "type");
+					all.forEach(emilEnvironment -> {
+						try {
+							emilDataExport.saveEnvToPath(collection, emilEnvironment);
+						} catch (IOException e) {
+							e.printStackTrace();
+						}
+					});
+				} catch (Exception e) {
+					e.printStackTrace();
+					LOG.warning("failed to export collection: " + collection);
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+			LOG.severe("failed to initialize export");
+		}
 	}
 
 	private void saveImport(Environment env, EmilEnvironment ee) throws JAXBException, BWFLAException {

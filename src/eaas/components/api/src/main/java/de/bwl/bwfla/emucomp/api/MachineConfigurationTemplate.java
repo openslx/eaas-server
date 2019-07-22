@@ -12,22 +12,9 @@ import java.util.logging.Logger;
 
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "emulationEnvironmentTemplate", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
-		"imageGeneralization"
-})
 @XmlRootElement(name="emulationEnvironmentTemplate", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class MachineConfigurationTemplate extends  MachineConfiguration
 {
-
-	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
-	private ImageGeneralization imageGeneralization;
-
-	public ImageGeneralization getImageGeneralization()
-	{
-		return imageGeneralization;
-	}
-
-
 	public static MachineConfigurationTemplate fromValue(String data) throws JAXBException {
 		return JaxbType.fromValue(data, MachineConfigurationTemplate.class);
 	}

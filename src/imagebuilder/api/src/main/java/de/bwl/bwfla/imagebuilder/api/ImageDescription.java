@@ -56,6 +56,9 @@ public class ImageDescription
 	@XmlElement
 	private String label;
 
+	@XmlElement(required = false)
+	private String xmountProxy;
+
 	@XmlElement(name = "content", required = true)
 	private List<ImageContentDescription> entries;
 
@@ -205,7 +208,8 @@ public class ImageDescription
 		return label;
 	}
 
-	public void setLabel(String label) {
+	public ImageDescription setLabel(String label) {
 		this.label = label;
+		return this;
 	}
 }

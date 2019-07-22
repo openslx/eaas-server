@@ -84,13 +84,13 @@ public class HttpUtils
 				start = length - end;
 				end = length - 1;
 			}
-			else if (end < 0) {
+			else if (end < 0 || end >= length) {
 				// Case: bytes=X- (last length-X bytes)
 				end = length - 1;
 			}
 
 			// Safety check!
-			if (start > end || end >= length)
+			if (start > end)
 				throw new IllegalArgumentException("Invalid range header: " + header);
 
 			ranges.add(new ByteRange(start, end - start + 1));

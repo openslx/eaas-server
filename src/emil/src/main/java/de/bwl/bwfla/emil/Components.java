@@ -19,8 +19,8 @@
 
 package de.bwl.bwfla.emil;
 
-import java.awt.*;
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
@@ -35,10 +35,10 @@ import java.util.List;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
@@ -47,17 +47,17 @@ import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.ws.rs.sse.InboundSseEvent;
 import javax.ws.rs.sse.OutboundSseEvent;
 import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.SessionOptions;
@@ -65,18 +65,20 @@ import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
+import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
+import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
-import de.bwl.bwfla.emil.utils.PrintJobObserver;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
@@ -85,7 +87,6 @@ import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.commons.io.FilenameUtils;
-import org.apache.commons.validator.routines.UrlValidator;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.api.eaas.EaasWS;
@@ -97,12 +98,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
-
-import static java.util.concurrent.TimeUnit.SECONDS;
 
 
 @ApplicationScoped
@@ -166,6 +164,12 @@ public class Components {
     @Config(value = "emil.containerdata.imagebuilder.timeout")
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration imageBuilderTimeout = null;
+
+    @Inject
+    @Config(value = "emil.max_session_duration")
+    @WithPropertyConverter(DurationPropertyConverter.class)
+    private Duration maxSessionDuration = null;
+
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
     private SoftwareArchiveHelper swHelper;
@@ -207,6 +211,9 @@ public class Components {
     @Resource(lookup = "java:jboss/ee/concurrency/executor/io")
     protected ExecutorService executor;
 
+    private ImageBuilder imagebuilder;
+    private BlobStore blobstore;
+
     @PostConstruct
     private void init() {
         swHelper = new SoftwareArchiveHelper(softwareArchive);
@@ -227,10 +234,20 @@ public class Components {
         try {
             this.eaas = eaasClient.getEaasWSPort(eaasGw);
             this.component = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class);
+
+            this.imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
+            this.blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
+
         }
         catch (Exception error) {
             throw new RuntimeException("Constructing web-services failed!", error);
         }
+
+        if (maxSessionDuration.isZero()) {
+            LOG.info("Session duration control is disabled");
+            maxSessionDuration = Duration.ofMillis(Long.MAX_VALUE);
+        }
+        else LOG.info("Session duration control is enabled! Max. session lifetime: " + maxSessionDuration.toString());
     }
 
     @PreDestroy
@@ -278,7 +295,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request,
@@ -371,6 +388,120 @@ public class Components {
         }
     }
 
+    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
+        ArrayList<String> args = new ArrayList<String>();
+        ContainerMetadata metadata = new ContainerMetadata();
+        final String inputDir = "container-input";
+        final String outputDir = "container-output";
+        metadata.setDhcp(isDHCPenabled);
+        metadata.setTelnet(true);
+        metadata.setProcess("/bin/sh");
+        args.add("-c");
+        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
+        args.add("");
+
+        args.add("--output");
+        args.add("config.json");
+
+
+        if(requiresInputFiles) {
+            args.add("--mount");
+            args.add(getMountStr(inputDir, config.getInput(), true));
+        }
+        args.add("--mount");
+        args.add(getMountStr(outputDir, config.getOutputPath(), false));
+
+        if (config.getCustomSubdir() != null) {
+            args.add("--rootfs");
+            args.add("rootfs/" + config.getCustomSubdir());
+        }
+
+        // Add environment variables
+        if(config.getProcess().getEnvironmentVariables() != null) {
+            for (String env : config.getProcess().getEnvironmentVariables()) {
+                args.add("--env");
+                args.add(env);
+            }
+        }
+
+        // Add emulator's command
+        args.add("--");
+        for (String arg : config.getProcess().getArguments())
+            args.add(arg);
+
+        metadata.setArgs(args);
+
+        return metadata.jsonValueWithoutRoot(true);
+    }
+
+    private String getMountStr(String src, String dst, boolean isReadonly) throws BWFLAException {
+        if (src != null && dst != null) {
+            return src + ":" + dst + ":bind:" + (isReadonly ? "ro" : "rw");
+        } else {
+            throw new BWFLAException("src or dst is null! src:" + src + " dst:" + dst);
+        }
+    }
+
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
+        File tmpfile = File.createTempFile("metadata.json", null, null);
+        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
+
+        BlobDescription blobDescription = new BlobDescription();
+        blobDescription.setDataFromFile(tmpfile.toPath())
+                .setNamespace("random")
+                .setDescription("random")
+                .setName("metadata")
+                .setType(".json");
+
+        return blobstore.put(blobDescription);
+    }
+
+    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
+        if (inputMedia.size() != 1)
+            throw new BWFLAException("Size of Input drives cannot exceed 1");
+
+        ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
+        final FileSystemType fileSystemType = FileSystemType.EXT4;
+        int sizeInMb = medium.getSizeInMb();
+        if (sizeInMb <= 0)
+            sizeInMb = 1024;
+
+        final ImageDescription description = new ImageDescription()
+                .setMediumType(MediumType.HDD)
+                .setPartitionTableType(PartitionTableType.NONE)
+                .setPartitionStartBlock(0)
+                .setFileSystemType(fileSystemType)
+                .setLabel("eaas-job")
+                .setSizeInMb(sizeInMb);
+
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
+        final ImageContentDescription metadataEntry = new ImageContentDescription();
+        metadataEntry.setAction(ImageContentDescription.Action.COPY)
+                .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
+                .setName("metadata.json");
+        description.addContentEntry(metadataEntry);
+
+
+        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(extfile.getAction())
+                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
+                    .setURL(new URL(extfile.getUrl()))
+                    .setSubdir("container-input");
+
+
+            if (extfile.getName() == null || extfile.getName().isEmpty())
+                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
+            else
+                entry.setName(extfile.getName());
+
+            description.addContentEntry(entry);
+        }
+
+        return description;
+    }
+
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
         if (desc.getEnvironment() == null) {
             throw new BadRequestException(Response
@@ -389,8 +520,6 @@ public class Components {
             }
 
             final ContainerConfiguration config = (ContainerConfiguration) chosenEnv;
-            final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
-            final BlobStore blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
 
             int numInputImages = 1;
 
@@ -484,6 +613,79 @@ public class Components {
         }
     }
 
+    private BlobStoreBinding buildExternalFilesMedia(ComponentWithExternalFilesRequest.InputMedium medium,
+                                           TaskStack cleanups,
+                                           int index) throws BWFLAException {
+        int sizeInMb = medium.getSizeInMb();
+        if (sizeInMb <= 0)
+            sizeInMb = 1024;
+
+        final ImageDescription description = new ImageDescription();
+        description.setMediumType(medium.getMediumType());
+
+        if (description.getMediumType() == MediumType.HDD) {
+            description.setPartitionTableType(medium.getPartitiionTableType())
+                    .setPartitionStartBlock(2048)
+                    .setFileSystemType(medium.getFileSystemType())
+                    .setSizeInMb(sizeInMb);
+        }
+        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(extfile.getAction())
+                    .setArchiveFormat(extfile.getCompressionFormat());
+//                            .setDataFromUrl(new URL(extfile.getUrl()));
+
+//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
+
+            try {
+                entry.setURL(new URL(extfile.getUrl()));
+            } catch (MalformedURLException e) {
+                throw new BWFLAException(e);
+            }
+//                    else
+//                        entry.setURL(null);
+
+            if (extfile.getName() == null || extfile.getName().isEmpty())
+                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
+            else
+                entry.setName(extfile.getName());
+
+            description.addContentEntry(entry);
+        }
+
+        // Build input image
+        final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
+        // since cdrom is read-only entity, we return user ISO directly
+        if (description.getMediumType() != MediumType.CDROM) {
+            final Runnable cleanup = () -> {
+                try {
+                    blobstore.delete(blob);
+                } catch (Exception error) {
+                    LOG.log(Level.WARNING, "Deleting container's input image failed!\n", error);
+                }
+            };
+
+            cleanups.push(cleanup);
+        }
+        // Add input image to machine's config
+
+        final BlobStoreBinding binding = new BlobStoreBinding();
+        binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
+        if (description.getMediumType() != MediumType.CDROM)
+            binding.setPartitionOffset(description.getPartitionOffset());
+        binding.setFileSystemType(description.getFileSystemType());
+        binding.setId("input-" + index);
+
+        //FIXME remove if else and make it more elegant (maybe unite?)
+        if (medium.getMediumType() == MediumType.CDROM)
+            binding.setResourceType(Binding.ResourceType.ISO);
+        else if (medium.getMediumType() == MediumType.HDD) {
+            binding.setResourceType(Binding.ResourceType.DISK);
+        }
+
+        return binding;
+    }
+
     protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer) {
         if (machineDescription.getEnvironment() == null) {
             throw new BadRequestException(Response
@@ -515,81 +717,57 @@ public class Components {
             if(emilEnv != null && emilEnv.isEnableRelativeMouse())
                 EmulationEnvironmentHelper.enableRelativeMouse(config);
 
-            final ImageBuilder imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
-            final BlobStore blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
-
             int numInputImages = 1;
 
-            // Wrap external input files into images
-            for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
-                int sizeInMb = medium.getSizeInMb();
-                if (sizeInMb <= 0)
-                    sizeInMb = 1024;
+            if(machineDescription.getLinuxRuntimeData() != null && machineDescription.getLinuxRuntimeData().getUserContainerEnvironment() != null && !machineDescription.getLinuxRuntimeData().getUserContainerEnvironment().isEmpty())
+            {
+                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getLinuxRuntimeData().getUserContainerArchive(),
+                        machineDescription.getLinuxRuntimeData().getUserContainerEnvironment());
+                LOG.warning(ociConf.jsonValueWithoutRoot(true));
 
-                final ImageDescription description = new ImageDescription();
-                description.setMediumType(medium.getMediumType());
-
-                if (description.getMediumType() == MediumType.HDD) {
-                    description.setPartitionTableType(medium.getPartitiionTableType())
-                            .setPartitionStartBlock(2048)
-                            .setFileSystemType(medium.getFileSystemType())
-                            .setSizeInMb(sizeInMb);
+                ImageDescription imageDescription = null;
+                try {
+                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
-                for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
-                    final ImageContentDescription entry = new ImageContentDescription()
-                            .setAction(extfile.getAction())
-                            .setArchiveFormat(extfile.getCompressionFormat());
-//                            .setDataFromUrl(new URL(extfile.getUrl()));
-
-//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
-                    entry.setURL(new URL(extfile.getUrl()));
-//                    else
-//                        entry.setURL(null);
-
-                    if (extfile.getName() == null || extfile.getName().isEmpty())
-                        entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-                    else
-                        entry.setName(extfile.getName());
-
-                    description.addContentEntry(entry);
-                }
-
-                // Build input image
-                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
-                // since cdrom is read-only entity, we return user ISO directly
-                if (description.getMediumType() != MediumType.CDROM) {
-                    final Runnable cleanup = () -> {
-                        try {
-                            blobstore.delete(blob);
-                        } catch (Exception error) {
-                            LOG.log(Level.WARNING, "Deleting container's input image failed!\n", error);
-                        }
-                    };
-
-                    cleanups.push(cleanup);
-                }
-                // Add input image to machine's config
+                final BlobHandle blob = ImageBuilderClient.build(imagebuilder, imageDescription, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
 
                 final BlobStoreBinding binding = new BlobStoreBinding();
                 binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
-                if (description.getMediumType() != MediumType.CDROM)
-                    binding.setPartitionOffset(description.getPartitionOffset());
-                binding.setFileSystemType(description.getFileSystemType());
-                binding.setId("input-" + numInputImages++);
+                binding.setPartitionOffset(imageDescription.getPartitionOffset());
+                binding.setFileSystemType(imageDescription.getFileSystemType());
+                binding.setId("eaas-job");
 
-                //FIXME remove if else and make it more elegant (maybe unite?)
-                if (medium.getMediumType() == MediumType.CDROM)
-                    binding.setResourceType(Binding.ResourceType.ISO);
-                else if (medium.getMediumType() == MediumType.HDD) {
-                    binding.setResourceType(Binding.ResourceType.DISK);
+                ImageArchiveBinding rootfs = null;
+                for(AbstractDataResource r : ociConf.getDataResources())
+                {
+                    if(r.getId().equals("rootfs"))
+                        rootfs = ((ImageArchiveBinding)r);
                 }
+                if(rootfs == null)
+                    throw new BadRequestException(Response
+                            .status(Response.Status.BAD_REQUEST)
+                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .build());
+                rootfs.setFileSystemType(null);
+                this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
 
-                this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
 
+                this.addBindingToEnvironment(config, binding, this.toDriveType(MediumType.HDD));
                 config.setOutputBindingId(binding.getId());
+            }
+            else {
+                // Wrap external input files into images
+                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
 
-                // TODO: Extend MachineConfiguration to support multiple input/output-images!
-                break;
+                    BlobStoreBinding binding = buildExternalFilesMedia(medium, cleanups, numInputImages++);
+                    this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
+                    config.setOutputBindingId(binding.getId());
+
+                    // TODO: Extend MachineConfiguration to support multiple input/output-images!
+                    break;
+                }
             }
 
             Integer driveId = null;
@@ -621,8 +799,11 @@ public class Components {
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
 
-            if(emilEnv != null && emilEnv.isEnablePrinting())
-                observer.add(new PrintJobObserver(componentClient.getMachinePort(eaasGw), sessionId));
+            // Register server-sent-event source
+            {
+                final String srcurl = component.getEventSourceUrl(sessionId);
+                observer.add(new EventObserver(srcurl, LOG));
+            }
 
             return new MachineComponentResponse(sessionId, driveId);
         }
@@ -736,7 +917,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}")
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
@@ -790,7 +971,7 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
 
@@ -818,7 +999,7 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
@@ -858,7 +1039,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/controlurls")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
@@ -882,7 +1063,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/result")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getResult(@PathParam("componentId") String componentId)
@@ -893,12 +1074,16 @@ public class Components {
                 throw new NotFoundException();
 
             // Actual result's location
-            final String location = handle.toRestUrl(blobStoreRestAddress);
+            String location = "";
+            if (blobStoreRestAddress.contains("http://eaas:8080"))
+                location = handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
+            else
+                location = handle.toRestUrl(blobStoreRestAddress);
 
             // Set response headers...
             final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
                     .header("Access-Control-Allow-Origin", "*")
-                    .location(new URI(location))
+                    .header("Location", new URI(location))
                     .build();
 
             return response;
@@ -920,7 +1105,7 @@ public class Components {
      * @HTTP 408 if no screenshot could be retrieved from the emulator
      */
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/screenshot")
     @Produces("image/png")
     public InputStream screenshot(@PathParam("componentId") String componentId,
@@ -962,13 +1147,15 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
     public Response stop(@PathParam("componentId") String componentId,
                              @Context HttpServletResponse servletResponse) {
         try {
             final ComponentSession session = sessions.get(componentId);
+            if(session == null)
+                throw new BWFLAException("session not found");
             final ComponentRequest request = session.getRequest();
             if (request instanceof MachineComponentRequest) {
                 final Machine machine = componentClient.getMachinePort(eaasGw);
@@ -985,7 +1172,7 @@ public class Components {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/downloadPrintJob")
     @Produces("application/pdf")
     public InputStream downloadPrintJob(@PathParam("componentId") String componentId,
@@ -1016,22 +1203,24 @@ public class Components {
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/events")
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
     {
-
-        LOG.warning("registering events");
         final ComponentSession session = sessions.get(componentId);
-        if(session == null)
-            return;
+        if (session == null)
+            throw new NotFoundException("Session not found: " + componentId);
 
-        session.initializeEventLoop(sink, sse);
+        if (session.hasEventSink())
+            throw new BadRequestException("An event-sink is already registered!");
+
+        LOG.warning("Start forwarding server-sent-events for session " + componentId);
+        session.setEventSink(sink, sse);
     }
 
     @GET
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/printJobs")
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> printJobs(@PathParam("componentId") String componentId) {
@@ -1058,7 +1247,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/snapshot")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1074,7 +1263,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/checkpoint")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1091,7 +1280,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}/changeMedia")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1150,7 +1339,7 @@ public class Components {
      * @param componentId The component's ID to release.
      */
     @DELETE
-    @Secured
+    @Secured({Role.PUBLIC})
     @Path("/{componentId}")
     public void releaseComponent(@PathParam("componentId") String componentId) {
         ComponentSession session = sessions.get(componentId);
@@ -1313,11 +1502,11 @@ public class Components {
         private final String id;
         private final ComponentRequest request;
         private final TaskStack tasks;
-        private final List<EventObserver> observerList;
-        private ScheduledFuture<?> eventTask;
-        private boolean finished = false;
+        private final List<EventObserver> observers;
+        private EventSink esink;
 
-        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observer)
+
+        public ComponentSession(String id, ComponentRequest request, TaskStack tasks, List<EventObserver> observers)
         {
             this.keepaliveTimestamp = new AtomicLong(0);
             this.startTimestamp = Components.timestamp();
@@ -1326,7 +1515,7 @@ public class Components {
             this.id = id;
             this.request = request;
             this.tasks = tasks;
-            this.observerList = observer;
+            this.observers = observers;
 
             LOG.info("Session for component ID '" + id + "' created");
         }
@@ -1340,13 +1529,14 @@ public class Components {
 
         public void release()
         {
-            finished = true;
-
-            if(eventTask != null)
-                eventTask.cancel(true);
-
             if (released.getAndSet(true))
                 return;  // Release was already called!
+
+            if (!observers.isEmpty())
+                LOG.info("Stopping " + observers.size() + " event-observer(s) for session '" + id + "'...");
+
+            for (EventObserver observer : observers)
+                observer.stop();
 
             LOG.info("Releasing session '" + id + "'...");
             try {
@@ -1398,21 +1588,55 @@ public class Components {
             return startTimestamp;
         }
 
-        public void initializeEventLoop(SseEventSink sink, Sse sse)
+        public void setEventSink(SseEventSink sink, Sse sse)
         {
-            if(finished || eventTask != null)
-                return;
+            this.esink = new EventSink(sink, sse);
 
-            for(EventObserver eo : observerList) {
-                eventTask = scheduler.scheduleAtFixedRate(
-                () -> {
-                    System.out.println(eo.getName());
-                    for(String m : eo.messages()) {
-                        sink.send(sse.newEventBuilder().name(eo.getName())
-                                .data(String.class, m).build());
-                    }
-                }, 0, 5, TimeUnit.SECONDS);
+            final Consumer<InboundSseEvent> forwarder = (input) -> {
+                final OutboundSseEvent output = esink.newEventBuilder()
+                        .name(input.getName())
+                        .data(input.readData())
+                        .build();
+
+                esink.send(output);
+            };
+
+            if (!observers.isEmpty())
+                LOG.info("Starting " + observers.size() + " event-observer(s) for session '" + id + "'...");
+
+            for (EventObserver observer : observers) {
+                observer.register(forwarder)
+                        .start();
             }
+
+            // Send client notification when this session will expire...
+            if (maxSessionDuration.toMillis() < Long.MAX_VALUE) {
+                final Runnable task = () -> {
+                    final long duration = Components.timestamp() - this.getStartTimestamp();
+                    final long lifetime = maxSessionDuration.toMillis();
+                    final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionWillExpireNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+                };
+
+                final Runnable trigger = () -> executor.execute(task);
+                scheduler.schedule(trigger, 10, TimeUnit.SECONDS);
+            }
+        }
+
+        public EventSink getEventSink()
+        {
+            return esink;
+        }
+
+        public boolean hasEventSink()
+        {
+            return (esink != null);
         }
     }
 
@@ -1552,11 +1776,15 @@ public class Components {
     {
         private final ComponentSession session;
         private final long timeout;
+        private final long lifetime;
+        private long nextNotificationTimeout;
 
         public ComponentSessionCleanupTrigger(ComponentSession session, Duration timeout)
         {
             this.session = session;
             this.timeout = timeout.toMillis();
+            this.lifetime = maxSessionDuration.toMillis();
+            this.nextNotificationTimeout = maxSessionDuration.minus(Duration.ofSeconds(90L)).toMillis();
         }
 
         @Override
@@ -1564,19 +1792,127 @@ public class Components {
         {
             final long curts = Components.timestamp();
             final long prevts = session.getKeepaliveTimestamp();
+            final long duration = curts - session.getStartTimestamp();
             final long elapsed = curts - prevts;
-            if (elapsed < timeout) {
+            if ((elapsed < timeout) && (duration < lifetime)) {
+                // Send client notification if session is about to expire...
+                if (session.hasEventSink() && (duration >= nextNotificationTimeout)) {
+                    final SessionWillExpireNotification notification = new SessionWillExpireNotification(duration, lifetime);
+                    final EventSink esink = session.getEventSink();
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionWillExpireNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+
+                    nextNotificationTimeout += Duration.ofSeconds(30L).toMillis();
+                }
+
                 // Component should be kept alive! Schedule this task again.
-                final long delay = timeout - elapsed + 10L;
-                scheduler.schedule(this, delay, TimeUnit.MILLISECONDS);
+                long delay = (duration < nextNotificationTimeout) ? nextNotificationTimeout - duration : lifetime - duration;
+                scheduler.schedule(this, Math.min(delay, timeout - elapsed) + 10L, TimeUnit.MILLISECONDS);
             }
             else {
-                // Timeout expired!
+                // Send client notification...
+                if (session.hasEventSink() && (duration >= lifetime)) {
+                    final SessionExpiredNotification notification = new SessionExpiredNotification(duration, lifetime);
+                    final EventSink esink = session.getEventSink();
+                    final OutboundSseEvent event = esink.newEventBuilder()
+                            .mediaType(MediaType.APPLICATION_JSON_TYPE)
+                            .name(SessionExpiredNotification.name())
+                            .data(notification)
+                            .build();
+
+                    esink.send(event);
+
+                    LOG.info("Session '" + session.getId() + "' expired after " + notification.getDuration());
+                }
 
                 // Since scheduler tasks should complete quickly and session.release()
                 // can take longer, submit a new task to an unscheduled executor for it.
                 executor.execute(() -> session.release());
             }
+        }
+    }
+
+    private static class SessionDurationNotification
+    {
+        private String duration;
+        private String maxDuration;
+
+        protected SessionDurationNotification(long duration, long maxDuration)
+        {
+            this.duration = SessionExpiredNotification.toDurationString(duration);
+            this.maxDuration = SessionExpiredNotification.toDurationString(maxDuration);
+        }
+
+        @XmlElement(name = "duration")
+        public String getDuration()
+        {
+            return duration;
+        }
+
+        @XmlElement(name = "max_duration")
+        public String getMaxDuration()
+        {
+            return maxDuration;
+        }
+
+        public static String toDurationString(long duration)
+        {
+            // Duration is serialized as 'PTnHnMnS', but this method returns 'nhnmns'
+            return Duration.ofSeconds(TimeUnit.MILLISECONDS.toSeconds(duration))
+                    .toString()
+                    .substring(2)
+                    .toLowerCase();
+        }
+    }
+
+    private static class SessionWillExpireNotification extends SessionDurationNotification
+    {
+        private String message;
+
+        public SessionWillExpireNotification(long duration, long maxDuration)
+        {
+            super(duration, maxDuration);
+
+            final String timeout = SessionDurationNotification.toDurationString(maxDuration - duration);
+            this.message = "Your session will expire in " + timeout + "!";
+        }
+
+        @XmlElement(name = "message")
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public static String name()
+        {
+            return "session-will-expire";
+        }
+    }
+
+    private static class SessionExpiredNotification extends SessionDurationNotification
+    {
+        private String message;
+
+        public SessionExpiredNotification(long duration, long maxDuration)
+        {
+            super(duration, maxDuration);
+            this.message = "Your session has expired after " + super.getDuration() + "!";
+        }
+
+        @XmlElement(name = "message")
+        public String getMessage()
+        {
+            return message;
+        }
+
+        public static String name()
+        {
+            return "session-expired";
         }
     }
 }

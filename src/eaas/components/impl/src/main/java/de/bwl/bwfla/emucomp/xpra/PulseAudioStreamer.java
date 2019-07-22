@@ -112,7 +112,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			case ControlMessage.Types.ICE:
 				final IceData ice = (IceData) message.getData();
 				final String candidate = ice.getCandidate();
-				log.info("ICE candidate received:" + candidate);
+				log.info("ICE candidate received: " + candidate);
 				webrtc.addIceCandidate(ice.getSdpMLineIndex(), candidate);
 				break;
 
@@ -220,7 +220,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			final IceData ice = new IceData(candidate, sdpMLineIndex);
 			final ControlMessage<IceData> message = ControlMessage.wrap(ice);
 			try {
-				log.info("Sending ICE-candidate...");
+				log.info("Sending ICE-candidate: " + candidate);
 				outqueue.put(message.toString());
 			}
 			catch (InterruptedException error) {

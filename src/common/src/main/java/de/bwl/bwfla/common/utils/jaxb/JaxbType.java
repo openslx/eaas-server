@@ -92,7 +92,6 @@ public abstract class JaxbType {
         try {
             result = objectMapper.readValue(value, klass);
         } catch (IOException e) {
-            e.printStackTrace();
             throw new BWFLAException(e);
         }
 

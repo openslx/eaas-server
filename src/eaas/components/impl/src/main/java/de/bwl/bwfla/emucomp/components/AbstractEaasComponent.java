@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.emucomp.api.ClusterComponent;
 import de.bwl.bwfla.emucomp.api.ComponentState;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
@@ -49,6 +50,9 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 
 	/** Result of an async-computation */
 	protected final CompletableFuture<BlobHandle> result = new CompletableFuture<BlobHandle>();
+
+	private EventSink esink;
+
 
 	public String getComponentId()
 	{
@@ -81,6 +85,11 @@ public abstract class AbstractEaasComponent implements ClusterComponent
                 Collectors.toMap(
                         e -> e.getKey(),
                         e -> e.getValue().getControlPath(componentResource)));
+	}
+
+	@Override
+	public URI getEventSourceUrl() {
+		return URI.create(String.format("%%7Bcontext%%7D/api/v1/components/%s/events", componentID));
 	}
 
 	@Override
@@ -132,5 +141,17 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 
 	public void setEnvironmentId(String environmentId) {
 		this.environmentId = environmentId;
+	}
+
+	public void setEventSink(EventSink sink) {
+		this.esink = sink;
+	}
+
+	public EventSink getEventSink() {
+		return esink;
+	}
+
+	public boolean hasEventSink() {
+		return (esink != null);
 	}
 }

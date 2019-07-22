@@ -139,12 +139,12 @@ public class BlobStore
 						}
 
 						// And then remove the blob
-						try {
-							backend.delete(handle);
-						}
-						catch (Exception error) {
-							log.log(Level.WARNING, "Deleting blob failed!", error);
-						}
+//						try {
+//							backend.delete(handle);
+//						}
+//						catch (Exception error) {
+//							log.log(Level.WARNING, "Deleting blob failed!", error);
+//						}
 					}
 				}
 			}

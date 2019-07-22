@@ -42,7 +42,7 @@ components:
         gid: 1000
 
     containers:
-        blobstore: http://localhost:8080
+        blobstore: http://eaas:8080
         usernamespace:
             enabled: false
             user: bwfla
@@ -54,8 +54,8 @@ components:
         ports: 10000-10010
 
 emucomp:
-    blobstore_soap: http://localhost:8080
-    blobstore_rest: http://localhost:8080/blobstore/api/v1/blobs
+    blobstore_soap: http://eaas:8080
+    blobstore_rest: http://eaas:8080/blobstore/api/v1/blobs
     inactivitytimeout:  0
     enable_screenshooter: false
     debug_bean_enabled: false
@@ -63,4 +63,4 @@ emucomp:
     rompath: /eaas/roms
     alsa_card: PCH
 
-ws.imagearchive: http://localhost:8080
+ws.imagearchive: http://eaas:8080

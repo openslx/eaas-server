@@ -75,11 +75,11 @@ public class FitsOutputIndex extends IdentificationOutputIndex<FitsOutput>
 			String value = policy.get(type);
 			if (value == null)
 				value = defaultValue;
-			SoftwareQIDs softwareQIDs = QIDsFinder.findQIDs(type);
+			// SoftwareQIDs softwareQIDs = QIDsFinder.findQIDs(type);
 
 			try {
 				addEntry(entries, type, FILETYPE_NAMES.get(type), value, entry.getValue(),
-						softwareQIDs.getReadQIDs(), softwareQIDs.getWriteQIDs());
+						new ArrayList<>(), new ArrayList<>());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}
@@ -89,10 +89,10 @@ public class FitsOutputIndex extends IdentificationOutputIndex<FitsOutput>
 			final String type = "unknown";
 			final String value = policy.get(type);
 
-			SoftwareQIDs softwareQIDs = QIDsFinder.findQIDs(type);
+			// SoftwareQIDs softwareQIDs = QIDsFinder.findQIDs(type);
 			try {
 				addEntry(entries, type, value, FILETYPE_NAMES.get(type),
-                        unclassified, softwareQIDs.getReadQIDs(), softwareQIDs.getWriteQIDs());
+                        unclassified, new ArrayList<>(), new ArrayList<>());
 			} catch (IOException e) {
 				e.printStackTrace();
 			}

@@ -5,6 +5,7 @@ import javax.xml.bind.annotation.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.emil.datatypes.rest.EmilNetworkingType;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
 
@@ -39,11 +40,12 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	@XmlElement(required = false)
 	private String emulator;
 	@XmlElement(required = false)
-	private String helpText;
-	@XmlElement(required = false)
 	private String timeContext;
 	@XmlElement(required = false)
 	private String author;
+
+	@XmlElement(required = false)
+	private boolean isLinuxRuntime;
 
 	@XmlElement(required = false)
 	private String type = getClass().getCanonicalName();
@@ -62,28 +64,8 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private boolean enablePrinting = false;
 	@XmlElement(required = false)
 	private boolean shutdownByOs = false;
-
 	@XmlElement(required = false)
-	private boolean connectEnvs = false;
-
-	@XmlElement(required = false)
-	private boolean enableInternet;
-
-	@XmlElement(required = false)
-	private boolean serverMode;
-	@XmlElement(required = false)
-	private boolean localServerMode;
-	@XmlElement(required = false)
-	private boolean enableSocks;
-
-	@XmlElement(required = false)
-	private String serverPort;
-	@XmlElement(required = false)
-	private String serverIp;
-	@XmlElement(required = false)
-	private String gwPrivateIp;
-	@XmlElement(required = false)
-	private String gwPrivateMask;
+	private EmilNetworkingType networking;
 
 	@XmlElement(required = false)
 	private EmilEnvironmentOwner owner;
@@ -94,13 +76,6 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	@XmlElement(required = false, defaultValue = "jpeg")
 	private String xpraEncoding;
 
-	public boolean isConnectEnvs() {
-		return connectEnvs;
-	}
-
-	public void setConnectEnvs(boolean connectEnvs) {
-		this.connectEnvs = connectEnvs;
-	}
 
 	public boolean isCanProcessAdditionalFiles() {
 		return canProcessAdditionalFiles;
@@ -128,25 +103,16 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		version = template.version;
 		status = template.status;
 		emulator = template.emulator;
-		helpText = template.helpText;
 		timeContext = template.timeContext;
 		visible = template.visible;
 		enableRelativeMouse = template.enableRelativeMouse;
 		enablePrinting = template.enablePrinting;
 		shutdownByOs = template.shutdownByOs;
-		enableInternet = template.enableInternet;
-		serverMode = template.serverMode;
-		localServerMode = template.localServerMode;
-		enableSocks = template.enableSocks;
-		serverPort = template.serverPort;
-		serverIp = template.serverIp;
-		gwPrivateIp = template.gwPrivateIp;
-		gwPrivateMask = template.gwPrivateMask;
 		owner = template.owner;
 		permissions = template.permissions;
-		connectEnvs = template.connectEnvs;
 		canProcessAdditionalFiles = template.canProcessAdditionalFiles;
 		xpraEncoding = template.xpraEncoding;
+		networking = template.networking;
 	}
 
 	public String getArchive() {
@@ -248,12 +214,6 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 			return -1;
 		return title.compareTo(other.title);
 	}
-	public String getHelpText() {
-		return helpText;
-	}
-	public void setHelpText(String helpText) {
-		this.helpText = helpText;
-	}
 	
 	public boolean isVisible() {
 		if(childrenEnvIds == null || childrenEnvIds.size() == 0)
@@ -292,70 +252,6 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
     @JsonIgnore
 	private static final String idDBkey = "envId";
 
-	public boolean isEnableInternet() {
-		return enableInternet;
-	}
-
-	public void setEnableInternet(boolean enableInternet) {
-		this.enableInternet = enableInternet;
-	}
-
-	public boolean isServerMode() {
-		return serverMode;
-	}
-
-	public boolean isLocalServerMode() {
-		return localServerMode;
-	}
-
-	public void setLocalServerMode(boolean localServerMode) {
-		this.localServerMode = localServerMode;
-	}
-
-	public void setServerMode(boolean serverMode) {
-		this.serverMode = serverMode;
-	}
-
-	public boolean isEnableSocks() {
-		return enableSocks;
-	}
-
-	public void setEnableSocks(boolean enableSocks) {
-		this.enableSocks = enableSocks;
-	}
-
-	public String getServerPort() {
-		return serverPort;
-	}
-
-	public void setServerPort(String serverPort) {
-		this.serverPort = serverPort;
-	}
-
-	public String getServerIp() {
-		return serverIp;
-	}
-
-	public void setServerIp(String serverIp) {
-		this.serverIp = serverIp;
-	}
-
-	public String getGwPrivateIp() {
-		return gwPrivateIp;
-	}
-
-	public void setGwPrivateIp(String gwPrivateIp) {
-		this.gwPrivateIp = gwPrivateIp;
-	}
-
-	public String getGwPrivateMask() {
-		return gwPrivateMask;
-	}
-
-	public void setGwPrivateMask(String gwPrivateMask) {
-		this.gwPrivateMask = gwPrivateMask;
-	}
-
 	public EmilEnvironmentPermissions getPermissions() {
 		return permissions;
 	}
@@ -372,7 +268,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		this.owner = owner;
 	}
 
+	public boolean isLinuxRuntime() {
+		return isLinuxRuntime;
+	}
 
+	public void setLinuxRuntime(boolean linuxRuntime) {
+		isLinuxRuntime = linuxRuntime;
+	}
 
 	public String getAuthor() {
 		return author;
@@ -397,5 +299,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setXpraEncoding(String xpraEncoding) {
 		this.xpraEncoding = xpraEncoding;
+	}
+
+	public EmilNetworkingType getNetworking() {
+		return networking;
+	}
+
+	public void setNetworking(EmilNetworkingType networking) {
+		this.networking = networking;
 	}
 }

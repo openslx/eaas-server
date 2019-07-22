@@ -1,0 +1,4 @@
+ws:
+  session_resources:
+      cpu: 500m
+      memory: 512MB

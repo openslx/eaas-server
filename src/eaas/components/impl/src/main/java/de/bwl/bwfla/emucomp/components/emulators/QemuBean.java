@@ -134,13 +134,13 @@ public class QemuBean extends EmulatorBean
 			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 		}
 
-		String printerOutput = this.getDataDir().resolve("print").resolve("printer.out").toString();
-		emuContainerFilesToCheckpoint.add(printerOutput);
+		final Path printerOutput = this.getDataDir().resolve("print").resolve("printer.out");
+		emuContainerFilesToCheckpoint.add(printerOutput.toString());
 		emuRunner.addArgument("-chardev");
-		emuRunner.addArgument("file",",id=char0",",path=" + printerOutput);
+		emuRunner.addArgument("file",",id=char0",",path=" + printerOutput.toString());
 		emuRunner.addArguments("-parallel","chardev:char0");
 
-		printer = new PostScriptPrinter(new File(printerOutput));
+		printer = new PostScriptPrinter(printerOutput, this);
 	}
 
 	@Override

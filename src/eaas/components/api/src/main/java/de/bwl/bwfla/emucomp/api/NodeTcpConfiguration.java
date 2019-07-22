@@ -8,11 +8,8 @@ import javax.xml.bind.annotation.*;
 @XmlRootElement(name = "nodetcp", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class NodeTcpConfiguration extends ComponentConfiguration {
 
-    @XmlElement(required = true, nillable = false)
-    private String privateNetIp;
-
-    @XmlElement(required = true, nillable = false)
-    private String privateNetMask;
+    @XmlElement(required = true)
+    private boolean dhcp;
 
     @XmlElement
     private String destIp;
@@ -31,22 +28,6 @@ public class NodeTcpConfiguration extends ComponentConfiguration {
 
     @XmlElement(required = true)
     private boolean socksMode;
-
-    public String getPrivateNetIp() {
-        return privateNetIp;
-    }
-
-    public void setPrivateNetIp(String privateNetIp) {
-        this.privateNetIp = privateNetIp;
-    }
-
-    public String getPrivateNetMask() {
-        return privateNetMask;
-    }
-
-    public void setPrivateNetMask(String privateNetMask) {
-        this.privateNetMask = privateNetMask;
-    }
 
     public String getDestIp() {
         return destIp;
@@ -94,6 +75,14 @@ public class NodeTcpConfiguration extends ComponentConfiguration {
 
     public void setSocksPasswd(String socksPasswd) {
         this.socksPasswd = socksPasswd;
+    }
+
+    public boolean isDhcp() {
+        return dhcp;
+    }
+
+    public void setDhcp(boolean dhcp) {
+        this.dhcp = dhcp;
     }
 }
 

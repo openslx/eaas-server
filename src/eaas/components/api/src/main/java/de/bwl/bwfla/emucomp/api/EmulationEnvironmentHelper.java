@@ -94,6 +94,8 @@ public class EmulationEnvironmentHelper {
 
 		for (Drive d : env.getDrive()) {
 			String resourceUrl = d.getData();
+			if(resourceUrl == null)
+				continue;
 			if (resourceUrl.startsWith("binding://")) {
 				resourceUrl = resourceUrl.substring("binding://".length());
 				resourceUrl = resourceUrl.substring(0,
@@ -428,6 +430,12 @@ public class EmulationEnvironmentHelper {
 		int driveId = -1;
 		for (Drive drive : env.getDrive()) {
 			++driveId; // hack: fix me
+
+			if(drive.getType() == null)
+			{
+				log.warning("invalid drive data: drive type empty");
+				continue;
+			}
 
 			if (drive.getType().equals(driveType) && (drive.getData() == null || drive.getData().isEmpty())) {
 				drive.setData(dataUrl);
