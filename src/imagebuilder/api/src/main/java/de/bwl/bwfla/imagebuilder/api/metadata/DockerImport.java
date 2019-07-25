@@ -4,6 +4,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
 import java.util.List;
 
 @XmlRootElement
@@ -27,6 +28,12 @@ public class DockerImport extends ImageBuilderMetadata {
 
     @XmlElement
     private String emulatorType;
+
+    @XmlElement
+    private ArrayList<String> entryProcesses;
+
+    @XmlElement
+    private ArrayList<String> envVariables;
 
     public String getImageRef() {
         return imageRef;
@@ -74,5 +81,21 @@ public class DockerImport extends ImageBuilderMetadata {
 
     public void setEmulatorType(String emulatorType) {
         this.emulatorType = emulatorType;
+    }
+
+    public ArrayList getEntryProcesses() {
+        return entryProcesses;
+    }
+
+    public void setEntryProcesses(ArrayList entryProcesses) {
+        this.entryProcesses = entryProcesses;
+    }
+
+    public ArrayList getEnvVariables() {
+        return envVariables;
+    }
+
+    public void setEnvVariables(ArrayList envVariables) {
+        this.envVariables = envVariables;
     }
 }

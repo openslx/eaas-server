@@ -349,7 +349,9 @@ public class EmilContainerData extends EmilRest {
             if(containerRequest.getUrlString() == null && !(containerRequest instanceof ImportEmulatorRequest)) {
                 return new BWFLAException("invalid url: " + containerRequest.getUrlString());
             }
-            if((containerRequest.getProcessArgs() == null || containerRequest.getProcessArgs().size() == 0) && !(containerRequest instanceof ImportEmulatorRequest)) {
+            if ((containerRequest.getProcessArgs() == null || containerRequest.getProcessArgs().size() == 0) &&
+                    containerRequest.getImageType() != ImportContainerRequest.ContainerImageType.DOCKERHUB &&
+                    !(containerRequest instanceof ImportEmulatorRequest)) {
                 return new BWFLAException("missing process args");
             }
 
