@@ -152,7 +152,7 @@ public class SessionManager
 	/** Updates session's lifetime */
 	public void setLifetime(String id, long lifetime, TimeUnit unit, String name, DetachRequest.ComponentTitleCreator componentTitle)
 	{
-		if (componentTitle.getComponentName() != null) {
+		if (componentTitle != null && componentTitle.getComponentName() != null) {
 			ComponentGroupElement groupElement = new ComponentGroupElement();
 			groupElement.setComponentId(componentTitle.getComponentId());
 			groupElement.setCustomName(componentTitle.getComponentName());
