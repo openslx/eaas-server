@@ -285,9 +285,18 @@ public class ContainerUtil {
         config.setRootFilesystem("binding://rootfs");
 
         OciContainerConfiguration.Process process = new OciContainerConfiguration.Process();
-        if(containerRequest.getProcessEnvs() != null && containerRequest.getProcessEnvs().size() > 0)
-            process.setEnvironmentVariables(containerRequest.getProcessEnvs());
-        process.setArguments(containerRequest.getProcessArgs());
+        // Derive docker variables and processes from image
+
+        if (containerRequest.getImageType() == ImportContainerRequest.ContainerImageType.DOCKERHUB) {
+            process.setEnvironmentVariables(((DockerImport) result.getMetadata()).getEnvVariables());
+            process.setArguments(((DockerImport) result.getMetadata()).getEntryProcesses());
+        } else {
+            process.setArguments(containerRequest.getProcessArgs());
+
+            if (containerRequest.getProcessEnvs() != null && containerRequest.getProcessEnvs().size() > 0)
+                process.setEnvironmentVariables(containerRequest.getProcessEnvs());
+        }
+
         config.setProcess(process);
 
         config.setId("dummy");
