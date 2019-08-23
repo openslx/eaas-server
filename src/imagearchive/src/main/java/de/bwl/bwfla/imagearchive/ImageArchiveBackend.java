@@ -29,6 +29,7 @@ import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
+import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
@@ -44,11 +45,7 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.UUID;
+import java.util.*;
 import java.util.logging.Logger;
 
 
@@ -309,6 +306,26 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 	{
 		synchronized (defaultEnvironments) {
 			return defaultEnvironments.getProperty(osId);
+		}
+	}
+
+	public DefaultEnvironments getDefaultEnvironments()
+	{
+		synchronized (defaultEnvironments) {
+			Properties defaults = defaultEnvironments;
+			List<DefaultEnvironments.DefaultEntry> map = new ArrayList<>();
+
+			Enumeration<?> enumeration = defaults.propertyNames();
+			while (enumeration.hasMoreElements()) {
+				String k = (String) enumeration.nextElement();
+				DefaultEnvironments.DefaultEntry e = new DefaultEnvironments.DefaultEntry();
+				e.setKey(k);
+				e.setValue(defaults.getProperty(k));
+				map.add(e);
+			}
+			DefaultEnvironments response = new DefaultEnvironments();
+			response.setMap(map);
+			return response;
 		}
 	}
 

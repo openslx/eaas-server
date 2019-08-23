@@ -257,6 +257,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return new ImageArchiveBinding(backend, this.getExportPrefix(), id, type.value());
 	}
 
+	public List<DefaultEntry> getDefaultEnvironments(String backend) throws BWFLAException {
+		connectArchive();
+		return archive.getDefaultEnvironments(backend).getMap();
+	}
+
 	public String getDefaultEnvironment(String osId) throws BWFLAException {
 		return this.getDefaultEnvironment(this.getDefaultBackendName(), osId);
 	}

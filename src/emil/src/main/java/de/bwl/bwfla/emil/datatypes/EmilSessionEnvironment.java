@@ -20,8 +20,8 @@ public class EmilSessionEnvironment extends EmilObjectEnvironment {
     private String baseEnv;
     @XmlElement(required = false)
     private String userId;
-    @XmlElement(required = false)
-    private String creationDate;
+    @XmlElement
+    private String creationDate = Instant.now().toString();
     @XmlElement
     private String lastAccess = Instant.ofEpochMilli(0).toString();
 
