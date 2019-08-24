@@ -83,7 +83,7 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getNameIndexes();
 	}
 
-	public void addNameIndexesEntry(Entry entry, Alias alias) {
+	public void addNameIndexesEntry(Entry entry, Alias alias) throws BWFLAException {
 		imageHandler.addNameIndexesEntry(entry, alias);
 	}
 

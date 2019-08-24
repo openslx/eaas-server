@@ -81,8 +81,11 @@ public class ImageHandler
 		return imageNameIndex;
 	}
 
-	public void addNameIndexesEntry(Entry entry, Alias alias){
+	public void addNameIndexesEntry(Entry entry, Alias alias) throws BWFLAException{
+
 		imageNameIndex.addNameIndexesEntry(entry, alias);
+		createLocalEmulatorQcow(entry.getImage().getId());
+
 	}
 
 	public void updateLatestEmulator(String emulator, String version) {
@@ -229,6 +232,59 @@ public class ImageHandler
 						log.log(Level.WARNING, "Registering image '" + imgname + "' failed!", error);
 					}
 				}
+			}
+		}
+
+		if(iaConfig.getName().equals("emulators"))
+			createLocalEmulatorQcowFiles();
+	}
+
+	private void createLocalEmulatorQcow(String id) throws BWFLAException
+	{
+		File dir = new File(iaConfig.getImagePath() + "/base");
+		File image = new File(dir, id);
+		if(!image.exists())
+			throw new BWFLAException("Emulator Image " + id + " not found");
+		createLocalEmulatorQcow(image);
+	}
+
+
+	private void createLocalEmulatorQcow(File file) throws BWFLAException
+	{
+		File localCowDir = new File(iaConfig.getImagePath() + "/fakeqcow");
+		if(!localCowDir.exists())
+			localCowDir.mkdirs();
+
+		String name = file.getName();
+		QcowOptions options = new QcowOptions();
+		options.setBackingFile(file.getAbsolutePath());
+		File cow = new File(localCowDir, name);
+		if(cow.exists())
+			cow.delete();
+		EmulatorUtils.createCowFile(cow.toPath(), options);
+	}
+
+	private void createLocalEmulatorQcowFiles()
+	{
+		File dir = new File(iaConfig.getImagePath() + "/base");
+		if(!dir.exists())
+			return;
+
+		File[] files = dir.listFiles();
+		if(files == null)
+			return;
+
+		for (final File fileEntry : files) {
+			if (fileEntry.isDirectory())
+				continue;
+
+			if (fileEntry.getName().startsWith(".fuse"))
+				continue;
+
+			try {
+				createLocalEmulatorQcow(fileEntry);
+			} catch (BWFLAException e) {
+				e.printStackTrace();
 			}
 		}
 	}
