@@ -79,9 +79,9 @@ public class EthernetConnector implements IConnector {
         String socatExec = "exec:";
         if (emubean != null && emubean.isContainerModeEnabled()) {
             socatExec += "sudo runc exec --user "
-                    + emubean.getContainerUserId() + ":" + emubean.getContainerGroupId() + " " + emubean.getContainerId();
+                    + emubean.getContainerUserId() + ":" + emubean.getContainerGroupId() + " " + emubean.getContainerId()  + " ";
         }
-        socatExec += " vde_plug " +  this.vdeSocket.toString();
+        socatExec += "vde_plug " +  this.vdeSocket.toString();
 
         runner.addArgument(socatExec);
 
