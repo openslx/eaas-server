@@ -23,6 +23,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InterruptedIOException;
 import java.nio.ByteBuffer;
+import java.nio.file.Paths;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -43,27 +45,26 @@ import javax.websocket.server.ServerEndpoint;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.NodeManager;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
+import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
+import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
 
 @ServerEndpoint("/components/{componentId}/ws+ethernet/{hwAddress}")
-public class EthernetWebsocketServlet {
-    private static final int BUFFER_SIZE = 1500; // this is the MTU of ethernet
-
-    Logger LOG = Logger.getLogger(this.getClass().getName());
+public class EthernetWebsocketServlet extends IPCWebsocketProxy{
 
     @Inject
     protected NodeManager nodeManager;
 
     private EthernetConnector connector;
-    private Thread readThread;
 
     @OnOpen
     public void open(Session session, EndpointConfig conf,
             @PathParam("componentId") String componentId,
             @PathParam("hwAddress") String hwAddress) {
+
         try {
-            AbstractEaasComponent component = nodeManager
+            final AbstractEaasComponent component = nodeManager
                     .getComponentById(componentId, AbstractEaasComponent.class);
 
             IConnector connector = component.getControlConnector(
@@ -74,61 +75,23 @@ public class EthernetWebsocketServlet {
                 session.close();
             }
             this.connector = (EthernetConnector) connector;
+            String id = UUID.randomUUID().toString();
+            this.connector.connect(id);
+            this.componentId = componentId;
+            wait(Paths.get("/tmp/" + id + ".sock"));
+            Thread.sleep(100);
+            this.iosock = IpcSocket.connect("/tmp/" + id + ".sock", IpcSocket.Type.STREAM);
 
-            ManagedThreadFactory threadFactory = InitialContext
-                    .doLookup("java:jboss/ee/concurrency/factory/default");
-            this.readThread = threadFactory.newThread(() -> {
-                try {
-                    InputStream in = this.connector.getInputStream();
-
-                    byte buf[] = new byte[BUFFER_SIZE];
-                    int n = 0;
-                    while (((n = in.read(buf)) != -1)
-                            && !Thread.currentThread().isInterrupted()) {
-                        session.getBasicRemote()
-                                .sendBinary(ByteBuffer.wrap(buf, 0, n));
-                    }
-
-                    session.close(new CloseReason(CloseCodes.GOING_AWAY,
-                                "The associated ethernet connection has closed"));
-
-                } catch (InterruptedIOException ignore) {
-                    // all is going well, we terminated the thread ourselves
-                } catch (IOException _e) {
-                    LOG.log(Level.SEVERE, _e.getMessage(), _e);
-                } finally {
-                    try {
-                        session.close();
-                    } catch (IOException e1) {
-                        LOG.log(Level.SEVERE, e1.getMessage(), e1);
-                    }
-                }
-            });
-
-            readThread.start();
-
-        } catch (IOException | NamingException | BWFLAException e) {
-            LOG.log(Level.SEVERE, e.getMessage(), e);
-        }
-    }
-
-    @OnMessage
-    public void message(Session session, byte[] msg) {
-        try {
-            this.connector.getOutputStream().write(msg);
-            this.connector.getOutputStream().flush();
-        } catch (IOException e) {
-            try {
-                session.close();
-            } catch (IOException e1) {
-                LOG.log(Level.SEVERE, e.getMessage(), e);
+            // Start background thread for streaming from io-socket to client
+            {
+                this.streamer = new OutputStreamer(session, nodeManager.getWorkerThreadFactory());
+                streamer.start();
             }
         }
+        catch (Throwable error) {
+            log.log(Level.WARNING, "Setting up websocket proxy for component '" + componentId + "' failed!", error);
+            this.stop(session);
+        }
     }
 
-    @OnClose
-    public void close(Session session, CloseReason reason) {
-        readThread.interrupt();
-        this.connector.close();
-    }
 }

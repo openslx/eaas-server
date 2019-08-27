@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Path;
 
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.ProcessRunner;
 import de.bwl.bwfla.emucomp.components.emulators.EmulatorBean;
 
@@ -35,7 +36,7 @@ public class EthernetConnector implements IConnector {
     private final EmulatorBean emubean;
     private final String hwAddress;
     private final Path vdeSocket;
-    private ProcessRunner runner = null;
+    private DeprecatedProcessRunner runner = null;
     
     public static String getProtocolForHwaddress(final String hwAddress) {
         return EthernetConnector.PROTOCOL + "+" + hwAddress;
@@ -61,12 +62,30 @@ public class EthernetConnector implements IConnector {
         return getProtocolForHwaddress(this.hwAddress);
     }
 
-    public synchronized void plug() throws IOException {
-        if(this.runner != null)
+    public synchronized void connect(String id) {
+        if (this.runner != null)
             return;
-        
+
+        if (emubean == null) {
+            System.out.println("NULL");
+        }
+
+
         // Start a new VDE plug instance that connects to the emulator's switch
-        this.runner = new ProcessRunner();
+        this.runner = new DeprecatedProcessRunner();
+        runner.setCommand("socat");
+        runner.addArguments("unix-listen:/tmp/" + id + ".sock");
+
+        String socatExec = "exec:";
+        if (emubean != null && emubean.isContainerModeEnabled()) {
+            socatExec += "sudo runc exec --user "
+                    + emubean.getContainerUserId() + ":" + emubean.getContainerGroupId() + " " + emubean.getContainerId();
+        }
+        socatExec += " vde_plug " +  this.vdeSocket.toString();
+
+        runner.addArgument(socatExec);
+
+        /*
         if (emubean != null && emubean.isContainerModeEnabled()) {
             // Run the process inside of the running emulator-container!
             runner.addArguments("sudo", "runc", "exec");
@@ -75,24 +94,12 @@ public class EthernetConnector implements IConnector {
         }
 
         runner.addArguments("vde_plug", "-s", this.vdeSocket.toString());
+
+         */
         runner.start();
     }
     
     public void close() {
-        this.runner.close();
-    }
-    
-    public InputStream getInputStream() throws IOException {
-        if (this.runner == null) {
-            this.plug();
-        }
-        return this.runner.getInputStream();
-    }
-
-    public OutputStream getOutputStream() throws IOException {
-        if (this.runner == null) {
-            this.plug();
-        }
-        return this.runner.getOutputStream();
+        this.runner.stop();
     }
 }
