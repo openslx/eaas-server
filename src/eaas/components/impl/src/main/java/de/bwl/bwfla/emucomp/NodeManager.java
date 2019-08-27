@@ -62,6 +62,10 @@ public class NodeManager {
     protected ConcurrentMap<String, AbstractEaasComponent> components = new ConcurrentHashMap<String, AbstractEaasComponent>();
 
     @Inject
+    @Config("components.warmup_timeout")
+    protected Duration componentWarmupTimeout;
+
+    @Inject
     @Config("components.timeout")
     protected Duration componentExpirationTimeout;
     
@@ -208,7 +212,7 @@ public class NodeManager {
 
             // Submit cleanup handler
             final Runnable cleanup = new CleanupTrigger(component, componentExpirationTimeout);
-            scheduler.schedule(cleanup, componentExpirationTimeout.toMillis(), TimeUnit.MILLISECONDS);
+            scheduler.schedule(cleanup, componentWarmupTimeout.toMillis(), TimeUnit.MILLISECONDS);
 
             return component;
 
