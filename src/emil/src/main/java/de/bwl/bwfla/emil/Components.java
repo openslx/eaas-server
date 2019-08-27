@@ -318,7 +318,7 @@ public class Components {
 
         final String cid = result.getId();
         final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
-        cleanups.push(() -> this.unregister(session));
+        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
 
         this.register(session);
 
@@ -331,7 +331,7 @@ public class Components {
         return result;
     }
 
-    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack tasks, List<EventObserver> observer) {
+    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
         try {
             VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
             
@@ -350,9 +350,10 @@ public class Components {
             slirpConfig.setDhcpEnabled(desc.isDhcp());
 
             String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
-
+            cleanups.push("release-session/" + slirpId, () -> eaas.releaseSession(slirpId));
             return new ComponentResponse(slirpId);
         } catch (Throwable e) {
+            cleanups.execute();
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
                             + e.getMessage(),
@@ -360,7 +361,7 @@ public class Components {
         }
     }
 
-    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack tasks, List<EventObserver> observer) {
+    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
         try {
             VdeSocksConfiguration socksConfig = new VdeSocksConfiguration();
             
@@ -374,9 +375,10 @@ public class Components {
                 socksConfig.setNetmask(desc.getNetmask());
             }
             String socksId = eaasClient.getEaasWSPort(eaasGw).createSession(socksConfig.value(false));
-
+            cleanups.push("release-session/" + socksId, () -> eaas.releaseSession(socksId));
             return new ComponentResponse(socksId);
         } catch (Throwable e) {
+            cleanups.execute();
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
                             + e.getMessage(),
@@ -560,7 +562,7 @@ public class Components {
                         }
                     };
 
-                    cleanups.push(cleanup);
+                    cleanups.push("delete-blob/" + blob.getId(), cleanup);
 
                 // Add input image to container's config
 
@@ -586,13 +588,15 @@ public class Components {
             SessionOptions options = new SessionOptions();
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
-            final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
 
+            final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
                         .entity(new ErrorInformation("Session initialization has failed, obtained 'null' as session id."))
                         .build());
             }
+
+            cleanups.push("release-session/" + sessionId, () -> eaas.releaseSession(sessionId));
 
             Container container = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Container.class);
             container.startContainer(sessionId);
@@ -600,7 +604,7 @@ public class Components {
         }
         catch (BWFLAException | JAXBException | IOException error) {
 
-            TaskStack.run(cleanups);
+            cleanups.execute();
 
             throw new InternalServerErrorException(
                     Response.serverError()
@@ -661,7 +665,7 @@ public class Components {
                 }
             };
 
-            cleanups.push(cleanup);
+            cleanups.push("delete-blob/" + blob.getId(), cleanup);
         }
         // Add input image to machine's config
 
@@ -785,12 +789,13 @@ public class Components {
             }
 
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
-
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
                         .entity(new ErrorInformation("Session initialization has failed, obtained 'null' as session id."))
                         .build());
             }
+
+            cleanups.push("release-session/" + sessionId, () -> eaas.releaseSession(sessionId));
 
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
@@ -805,7 +810,7 @@ public class Components {
         }
         catch (BWFLAException | JAXBException | MalformedURLException e) {
 
-            TaskStack.run(cleanups);
+            cleanups.execute();
             e.printStackTrace();
             throw new InternalServerErrorException(
             		Response.serverError()
@@ -1447,14 +1452,19 @@ public class Components {
 
     public static class TaskStack
     {
-        private final Deque<Runnable> tasks = new ArrayDeque<Runnable>();
+        private final Deque<Task> tasks = new ArrayDeque<>();
 
-        public void push(Runnable task)
+        public void push(String name, Runnable task)
+        {
+            this.push(new Task(name, task));
+        }
+
+        public void push(Task task)
         {
             tasks.push(task);
         }
 
-        public Runnable pop()
+        public Task pop()
         {
             return tasks.pop();
         }
@@ -1464,14 +1474,46 @@ public class Components {
             return tasks.isEmpty();
         }
 
-        public static void run(TaskStack tasks)
+        public boolean execute()
         {
-            while (!tasks.isEmpty()) {
+            boolean result = true;
+            while (!this.isEmpty())
+                result = result && this.pop().run();
+
+            return result;
+        }
+
+        public static class Task
+        {
+            private final String name;
+            private final Runnable runnable;
+
+            private Task(String name, Runnable runnable)
+            {
+                this.name = name;
+                this.runnable = runnable;
+            }
+
+            public String name()
+            {
+                return name;
+            }
+
+            public Runnable runnable()
+            {
+                return runnable;
+            }
+
+            public boolean run()
+            {
+                LOG.log(Level.WARNING, "Running task '" + name + "'...");
                 try {
-                    tasks.pop().run();
+                    runnable.run();
+                    return true;
                 }
                 catch (Exception error) {
-                    LOG.log(Level.WARNING, "Running task failed!\n", error);
+                    LOG.log(Level.WARNING, "Running task '" + name + "' failed!\n", error);
+                    return false;
                 }
             }
         }
@@ -1522,14 +1564,6 @@ public class Components {
             for (EventObserver observer : observers)
                 observer.stop();
 
-            LOG.info("Releasing session '" + id + "'...");
-            try {
-                eaas.releaseSession(id);
-            }
-            catch (Exception error) {
-                LOG.log(Level.WARNING, "Releasing session '" + id + "' failed!\n", error);
-            }
-
 //             if(request.getUserContext() != null && request instanceof MachineComponentRequest)
 //            {
 //                MachineComponentRequest machineRequest = (MachineComponentRequest)request;
@@ -1547,9 +1581,10 @@ public class Components {
 //            }
 
             // Run all tasks in reverse order
-            TaskStack.run(tasks);
-
-            LOG.info("Session '" + id + "' released");
+            LOG.info("Releasing session '" + id + "'...");
+            if (tasks.execute())
+                LOG.info("Session '" + id + "' released");
+            else LOG.log(Level.WARNING, "Releasing session '" + id + "' failed!");
         }
 
         public String getId()
