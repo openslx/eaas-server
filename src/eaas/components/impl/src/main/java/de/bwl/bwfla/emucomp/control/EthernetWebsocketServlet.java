@@ -79,7 +79,6 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
             this.connector.connect(id);
             this.componentId = componentId;
             wait(Paths.get("/tmp/" + id + ".sock"));
-            Thread.sleep(100);
             this.iosock = IpcSocket.connect("/tmp/" + id + ".sock", IpcSocket.Type.STREAM);
 
             // Start background thread for streaming from io-socket to client

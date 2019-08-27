@@ -2,6 +2,7 @@ package de.bwl.bwfla.emucomp.control;
 
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
 
 import javax.enterprise.concurrent.ManagedThreadFactory;
@@ -27,11 +28,20 @@ abstract class IPCWebsocketProxy {
         final int timeout = 60000;  // in ms
         final int waittime = 1000;  // in ms
         for (int numretries = timeout / waittime; numretries > 0; --numretries) {
-            if (Files.exists(path)) {
+
+            DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+            runner.setCommand("awk");
+            runner.addArgument("BEGIN {e=1} $8==sock && $4==\"00010000\" {e=0; exit} END {exit e}");
+            runner.addArgument("sock=" + path.toString());
+            runner.addArgument("/proc/net/unix");
+            runner.execute(false, false);
+            int code = runner.getReturnCode();
+            if (code == 0) {
                 log.info("socket seems to be ready now");
+                runner.cleanup();
                 return;
             }
-
+            runner.cleanup();
             try {
                 Thread.sleep(waittime);
             }
