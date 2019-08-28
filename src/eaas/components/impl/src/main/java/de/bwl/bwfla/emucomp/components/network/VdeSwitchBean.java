@@ -26,6 +26,7 @@ import java.io.OutputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
@@ -45,6 +46,7 @@ import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
+import de.bwl.bwfla.emucomp.control.IPCWebsocketProxy;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import org.apache.tamaya.inject.api.Config;
@@ -129,6 +131,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             runner.addArgument("exec:" + this.vdeplugBinary + " -s " + this.switchPath);
             runner.start();
 
+            IPCWebsocketProxy.wait(Paths.get(socketPath));
             IpcSocket iosock = IpcSocket.connect(socketPath, IpcSocket.Type.STREAM);
 
             // start a new connection thread

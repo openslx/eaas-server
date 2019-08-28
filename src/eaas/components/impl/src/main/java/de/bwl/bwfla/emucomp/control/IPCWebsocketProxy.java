@@ -14,7 +14,7 @@ import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-abstract class IPCWebsocketProxy {
+public abstract class IPCWebsocketProxy {
 
     final static Logger log = Logger.getLogger(IPCWebsocketProxy.class.getName());
     protected IpcSocket iosock;
