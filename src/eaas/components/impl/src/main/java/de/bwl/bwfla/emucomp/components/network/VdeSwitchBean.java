@@ -29,6 +29,7 @@ import java.nio.file.Path;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -40,8 +41,10 @@ import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
 import javax.websocket.Session;
 
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
+import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import org.apache.tamaya.inject.api.Config;
@@ -118,15 +121,21 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
         try {
             // start a new VDE plug instance that connects to the switch
-            ProcessRunner runner = new ProcessRunner(this.vdeplugBinary, "-s",
-                    this.switchPath);
+            DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+
+            String socketPath = "/tmp/" + UUID.randomUUID().toString() + ".sock";
+            runner.setCommand("socat");
+            runner.addArgument("unix-listen:" + socketPath);
+            runner.addArgument("exec:" + this.vdeplugBinary + " -s " + this.switchPath);
             runner.start();
+
+            IpcSocket iosock = IpcSocket.connect(socketPath, IpcSocket.Type.STREAM);
 
             // start a new connection thread
             // it will connect to the websocket url and start forwarding
             // traffic to/from the given process
             Thread readThread = threadFactory
-                    .newThread(new Connection(runner, URI.create(ethUrl)));
+                    .newThread(new Connection(runner, iosock, URI.create(ethUrl)));
             readThread.start();
             this.connections.put(ethUrl, readThread);
         } catch (IOException | DeploymentException e) {
@@ -162,30 +171,29 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     }
 
     private static class Connection implements Runnable {
-        public final ProcessRunner runner;
+        public final DeprecatedProcessRunner runner;
         public final WebsocketClient wsClient;
         private final URI ethUrl;
+        private final IpcSocket iosocket;
 
-        public Connection(final ProcessRunner runner, final URI ethUrl)
+        public Connection(final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
                 throws DeploymentException, IOException {
             super();
             this.runner = runner;
             this.ethUrl = ethUrl;
+            this.iosocket = iosocket;
             
             // this will immediately establish the connection (or fail with an
             // exception)
             this.wsClient = new WebsocketClient(ethUrl) {
-                private final OutputStream stream = runner.getOutputStream();
 
                 @Override
                 public void doOnMessage(ByteBuffer msg) {
                     try {
-
                         final int size = msg.remaining();
                         final byte[] buffer  = new byte[size];
                         msg.get(buffer);
-                        stream.write(buffer, 0, size);
-                        stream.flush();
+                        iosocket.send(buffer, true);
                     } catch (Throwable e) {
                         Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, e.getMessage(), e);
                     }
@@ -196,20 +204,22 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             // automatically close the associated InputStream and thus
             // terminate this thread
             wsClient.addCloseListener((Session session, CloseReason reason) -> {
-                runner.close();
+                runner.stop();
+                runner.cleanup();
+                try {
+                    iosocket.close();
+                }
+                catch (IOException ignore) {}
             });
         }
 
         @Override
         public void run() {
             try {
-                InputStream in = this.runner.getInputStream();
-
-                byte buf[] = new byte[1500];
-                int n = 0;
-                Thread.sleep(1000);
-                while (!Thread.currentThread().isInterrupted() && ((n = in.read(buf)) != -1)) {
-                    wsClient.send(ByteBuffer.wrap(buf, 0, n));
+                // Thread.sleep(1000);
+                final ByteBuffer buffer = ByteBuffer.allocate(4 * 1024);
+                while (!Thread.currentThread().isInterrupted() && iosocket.receive(buffer, true)) {
+                    wsClient.send(buffer);
                 }
 
             } catch (InterruptedIOException ignore) {

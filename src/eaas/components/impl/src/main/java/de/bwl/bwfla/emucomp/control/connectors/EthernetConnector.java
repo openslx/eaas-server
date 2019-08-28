@@ -73,17 +73,20 @@ public class EthernetConnector implements IConnector {
 
         // Start a new VDE plug instance that connects to the emulator's switch
         this.runner = new DeprecatedProcessRunner();
+
         runner.setCommand("socat");
         runner.addArguments("unix-listen:/tmp/" + id + ".sock");
 
-        String socatExec = "exec:";
+
+        String socatExec = "exec ";
         if (emubean != null && emubean.isContainerModeEnabled()) {
             socatExec += "sudo runc exec --user "
                     + emubean.getContainerUserId() + ":" + emubean.getContainerGroupId() + " " + emubean.getContainerId()  + " ";
         }
         socatExec += "vde_plug " +  this.vdeSocket.toString();
 
-        runner.addArgument(socatExec);
+        runner.addEnvVariable("SOCATCMD", socatExec);
+        runner.addArgument("exec:sh -c $SOCATCMD");
 
         /*
         if (emubean != null && emubean.isContainerModeEnabled()) {

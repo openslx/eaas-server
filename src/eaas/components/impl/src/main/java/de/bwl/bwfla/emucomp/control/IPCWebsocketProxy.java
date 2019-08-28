@@ -16,12 +16,12 @@ import java.util.logging.Logger;
 
 abstract class IPCWebsocketProxy {
 
-    final Logger log = Logger.getLogger(this.getClass().getName());
+    final static Logger log = Logger.getLogger(IPCWebsocketProxy.class.getName());
     protected IpcSocket iosock;
     protected OutputStreamer streamer;
     protected String componentId;
 
-    void wait(Path path) throws BWFLAException
+    public static void wait(Path path) throws BWFLAException
     {
         log.info("Waiting for socket to become ready...");
 
