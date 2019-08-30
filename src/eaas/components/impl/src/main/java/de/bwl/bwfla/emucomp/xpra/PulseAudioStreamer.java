@@ -36,6 +36,7 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import java.io.StringReader;
+import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.TimeUnit;
@@ -57,7 +58,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 	private final Bin audio;
 
 
-	public PulseAudioStreamer()
+	public PulseAudioStreamer(Path pulsesock)
 	{
 		this.log = Logger.getLogger(PulseAudioStreamer.class.getName());
 
@@ -71,7 +72,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 
 		this.outqueue = new ArrayBlockingQueue<>(8);
 		this.pipeline = PulseAudioStreamer.createPipeline(log);
-		this.audio = PulseAudioStreamer.createAudioBin();
+		this.audio = PulseAudioStreamer.createAudioBin(pulsesock.toString());
 		this.webrtc= PulseAudioStreamer.createWebRtcBin(pipeline, outqueue, log);
 
 		pipeline.addMany(webrtc, audio);
@@ -234,10 +235,11 @@ public class PulseAudioStreamer implements IAudioStreamer
 		return webrtc;
 	}
 
-	private static Bin createAudioBin()
+	private static Bin createAudioBin(String pulsesock)
 	{
-		final String description = "audiotestsrc ! audioconvert ! audioresample ! queue ! opusenc ! rtpopuspay"
-				+ " ! queue ! capsfilter caps=application/x-rtp,media=audio,encoding-name=OPUS,payload=96";
+		final String description = "pulsesrc server=" + pulsesock + " device=xpra-speaker.monitor "
+				+ "! audioconvert ! audioresample ! queue ! opusenc ! rtpopuspay ! queue "
+				+ "! capsfilter caps=application/x-rtp,media=audio,encoding-name=OPUS,payload=96";
 
 		return Gst.parseBinFromDescription(description, true);
 	}

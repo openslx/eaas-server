@@ -371,6 +371,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return this.getSocketsDir().resolve("xpra-iosocket");
 	}
 
+	private Path getXpraPulseAudioSocketPath()
+	{
+		return this.getSocketsDir().resolve("xpra-pasocket");
+	}
+
+	private Path getXpraPulseAudioCookiePath()
+	{
+		final Path socket = this.getXpraPulseAudioSocketPath();
+		return socket.getParent().resolve(socket.getFileName() + ".cookie");
+	}
+
 	/** Returns emulator's runtime layer name. */
 	protected String getEmuContainerName(MachineConfiguration machineConfiguration)
 	{
@@ -690,6 +701,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 								cgen.addArgValues("=", hostPathReplacer.apply(value));
 						});
 
+				if (this.isXpraBackendEnabled()) {
+					final String pulsesock = this.getXpraPulseAudioSocketPath().toString();
+					cgen.addArguments("--env", "__pulse_server=" + hostPathReplacer.apply(pulsesock));
+
+					final String pulsecookie = this.getXpraPulseAudioCookiePath().toString();
+					cgen.addArguments("--env", "__pulse_cookie=" + hostPathReplacer.apply(pulsecookie));
+				}
+
 				// Enable KVM device (if needed)
 				if (isKvmDeviceEnabled)
 					cgen.addArgument("--enable-kvm");
@@ -891,7 +910,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 		}
 		else if (this.isXpraBackendEnabled()) {
-			final PulseAudioStreamer streamer = new PulseAudioStreamer();
+			final PulseAudioStreamer streamer = new PulseAudioStreamer(this.getXpraPulseAudioSocketPath());
 			this.addControlConnector(new XpraConnector(this.getXpraSocketPath(), streamer));
 		}
 
