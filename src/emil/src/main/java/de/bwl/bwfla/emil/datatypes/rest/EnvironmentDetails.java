@@ -143,6 +143,7 @@ public class EnvironmentDetails {
         this.archive = emilenv.getArchive();
         this.xpraEncoding = emilenv.getXpraEncoding();
         this.isLinuxRuntime = emilenv.isLinuxRuntime();
+        this.helpText = emilenv.getHelpText();
 
         if(machineConf != null)
             this.drives = machineConf.getDrive();

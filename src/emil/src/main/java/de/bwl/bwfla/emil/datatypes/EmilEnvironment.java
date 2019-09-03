@@ -4,6 +4,7 @@ import javax.xml.bind.annotation.*;
 
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.rest.EmilNetworkingType;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
@@ -20,6 +21,7 @@ import java.util.Set;
 	EmilSessionEnvironment.class
 })
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironment> {
 	@XmlElement(required = false)
 	private String parentEnvId;
@@ -75,6 +77,9 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	@XmlElement(required = false, defaultValue = "jpeg")
 	private String xpraEncoding;
+
+	@XmlElement
+	private String helpText;
 
 
 	public boolean isCanProcessAdditionalFiles() {
@@ -307,5 +312,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setNetworking(EmilNetworkingType networking) {
 		this.networking = networking;
+	}
+
+	public String getHelpText() {
+		return helpText;
+	}
+
+	public void setHelpText(String helpText) {
+		this.helpText = helpText;
 	}
 }

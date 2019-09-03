@@ -9,8 +9,13 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.logging.Logger;
@@ -47,6 +52,26 @@ public class ClassificationData {
         db = dbConnector.getInstance(dbName);
     }
 
+    public void export(File exportDirectory) throws JAXBException, IOException {
+         List<ClassificationResult> results = db.getJaxbObjects(collectionName, parentElement + idDBkey, ClassificationResult.class);
+         File currentExportDir = new File(exportDirectory, (new Date().toString()));
+         Files.createDirectories(currentExportDir.toPath());
+         for(ClassificationResult result : results)
+         {
+             if(result.getObjectId() == null)
+                 continue;
+
+             File exportFile = new File(currentExportDir, result.getObjectId() + ".xml");
+             try {
+                 PrintWriter out = new PrintWriter(exportFile);
+                 out.print(result.value(true));
+                 out.close();
+             } catch (FileNotFoundException e) {
+                 e.printStackTrace();
+             }
+         }
+    }
+
     public ClassificationResult load(String objectId) throws NoSuchElementException {
         try {
             return db.getJaxbRootbasedObject(collectionName, objectId, parentElement + idDBkey, ClassificationResult.class);
@@ -56,7 +81,6 @@ public class ClassificationData {
             throw new NoSuchElementException();
         }
     }
-
 
     public void save(ClassificationResult c, String objectId) throws JAXBException, IOException, BWFLAException {
         // classification wasn't successful

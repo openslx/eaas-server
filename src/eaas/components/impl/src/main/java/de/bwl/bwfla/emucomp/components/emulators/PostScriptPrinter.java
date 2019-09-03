@@ -25,6 +25,8 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
+
 public class PostScriptPrinter implements Runnable
 {
     protected static final Logger LOG = Logger.getLogger(PostScriptPrinter.class.getCanonicalName());
@@ -85,7 +87,7 @@ public class PostScriptPrinter implements Runnable
     private boolean prepare()
     {
         try {
-            br = Files.newBufferedReader(emulatorPrinterOutput);
+            br = Files.newBufferedReader(emulatorPrinterOutput, ISO_8859_1);
         } catch (IOException e) {
             return false;
         }

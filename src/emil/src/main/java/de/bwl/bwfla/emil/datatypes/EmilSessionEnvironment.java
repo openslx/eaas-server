@@ -4,10 +4,13 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import javax.persistence.Entity;
+import javax.persistence.criteria.CriteriaBuilder;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.time.Instant;
+import java.time.format.DateTimeParseException;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
@@ -17,10 +20,10 @@ public class EmilSessionEnvironment extends EmilObjectEnvironment {
     private String baseEnv;
     @XmlElement(required = false)
     private String userId;
-    @XmlElement(required = false)
-    private long creationDate;
-    @XmlElement(defaultValue = "0")
-    private long lastAccess = 0;
+    @XmlElement
+    private String creationDate = Instant.now().toString();
+    @XmlElement
+    private String lastAccess = Instant.ofEpochMilli(0).toString();
 
     public EmilSessionEnvironment() {}
 
@@ -60,21 +63,41 @@ public class EmilSessionEnvironment extends EmilObjectEnvironment {
     }
 
     public long getCreationDate() {
-        return creationDate;
+        try {
+            return
+                    Instant.parse(creationDate).toEpochMilli();
+        }
+        catch ( DateTimeParseException e)
+        {
+            e.printStackTrace();
+            return 0;
+        }
     }
 
     public void setCreationDate(long creationDate) {
-        this.creationDate = creationDate;
+        this.creationDate = Instant.ofEpochMilli(creationDate).toString();
     }
 
     public long getLastAccess() {
-        if(lastAccess < creationDate)
-            return creationDate;
-        return lastAccess;
+        long _lastAccess = 0;
+        long _creationDate = 0;
+
+        try {
+            _lastAccess = Instant.parse(lastAccess).toEpochMilli();
+            _creationDate = Instant.parse(creationDate).toEpochMilli();
+        }
+        catch (DateTimeParseException e)
+        {
+            e.printStackTrace();
+        }
+
+        if(_lastAccess < _creationDate)
+            return _creationDate;
+        return _lastAccess;
     }
 
     public void setLastAccess(long lastAccess) {
-        this.lastAccess = lastAccess;
+        this.lastAccess = Instant.ofEpochMilli(lastAccess).toString();
     }
 
     @Override

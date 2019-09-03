@@ -282,7 +282,6 @@ public class EmilEnvironmentRepository {
 		}
 		objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
 
-
 //		try {
 //			try {
 //				 importExistentEnv();
@@ -295,8 +294,6 @@ public class EmilEnvironmentRepository {
 //		}
 
 		// removeMissingEnvironments();
-
-
 	}
 
 	private EmilEnvironment getSharedEmilEnvironmentById(String envid) {

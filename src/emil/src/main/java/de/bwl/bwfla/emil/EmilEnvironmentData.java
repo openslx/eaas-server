@@ -559,6 +559,7 @@ public class EmilEnvironmentData extends EmilRest {
 		newEnv.setCanProcessAdditionalFiles(desc.canProcessAdditionalFiles());
 		newEnv.setXpraEncoding(desc.getXpraEncoding());
 		newEnv.setLinuxRuntime(desc.isLinuxRuntime());
+		newEnv.setHelpText(desc.getHelpText());
 
 		if (desc.getTime() != null) {
 			newEnv.setTimeContext(desc.getTime());
@@ -582,6 +583,26 @@ public class EmilEnvironmentData extends EmilRest {
 	}
 
 	@Secured({Role.RESTRCITED})
+	@GET
+	@Path("/defaultEnvironments")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Map<String, String> defaultEnvironments()
+	{
+		Map<String, String> map = new HashMap<>();
+		try {
+			List<DefaultEntry> defaultEnvironments = envHelper.getDefaultEnvironments();
+			for(DefaultEntry e : defaultEnvironments)
+			{
+				map.put(e.getKey(), e.getValue());
+			}
+			return map;
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+			Emil.errorMessageResponse(e.getMessage());
+			return null;
+		}
+	}
+
 	@GET
 	@Path("/defaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)

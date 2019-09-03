@@ -1,6 +1,10 @@
 package de.bwl.bwfla.emil.classification;
 
+import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.PrintWriter;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -108,11 +112,11 @@ public class ArchiveAdapter {
 
             ClassificationResult cached = null;
 
-            try { cached = db.load(objectId); } catch (NoSuchElementException ignore) {}
-            if(forceProposal)
+            try { cached = db.load(objectId); } catch (NoSuchElementException ignore) { }
+            if(cached == null)
+                throw new NoSuchElementException();
+            if(forceProposal || cached.getEnvironmentList().size() == 0)
             {
-                if(cached == null)
-                    throw new NoSuchElementException();
                 ClassificationResult result = propose(cached, objectId);
                 try {
                     db.save(result, objectId);
@@ -121,10 +125,8 @@ public class ArchiveAdapter {
                 }
                 return result;
             }
-            if(cached == null)
-                return new ClassificationResult();
-
-            return cached;
+            else
+                return cached;
         } catch (NoSuchElementException e) {
             // if no data for the object id, classify it
             LOG.severe("no such element exception");
@@ -173,7 +175,7 @@ public class ArchiveAdapter {
                             knownEnvironments.add(emilEnv.getEnvId());
                         }
                         else {
-                            LOG.info("porposed envs contains: " + emilEnv.getEnvId() + " skipp env");
+                            // LOG.info("proposed envs contains: " + emilEnv.getEnvId() + " skipp env");
                             EmilEnvironment _env = emilEnvRepo.getEmilEnvironmentById(envId);
                             if(_env instanceof EmilObjectEnvironment)
                                 break;
@@ -196,6 +198,7 @@ public class ArchiveAdapter {
 
         for(EmilObjectEnvironment objEnv : emilObjectEnvironments) {
             EnvironmentInfo ei = new EnvironmentInfo(objEnv.getEnvId(), objEnv.getTitle());
+            LOG.info("found oe: " + objEnv.getTitle());
             ei.setObjectEnvironment(true);
             result.add(ei);
         }
@@ -214,6 +217,33 @@ public class ArchiveAdapter {
         return result;
     }
 
+    public void logClassificationFailure(String objectId, ClassificationResult result) {
+        File logDir = new File("/home/bwfla/log/application");
+        if (!logDir.exists())
+            try {
+                Files.createDirectories(logDir.toPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        File currentLogDir = new File(logDir, "classification");
+        if(!currentLogDir.exists())
+            try {
+                Files.createDirectories(currentLogDir.toPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
+        File output = new File(logDir, objectId + "-" + (new Date()).getTime() + "-failed.log");
+        try {
+            PrintWriter out = new PrintWriter(output);
+            out.print(result.value(true));
+            out.close();
+        } catch (FileNotFoundException | JAXBException e) {
+            e.printStackTrace();
+        }
+    }
+
     private ClassificationResult classifyObject(String archiveId, String objectId) throws BWFLAException {
         try {
 
@@ -224,7 +254,8 @@ public class ArchiveAdapter {
             catch (BWFLAException e)
             {
                 LOG.warning("file collection for " + objectId + " is null");
-                return new ClassificationResult();
+
+                return new ClassificationResult(e);
             }
 
             FileCollection fc = FileCollection.fromValue(fcString);
@@ -232,7 +263,7 @@ public class ArchiveAdapter {
             if(fc == null)
             {
                 LOG.warning("file collection for " + objectId + " is null");
-                return new ClassificationResult();
+                return new ClassificationResult( new BWFLAException("could not load file collection for object " + objectId));
             }
 
             ClassificationResult response;
@@ -278,8 +309,7 @@ public class ArchiveAdapter {
 
     }
 
-    private ClassificationResult propose(ClassificationResult response, String objectId)
-    {
+    private ClassificationResult propose(ClassificationResult response, String objectId) {
         HashMap<String, DiskType> mediaFormats = new HashMap<>();
         if(response.getMediaFormats() != null)
         {
@@ -335,7 +365,8 @@ public class ArchiveAdapter {
                         os.setDefaultEnvironment(info);
 
                         EnvironmentInfo infoL = new EnvironmentInfo(emilEnv.getEnvId(), emilEnv.getTitle() + " (D)");
-                        defaultList.add(infoL);
+                        if(!defaultList.stream().filter(o -> o.getId().equals(infoL.getId())).findFirst().isPresent())
+                            defaultList.add(infoL);
                     }
                 }
                 suggested.add(os);
@@ -347,27 +378,39 @@ public class ArchiveAdapter {
             LOG.log(Level.SEVERE, e.getMessage(), e);
         }
         response.setSuggested(suggested);
-        if(defaultList.size() > 0)
-            // response.setEnvironmentList(defaultList);
-            environmentList.addAll(defaultList);
-
-        HashMap<String, RelatedQIDS> qidsHashMap = new HashMap<>();
-        environmentList.forEach(env -> {
-            String os = null;
-            try {
-                os =  ((MachineConfiguration) envHelper.getEnvironmentById(env.getId())).getOperatingSystemId();
-
-                if(os != null) {
-                    // sanitze: remove ':'
-                    os = os.replace(':', '_');
-                    // qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
+        
+        if(defaultList.size() > 0) {
+            for(EnvironmentInfo info : environmentList)
+            {
+                if(info.isObjectEnvironment()) {
+                    LOG.info("adding oe to default list.");
+                    defaultList.add(0, info);
                 }
-            } catch (BWFLAException e) {
-                e.printStackTrace();
             }
-        });
+            response.setEnvironmentList(defaultList);
+        }
+        else
+            response.setEnvironmentList(environmentList);
 
-        response.setEnvironmentList(environmentList);
+//=======
+//        HashMap<String, RelatedQIDS> qidsHashMap = new HashMap<>();
+//        environmentList.forEach(env -> {
+//            String os = null;
+//            try {
+//                os =  ((MachineConfiguration) envHelper.getEnvironmentById(env.getId())).getOperatingSystemId();
+//
+//                if(os != null) {
+//                    // sanitze: remove ':'
+//                    os = os.replace(':', '_');
+//                    qidsHashMap.put(env.getId(), QIDsFinder.findFollowingAndFollowedQIDS(os));
+//                }
+//            } catch (BWFLAException e) {
+//                e.printStackTrace();
+//            }
+//        });
+//
+//        response.setEnvironmentList(environmentList);
+//>>>>>>> master
         return response;
     }
 
@@ -415,6 +458,21 @@ public class ArchiveAdapter {
 
     public List<String> getEnvironmentDependencies(String envId) throws IOException, JAXBException {
         return db.getEnvironmentDependencies(envId);
+    }
+
+    public void dump() {
+        File exportDir = new File("/home/bwfla/export/classification-data");
+        if (!exportDir.exists())
+            try {
+                Files.createDirectories(exportDir.toPath());
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        try {
+            db.export(exportDir);
+        } catch (JAXBException | IOException e) {
+            e.printStackTrace();
+        }
     }
 
     public ObjectArchiveHelper objects()

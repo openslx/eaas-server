@@ -144,7 +144,7 @@ class ImageHelper {
 		DeprecatedProcessRunner rsyncRunner = new DeprecatedProcessRunner();
 		rsyncRunner.setCommand("rsync");
 		rsyncRunner.addArgument("-crlptgoD");
-		rsyncRunner.addArguments("-v", "--delete"); // , "--no-o", "--no-g");
+		rsyncRunner.addArguments( "--delete"); // , "--no-o", "--no-g");
 		rsyncRunner.addArgument(sourceDir.toAbsolutePath().toString() + "/");
 		rsyncRunner.addArgument(targetDir.toAbsolutePath().toString());
 		if (!rsyncRunner.execute())

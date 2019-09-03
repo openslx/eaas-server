@@ -237,4 +237,8 @@ public class DatabaseEnvironmentsAdapter {
     public void extractMetadata(String imageId) throws BWFLAException {
         environmentsAdapter.extractMetadata(imageId);
     }
+
+    public List<DefaultEntry> getDefaultEnvironments() throws BWFLAException {
+        return environmentsAdapter.getDefaultEnvironments("default");
+    }
 }

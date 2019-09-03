@@ -27,20 +27,21 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.api.metadata.DockerImport;
 import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
+import jdk.nashorn.internal.parser.JSONParser;
 
 import javax.activation.DataHandler;
 import javax.activation.URLDataSource;
 import javax.xml.bind.JAXBException;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import static de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ArchiveFormat.DOCKER;
@@ -166,6 +167,36 @@ public abstract class MediumBuilder
 						dockerMd.setDigest(ds.digest);
 						dockerMd.setEmulatorVersion(ds.version);
 						dockerMd.setEmulatorType(ds.emulatorType);
+						DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+						runner.setCommand("/bin/bash");
+						dstdir.getParent().resolve("image");
+
+						runner.addArgument("-c");
+
+						Path imageDir = dstdir.getParent().resolve("image");
+
+						if(imageDir.toFile().exists()) {
+							runner.addArgument("jq '{Cmd: .config.Cmd, Env: .config.Env}' " + dstdir + "/../image/blobs/\"$(jq -r .config.digest " + dstdir + "/../image/blobs/\"$(jq -r .manifests[].digest " + dstdir + "/../image/index.json | tr : /)\" | tr : /)\"");
+							runner.start();
+						} else {
+							throw new BWFLAException("docker container doesn't contain image directory");
+						}
+
+
+						runner.waitUntilFinished();
+
+						javax.json.JsonReader jr =
+								javax.json.Json.createReader(runner.getStdOutReader());
+						javax.json.JsonObject jo = jr.readObject();
+						javax.json.JsonArray envVarialbes = jo.getJsonArray("Env");
+						javax.json.JsonArray processes = jo.getJsonArray("Cmd");
+
+
+						List processList = IntStream.range(0, processes.size()).mapToObj(processes::getString).collect(Collectors.toList());
+						List environmentsList = IntStream.range(0, envVarialbes.size()).mapToObj(envVarialbes::getString).collect(Collectors.toList());
+
+						dockerMd.setEntryProcesses(new ArrayList(processList));
+						dockerMd.setEnvVariables(new ArrayList(environmentsList));
 
 						md = dockerMd;
 					}

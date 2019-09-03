@@ -36,6 +36,7 @@ import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
+import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
@@ -169,6 +170,11 @@ public class ImageArchiveWS
 	{
 		return this.lookup(backend)
 				.addRecordingFile(envId, traceId, data);
+	}
+
+	public DefaultEnvironments getDefaultEnvironments(String backend) throws BWFLAException {
+		return this.lookup(backend)
+				.getDefaultEnvironments();
 	}
 
 	public String getDefaultEnvironment(String backend, String osId) throws BWFLAException

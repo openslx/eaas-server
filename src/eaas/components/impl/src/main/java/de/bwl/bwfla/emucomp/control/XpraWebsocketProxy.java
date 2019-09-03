@@ -19,12 +19,9 @@
 
 package de.bwl.bwfla.emucomp.control;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.inject.Inject;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
@@ -37,18 +34,14 @@ import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 
 
 @ServerEndpoint(value = "/components/{componentId}/xpra", subprotocols = {"binary"})
-public class XpraWebsocketProxy
+public class XpraWebsocketProxy extends IPCWebsocketProxy
 {
 	private final Logger log = Logger.getLogger(this.getClass().getName());
 
-	private String componentId;
-	private IpcSocket iosock;
-	private OutputStreamer streamer;
 	private XpraConnector connector;
 
 	@Inject
 	private NodeManager nodeManager = null;
-
 
 	@OnOpen
 	public void open(Session session, EndpointConfig config, @PathParam("componentId") String componentId)
@@ -97,32 +90,9 @@ public class XpraWebsocketProxy
 		}
 	}
 
-	@OnMessage
-	public void message(Session session, byte[] message, boolean last) throws IOException
+	@Override
+	protected void stop(Session session)
 	{
-		// Forward message from client to iosocket
-		iosock.send(message, true);
-	}
-
-	@OnClose
-	public void close(Session session, CloseReason closeReason)
-	{
-		final String reason = closeReason.getCloseCode().toString();
-		log.info("Websocket session for component '" + componentId + "' closed. Reason: " + reason);
-		this.stop(session);
-	}
-
-	@OnError
-	public void error(Session session, Throwable error)
-	{
-		log.log(Level.WARNING, "Websocket session for component '" + componentId + "' failed! ", error);
-		this.stop(session);
-	}
-
-	private void stop(Session session)
-	{
-		log.info("Stopping websocket proxy for component '" + componentId + "'...");
-
 		try {
 			connector.getAudioStreamer().stop();
 		}
@@ -130,83 +100,6 @@ public class XpraWebsocketProxy
 			log.log(Level.WARNING, "Stopping audio-streamer failed!", error);
 		}
 
-		if (streamer != null && streamer.isRunning()) {
-			try {
-				streamer.stop();
-			}
-			catch (Exception error) {
-				log.log(Level.WARNING, "Stopping output-streamer failed!", error);
-			}
-		}
-
-		if (iosock != null) {
-			try {
-				iosock.close();
-			}
-			catch (Exception error) {
-				log.log(Level.WARNING, "Closing io-socket failed!", error);
-			}
-		}
-
-		try {
-			session.close();
-		}
-		catch (Exception error) {
-			log.log(Level.WARNING, "Closing websocket session failed!", error);
-		}
-
-		log.info("Websocket proxy for component '" + componentId + "' stopped");
-	}
-
-	private class OutputStreamer implements Runnable
-	{
-		private final Thread worker;
-		private final Session session;
-		private boolean running;
-
-		public OutputStreamer(Session session, ManagedThreadFactory wfactory)
-		{
-			this.worker = wfactory.newThread(this);
-			this.session = session;
-			this.running = false;
-		}
-
-		public boolean isRunning()
-		{
-			return running;
-		}
-
-		public void start()
-		{
-			running = true;
-			worker.start();
-		}
-
-		public void stop() throws InterruptedException
-		{
-			running = false;
-			worker.join();
-		}
-
-		@Override
-		public void run()
-		{
-			try {
-				final ByteBuffer buffer = ByteBuffer.allocate(4 * 1024);
-				while (running && iosock.receive(buffer, true)) {
-					if (!session.isOpen())
-						break;
-
-					session.getBasicRemote()
-							.sendBinary(buffer);
-				}
-
-				final String message = "Server requested to closed connection!";
-				session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, message));
-			}
-			catch (Exception error) {
-				log.log(Level.WARNING, "Forwarding from io-socket to client failed!", error);
-			}
-		}
+		super.stop(session);
 	}
 }
