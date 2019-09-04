@@ -19,7 +19,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import de.bwl.bwfla.api.objectarchive.ObjectFileCollection;
+import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
@@ -257,13 +257,13 @@ public class EmilSoftwareData extends EmilRest {
 				if(archiveName == null || archiveName.startsWith("user"))
 				{
 					LOG.severe("importing object");
-					ObjectFileCollection object = objHelper.getObjectHandle(archiveName, swo.getObjectId());
-					if(object == null)
+					DigitalObjectMetadata md = objHelper.getObjectMetadata(archiveName, swo.getObjectId());
+					if(md == null)
 					{
 						LOG.severe("importing object failed");
 						return Emil.errorMessageResponse("failed to access object");
 					}
-					objHelper.importObject("default", object);
+					objHelper.importFromMetadata("default", md.getMetsData());
 					archiveName = "default";
 				}
 

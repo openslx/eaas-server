@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.utils;
 
 import java.io.File;
 import java.io.IOException;

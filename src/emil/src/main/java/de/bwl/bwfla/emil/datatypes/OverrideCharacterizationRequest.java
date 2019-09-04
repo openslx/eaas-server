@@ -6,6 +6,7 @@ public class OverrideCharacterizationRequest {
     protected String objectId;
     protected String description;
     protected String objectArchive;
+    protected List<EnvironmentInfo> environments;
 
     public String getDescription() {
         return description;
@@ -26,7 +27,7 @@ public class OverrideCharacterizationRequest {
     public void setEnvironments(List<EnvironmentInfo> environments) {
         this.environments = environments;
     }
-    protected List<EnvironmentInfo> environments;
+
 
     public String getObjectArchive() {
         return objectArchive;

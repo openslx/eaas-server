@@ -1,35 +1,14 @@
-package de.bwl.bwfla.emil.classification;
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.file.Files;
-import java.util.*;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-
-import javax.annotation.PostConstruct;
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
-import javax.xml.bind.JAXBException;
+package de.bwl.bwfla.emil.utils.tasks;
 
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
-import de.bwl.bwfla.emil.ClassificationData;
-import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
-import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
-import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
-import de.bwl.bwfla.wikidata.reader.QIDsFinder;
-import de.bwl.bwfla.wikidata.reader.entities.RelatedQIDS;
-import org.apache.tamaya.inject.api.Config;
-
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
+import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
+import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
+import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
+import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
@@ -40,111 +19,39 @@ import de.bwl.bwfla.imageclassifier.client.ImageClassifier;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.imageproposer.client.Proposal;
 import de.bwl.bwfla.imageproposer.client.ProposalRequest;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 
-@ApplicationScoped
-public class ArchiveAdapter {
-    protected final static Logger LOG = Logger.getLogger(ArchiveAdapter.class.getName());
-    @Inject
-    @Config(value = "ws.objectarchive")
-    private String objectArchive;
+import javax.xml.bind.JAXBException;
+import java.io.IOException;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
-    @Inject
-    @Config(value = "ws.imagearchive")
-    private String imageArchive;
-
-    @Inject
-    @Config(value = "emil.classificationservice")
-    private String classificationService;
-
-    @Inject
-    @Config(value = "emil.imageproposerservice")
-    private String imageProposerService;
-
-    @Inject
-    @Config(value = "commonconf.serverdatadir")
-    protected String serverdatadir;
+public class ClassificationTask extends AbstractTask<ClassificationResult> {
 
 
-    @Inject
-	@Config(value = "emil.emilobjectenvironmentspaths")
-	private String emilObjectEnvironmentsPath;
+    private static final Logger LOG = Logger.getLogger(ClassificationTask.class.getName());
 
-    @Inject
-    @AuthenticatedUser
-    private UserContext authenticatedUser;
-
-
-    protected ObjectArchiveHelper objHelper;
-    protected EnvironmentsAdapter envHelper;
-    protected ImageClassifier imageClassifier;
-    protected ImageProposer imageProposer;
-
-    @Inject
-    protected ClassificationData db;
-
-    @Inject
-    private EmilEnvironmentRepository emilEnvRepo;
-
-    @PostConstruct
-    public void init()  {
-        objHelper = new ObjectArchiveHelper(objectArchive);
-        envHelper = new EnvironmentsAdapter(imageArchive);
-        imageClassifier = new ImageClassifier(classificationService + "/imageclassifier");
-        try {
-            imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
-        } catch (IllegalArgumentException e) {}
+    public ClassificationTask(ProposeEnvironmentsRequest req)
+    {
+        this.request = req;
+        this.emilEnvRepo = req.archive.environmentRepository();
+        this.envHelper = req.archive.environments();
+        this.imageClassifier = req.archive.imageClassifier();
+        this.imageProposer = req.archive.imageProposer();
     }
 
-    public ClassificationResult getEnvironmentsForObject(String archiveId, String objectId) throws BWFLAException {
-        return this.getEnvironmentsForObject(archiveId, objectId, false, false);
-    }
+    private final EmilEnvironmentRepository emilEnvRepo;
+    private final ProposeEnvironmentsRequest request;
+    private final EnvironmentsAdapter envHelper;
+    private final ImageClassifier imageClassifier;
+    private final ImageProposer imageProposer;
 
-    public ClassificationResult getEnvironmentsForObject(String archiveId, String objectId,
-                                                         boolean forceCharacterization,
-                                                         boolean forceProposal) throws BWFLAException {
-        try {
-            LOG.severe("getEnvironmentsForObject " + forceCharacterization + " " + forceProposal);
-            // shortcut to force characterization if requested:
-            if (forceCharacterization) {
-                throw new NoSuchElementException();
-            }
-
-            ClassificationResult cached = null;
-
-            try { cached = db.load(objectId); } catch (NoSuchElementException ignore) { }
-            if(cached == null)
-                throw new NoSuchElementException();
-            if(forceProposal || cached.getEnvironmentList().size() == 0)
-            {
-                ClassificationResult result = propose(cached, objectId);
-                try {
-                    db.save(result, objectId);
-                } catch (JAXBException|IOException e) {
-                    LOG.log(Level.SEVERE, e.getMessage(), e);
-                }
-                return result;
-            }
-            else
-                return cached;
-        } catch (NoSuchElementException e) {
-            // if no data for the object id, classify it
-            LOG.severe("no such element exception");
-            ClassificationResult response = this.classifyObject(archiveId, objectId);
-            try {
-                // do not saveDoc the proposal result here
-                db.save(response, objectId);
-                response = propose(response, objectId);
-            } catch (JAXBException | IOException e1) {
-                LOG.log(Level.SEVERE, e1.getMessage(), e1);
-                throw new BWFLAException(e1);
-            }
-            return response;
-        }
-    }
-
-    public ClassificationResult getClassificationResultForObject(String objectId){
-        return db.load(objectId);
+    public static class ProposeEnvironmentsRequest
+    {
+        String objectId;
+        ArchiveAdapter archive;
+        ClassificationResult cached;
     }
 
     private List<EnvironmentInfo> resolveEmilEnvironments(String objectId, Collection<String> proposedEnvironments) throws IOException, BWFLAException {
@@ -198,7 +105,7 @@ public class ArchiveAdapter {
 
         for(EmilObjectEnvironment objEnv : emilObjectEnvironments) {
             EnvironmentInfo ei = new EnvironmentInfo(objEnv.getEnvId(), objEnv.getTitle());
-            LOG.info("found oe: " + objEnv.getTitle());
+            // LOG.info("found oe: " + objEnv.getTitle());
             ei.setObjectEnvironment(true);
             result.add(ei);
         }
@@ -217,39 +124,13 @@ public class ArchiveAdapter {
         return result;
     }
 
-    public void logClassificationFailure(String objectId, ClassificationResult result) {
-        File logDir = new File("/home/bwfla/log/application");
-        if (!logDir.exists())
-            try {
-                Files.createDirectories(logDir.toPath());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        File currentLogDir = new File(logDir, "classification");
-        if(!currentLogDir.exists())
-            try {
-                Files.createDirectories(currentLogDir.toPath());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-
-        File output = new File(logDir, objectId + "-" + (new Date()).getTime() + "-failed.log");
-        try {
-            PrintWriter out = new PrintWriter(output);
-            out.print(result.value(true));
-            out.close();
-        } catch (FileNotFoundException | JAXBException e) {
-            e.printStackTrace();
-        }
-    }
 
     private ClassificationResult classifyObject(String archiveId, String objectId) throws BWFLAException {
         try {
 
             String fcString;
             try {
-                fcString = getFileCollectionForObject(archiveId, objectId);
+                fcString = request.archive.getFileCollectionForObject(archiveId, objectId);
             }
             catch (BWFLAException e)
             {
@@ -378,7 +259,7 @@ public class ArchiveAdapter {
             LOG.log(Level.SEVERE, e.getMessage(), e);
         }
         response.setSuggested(suggested);
-        
+
         if(defaultList.size() > 0) {
             for(EnvironmentInfo info : environmentList)
             {
@@ -415,69 +296,63 @@ public class ArchiveAdapter {
     }
 
 
-    public String getFileCollectionForObject(String archiveId, String objectId)
-            throws  BWFLAException {
-        if(archiveId == null)
-        {
-            if(authenticatedUser == null || authenticatedUser.getUsername() == null)
-                archiveId = "default";
-            else
-                archiveId = authenticatedUser.getUsername();
-        }
-
-        try {
-            FileCollection fc = objHelper.getObjectReference(archiveId, objectId);
-            if (fc == null)
-                throw new BWFLAException("Returned FileCollection is null for '" + archiveId + "/" + objectId + "'!");
-            return fc.value();
-
-        } catch (JAXBException e) {
-            throw new BWFLAException("Cannot find object reference for '" + objectId + "'", e);
-        }
-    }
-
-    public void setCachedEnvironmentsForObject(String objectId, List<EnvironmentInfo> environments, String userDescription)
-            throws BWFLAException {
-
-        ClassificationResult result = null;
-        try {
-            result = db.load(objectId);
-        } catch (NoSuchElementException e) {
-            result = new ClassificationResult();
-        }
-
-        result.setEnvironmentList(environments);
-        result.setUserDescription(userDescription);
-        try {
-            db.save(result, objectId);
-        } catch (JAXBException | IOException e) {
-            LOG.log(Level.SEVERE, e.getMessage(), e);
-            throw new BWFLAException(e);
-        }
-    }
-
-    public List<String> getEnvironmentDependencies(String envId) throws IOException, JAXBException {
-        return db.getEnvironmentDependencies(envId);
-    }
-
-    public void dump() {
-        File exportDir = new File("/home/bwfla/export/classification-data");
-        if (!exportDir.exists())
-            try {
-                Files.createDirectories(exportDir.toPath());
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        try {
-            db.export(exportDir);
-        } catch (JAXBException | IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    public ObjectArchiveHelper objects()
+    private ClassificationResult propose()
     {
-        return objHelper;
+        ClassificationResult result = propose(cached, objectId);
+    }
+
+
+    private ClassificationResult fullClassification()
+    {
+        ClassificationResult response = this.classifyObject(archiveId, objectId);
+        try {
+            // do not saveDoc the proposal result here
+            classification.save(response, objectId);
+            response = propose(response, objectId);
+        } catch (JAXBException | IOException e1) {
+            LOG.log(Level.SEVERE, e1.getMessage(), e1);
+            throw new BWFLAException(e1);
+        }
+        return response;
+    }
+
+    @Override
+    protected ClassificationResult execute() throws Exception {
+
+        try {
+            LOG.severe("getEnvironmentsForObject " + forceCharacterization + " " + forceProposal);
+            // shortcut to force characterization if requested:
+            if (forceCharacterization) {
+                throw new NoSuchElementException();
+            }
+
+            ClassificationResult cached = null;
+
+            try { cached = classification.load(objectId); } catch (NoSuchElementException ignore) { }
+            if(cached == null) {
+                if(noUpdate)
+                    return new ClassificationResult();
+
+                throw new NoSuchElementException();
+            }
+
+            if(forceProposal || cached.getEnvironmentList().size() == 0)
+            {
+
+                try {
+                    classification.save(result, objectId);
+                } catch (JAXBException |IOException e) {
+                    LOG.log(Level.SEVERE, e.getMessage(), e);
+                }
+                return result;
+            }
+            else
+                return cached;
+        } catch (NoSuchElementException e) {
+            // if no data for the object id, classify it
+            LOG.severe("no such element exception");
+
+        }
     }
 
 }

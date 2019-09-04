@@ -4,16 +4,12 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.net.URLDecoder;
 import java.util.*;
-import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -24,10 +20,9 @@ import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
-import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.emil.classification.ArchiveAdapter;
+import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
@@ -36,6 +31,7 @@ import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
+import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.utils.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.utils.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emucomp.api.*;
@@ -46,18 +42,16 @@ import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
-import jdk.nashorn.internal.objects.annotations.Getter;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
-import org.openjena.atlas.logging.Log;
 
 @Path("EmilEnvironmentData")
 @ApplicationScoped
 public class EmilEnvironmentData extends EmilRest {
+
+	private static boolean initialized = false;
 
 	@Inject
 	private DatabaseEnvironmentsAdapter envHelper;
@@ -72,11 +66,13 @@ public class EmilEnvironmentData extends EmilRest {
 	@Inject
 	private ArchiveAdapter archive;
 
-	private AsyncIoTaskManager taskManager;
 	private ImageProposer imageProposer;
 
 	@Inject
 	private ContainerUtil containerUtil;
+
+	@Inject
+	private TaskManager taskManager;
 
 	@Inject
 	@AuthenticatedUser
@@ -89,14 +85,28 @@ public class EmilEnvironmentData extends EmilRest {
 		} catch (IllegalArgumentException e) {
 		}
 
+		init(false);
+	}
+
+	public synchronized int init(boolean force)
+	{
+		int res = -1;
+		if(initialized && !force)
+			return -1;
+
 		try {
-			taskManager = new AsyncIoTaskManager();
-		} catch (NamingException e) {
-			throw new IllegalStateException("failed to create AsyncIoTaskManager");
+			res = emilEnvRepo.initialize();
+			LOG.warning("init: import of " + res + " environments completed");
+		} catch (JAXBException e) {
+			e.printStackTrace();
+		} catch (BWFLAException e) {
+			e.printStackTrace();
 		}
 
-		init();
+		initialized = true;
+		return res;
 	}
+
 
 	@Secured({Role.PUBLIC})
 	@GET
@@ -168,9 +178,9 @@ public class EmilEnvironmentData extends EmilRest {
 	@GET
 	@Path("/init")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response init() {
+	public Response _init() {
 		try {
-			return Emil.successMessageResponse("import of " + emilEnvRepo.initialize() + " environments completed");
+			return Emil.successMessageResponse("import of " + init(true) + " environments completed");
 		} catch (Throwable t) {
 			return Emil.internalErrorResponse(t);
 		}
@@ -754,26 +764,11 @@ public class EmilEnvironmentData extends EmilRest {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response sync() {
 		envHelper.sync();
-		init();
+		init(true);
 		return Emil.successMessageResponse("syncing archives ");
 	}
 
-	@Secured({Role.RESTRCITED})
-	@POST
-	@Path("/overrideObjectCharacterization")
-	@Produces(MediaType.APPLICATION_JSON)
-	@Consumes(MediaType.APPLICATION_JSON)
-	public Response overrideObjectCharacterization(OverrideCharacterizationRequest request) {
-		String objectId = request.getObjectId();
-		String objectArchive = request.getObjectArchive();
-		List<EnvironmentInfo> environments = request.getEnvironments();
-		try {
-			archive.setCachedEnvironmentsForObject(objectId, environments, request.getDescription());
-			return Emil.successMessageResponse("");
-		} catch (Exception e) {
-			return Emil.errorMessageResponse(e.getMessage());
-		}
-	}
+
 
 	@Secured({Role.RESTRCITED})
 	@POST
@@ -923,42 +918,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return response;
 	}
 
-	@Secured({Role.PUBLIC})
-	@GET
-	@Path("/taskState")
-	@Produces(MediaType.APPLICATION_JSON)
-	public TaskStateResponse taskState(@QueryParam("taskId") String taskId) {
-		final TaskInfo<Object> info = taskManager.getTaskInfo(taskId);
-		if (info == null)
-			return new TaskStateResponse(new BWFLAException("task failed"));
 
-		if (!info.result().isDone())
-			return new TaskStateResponse(taskId);
-
-		try {
-			Object o = info.result().get();
-			TaskStateResponse response = new TaskStateResponse(taskId, true);
-
-			if(o != null) {
-
-				if(o instanceof BWFLAException)
-					return new TaskStateResponse((BWFLAException)o);
-
-				if(o instanceof Map)
-					response.setUserData((Map<String,String>)o);
-			}
-
-			return response;
-
-		} catch (InterruptedException|ExecutionException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new TaskStateResponse(new BWFLAException(e));
-		}
-
-		finally {
-			taskManager.removeTaskInfo(taskId);
-		}
-	}
 
 	private String createEnvIdJson(String envId) throws IOException {
 		JsonBuilder json = new JsonBuilder();
@@ -967,12 +927,6 @@ public class EmilEnvironmentData extends EmilRest {
 		json.endObject();
 		json.finish();
 		return json.toString();
-	}
-
-	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
-		public AsyncIoTaskManager() throws NamingException {
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
-		}
 	}
 
 //	class ExportImageTask extends AbstractTask<Object>

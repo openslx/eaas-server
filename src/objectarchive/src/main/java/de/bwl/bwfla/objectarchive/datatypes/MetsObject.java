@@ -2,6 +2,7 @@ package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.BwflaFileInputStream;
+import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
@@ -18,6 +19,7 @@ import java.io.File;
 import java.io.StringReader;
 import java.math.BigInteger;
 import java.net.URLEncoder;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -323,6 +325,7 @@ public class MetsObject {
     {
         log.severe("get object file collection");
         FileCollection c = new FileCollection(getId());
+        c.setLabel(getLabel());
         for(String fileId : objectFiles.keySet())
         {
             log.severe("adding object: " + fileId);
@@ -333,19 +336,24 @@ public class MetsObject {
             }
 
             String url = of.fileLocations.get(0);
-            Drive.DriveType t;
+            Drive.DriveType t = null;
+            Binding.ResourceType rt = null;
             try {
-                if(of.mediumType != null)
+                if (of.mediumType != null) {
                     t = Drive.DriveType.fromQID(of.mediumType);
-                else if (of.fileType != null)
-                    t = Drive.DriveType.fromQID(of.fileType);
-                else {
-                    log.severe("can't resolve drive type: ");
-                    continue;
                 }
-                if(t == null)
+                else if (of.fileType != null) {
+                    t = Drive.DriveType.fromQID(of.fileType);
+                    rt = Binding.ResourceType.fromQID(of.mediumType);
+                }
+                else {
+                    log.warning("can't resolve drive type: " + of.mediumType + " " + of.fileType);
+                }
+
+                if (t == null && rt == null)
                     continue;
             }
+
             catch (IllegalArgumentException e)
             {
                 e.printStackTrace();
@@ -357,6 +365,7 @@ public class MetsObject {
                     url = exportPrefix + "/" + url;
             }
             FileCollectionEntry fce = new FileCollectionEntry(url, t, of.id);
+            fce.setResourceType(rt);
             c.files.add(fce);
         }
         try {

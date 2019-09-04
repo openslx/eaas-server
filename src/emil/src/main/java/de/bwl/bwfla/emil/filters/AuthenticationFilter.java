@@ -87,13 +87,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
         try {
             System.out.println(" secret " + authSecret);
+            System.out.println(" token " + token);
             Algorithm algorithm = Algorithm.HMAC256(authSecret);
             JWTVerifier verifier = JWT.require(algorithm)
                     .build(); //Reusable verifier instance
             DecodedJWT jwt = verifier.verify(token);
             userAuthenticatedEvent.fire(new JwtLoginEvent(jwt));
         } catch (JWTVerificationException exception){
-            // exception.printStackTrace();
+            exception.printStackTrace();
             // throw exception;
             // System.out.println("anonymous");
             userAuthenticatedEvent.fire(new JwtLoginEvent(null));

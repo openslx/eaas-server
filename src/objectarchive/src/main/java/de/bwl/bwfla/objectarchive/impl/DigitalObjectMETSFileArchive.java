@@ -135,16 +135,6 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	}
 
 	@Override
-	public ObjectFileCollection getObjectHandle(String objectId) {
-		return null;
-	}
-
-	@Override
-	public void importObject(ObjectFileCollection fc) throws BWFLAException {
-		throw new BWFLAException("not supported");
-	}
-
-	@Override
 	public String getName() {
 		return name;
 	}
@@ -181,7 +171,6 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		throw new BWFLAException("not supported");
 	}
 
-	@Override
 	public Mets getMetsMetadata(String id) throws BWFLAException {
 
 		log.warning("getMetsmedatadata " + dataPath);

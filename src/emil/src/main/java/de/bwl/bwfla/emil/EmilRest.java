@@ -19,7 +19,6 @@ import de.bwl.bwfla.api.emucomp.ComponentService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.eaas.client.EaasClient;
-import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 
 abstract class EmilRest {

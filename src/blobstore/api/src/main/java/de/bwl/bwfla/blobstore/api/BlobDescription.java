@@ -115,6 +115,9 @@ public class BlobDescription
 
 	public BlobDescription setType(String type)
 	{
+		if(type == null)
+			return this;
+
 		BlobDescription.checkType(type);
 		this.type = type;
 		return this;
@@ -235,7 +238,9 @@ public class BlobDescription
 
 	public static void checkType(String name)
 	{
-		BlobDescription.check(name, "Blob's type");
+		if(name == null)
+			return;
+
 		if (!name.matches(TYPE_PATTERN))
 			throw new IllegalArgumentException("Blob's type contains invalid character(s)!");
 	}

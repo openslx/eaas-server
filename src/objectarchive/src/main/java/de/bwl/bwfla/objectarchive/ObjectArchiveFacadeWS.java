@@ -17,7 +17,6 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
-import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import gov.loc.mets.Mets;
@@ -73,13 +72,6 @@ public class ObjectArchiveFacadeWS
 		return a.getObjectList();
 	}
 
-
-	public ObjectFileCollection getObjectHandle(String archive, String id) throws BWFLAException
-	{
-		DigitalObjectArchive a = getArchive(archive);
-		return a.getObjectHandle(id);
-	}
-
 	/**
 	 * @param id object-id
 	 * @return object reference as PID / PURL
@@ -101,11 +93,6 @@ public class ObjectArchiveFacadeWS
 		}
 	}
 
-	public void importObject(String archive, ObjectFileCollection collection) throws BWFLAException {
-		DigitalObjectArchive a = getArchive(archive);
-		a.importObject(collection);
-	}
-
 	public void importObjectFromMetadata(String archive, String metadata) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		a.importObject(metadata);
@@ -114,20 +101,6 @@ public class ObjectArchiveFacadeWS
 	public void delete(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		a.delete(id);
-	}
-
-	public String getMetsMetadata(String archive, String id) throws BWFLAException {
-		DigitalObjectArchive a = getArchive(archive);
-		Mets metsdata = a.getMetsMetadata(id);
-		if(metsdata == null)
-			return null;
-		String result = null;
-		try {
-			result = metsdata.value(true);
-		} catch (JAXBException e) {
-			throw new BWFLAException(e);
-		}
-		return result;
 	}
 
 	public DigitalObjectMetadata getObjectMetadata(String archive, String id) throws BWFLAException {

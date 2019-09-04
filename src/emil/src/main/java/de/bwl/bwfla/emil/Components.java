@@ -96,7 +96,7 @@ import de.bwl.bwfla.common.datatypes.EaasState;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
-import de.bwl.bwfla.emil.classification.ArchiveAdapter;
+import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;

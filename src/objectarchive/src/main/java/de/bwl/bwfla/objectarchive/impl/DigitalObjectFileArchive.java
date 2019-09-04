@@ -23,6 +23,8 @@ import java.io.*;
 import java.net.URLEncoder;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -34,9 +36,9 @@ import javax.activation.DataHandler;
 import javax.activation.FileDataSource;
 import javax.inject.Inject;
 
+import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.objectarchive.datatypes.*;
-import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection.ObjectFileCollectionHandle;
 
 import gov.loc.mets.Mets;
 import org.apache.commons.io.FileUtils;
@@ -61,7 +63,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private String name;
 	private String localPath;
 	private boolean defaultArchive;
-	
+
 	protected ObjectFileFilter objectFileFilter = new ObjectFileFilter();
 	protected ObjectImportHandle importHandle;
 
@@ -73,6 +75,19 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Config(value="commonconf.serverdatadir")
 	public String serverdatadir;
 
+	private static final String METS_MD_FILENAME = "mets.xml";
+
+	private String getExportPrefix()
+	{
+		String exportPrefix;
+		try {
+			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/";
+		} catch (UnsupportedEncodingException e) {
+			log.log(Level.WARNING, e.getMessage(), e);
+			return null;
+		}
+		return exportPrefix;
+	}
 
 	/**
 	 * Simple ObjectArchive example. Files are organized as follows
@@ -109,6 +124,26 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private static String strSaveFilename(String filename)
 	{
 		return filename.replace(" ", "");
+	}
+
+	private Path resolveMetadatTarget(String id) throws BWFLAException
+	{
+		File objectDir = new File(localPath);
+		if(!objectDir.exists() && !objectDir.isDirectory())
+		{
+			throw new BWFLAException("objectDir " + localPath + " does not exist");
+		}
+
+		Path targetDir = objectDir.toPath().resolve(id);
+		targetDir.resolve("metadata");
+		if(!Files.exists(targetDir)) {
+			try {
+				Files.createDirectories(targetDir);
+			} catch (IOException e) {
+				throw new BWFLAException(e);
+			}
+		}
+		return targetDir;
 	}
 
 	private Path resolveTarget(String id, ResourceType rt) throws BWFLAException
@@ -200,31 +235,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		EmulatorUtils.copyRemoteUrl(resource, target, null);
 	}
 
-	void importObjectFile(String objectId, ObjectFileCollection.ObjectFileCollectionHandle fc) throws BWFLAException {
-		Path targetDir = resolveTarget(objectId, fc.getType());
-		Path target = targetDir.resolve(fc.getFilename());
-		try {
-			InputStream inputStream = fc.getHandle().getInputStream();
-			if(inputStream == null)
-			{
-				throw new BWFLAException("can't get inputstream");
-			}
-			if(fc.getType() == ResourceType.FILE)
-			{
-				Zip32Utils.unzip(inputStream, targetDir.toFile());
-			}
-			else {
-				FileUtils.copyInputStreamToFile(inputStream, target.toFile());
-			}
-		} catch (IOException e) {
-			log.log(Level.WARNING, e.getMessage(), e);
-			throw new BWFLAException(e);
-		}
-	}
-
-	void importObjectFile(FileCollectionEntry resource) throws BWFLAException
+	void importObjectFile(String objectId, FileCollectionEntry resource) throws BWFLAException
 	{
-		Path targetDir = resolveTarget(resource.getId(), resource.getType());
+		Path targetDir = resolveTarget(objectId, resource.getType());
 		
 		String fileName = resource.getLocalAlias();
 		if(fileName == null || fileName.isEmpty())
@@ -234,37 +247,27 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		Path target = targetDir.resolve(fileName);
 
 		EmulatorUtils.copyRemoteUrl(resource, target, null);
-
-		if(resource.getLabel() !=  null || resource.getOrder() != null)
-		{
-			DigitalObjectFileMetadata md = new DigitalObjectFileMetadata(resource.getLocalAlias(), resource.getLabel(), resource.getOrder());
-			try {
-				md.writeProperties(targetDir.resolve(fileName + ".properties"));
-				log.info("writing extended file properties to: " + targetDir.resolve(fileName + ".properties"));
-			}
-			catch(IOException e)
-			{
-				throw new BWFLAException(e);
-			}
-		}
-	}
-
-	public void importObject(ObjectFileCollection fc) throws BWFLAException
-	{
-		if(fc == null || fc.getFiles() == null)
-			throw new BWFLAException("Invalid arguments");
-
-		if(objectExits(fc.getId()))
-			return;
-
-		for(ObjectFileCollectionHandle entry : fc.getFiles())
-			importObjectFile(fc.getId(), entry);
 	}
 
 	@Override
 	public void importObject(String metsdata) throws BWFLAException {
+		MetsObject o = new MetsObject(metsdata);
+		if(o.getId() == null || o.getId().isEmpty())
+			throw new BWFLAException("invalid object id " + o.getId());
 
+		FileCollection fc = o.getFileCollection(null);
 
+		if(fc == null || fc.files == null)
+			throw new BWFLAException("Invalid arguments");
+
+		if(objectExits(o.getId()))
+			return;
+
+		for(FileCollectionEntry entry : fc.files)
+			importObjectFile(o.getId(), entry);
+
+		Mets m = fromFileCollection(o.getId(), fc);
+		writeMetsFile(m);
 	}
 
 	public List<String> getObjectList()
@@ -340,12 +343,47 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			e.printStackTrace();
 			throw new BWFLAException(e);
 		}
-
 	}
 
-	@Override
-	public Mets getMetsMetadata(String id) {
-		return null;
+	private Mets fromFileCollection(String objectId, FileCollection fc) throws BWFLAException {
+		if(fc == null || fc.files == null)
+			throw new BWFLAException("Invalid arguments");
+
+		String label = fc.getLabel() != null ? fc.getLabel() : objectId;
+
+		Mets m = MetsUtil.createMets(fc.id, label);
+		for(FileCollectionEntry entry : fc.files) {
+			MetsUtil.FileTypeProperties properties = new MetsUtil.FileTypeProperties();
+			Path targetDir = resolveTarget(objectId, entry.getType());
+			String url = Paths.get(localPath).relativize(targetDir).toString();
+
+			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQId(): null;
+			properties.deviceId = entry.getType().toQid();
+
+			MetsUtil.addFile(m, url, properties);
+		}
+		return m;
+	}
+
+	private void createMetsFiles(String objectId) throws BWFLAException {
+		FileCollection fc = getObjectReference(objectId);
+		Mets m = fromFileCollection(objectId, fc);
+		writeMetsFile(m);
+	}
+
+	private void writeMetsFile(Mets m) throws BWFLAException {
+		Path targetDir = resolveMetadatTarget(m.getID());
+		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
+
+		log.warning("local representation");
+		log.warning(m.toString());
+
+		try {
+			Files.write( metsPath, m.toString().getBytes(), StandardOpenOption.CREATE_NEW);
+		} catch (IOException e) {
+			e.printStackTrace();
+			throw new BWFLAException(e);
+		}
 	}
 
 	public FileCollection getObjectReference(String objectId)
@@ -392,64 +430,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			return null;
 		}
 		
-	}
-
-	@Override
-	public ObjectFileCollection getObjectHandle(String objectId) {
-		if (objectId == null)
-			return null;
-
-		log.info("looking for: " + objectId);
-		File topDir = new File(localPath);
-		if (!topDir.exists() || !topDir.isDirectory()) {
-			log.warning("objectDir " + localPath + " does not exist");
-			return null;
-		}
-
-		File objectDir = new File(topDir, objectId);
-		if (!objectDir.exists() || !objectDir.isDirectory()) {
-			log.warning("objectDir " + objectDir + " does not exist");
-			return null;
-		}
-
-		ObjectFileManifestation mf = null;
-		try {
-			mf = new ObjectFileManifestation(objectFileFilter, objectDir);
-		} catch (BWFLAException e) {
-			log.log(Level.WARNING, e.getMessage(), e);
-		}
-
-		List<ObjectFileCollectionHandle> entries = new ArrayList<>();
-		for (ResourceType rt : ResourceType.values()) {
-			List<ObjectFileManifestation.FileEntry> flist = mf.getResourceFiles(rt);
-			if(flist == null)
-				continue;
-
-			if(rt.equals(ResourceType.FILE)) // we just add the zip file.
-			{
-				File zip = new File(objectDir, rt.value() + ".zip");
-				if(zip.exists())
-				{
-					DataHandler handle = new DataHandler(new FileDataSource(zip));
-					log.info("adding handle for : " + zip.getName());
-					ObjectFileCollectionHandle entry = new ObjectFileCollectionHandle(handle, rt, zip.getName());
-					entries.add(entry);
-				}
-				continue;
-			}
-
-			for(ObjectFileManifestation.FileEntry fe : flist)
-			{
-				DataHandler handle = new DataHandler(new FileDataSource(fe.getFile()));
-				log.info("adding handle for : " + fe.getFile().getName());
-				ObjectFileCollectionHandle entry = new ObjectFileCollectionHandle(handle, rt, fe.getFile().getName());
-				entries.add(entry);
-			}
-		}
-
-		ObjectFileCollection fc = new ObjectFileCollection(objectId);
-		fc.setFiles(entries);
-		return fc;
 	}
 
 	public Path getLocalPath()
@@ -501,6 +481,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			if (file.isDirectory())
 				return false;
 
+			if (file.getName().startsWith("."))
+				return false;
+
 			if (file.getName().endsWith(".properties"))
 				return false;
 
@@ -521,7 +504,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			return (name.regionMatches(true, length - 4, ".iso", 0, 4)  || name.regionMatches(true, length - 4, ".bin", 0, 4));
 		}
 	};
-	
+
 	protected static class FloppyFileFilter implements FileFilter
 	{
 		private final Set<String> formats = new HashSet<String>();
@@ -556,8 +539,12 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	}
 
 	@Override
-	public DigitalObjectMetadata getMetadata(String objectId) {
-		DigitalObjectMetadata md = new DigitalObjectMetadata(objectId, objectId, objectId);
+	public DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException {
+
+		MetsObject o = loadMetsData(objectId);
+		Mets m = MetsUtil.export(o.getMets(), getExportPrefix());
+		DigitalObjectMetadata md = new DigitalObjectMetadata(o.getMets());
+
 
 		String thumb = null;
 		try {
@@ -569,6 +556,16 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			md.setThumbnail(thumb);
 
 		return md;
+	}
+
+	private MetsObject loadMetsData(String objectId) throws BWFLAException {
+		Path targetDir = resolveMetadatTarget(objectId);
+		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
+		if(!Files.exists(metsPath)) {
+			createMetsFiles(objectId);
+		}
+		MetsObject mets = new MetsObject(metsPath.toFile());
+		return mets;
 	}
 
 	@Override
@@ -593,7 +590,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	public static class ObjectFileFilter
 	{
-		public FileFilter ISO_FILE_FILTER = new IsoFileFilter();
-		public FileFilter FLOPPY_FILE_FILTER = new FloppyFileFilter();
+		public FileFilter ISO_FILE_FILTER = new NullFileFilter();
+		public FileFilter FLOPPY_FILE_FILTER = new NullFileFilter();
 	}
 }

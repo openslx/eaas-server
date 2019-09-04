@@ -26,6 +26,7 @@ import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
+import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
@@ -79,10 +80,14 @@ public class EmilEnvironmentRepository {
 
 	private String emilDbCollectionName = "eaasEnv";
 
-	private ObjectArchiveHelper objectArchiveHelper;
+	@Inject
+	private EmilObjectData objects;
 
 	@Inject
 	private UserSessions sessions;
+
+	@Inject
+	private ObjectClassification classification;
 
 	public final class MetadataCollection {
 		public static final String PUBLIC = "public";
@@ -280,7 +285,6 @@ public class EmilEnvironmentRepository {
 		{
 			e.printStackTrace();
 		}
-		objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
 
 //		try {
 //			try {
@@ -461,7 +465,7 @@ public class EmilEnvironmentRepository {
 					e.printStackTrace();
 				}
 				db.deleteDoc(getCollectionCtx(), envId, env.getIdDBkey());
-				db.deleteDoc(ClassificationData.collectionName, envId, ClassificationData.parentElement + ".environmentList.id", false);
+				classification.cleanupClassificationData(envId);
 			}
 		} else {
 			sessions.delete((EmilSessionEnvironment)env);
@@ -659,7 +663,7 @@ public class EmilEnvironmentRepository {
 
 
 	public String saveAsUserSession(Snapshot snapshot, SaveUserSessionRequest request) throws BWFLAException {
-		String sessionEnvId = snapshot.saveUserSession(environmentsAdapter, objectArchiveHelper, request);
+		String sessionEnvId = snapshot.saveUserSession(environmentsAdapter, objects.helper(), request);
 
 		EmilEnvironment parentEnv = getEmilEnvironmentById(request.getEnvId());
 		if (parentEnv == null)
@@ -709,7 +713,7 @@ public class EmilEnvironmentRepository {
 			request.setObjectArchiveId(archiveName);
 
 		EmilEnvironment parentEnv = getEmilEnvironmentById(request.getEnvId());
-		EmilObjectEnvironment ee = snapshot.createObjectEnvironment(environmentsAdapter, objectArchiveHelper, request);
+		EmilObjectEnvironment ee = snapshot.createObjectEnvironment(environmentsAdapter, objects.helper(), request);
 
 		parentEnv.addBranchId(ee.getEnvId());
 		save(parentEnv, false);

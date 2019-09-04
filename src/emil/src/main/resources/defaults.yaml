@@ -10,7 +10,7 @@ emil:
   usersessionretention: 10080
   containerdata:
     imagebuilder:
-      timeout: 15 mins
+      timeout: 30 mins
       delay: 3 secs
   authEnabled: false
   authSecret: ''

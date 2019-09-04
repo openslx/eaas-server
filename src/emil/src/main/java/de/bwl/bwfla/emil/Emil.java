@@ -12,22 +12,24 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.*;
 
+import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import gov.loc.mets.Mets;
 import org.jboss.resteasy.specimpl.ResponseBuilderImpl;
 
 
 @Path("Emil")
 @ApplicationScoped
-public class Emil extends EmilRest
-{
+public class Emil extends EmilRest {
 	/* ### ADMIN Interfaces ### */
 
 	@Inject
@@ -37,12 +39,16 @@ public class Emil extends EmilRest
 	@Inject
 	private EmilEnvironmentRepository environmentRepository;
 
+	@Inject
+	private EmilEnvironmentData environments;
+
 	@GET
 	@Secured({Role.PUBLIC})
 	@Path("/buildInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response buildInfo()
 	{
+		environments.init(false);
 		JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
 		try {
 			json.beginObject();
