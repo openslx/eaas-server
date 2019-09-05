@@ -39,16 +39,13 @@ public class Emil extends EmilRest {
 	@Inject
 	private EmilEnvironmentRepository environmentRepository;
 
-	@Inject
-	private EmilEnvironmentData environments;
-
 	@GET
 	@Secured({Role.PUBLIC})
 	@Path("/buildInfo")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response buildInfo()
 	{
-		environments.init(false);
+		environmentRepository.init(false);
 		JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
 		try {
 			json.beginObject();

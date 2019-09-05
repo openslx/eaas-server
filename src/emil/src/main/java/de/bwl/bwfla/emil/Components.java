@@ -96,7 +96,6 @@ import de.bwl.bwfla.common.datatypes.EaasState;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
-import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
@@ -191,9 +190,7 @@ public class Components {
     private static ConcurrentHashMap<String, ComponentSession> sessions;
 
     @Inject
-    private ArchiveAdapter archive;
-
-    ObjectArchiveHelper objectArchiveHelper;
+    private EmilObjectData objects;
 
     @Inject
     @AuthenticatedUser
@@ -217,7 +214,6 @@ public class Components {
     @PostConstruct
     private void init() {
         swHelper = new SoftwareArchiveHelper(softwareArchive);
-        objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
         sessions = new ConcurrentHashMap<>();
 
         this.sessionStatsPath = Paths.get(serverdatadir).resolve("sessions.csv");
@@ -867,17 +863,8 @@ public class Components {
                 archiveId = authenticatedUser.getUsername();
         }
 
-        String chosenObjRef = archive.getFileCollectionForObject(archiveId, objectId);
-        if (chosenObjRef == null) {
-            throw new BadRequestException(Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation(
-                            "Could not find object with ID: " + objectId))
-                    .build());
-        }
-
+        FileCollection fc = objects.getFileCollection(archiveId, objectId);
         ObjectArchiveBinding binding = new ObjectArchiveBinding(envHelper.toString(), archiveId, objectId);
-        FileCollection fc = FileCollection.fromValue(chosenObjRef);
 
         int driveId = EmulationEnvironmentHelper.addArchiveBinding((MachineConfiguration) chosenEnv, binding, fc);
         return driveId;
@@ -1302,19 +1289,16 @@ public class Components {
 
         String objurl = null;
         try {
-            chosenObjRef = archive.getFileCollectionForObject(changeRequest.getArchiveId(),
+            FileCollection fc  = objects.getFileCollection(changeRequest.getArchiveId(),
                     changeRequest.getObjectId());
-            if(chosenObjRef == null)
-                return Emil.errorMessageResponse("no file collection found for object " + changeRequest.getObjectId());
 
-            FileCollection fc = FileCollection.fromValue(chosenObjRef);
             for(FileCollectionEntry fce : fc.files)
                 if(fce.getId().equals(changeRequest.getLabel()))
                 {
                     objurl = fce.getId();
                     break;
                 }
-        } catch (NoSuchElementException | BWFLAException | JAXBException e1) {
+        } catch (NoSuchElementException | BWFLAException e1) {
             LOG.log(Level.SEVERE, e1.getMessage(), e1);
             return Emil.internalErrorResponse("failed loading object meta data");
         }

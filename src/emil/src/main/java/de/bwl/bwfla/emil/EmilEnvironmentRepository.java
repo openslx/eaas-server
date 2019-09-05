@@ -13,11 +13,9 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.*;
@@ -26,10 +24,8 @@ import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
-import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
@@ -73,7 +69,7 @@ public class EmilEnvironmentRepository {
 
 	@Inject
 	@AuthenticatedUser
-	private UserContext authenticatedUser;
+	private UserContext authenticatedUser = null;
 
 	@Inject
 	private EmilDataImport importHelper;
@@ -88,6 +84,8 @@ public class EmilEnvironmentRepository {
 
 	@Inject
 	private ObjectClassification classification;
+
+	private static boolean initialized = false;
 
 	public final class MetadataCollection {
 		public static final String PUBLIC = "public";
@@ -192,16 +190,26 @@ public class EmilEnvironmentRepository {
 		return db.count(MetadataCollection.PUBLIC, filter);
 	}
 
+
 	private Stream<EmilEnvironment> loadEmilEnvironments() {
-		Stream<EmilEnvironment> all = db.find(getCollectionCtx(), new MongodbEaasConnector.FilterBuilder(), "type");
+		return loadEmilEnvironments(getCollectionCtx());
+	}
+
+	private Stream<EmilEnvironment> loadEmilEnvironments(String collectionCtx) {
+		Stream<EmilEnvironment> all = db.find(collectionCtx, new MongodbEaasConnector.FilterBuilder(), "type");
 		all = Stream.concat(all, db.find(MetadataCollection.PUBLIC, new MongodbEaasConnector.FilterBuilder(), "type"));
 		all = Stream.concat(all, db.find(MetadataCollection.REMOTE, new MongodbEaasConnector.FilterBuilder(), "type"));
 		return all;
 	}
 
 	private List<EmilObjectEnvironment> loadEmilObjectEnvironments() throws BWFLAException {
+		String userCtx = getUserCtx();
+		return loadEmilObjectEnvironments(userCtx);
+	}
+
+	private List<EmilObjectEnvironment> loadEmilObjectEnvironments(String userCtx) throws BWFLAException {
 		//TODO: refactor to stream
-		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(getCollectionCtx(),
+		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(userCtx,
 				EmilObjectEnvironment.class.getCanonicalName(), "type");
 
 		result.addAll(db.getRootlessJaxbObjects(MetadataCollection.PUBLIC,
@@ -278,13 +286,8 @@ public class EmilEnvironmentRepository {
 				}
 			}
 		}
-		try {
-			initialize();
-		}
-		catch (BWFLAException| JAXBException e)
-		{
-			e.printStackTrace();
-		}
+		init(true);
+
 
 //		try {
 //			try {
@@ -336,15 +339,15 @@ public class EmilEnvironmentRepository {
 
 
 	//TODO: refactor
-	public List<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId) throws BWFLAException {
+	public List<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId, String userCtx) throws BWFLAException {
 		List<EmilObjectEnvironment> result = new ArrayList<>();
 		if (objectId == null)
 			return result;
 
-		List<EmilObjectEnvironment> all = loadEmilObjectEnvironments();
+		List<EmilObjectEnvironment> all = loadEmilObjectEnvironments(userCtx);
 		for (EmilObjectEnvironment objEnv : all) {
 			if (objEnv.getObjectId().equals(objectId) && objEnv.isVisible()
-					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ))
+					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				result.add(objEnv);
 		}
 		return result;
@@ -476,7 +479,26 @@ public class EmilEnvironmentRepository {
 		return db.getRootlessJaxbObjects(getCollectionCtx(), type, "type");
 	}
 
-	public int initialize() throws JAXBException, BWFLAException {
+	public synchronized int init(boolean force)
+	{
+		int res = -1;
+		if(initialized && !force)
+			return -1;
+
+		try {
+			res = initialize();
+			LOG.warning("init: import of " + res + " environments completed");
+		} catch (JAXBException e) {
+			e.printStackTrace();
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+		}
+
+		initialized = true;
+		return res;
+	}
+
+	private int initialize() throws JAXBException, BWFLAException {
 		int counter = 0;
 
 //		List<EmilEnvironment> oldEnvs = null;
@@ -630,18 +652,28 @@ public class EmilEnvironmentRepository {
 		save(ee, true);
 	}
 
-	public List<EmilEnvironment> getEmilEnvironments() {
 
-		final Stream<EmilEnvironment> all = loadEmilEnvironments();
+	public List<EmilEnvironment> getEmilEnvironments(String userCtx)
+	{
+		final Stream<EmilEnvironment> all = loadEmilEnvironments(userCtx);
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(e -> {
 			if(known.contains(e.getEnvId()))
 				return false;
 			return known.add(e.getEnvId());
-		      }).filter( e -> (e.isVisible()))
-				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ)))
+		}).filter( e -> (e.isVisible()))
+				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
 				.collect(Collectors.toList());
+	}
+
+	public List<EmilEnvironment> getEmilEnvironments() {
+
+		String userCtx = null;
+		if(authenticatedUser != null)
+			userCtx = authenticatedUser.getUsername();
+
+		return getEmilEnvironments(userCtx);
 	}
 
 	public List<EmilEnvironment> getChildren(String envId, List<EmilEnvironment> envs) throws BWFLAException {

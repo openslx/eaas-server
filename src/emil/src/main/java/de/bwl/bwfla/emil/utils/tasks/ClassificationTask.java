@@ -3,15 +3,15 @@ package de.bwl.bwfla.emil.utils.tasks;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
-import de.bwl.bwfla.emil.utils.ArchiveAdapter;
+import de.bwl.bwfla.emil.ObjectClassification;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
 import de.bwl.bwfla.imageclassifier.client.Identification;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
@@ -20,44 +20,50 @@ import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.imageproposer.client.Proposal;
 import de.bwl.bwfla.imageproposer.client.ProposalRequest;
 
-import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class ClassificationTask extends AbstractTask<ClassificationResult> {
+public class ClassificationTask extends AbstractTask<Object> {
 
 
     private static final Logger LOG = Logger.getLogger(ClassificationTask.class.getName());
 
-    public ClassificationTask(ProposeEnvironmentsRequest req)
+    public ClassificationTask(ClassifyObjectRequest req)
     {
         this.request = req;
-        this.emilEnvRepo = req.archive.environmentRepository();
-        this.envHelper = req.archive.environments();
-        this.imageClassifier = req.archive.imageClassifier();
-        this.imageProposer = req.archive.imageProposer();
+        this.emilEnvRepo = req.metadata;
+        this.envHelper = req.environments;
+        this.imageClassifier = req.classification.imageClassifier();
+        this.imageProposer = req.classification.imageProposer();
+        this.classification = req.classification;
     }
 
     private final EmilEnvironmentRepository emilEnvRepo;
-    private final ProposeEnvironmentsRequest request;
-    private final EnvironmentsAdapter envHelper;
+    private final ClassifyObjectRequest request;
+    private final DatabaseEnvironmentsAdapter envHelper;
     private final ImageClassifier imageClassifier;
     private final ImageProposer imageProposer;
+    private final ObjectClassification classification;
 
-    public static class ProposeEnvironmentsRequest
+    public static class ClassifyObjectRequest
     {
-        String objectId;
-        ArchiveAdapter archive;
-        ClassificationResult cached;
+        public ObjectClassification classification;
+        public DatabaseEnvironmentsAdapter environments;
+        public EmilEnvironmentRepository metadata;
+        public ClassificationResult input;
+        public FileCollection fileCollection;
+        public boolean noUpdate;
+        public boolean forceProposal;
+        public String userCtx;
     }
 
     private List<EnvironmentInfo> resolveEmilEnvironments(String objectId, Collection<String> proposedEnvironments) throws IOException, BWFLAException {
 
         HashMap<String, List<EmilEnvironment>> envMap = new HashMap<>();
-        List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
+        List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments(request.userCtx);
 //        if (environments != null && environments.size() == 0) {
 //             FIXME
 //             we need to call EmilEnvironmentData.init() here
@@ -101,7 +107,7 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
 
         List<EnvironmentInfo> result = new ArrayList<>();
 
-        List<EmilObjectEnvironment> emilObjectEnvironments = emilEnvRepo.getEmilObjectEnvironmentByObject(objectId);
+        List<EmilObjectEnvironment> emilObjectEnvironments = emilEnvRepo.getEmilObjectEnvironmentByObject(objectId, request.userCtx);
 
         for(EmilObjectEnvironment objEnv : emilObjectEnvironments) {
             EnvironmentInfo ei = new EnvironmentInfo(objEnv.getEnvId(), objEnv.getTitle());
@@ -125,27 +131,8 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
     }
 
 
-    private ClassificationResult classifyObject(String archiveId, String objectId) throws BWFLAException {
+    private ClassificationResult classifyObject(FileCollection fc) throws BWFLAException {
         try {
-
-            String fcString;
-            try {
-                fcString = request.archive.getFileCollectionForObject(archiveId, objectId);
-            }
-            catch (BWFLAException e)
-            {
-                LOG.warning("file collection for " + objectId + " is null");
-
-                return new ClassificationResult(e);
-            }
-
-            FileCollection fc = FileCollection.fromValue(fcString);
-
-            if(fc == null)
-            {
-                LOG.warning("file collection for " + objectId + " is null");
-                return new ClassificationResult( new BWFLAException("could not load file collection for object " + objectId));
-            }
 
             ClassificationResult response;
 
@@ -155,7 +142,7 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
             HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> data = id.getIdentificationData();
             if(data == null)
             {
-                LOG.warning("identification failed for objectID:" + objectId );
+                LOG.warning("identification failed for objectID:" + fc.id );
                 return new ClassificationResult();
             }
 
@@ -179,7 +166,7 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
                 if(details.getDiskType() != null)
                     mediaFormats.put(fce.getId(), details.getDiskType());
             }
-            response = new ClassificationResult(objectId, fileFormats, mediaFormats);
+            response = new ClassificationResult(fc.id, fileFormats, mediaFormats);
 
             return response;
         } catch (Throwable t) {
@@ -190,7 +177,7 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
 
     }
 
-    private ClassificationResult propose(ClassificationResult response, String objectId) {
+    private ClassificationResult propose(ClassificationResult response) {
         HashMap<String, DiskType> mediaFormats = new HashMap<>();
         if(response.getMediaFormats() != null)
         {
@@ -229,7 +216,7 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
         List<ClassificationResult.OperatingSystem> suggested = new ArrayList<>();;
 
         try {
-            environmentList = resolveEmilEnvironments(objectId, proposal.getImages());
+            environmentList = resolveEmilEnvironments(response.getObjectId(), proposal.getImages());
         } catch (IOException | BWFLAException e) {
             return new ClassificationResult(new BWFLAException(e));
         }
@@ -296,63 +283,22 @@ public class ClassificationTask extends AbstractTask<ClassificationResult> {
     }
 
 
-    private ClassificationResult propose()
-    {
-        ClassificationResult result = propose(cached, objectId);
-    }
-
-
-    private ClassificationResult fullClassification()
-    {
-        ClassificationResult response = this.classifyObject(archiveId, objectId);
-        try {
-            // do not saveDoc the proposal result here
-            classification.save(response, objectId);
-            response = propose(response, objectId);
-        } catch (JAXBException | IOException e1) {
-            LOG.log(Level.SEVERE, e1.getMessage(), e1);
-            throw new BWFLAException(e1);
-        }
-        return response;
-    }
-
     @Override
     protected ClassificationResult execute() throws Exception {
 
-        try {
-            LOG.severe("getEnvironmentsForObject " + forceCharacterization + " " + forceProposal);
-            // shortcut to force characterization if requested:
-            if (forceCharacterization) {
-                throw new NoSuchElementException();
-            }
+        ClassificationResult result = request.input;
 
-            ClassificationResult cached = null;
+        if(request.noUpdate)
+            return result;
 
-            try { cached = classification.load(objectId); } catch (NoSuchElementException ignore) { }
-            if(cached == null) {
-                if(noUpdate)
-                    return new ClassificationResult();
+        if(request.input == null || request.input.getMediaFormats().size() == 0)
+            request.input = classifyObject(request.fileCollection);
 
-                throw new NoSuchElementException();
-            }
+        if(request.forceProposal || request.input.getEnvironmentList().size() == 0)
+            result = propose(request.input);
 
-            if(forceProposal || cached.getEnvironmentList().size() == 0)
-            {
-
-                try {
-                    classification.save(result, objectId);
-                } catch (JAXBException |IOException e) {
-                    LOG.log(Level.SEVERE, e.getMessage(), e);
-                }
-                return result;
-            }
-            else
-                return cached;
-        } catch (NoSuchElementException e) {
-            // if no data for the object id, classify it
-            LOG.severe("no such element exception");
-
-        }
+        classification.save(result);
+        return result;
     }
 
 }

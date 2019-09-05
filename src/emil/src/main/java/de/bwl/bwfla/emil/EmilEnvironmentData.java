@@ -22,7 +22,6 @@ import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.emil.utils.ArchiveAdapter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
@@ -51,10 +50,8 @@ import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
 @ApplicationScoped
 public class EmilEnvironmentData extends EmilRest {
 
-	private static boolean initialized = false;
-
 	@Inject
-	private DatabaseEnvironmentsAdapter envHelper;
+	private DatabaseEnvironmentsAdapter environments;
 
 	@Inject
 	@Config(value = "emil.imageproposerservice")
@@ -62,9 +59,6 @@ public class EmilEnvironmentData extends EmilRest {
 
 	@Inject
 	private EmilEnvironmentRepository emilEnvRepo;
-
-	@Inject
-	private ArchiveAdapter archive;
 
 	private ImageProposer imageProposer;
 
@@ -78,35 +72,19 @@ public class EmilEnvironmentData extends EmilRest {
 	@AuthenticatedUser
 	private UserContext authenticatedUser = null;
 
+	@Inject
+	private ObjectClassification classification;
+
+	@Inject
+	@Config(value = "ws.imagearchive")
+	private String imageArchive;
+
 	@PostConstruct
 	private void initialize() {
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
-		} catch (IllegalArgumentException e) {
-		}
-
-		init(false);
+		} catch (IllegalArgumentException e) { }
 	}
-
-	public synchronized int init(boolean force)
-	{
-		int res = -1;
-		if(initialized && !force)
-			return -1;
-
-		try {
-			res = emilEnvRepo.initialize();
-			LOG.warning("init: import of " + res + " environments completed");
-		} catch (JAXBException e) {
-			e.printStackTrace();
-		} catch (BWFLAException e) {
-			e.printStackTrace();
-		}
-
-		initialized = true;
-		return res;
-	}
-
 
 	@Secured({Role.PUBLIC})
 	@GET
@@ -152,7 +130,7 @@ public class EmilEnvironmentData extends EmilRest {
 		// Add all environments to the response...
 			MachineConfiguration machineConf = null;
 
-			Environment env = envHelper.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+			Environment env = environments.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
 			if (env instanceof MachineConfiguration)
 				machineConf = (MachineConfiguration) env;
 
@@ -180,7 +158,7 @@ public class EmilEnvironmentData extends EmilRest {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response _init() {
 		try {
-			return Emil.successMessageResponse("import of " + init(true) + " environments completed");
+			return Emil.successMessageResponse("import of " + emilEnvRepo.init(true) + " environments completed");
 		} catch (Throwable t) {
 			return Emil.internalErrorResponse(t);
 		}
@@ -196,13 +174,7 @@ public class EmilEnvironmentData extends EmilRest {
 		if(envId == null || envId.trim().isEmpty()){
 			return new ArrayList<>();
 		}
-
-		try {
-			return archive.getEnvironmentDependencies(envId);
-		} catch (IOException|JAXBException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new ArrayList<>();
-		}
+		return classification.getEnvironmentDependencies(envId);
 	}
 
 
@@ -219,18 +191,12 @@ public class EmilEnvironmentData extends EmilRest {
 		if (!desc.getDeleteMetaData() && !desc.getDeleteImage())
 			return Emil.successMessageResponse("nothing to be deleted");
 
-		try {
-			List<String> objectDependencies = archive.getEnvironmentDependencies(desc.getEnvId());
-            System.out.println("size " + objectDependencies.size() + " " + desc.isForce());
-			if(objectDependencies != null && objectDependencies.size() > 0 && !desc.isForce())
-			{
-				final String json = createJsonResponse("2", objectDependencies.toString());
-				return createResponse(Status.OK, json);
-			}
-		} catch (IOException|JAXBException e) {
-
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-//			return Emil.internalErrorResponse(e);
+		List<String> objectDependencies = classification.getEnvironmentDependencies(desc.getEnvId());
+		System.out.println("size " + objectDependencies.size() + " " + desc.isForce());
+		if(objectDependencies != null && objectDependencies.size() > 0 && !desc.isForce())
+		{
+			final String json = createJsonResponse("2", objectDependencies.toString());
+			return createResponse(Status.OK, json);
 		}
 
 		try {
@@ -321,7 +287,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @return
 	 */
 	public Response createEnvironment(EnvironmentCreateRequest envReq) {
-		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
+		final DatabaseEnvironmentsAdapter environmentHelper = environments;
 
 		if(envReq.getTemplateId() == null)
 			return Emil.errorMessageResponse("invalid template id");
@@ -372,7 +338,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 *         "In 1936, the Russians made a computer that ran on water"}]}]}
 	 */
 	public Response getEnvironmentTemplates() {
-		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
+		final DatabaseEnvironmentsAdapter environmentHelper = environments;
 		try {
 			List<MachineConfigurationTemplate> envs = environmentHelper.getTemplates();
 
@@ -434,7 +400,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 *         "In 1936, the Russians made a computer that ran on water"}]}]}
 	 */
 	public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
-		final DatabaseEnvironmentsAdapter environmentHelper = envHelper;
+		final DatabaseEnvironmentsAdapter environmentHelper = environments;
 		try {
 			List<GeneralizationPatch> envs = environmentHelper.getPatches();
 			return envs;
@@ -488,7 +454,7 @@ public class EmilEnvironmentData extends EmilRest {
 		}
 
 		try {
-			Environment environment = envHelper.getEnvironmentById(currentEnv.getArchive(), desc.getEnvId());
+			Environment environment = environments.getEnvironmentById(currentEnv.getArchive(), desc.getEnvId());
 
 			if(environment instanceof MachineConfiguration)
 			{
@@ -543,14 +509,14 @@ public class EmilEnvironmentData extends EmilRest {
 				ImageArchiveMetadata md = new ImageArchiveMetadata();
 				md.setType(ImageType.USER);
 				newEnv.setArchive("default");
-				String id = envHelper.importMetadata("default", environment, md, false);
+				String id = environments.importMetadata("default", environment, md, false);
 				newEnv.setEnvId(id);
 				newEnv.setParentEnvId(currentEnv.getEnvId());
 				currentEnv.addChildEnvId(newEnv.getEnvId());
 				imported = true;
 			}
 			else {
-				envHelper.updateMetadata(currentEnv.getArchive(), environment);
+				environments.updateMetadata(currentEnv.getArchive(), environment);
 				newEnv = currentEnv;
 			}
 			imageProposer.refreshIndex();
@@ -600,7 +566,7 @@ public class EmilEnvironmentData extends EmilRest {
 	{
 		Map<String, String> map = new HashMap<>();
 		try {
-			List<DefaultEntry> defaultEnvironments = envHelper.getDefaultEnvironments();
+			List<DefaultEntry> defaultEnvironments = environments.getDefaultEnvironments();
 			for(DefaultEntry e : defaultEnvironments)
 			{
 				map.put(e.getKey(), e.getValue());
@@ -619,7 +585,7 @@ public class EmilEnvironmentData extends EmilRest {
 	public DefaultEnvironmentResponse defaultEnvironment(@QueryParam("osId") String osId) {
 
 		try {
-			String env = envHelper.getDefaultEnvironment(osId);
+			String env = environments.getDefaultEnvironment(osId);
 			DefaultEnvironmentResponse response = new DefaultEnvironmentResponse();
 			response.setEnvId(env);
 			return response;
@@ -634,7 +600,7 @@ public class EmilEnvironmentData extends EmilRest {
 	@Produces(MediaType.APPLICATION_JSON)
 	public EmilResponseType setDefaultEnvironment(@QueryParam("osId") String osId, @QueryParam("envId") String envId) {
 		try {
-			envHelper.setDefaultEnvironment(osId, envId);
+			environments.setDefaultEnvironment(osId, envId);
 			return new EmilResponseType();
 		} catch (BWFLAException e) {
 			return new EmilResponseType(e);
@@ -656,10 +622,10 @@ public class EmilEnvironmentData extends EmilRest {
 			return Emil.internalErrorResponse("not found: " + req.getId());
 		}
 		try {
-			Environment environment = envHelper.getEnvironmentById(emilEnv.getArchive(), req.getId());
+			Environment environment = environments.getEnvironmentById(emilEnv.getArchive(), req.getId());
 			ImageArchiveMetadata md = new ImageArchiveMetadata();
 			md.setType(ImageType.USER);
-			String id = envHelper.importMetadata("default", environment, md, false);
+			String id = environments.importMetadata("default", environment, md, false);
 			EmilEnvironment newEmilEnv = new EmilEnvironment(emilEnv);
 			newEmilEnv.setEnvId(id);
 			newEmilEnv.setTitle("[fork]: " + newEmilEnv.getTitle() + " " + newEmilEnv.getEnvId());
@@ -763,12 +729,10 @@ public class EmilEnvironmentData extends EmilRest {
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response sync() {
-		envHelper.sync();
-		init(true);
+		environments.sync();
+		emilEnvRepo.init(true);
 		return Emil.successMessageResponse("syncing archives ");
 	}
-
-
 
 	@Secured({Role.RESTRCITED})
 	@POST
@@ -812,7 +776,7 @@ public class EmilEnvironmentData extends EmilRest {
 		request.destArchive = "default";
 		request.templateId = imageReq.getTemplateId();
 		request.nativeConfig = imageReq.getNativeConfig();
-		request.environmentHelper = envHelper;
+		request.environmentHelper = environments;
 		request.imageProposer = imageProposer;
 		request.patchId = imageReq.getPatchId();
 
@@ -836,7 +800,7 @@ public class EmilEnvironmentData extends EmilRest {
 	 * @return
 	 */
     public ImageNameIndex getNameIndexes() throws BWFLAException, JAXBException {
-        return envHelper.getNameIndexes();
+        return environments.getNameIndexes();
     }
 
 //	@POST
@@ -885,7 +849,7 @@ public class EmilEnvironmentData extends EmilRest {
 				continue;
 			}
 			try {
-				Environment e = envHelper.getEnvironmentById(emilEnvironment.getArchive(), envId);
+				Environment e = environments.getEnvironmentById(emilEnvironment.getArchive(), envId);
 //				if(!(e instanceof MachineConfiguration))
 //					continue;
 //				env = e;
@@ -897,7 +861,7 @@ public class EmilEnvironmentData extends EmilRest {
 				e.printStackTrace();
 			}
 
-			importRequest.environmentHelper = envHelper;
+			importRequest.environmentHelper = environments;
 			importRequest.destArchive = replicateImagesRequest.getDestArchive();
 			importRequest.imageProposer = imageProposer;
 			importRequest.containerUtil = containerUtil;

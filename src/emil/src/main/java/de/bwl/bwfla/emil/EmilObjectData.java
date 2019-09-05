@@ -23,7 +23,6 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -144,7 +143,7 @@ public class EmilObjectData extends EmilRest {
 		}
 
 		try {
-			List<String> objects = archive.objects().getObjectList(archiveId);
+			List<String> objects = objHelper.getObjectList(archiveId);
 			if(objects == null) {
 				LOG.warning("objects null");
 				return Response.status(Response.Status.BAD_REQUEST).entity("Objects are null").build();
@@ -158,7 +157,7 @@ public class EmilObjectData extends EmilRest {
 				if(software != null)
 					continue;
 
-				DigitalObjectMetadata md = archive.objects().getObjectMetadata(archiveId, id);
+				DigitalObjectMetadata md = objHelper.getObjectMetadata(archiveId, id);
 				ObjectListItem item = new ObjectListItem(id);
 				item.setTitle(md.getTitle());
 				item.setArchiveId(archiveId);
@@ -202,7 +201,7 @@ public class EmilObjectData extends EmilRest {
 		}
 
 		try {
-			archive.objects().delete(archiveId, objectId);
+			objHelper.delete(archiveId, objectId);
 			return Response.status(Response.Status.OK).build();
 		}
 		catch (BWFLAException e)
@@ -226,10 +225,7 @@ public class EmilObjectData extends EmilRest {
 	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public MediaDescriptionResponse mediaDescription(@PathParam("objectId") String objectId,
-												     @PathParam("objectArchive") String archiveId,
-													 @QueryParam("updateClassification") @DefaultValue("false") boolean updateClassification,
-													 @QueryParam("updateProposal") @DefaultValue("false") boolean updateProposal,
-													 @QueryParam("noUpdate") @DefaultValue("false") boolean noUpdate)
+												     @PathParam("objectArchive") String archiveId)
 	{
 		if(archiveId == null || archiveId.equals("default")) {
 			try {
@@ -241,7 +237,6 @@ public class EmilObjectData extends EmilRest {
 
 		MediaDescriptionResponse resp = new MediaDescriptionResponse();
 		try {
-
 			FileCollection fc = null;
 			try {
 				fc = getFileCollection(archiveId, objectId);
@@ -251,12 +246,9 @@ public class EmilObjectData extends EmilRest {
 
 			resp.setMediaItems(fc);
 			resp.setMetadata(objHelper.getObjectMetadata(archiveId, objectId));
-
-
-			resp.setObjectEnvironments(getEnvironmentsForObject(archiveId, objectId, updateClassification, updateProposal, noUpdate));
 			return resp;
 		}
-		catch (BWFLAException | JAXBException exception) {
+		catch (BWFLAException exception) {
 			return new MediaDescriptionResponse(new BWFLAException(exception));
 		}
 	}

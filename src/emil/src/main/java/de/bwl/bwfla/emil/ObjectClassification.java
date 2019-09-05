@@ -6,8 +6,14 @@ import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
 import de.bwl.bwfla.emil.datatypes.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.OverrideCharacterizationRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
+import de.bwl.bwfla.emil.datatypes.rest.ClientClassificationRequest;
+import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
+import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.emil.utils.TaskManager;
+import de.bwl.bwfla.emil.utils.tasks.ClassificationTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.imageclassifier.client.ImageClassifier;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
@@ -55,6 +61,20 @@ public class ObjectClassification {
     @Inject
     private EmilObjectData objects;
 
+    @Inject
+    private EmilEnvironmentRepository metadata;
+
+    @Inject
+    private DatabaseEnvironmentsAdapter environments;
+
+    @Inject
+    private TaskManager taskManager;
+
+    @Inject
+    @AuthenticatedUser
+    private UserContext authenticatedUser;
+
+
     //  name of collection in eaas database
     static String collectionName = "classificationCache";
     //  key inside collection
@@ -97,19 +117,17 @@ public class ObjectClassification {
     }
 
     @Secured({Role.PUBLIC})
-    @GET
+    @POST
     @Produces(MediaType.APPLICATION_JSON)
-    @Path("/{objectArchive}/{objectId}")
-    public Response classify(@PathParam("objectId") String objectId,
-                             @PathParam("objectArchive") String archiveId,
-                             @QueryParam("updateClassification") @DefaultValue("false") boolean updateClassification,
-                             @QueryParam("updateProposal") @DefaultValue("false") boolean updateProposal,
-                             @QueryParam("noUpdate") @DefaultValue("false") boolean noUpdate)
+    @Path("/")
+    public TaskStateResponse classify(ClientClassificationRequest request)
     {
-
         try {
-
-            FileCollection fc = objects.getFileCollection(archiveId, objectId);
+            FileCollection fc = objects.getFileCollection(request.getArchiveId(), request.getObjectId());
+            return new TaskStateResponse(getEnvironmentsForObject(fc,
+                    request.isUpdateClassification(),
+                    request.isUpdateProposal(),
+                    request.isNoUpdate()));
         } catch (BWFLAException e) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -119,11 +137,30 @@ public class ObjectClassification {
     }
 
 
-    public ClassificationResult getEnvironmentsForObject(FileCollection fc,
+    public String getEnvironmentsForObject(FileCollection fc,
                                                          boolean forceCharacterization,
                                                          boolean forceProposal,
                                                          boolean noUpdate) throws BWFLAException {
 
+        ClassificationTask.ClassifyObjectRequest request = new ClassificationTask.ClassifyObjectRequest();
+        request.fileCollection = fc;
+        request.classification = this;
+        request.environments = environments;
+        request.metadata = metadata;
+        request.input = null;
+        request.noUpdate = noUpdate;
+        request.forceProposal = forceProposal;
+        request.userCtx = null;
+
+        if(authenticatedUser != null)
+            request.userCtx = authenticatedUser.getUsername();
+
+        if(!forceCharacterization || noUpdate)
+            try {
+                request.input = load(fc.id);
+            } catch (NoSuchElementException ignore) {};
+
+        return taskManager.submitTask(new ClassificationTask(request));
     }
 
 
@@ -140,8 +177,8 @@ public class ObjectClassification {
         result.setEnvironmentList(environments);
         result.setUserDescription(userDescription);
         try {
-            save(result, objectId);
-        } catch (JAXBException | IOException e) {
+            save(result);
+        } catch (JAXBException  e) {
             LOG.log(Level.SEVERE, e.getMessage(), e);
             throw new BWFLAException(e);
         }
@@ -178,11 +215,11 @@ public class ObjectClassification {
         }
     }
 
-    private void save(ClassificationResult c, String objectId) throws JAXBException, IOException, BWFLAException {
+    public void save(ClassificationResult c) throws JAXBException, BWFLAException {
         // classification wasn't successful
         if (c.getObjectId() == null || c.getObjectId().equals(""))
             return;
-        db.saveDoc(collectionName, objectId, parentElement + idDBkey, c.JSONvalue(false));
+        db.saveDoc(collectionName, c.getObjectId(), parentElement + idDBkey, c.JSONvalue(false));
     }
 
     public List<String> getEnvironmentDependencies(String envId) {
@@ -205,15 +242,6 @@ public class ObjectClassification {
         return objects;
     }
 
-    public synchronized void saveClassificationResult(String objectId, ClassificationResult result) throws BWFLAException
-    {
-        try {
-            save(result, objectId);
-        } catch (JAXBException | IOException e) {
-            throw new BWFLAException(e);
-        }
-    }
-
     public void dump() {
         File exportDir = new File("/home/bwfla/export/classification-data");
         if (!exportDir.exists())
@@ -232,5 +260,13 @@ public class ObjectClassification {
     void cleanupClassificationData(String envId)
     {
         db.deleteDoc(collectionName, envId, parentElement + ".environmentList.id", false);
+    }
+
+    public ImageProposer imageProposer() {
+        return imageProposer;
+    }
+
+    public ImageClassifier imageClassifier() {
+        return imageClassifier;
     }
 }
