@@ -28,8 +28,8 @@ import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 
+import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
 import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
 
 /*
  * This class dispatches URL requests to the correct servlet.
@@ -86,7 +86,7 @@ public class FilterDispatcher implements Filter
                         break;
                     }
 
-                    case XpraConnector.PROTOCOL: {
+                    case AudioConnector.PROTOCOL: {
                         // use the custom signalling servlet for incoming requests
                         servletName = WebRtcSignallingServlet.SERVLET_NAME;
                         break;

@@ -46,10 +46,12 @@ import de.bwl.bwfla.emucomp.components.BindingsManager;
 import de.bwl.bwfla.emucomp.components.EaasComponentBean;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.EventID;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
+import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IThrowingSupplier;
 import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
+import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
 import de.bwl.bwfla.emucomp.xpra.PulseAudioStreamer;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.commons.io.FileUtils;
@@ -180,6 +182,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private static final String PROTOCOL_SDLONP  = "sdlonp";
 	private static final String PROTOCOL_Y11     = "y11";
 
+	/* Supported audio driver names */
+	private static final String AUDIODRIVER_PULSE  = "pulse";
+
 	/** Data directory inside of the emulator-containers */
 	private static final String EMUCON_DATA_DIR = "/emucon/data";
 
@@ -229,6 +234,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	public boolean isXpraBackendEnabled()
 	{
 		return (emuBeanMode == EmulatorBeanMode.XPRA);
+	}
+
+	public boolean isPulseAudioEnabled()
+	{
+		// TODO: make this configurable!
+		return true;
 	}
 
 	public boolean isLocalModeEnabled()
@@ -371,15 +382,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return this.getSocketsDir().resolve("xpra-iosocket");
 	}
 
-	private Path getXpraPulseAudioSocketPath()
+	private Path getPulseAudioSocketPath()
 	{
-		return this.getSocketsDir().resolve("xpra-pasocket");
-	}
-
-	private Path getXpraPulseAudioCookiePath()
-	{
-		final Path socket = this.getXpraPulseAudioSocketPath();
-		return socket.getParent().resolve(socket.getFileName() + ".cookie");
+		return this.getSocketsDir().resolve("pulse-iosocket");
 	}
 
 	/** Returns emulator's runtime layer name. */
@@ -701,14 +706,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 								cgen.addArgValues("=", hostPathReplacer.apply(value));
 						});
 
-				if (this.isXpraBackendEnabled()) {
-					final String pulsesock = this.getXpraPulseAudioSocketPath().toString();
-					cgen.addArguments("--env", "__pulse_server=" + hostPathReplacer.apply(pulsesock));
-
-					final String pulsecookie = this.getXpraPulseAudioCookiePath().toString();
-					cgen.addArguments("--env", "__pulse_cookie=" + hostPathReplacer.apply(pulsecookie));
-				}
-
 				// Enable KVM device (if needed)
 				if (isKvmDeviceEnabled)
 					cgen.addArgument("--enable-kvm");
@@ -720,6 +717,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				if (this.isXpraBackendEnabled()) {
 					final String xprasock = this.getXpraSocketPath().toString();
 					cgen.addArguments("--xpra-socket", hostPathReplacer.apply(xprasock));
+				}
+
+				if (this.isPulseAudioEnabled()) {
+					final String pulsesock = this.getPulseAudioSocketPath().toString();
+					cgen.addArguments("--pulse-socket", hostPathReplacer.apply(pulsesock));
 				}
 
 				cgen.addArgument("--");
@@ -769,13 +771,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		if (this.isXpraBackendEnabled()) {
 			if (emuEnvironment.hasCheckpointBindingId()) {
-				this.waitUntilXpraReady(this.getXpraSocketPath(), EmuCompState.EMULATOR_BUSY);
+				this.waitUntilPathExists(this.getXpraSocketPath(), EmuCompState.EMULATOR_BUSY);
 				this.waitUntilRestoreDone();
 			}
 			else {
 				final String rootfs = bindings.lookup(BindingsManager.toBindingId(EMUCON_ROOTFS_BINDING_ID, BindingsManager.EntryType.FS_MOUNT));
 				final Path path = Paths.get(rootfs, "tmp", "xpra-started");
-				this.waitUntilXpraReady(path, EmuCompState.EMULATOR_BUSY);
+				this.waitUntilPathExists(path, EmuCompState.EMULATOR_BUSY);
 			}
 		}
 		else if (this.isSdlBackendEnabled()) {
@@ -796,6 +798,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					return;
 			}
 		}
+
+		if (this.isPulseAudioEnabled())
+			this.waitUntilPathExists(this.getPulseAudioSocketPath(), EmuCompState.EMULATOR_BUSY);
 
 		LOG.info("Emulator started in process " + emuRunner.getProcessId());
 
@@ -910,8 +915,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 		}
 		else if (this.isXpraBackendEnabled()) {
-			final PulseAudioStreamer streamer = new PulseAudioStreamer(this.getXpraPulseAudioSocketPath());
-			this.addControlConnector(new XpraConnector(this.getXpraSocketPath(), streamer));
+			this.addControlConnector(new XpraConnector(this.getXpraSocketPath()));
+		}
+
+		if (this.isPulseAudioEnabled()) {
+			final String cid = this.getComponentId();
+			final Path pulsesock = this.getPulseAudioSocketPath();
+			final PulseAudioStreamer streamer = new PulseAudioStreamer(cid, pulsesock);
+			this.addControlConnector(new AudioConnector(streamer));
+			streamer.play();
 		}
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
@@ -1042,6 +1054,20 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			final XpraConnector connector = (XpraConnector) this.getControlConnector(XpraConnector.PROTOCOL);
 			if (connector != null)
 				connector.disconnect();
+		}
+
+		if (this.isPulseAudioEnabled()) {
+			final AudioConnector connector = (AudioConnector) this.getControlConnector(AudioConnector.PROTOCOL);
+			if (connector != null && !connector.getAudioStreamer().isClosed()) {
+				final IAudioStreamer streamer = connector.getAudioStreamer();
+				try {
+					streamer.stop();
+					streamer.close();
+				}
+				catch (Exception error) {
+					LOG.log(Level.WARNING, "Stopping audio streamer failed!", error);
+				}
+			}
 		}
 
 		if (emuRunner.isProcessRunning())
@@ -1436,6 +1462,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		// Setup emulator's environment
 		emuRunner.addEnvVariable("SDL_VIDEODRIVER", protocol);
+		if (this.isPulseAudioEnabled())
+			emuRunner.addEnvVariable("SDL_AUDIODRIVER", AUDIODRIVER_PULSE);
+
 		emuRunner.addEnvVariable("SDL_SRVCTLSOCKET", ctlSocket.getName());
 		emuRunner.addEnvVariable("SDL_EMUCTLSOCKET", emuCtlSocketName);
 		emuRunner.addEnvVariable("ALSA_CARD", alsa_card);
@@ -1488,15 +1517,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// Setup emulator's tunnel
 		final GuacamoleConfiguration gconf = tunnelConfig.getGuacamoleConfiguration();
 		gconf.setProtocol(protocol);
-		gconf.setParameter("enable-audio", "true");
+		gconf.setParameter("enable-audio", Boolean.toString(!this.isPulseAudioEnabled()));
 		gconf.setParameter("emu-iosocket", emusocket);
 
 		// Setup client configuration
-		final GuacamoleClientInformation ginfo = tunnelConfig.getGuacamoleClientInformation();
-		ginfo.getAudioMimetypes().add("audio/ogg");
+		if (!this.isPulseAudioEnabled()) {
+			final GuacamoleClientInformation ginfo = tunnelConfig.getGuacamoleClientInformation();
+			ginfo.getAudioMimetypes().add("audio/ogg");
+		}
 
 		// Setup emulator's environment
-		emuRunner.addEnvVariable("SDL_AUDIODRIVER", protocol);
+		emuRunner.addEnvVariable("SDL_AUDIODRIVER", (this.isPulseAudioEnabled()) ? AUDIODRIVER_PULSE : protocol);
 		emuRunner.addEnvVariable("SDL_VIDEODRIVER", protocol);
 		emuRunner.addEnvVariable("SDL_SRVCTLSOCKET", ctlSocket.getName());
 		emuRunner.addEnvVariable("SDL_EMUCTLSOCKET", emuCtlSocketName);
@@ -1991,15 +2022,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return ok;
 	}
 
-	private void waitUntilXpraReady(Path path, EmuCompState expstate) throws BWFLAException
+	private void waitUntilPathExists(Path path, EmuCompState expstate) throws BWFLAException
 	{
-		LOG.info("Waiting for emulator to become ready...");
+		LOG.info("Waiting for path '" + path.toString() +"'...");
 
 		final int timeout = 60000;  // in ms
 		final int waittime = 1000;  // in ms
 		for (int numretries = timeout / waittime; numretries > 0; --numretries) {
 			if (Files.exists(path)) {
-				LOG.info("Emulator seems to be ready now");
+				LOG.info("Path '" + path.toString() +"' exists now");
 				return;
 			}
 
@@ -2011,13 +2042,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			if (emuBeanState.get() != expstate) {
-				final String message = "Expected state changed, abort waiting for emulator!";
+				final String message = "Expected state changed, abort waiting for path!";
 				LOG.warning(message);
 				throw new BWFLAException(message);
 			}
 		}
 
-		throw new BWFLAException("Emulator is not ready!");
+		throw new BWFLAException("Path '" + path.toString() +"' does not exist!");
 	}
 
 	private void waitUntilRestoreDone()

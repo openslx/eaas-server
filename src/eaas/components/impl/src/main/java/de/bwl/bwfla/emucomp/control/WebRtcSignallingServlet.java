@@ -22,8 +22,8 @@ package de.bwl.bwfla.emucomp.control;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.NodeManager;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
+import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -45,7 +45,7 @@ public class WebRtcSignallingServlet extends HttpServlet
     public static final String SERVLET_NAME = "WebRtcSignallingServlet";
 
 	/** Protocol ID, that must be present in request's URL */
-	private static final String PROTOCOL_SUFFIX = "/" + XpraConnector.PROTOCOL;
+	private static final String PROTOCOL_SUFFIX = "/" + AudioConnector.PROTOCOL;
 
 	/** Length of the Protocol ID */
 	private static final int PROTOCOL_SUFFIX_LENGTH = PROTOCOL_SUFFIX.length();
@@ -76,17 +76,17 @@ public class WebRtcSignallingServlet extends HttpServlet
 		return componentId;
 	}
 
-	protected XpraConnector getXpraConnector(String componentId) throws ServletException
+	protected AudioConnector getAudioConnector(String componentId) throws ServletException
 	{
 		try {
 			AbstractEaasComponent component = nodeManager.getComponentById(componentId, AbstractEaasComponent.class);
-			IConnector connector = component.getControlConnector(XpraConnector.PROTOCOL);
-			if (!(connector instanceof XpraConnector)) {
-				String message = "No XpraConnector found for component '" + componentId + "'!";
+			IConnector connector = component.getControlConnector(AudioConnector.PROTOCOL);
+			if (!(connector instanceof AudioConnector)) {
+				String message = "No AudioConnector found for component '" + componentId + "'!";
 				throw new ServletException(message);
 			}
 
-			return (XpraConnector) connector;
+			return (AudioConnector) connector;
 		}
 		catch (BWFLAException error) {
 			throw new ServletException("No component found with ID " + componentId, error);
@@ -100,7 +100,7 @@ public class WebRtcSignallingServlet extends HttpServlet
 	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		final String compid = this.getComponentId(request);
-		final XpraConnector connector = this.getXpraConnector(compid);
+		final AudioConnector connector = this.getAudioConnector(compid);
 		try {
 			final String message = connector.getAudioStreamer()
 					.pollServerControlMessage(30, TimeUnit.SECONDS);
@@ -120,7 +120,7 @@ public class WebRtcSignallingServlet extends HttpServlet
 	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
 	{
 		final String compid = this.getComponentId(request);
-		final XpraConnector connector = this.getXpraConnector(compid);
+		final AudioConnector connector = this.getAudioConnector(compid);
 		try {
 			final char[] buffer = new char[request.getContentLength()];
 			final int length = request.getReader()

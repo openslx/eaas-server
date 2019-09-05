@@ -17,19 +17,39 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emucomp.xpra;
-
-import java.util.concurrent.TimeUnit;
+package de.bwl.bwfla.emucomp.control.connectors;
 
 
-public interface IAudioStreamer
+import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
+
+import java.net.URI;
+
+
+public class AudioConnector implements IConnector
 {
-    String pollServerControlMessage(long timeout, TimeUnit unit) throws InterruptedException;
-    void postClientControlMessage(char[] payload) throws IllegalArgumentException;
-    void postClientControlMessage(char[] payload, int offset, int length) throws IllegalArgumentException;
-    void postClientControlMessage(String payload) throws IllegalArgumentException;
-    void play();
-    void stop();
-    void close();
-    boolean isClosed();
+	public final static String PROTOCOL = "audio";
+
+	private final IAudioStreamer streamer;
+
+	public AudioConnector(IAudioStreamer streamer)
+	{
+		this.streamer = streamer;
+	}
+
+	@Override
+	public URI getControlPath(final URI componentResource)
+	{
+		return componentResource.resolve(AudioConnector.PROTOCOL);
+	}
+
+	@Override
+	public String getProtocol()
+	{
+		return AudioConnector.PROTOCOL;
+	}
+
+	public IAudioStreamer getAudioStreamer()
+	{
+		return streamer;
+	}
 }

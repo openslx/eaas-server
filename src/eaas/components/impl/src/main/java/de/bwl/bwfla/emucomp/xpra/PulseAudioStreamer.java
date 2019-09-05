@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emucomp.xpra;
 
+import de.bwl.bwfla.common.logging.PrefixLogger;
 import org.freedesktop.gstreamer.Bin;
 import org.freedesktop.gstreamer.Bus;
 import org.freedesktop.gstreamer.Gst;
@@ -56,11 +57,14 @@ public class PulseAudioStreamer implements IAudioStreamer
 	private final Pipeline pipeline;
 	private final WebRTCBin webrtc;
 	private final Bin audio;
+	private boolean closed;
 
 
-	public PulseAudioStreamer(Path pulsesock)
+	public PulseAudioStreamer(String cid, Path pulsesock)
 	{
-		this.log = Logger.getLogger(PulseAudioStreamer.class.getName());
+		final PrefixLogger logger = new PrefixLogger(PulseAudioStreamer.class.getName());
+		logger.getContext().add("cid", cid);
+		this.log = logger;
 
 		try {
 			Gst.init(new Version(1, 14));
@@ -74,6 +78,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 		this.pipeline = PulseAudioStreamer.createPipeline(log);
 		this.audio = PulseAudioStreamer.createAudioBin(pulsesock.toString());
 		this.webrtc= PulseAudioStreamer.createWebRtcBin(pipeline, outqueue, log);
+		this.closed = false;
 
 		pipeline.addMany(webrtc, audio);
 		audio.link(webrtc);
@@ -125,24 +130,34 @@ public class PulseAudioStreamer implements IAudioStreamer
 	@Override
 	public void play()
 	{
+		log.info("Starting audio streamer...");
 		pipeline.play();
 	}
 
 	@Override
 	public void stop()
 	{
+		log.info("Stopping audio streamer...");
 		pipeline.stop();
 	}
 
 	@Override
 	public void close()
 	{
+		log.info("Closing audio streamer...");
 		try {
 			pipeline.close();
+			closed = true;
 		}
 		finally {
 			Gst.quit();
 		}
+	}
+
+	@Override
+	public boolean isClosed()
+	{
+		return closed;
 	}
 
 
@@ -237,7 +252,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 
 	private static Bin createAudioBin(String pulsesock)
 	{
-		final String description = "pulsesrc server=" + pulsesock + " device=xpra-speaker.monitor "
+		final String description = "pulsesrc server=" + pulsesock + " device=emu-speaker.monitor "
 				+ "! audioconvert ! audioresample ! queue ! opusenc ! rtpopuspay ! queue "
 				+ "! capsfilter caps=application/x-rtp,media=audio,encoding-name=OPUS,payload=96";
 

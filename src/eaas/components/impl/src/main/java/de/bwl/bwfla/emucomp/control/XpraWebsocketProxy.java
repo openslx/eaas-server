@@ -70,36 +70,12 @@ public class XpraWebsocketProxy extends IPCWebsocketProxy
 					catch (Exception error) {
 						log.log(Level.WARNING, "Stopping websocket streamer failed!", error);
 					}
-
-					try {
-						log.info("Stopping audio streamer for component '" + componentId + "'...");
-						connector.getAudioStreamer().stop();
-					}
-					catch (Exception error) {
-						log.log(Level.WARNING, "Stopping audio streamer failed!", error);
-					}
 				});
 			}
-
-			// Start sound streaming
-			connector.getAudioStreamer().play();
 		}
 		catch (Throwable error) {
 			log.log(Level.WARNING, "Setting up websocket proxy for component '" + componentId + "' failed!", error);
 			this.stop(session);
 		}
-	}
-
-	@Override
-	protected void stop(Session session)
-	{
-		try {
-			connector.getAudioStreamer().stop();
-		}
-		catch (Exception error) {
-			log.log(Level.WARNING, "Stopping audio-streamer failed!", error);
-		}
-
-		super.stop(session);
 	}
 }
