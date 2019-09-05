@@ -1,0 +1,216 @@
+package de.bwl.bwfla.common.utils.METS;
+
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import gov.loc.mets.*;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+
+public class MetsUtil {
+
+    private enum MetsEaasConstant {
+        FILE_GROUP_OBJECTS("DIGITAL OBJECTS");
+
+        private final String label;
+
+        MetsEaasConstant(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+
+    }
+    public enum MetsEaasContext {
+        INSTALLATION("Installation"),
+        USAGE("Configured Usage");
+
+        private final String label;
+
+        MetsEaasContext(String label) {
+            this.label = label;
+        }
+
+        @Override
+        public String toString() {
+            return label;
+        }
+    }
+
+    public static Mets createMets(String id, String label)
+    {
+        Mets metsRoot = new Mets();
+        metsRoot.setID(id);
+        metsRoot.setLabel1(label);
+
+        return metsRoot;
+    }
+
+    public static Object createFileFormatEntry(Mets metsRoot, String ffmtId) {
+        List<AmdSecType> amdSecList = metsRoot.getAmdSec();
+        AmdSecType amdSecType;
+        if(amdSecList.size() == 0) {
+            amdSecType = new AmdSecType();
+            amdSecList.add(amdSecType);
+        }
+        else
+            amdSecType = amdSecList.get(0);
+
+        List<MdSecType> mdSecTypeList = amdSecType.getTechMD();
+        Optional<MdSecType> existingType = mdSecTypeList.stream()
+                .filter(t -> t.getMdRef().getID().equals(ffmtId))
+                .findAny();
+
+        if(existingType.isPresent())
+            return existingType.get();
+
+        MdSecType type = new MdSecType();
+        type.setID("FileFormat-" + UUID.randomUUID().toString());
+
+        MdSecType.MdRef mdref = new MdSecType.MdRef();
+        mdref.setID(ffmtId);
+        type.setMdRef(mdref);
+        mdref.setMDTYPE("OTHER");
+        mdref.setOTHERMDTYPE("FILETYPE");
+
+        mdSecTypeList.add(type);
+        return type;
+    }
+
+    static Object createDeviceEntry(Mets metsRoot, String deviceId) {
+
+        List<AmdSecType> amdSecList = metsRoot.getAmdSec();
+        AmdSecType amdSecType;
+        if(amdSecList.size() == 0) {
+            amdSecType = new AmdSecType();
+            amdSecList.add(amdSecType);
+        }
+        else
+            amdSecType = amdSecList.get(0);
+
+        List<MdSecType> mdSecTypeList = amdSecType.getSourceMD();
+        Optional<MdSecType> existingType = mdSecTypeList.stream()
+                .filter(t -> t.getMdRef().getID().equals(deviceId))
+                .findAny();
+
+        if(existingType.isPresent())
+            return existingType.get();
+
+        MdSecType type = new MdSecType();
+        type.setID("Device-" + UUID.randomUUID().toString());
+
+        MdSecType.MdRef mdref = new MdSecType.MdRef();
+        mdref.setID(deviceId);
+        mdref.setMDTYPE("OTHER");
+        mdref.setOTHERMDTYPE("DEVICETYPE");
+        type.setMdRef(mdref);
+
+        mdSecTypeList.add(type);
+        return type;
+    }
+
+
+    static FileType createFileEntry(String objUrl) {
+
+        String fileId = "FID-" + UUID.randomUUID().toString();
+
+        FileType fT = new FileType();
+        fT.setID(fileId);
+
+        List<FileType.FLocat> locationList = fT.getFLocat();
+        FileType.FLocat fLocat = new FileType.FLocat();
+        fLocat.setLOCTYPE("URL");
+        fLocat.setHref(objUrl);
+
+        locationList.add(fLocat);
+        return fT;
+    }
+
+    public static Mets export(Mets mets, String exportPrefix) {
+
+        Mets metsRoot = null;
+        try {
+            metsRoot = Mets.fromJsonValueWithoutRoot(mets.jsonValueWithoutRoot(false), Mets.class);
+        } catch (BWFLAException e) {
+            e.printStackTrace();
+            return null;
+        }
+
+        if (metsRoot.getFileSec() == null)
+            return metsRoot;
+
+        List<MetsType.FileSec.FileGrp> fileGrpList = metsRoot.getFileSec().getFileGrp();
+        Optional<MetsType.FileSec.FileGrp> digitalObjects = fileGrpList.stream()
+                .filter(f -> f.getUSE().equals(MetsEaasConstant.FILE_GROUP_OBJECTS.toString()))
+                .findAny();
+
+        if (!digitalObjects.isPresent())
+            return metsRoot;
+
+        MetsType.FileSec.FileGrp fileGrp = digitalObjects.get();
+
+        for (FileType ft : fileGrp.getFile())
+        {
+            List<FileType.FLocat> locationList = ft.getFLocat();
+            if(locationList.size() == 0)
+                continue;
+
+            FileType.FLocat fLocat = locationList.get(0);
+            if(!fLocat.getHref().startsWith("http"))
+                fLocat.setHref(exportPrefix + fLocat.getHref());
+        }
+
+        return metsRoot;
+    }
+
+    public static FileType addFile(Mets metsRoot, String url, FileTypeProperties properties)
+    {
+        if(metsRoot.getFileSec() == null)
+            metsRoot.setFileSec(new MetsType.FileSec());
+
+        List<MetsType.FileSec.FileGrp> fileGrpList = metsRoot.getFileSec().getFileGrp();
+        Optional<MetsType.FileSec.FileGrp> digitalObjects = fileGrpList.stream()
+                .filter(f -> f.getUSE().equals(MetsEaasConstant.FILE_GROUP_OBJECTS.toString()))
+                .findAny();
+
+        MetsType.FileSec.FileGrp fileGrp;
+        if(digitalObjects.isPresent())
+            fileGrp = digitalObjects.get();
+        else {
+            fileGrp = new MetsType.FileSec.FileGrp();
+            fileGrp.setUSE(MetsEaasConstant.FILE_GROUP_OBJECTS.toString());
+            metsRoot.getFileSec().getFileGrp().add(fileGrp);
+        }
+
+        FileType ft = createFileEntry(url);
+        fileGrp.getFile().add(ft);
+
+        if(properties.fileSize > 0)
+            ft.setSIZE(properties.fileSize);
+
+        if(properties.deviceId != null)
+        {
+            Object idref = createDeviceEntry(metsRoot, properties.deviceId);
+            ft.getADMID().add(idref);
+        }
+
+        if(properties.fileFmt != null)
+        {
+            Object idRef = createFileFormatEntry(metsRoot, properties.fileFmt);
+            ft.getADMID().add(idRef);
+        }
+
+        return ft;
+    }
+
+    public static class FileTypeProperties {
+        public long fileSize = 0;
+        public String checksum = null;
+        public String deviceId = null;
+        public String fileFmt = null;
+    }
+}
