@@ -76,7 +76,7 @@ public class ClassificationTask extends AbstractTask<Object> {
             {
                 continue;
             }
-            List<EmilEnvironment> emilEnvironments = emilEnvRepo.getChildren(envId, environments);
+            List<EmilEnvironment> emilEnvironments = emilEnvRepo.getChildren(envId, environments, request.userCtx);
             List<EmilEnvironment> resultList = new ArrayList<>();
             for(EmilEnvironment emilEnv : emilEnvironments) {
                 if(emilEnv instanceof EmilObjectEnvironment) // do this later
@@ -89,7 +89,7 @@ public class ClassificationTask extends AbstractTask<Object> {
                         }
                         else {
                             // LOG.info("proposed envs contains: " + emilEnv.getEnvId() + " skipp env");
-                            EmilEnvironment _env = emilEnvRepo.getEmilEnvironmentById(envId);
+                            EmilEnvironment _env = emilEnvRepo.getEmilEnvironmentById(request.userCtx, envId, request.userCtx);
                             if(_env instanceof EmilObjectEnvironment)
                                 break;
 
@@ -227,7 +227,7 @@ public class ClassificationTask extends AbstractTask<Object> {
                 ClassificationResult.OperatingSystem os = new ClassificationResult.OperatingSystem(osId, proposal.getSuggested().get(osId));
                 String envId = envHelper.getDefaultEnvironment(osId);
                 if (envId != null) {
-                    EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(envId);
+                    EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(request.userCtx, envId, request.userCtx);
                     if (emilEnv != null) {
                         EnvironmentInfo info = new EnvironmentInfo(emilEnv.getEnvId(), emilEnv.getTitle());
                         os.setDefaultEnvironment(info);

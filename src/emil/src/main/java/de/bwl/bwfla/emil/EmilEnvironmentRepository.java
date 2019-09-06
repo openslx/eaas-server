@@ -324,7 +324,6 @@ public class EmilEnvironmentRepository {
 		if (envid == null)
 			return null;
 
-
 		try {
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
 
@@ -677,6 +676,11 @@ public class EmilEnvironmentRepository {
 	}
 
 	public List<EmilEnvironment> getChildren(String envId, List<EmilEnvironment> envs) throws BWFLAException {
+		String userCtx = getUserCtx();
+		return getChildren(envId, envs, userCtx);
+	}
+
+	public List<EmilEnvironment> getChildren(String envId, List<EmilEnvironment> envs, String userCtx) throws BWFLAException {
 		List<EmilEnvironment> result = new ArrayList<>();
 		for (EmilEnvironment e : envs) {
 			if (e.getParentEnvId() != null && e.getParentEnvId().equals(envId)) {
@@ -686,7 +690,7 @@ public class EmilEnvironmentRepository {
 		}
 		if (result.size() == 0) {
 			LOG.info("no child found for " + envId);
-			EmilEnvironment emilEnvironment = getEmilEnvironmentById(envId);
+			EmilEnvironment emilEnvironment = getEmilEnvironmentById(userCtx, envId, userCtx);
 			if (emilEnvironment != null)
 				result.add(emilEnvironment);
 		}
