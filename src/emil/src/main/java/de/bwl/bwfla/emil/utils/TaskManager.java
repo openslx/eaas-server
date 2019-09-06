@@ -3,6 +3,7 @@ package de.bwl.bwfla.emil.utils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
@@ -69,6 +70,8 @@ public class TaskManager {
             if(o != null) {
                 if(o instanceof BWFLAException)
                     return new TaskStateResponse((BWFLAException)o);
+                if(o instanceof ClassificationResult)
+                    response.setObject((ClassificationResult)o);
                 if(o instanceof Map)
                     response.setUserData((Map<String,String>)o);
             }
