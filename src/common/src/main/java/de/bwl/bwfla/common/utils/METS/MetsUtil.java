@@ -3,6 +3,7 @@ package de.bwl.bwfla.common.utils.METS;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import gov.loc.mets.*;
 
+import javax.xml.bind.JAXBException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -44,6 +45,7 @@ public class MetsUtil {
     public static Mets createMets(String id, String label)
     {
         Mets metsRoot = new Mets();
+        metsRoot.getStructMap();
         metsRoot.setID(id);
         metsRoot.setLabel1(label);
 
@@ -114,7 +116,7 @@ public class MetsUtil {
     }
 
 
-    static FileType createFileEntry(String objUrl) {
+    static FileType createFileEntry(String objUrl, String filename) {
 
         String fileId = "FID-" + UUID.randomUUID().toString();
 
@@ -126,6 +128,9 @@ public class MetsUtil {
         fLocat.setLOCTYPE("URL");
         fLocat.setHref(objUrl);
 
+        if(filename != null)
+            fLocat.setTitle(filename);
+
         locationList.add(fLocat);
         return fT;
     }
@@ -134,8 +139,8 @@ public class MetsUtil {
 
         Mets metsRoot = null;
         try {
-            metsRoot = Mets.fromJsonValueWithoutRoot(mets.jsonValueWithoutRoot(false), Mets.class);
-        } catch (BWFLAException e) {
+            metsRoot = Mets.fromValue(mets.value(), Mets.class);
+        } catch (JAXBException e) {
             e.printStackTrace();
             return null;
         }
@@ -186,7 +191,7 @@ public class MetsUtil {
             metsRoot.getFileSec().getFileGrp().add(fileGrp);
         }
 
-        FileType ft = createFileEntry(url);
+        FileType ft = createFileEntry(url, properties.filename);
         fileGrp.getFile().add(ft);
 
         if(properties.fileSize > 0)
@@ -212,5 +217,6 @@ public class MetsUtil {
         public String checksum = null;
         public String deviceId = null;
         public String fileFmt = null;
+        public String filename = null;
     }
 }

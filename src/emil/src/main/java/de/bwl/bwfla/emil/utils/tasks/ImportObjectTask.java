@@ -27,16 +27,25 @@ public class ImportObjectTask extends AbstractTask<Object> {
 
         for(ImportObjectRequest.ImportFileInfo info: req.getFiles()) {
             MetsUtil.FileTypeProperties properties = new MetsUtil.FileTypeProperties();
-            properties.deviceId = info.getDeviceId();
-            properties.fileFmt = info.getFileFmt();
+            // temp hack
+            if(info.getDeviceId().equals("Q82753")) {
+                properties.deviceId = null;
+                properties.fileFmt = info.getDeviceId();
+            }
+            else {
+                properties.deviceId = info.getDeviceId();
+                properties.fileFmt = info.getFileFmt();
+            }
+            properties.filename = info.getFilename();
             MetsUtil.addFile(m, info.getUrl(), properties);
         }
         try {
             objectArchiveHelper.importFromMetadata(archiveId, m.toString());
         } catch (BWFLAException e) {
             e.printStackTrace();
+            return new BWFLAException(e);
         }
-        System.out.println(m.toString());
+        // System.out.println(m.toString());
         return null;
     }
 }

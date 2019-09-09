@@ -52,6 +52,7 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import de.bwl.bwfla.emucomp.api.*;
+import de.bwl.bwfla.imageclassifier.client.Identification;
 import de.bwl.bwfla.imageclassifier.datatypes.*;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import org.apache.commons.io.FileUtils;
@@ -88,7 +89,58 @@ public abstract class BaseTask extends AbstractTask<Object>
 		this.executor = executor;
 	}
 
-	private IdentificationData<?> indentifyImage(FileCollectionEntry fce) {
+	private IdentificationData<?> identifyFile(String url, String fileName)
+	{
+		Path basePath = null;
+		IdentificationOutputIndex<?> index = null;
+		DiskType type = null;
+
+		try {
+			basePath = BaseTask.newBaseDir();
+		} catch (IdentificationTaskException e) {
+			e.printStackTrace();
+		}
+		final File baseDir = basePath.toFile();
+		String _fileName = fileName != null ? fileName : "user-file";
+		Path uploadPath = basePath.resolve(_fileName);
+
+		Binding b = new Binding();
+		b.setUrl(url);
+
+		try {
+			EmulatorUtils.copyRemoteUrl(b, uploadPath, new XmountOptions(), log);
+
+			type = runDiskType(uploadPath, log);
+			if(type == null)
+				throw new BWFLAException("cannot identify disk image");
+
+			log.info("Begin identification...");
+			String tool = cfg.get("imageclassifier.identification_tool");
+			Classifier classifier = null;
+			if(tool != null && tool.equals("FITS"))
+				classifier =  new FitsClassifier(executor, log);
+			else
+				classifier = new SiegfriedClassifier();
+
+			boolean verbosemode = Boolean.parseBoolean(cfg.get("imageclassifier.verbosemode"));
+			classifier.addDirectory(basePath);
+			index = classifier.runIdentification(verbosemode);
+		} catch (Throwable e) {
+			e.printStackTrace();
+		} finally {
+			log.info("Cleaning up...");
+
+			try {
+				FileUtils.deleteDirectory(baseDir);
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			log.info("Cleanup finished.");
+			return new IdentificationData<>(index, type);
+		}
+	}
+
+	private IdentificationData<?> identifyImage(FileCollectionEntry fce) {
 		Path subresFilePath = null;
 		Path cowMountpoint = null;
 		Path isoMountpoint = null;
@@ -175,30 +227,40 @@ public abstract class BaseTask extends AbstractTask<Object>
 	}
 
 
-	protected IdentificationResult identify() throws Exception
+	protected IdentificationResultContainer identify() throws Exception
 	{
+		IdentificationResultContainer<?> result = null;
+
 		final Map<String, String> policy = new HashMap<String, String>();
 
+		if(request.getFileCollection() != null) {
+			final String policyUrl = request.getPolicyUrl();
+			if (policyUrl != null && !policyUrl.isEmpty()) {
+				log.info("Reading policy file...");
+				this.readPolicyFile(policyUrl, policy);
+			}
 
-		final String policyUrl = request.getPolicyUrl();
-		if (policyUrl != null && !policyUrl.isEmpty()) {
-			log.info("Reading policy file...");
-			this.readPolicyFile(policyUrl, policy);
+			FileCollection fc = request.getFileCollection();
+			if (fc == null)
+				throw new BWFLAException("invalid object");
+
+			IdentificationResult<?> classificationResult = new IdentificationResult<>(fc, policy);
+
+			for (FileCollectionEntry fce : fc.files) {
+				IdentificationData<?> data = identifyImage(fce);
+				classificationResult.addResult(fce.getId(), data);
+			}
+			return new IdentificationResultContainer<>(classificationResult);
 		}
-
-		FileCollection fc = request.getFileCollection();
-		if(fc == null)
-			throw new BWFLAException("invalid object");
-
-		IdentificationResult<?> result = new IdentificationResult<>(fc, policy);
-
-		for(FileCollectionEntry fce : fc.files)
+		else if (request.getFileUrl() != null && request.getFileName() != null)
 		{
-			String objectUrl = fce.getUrl();
-			IdentificationData<?> data = indentifyImage(fce);
-			result.addResult(fce.getId(), data);
+			IdentificationData<?> data = identifyFile(request.getFileUrl(), request.getFileName());
+			FileIdentificationResult<?> classificationResult = new FileIdentificationResult<>(request.getFileUrl(), request.getFileName(), data);
+
+			return new IdentificationResultContainer<>(classificationResult);
 		}
-		return result;
+		else
+			throw new BWFLAException("invalid identification request");
 	}
 
 	/* =============== Internal Helpers =============== */

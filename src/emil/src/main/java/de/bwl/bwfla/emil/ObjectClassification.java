@@ -123,11 +123,22 @@ public class ObjectClassification {
     public TaskStateResponse classify(ClientClassificationRequest request)
     {
         try {
-            FileCollection fc = objects.getFileCollection(request.getArchiveId(), request.getObjectId());
-            return new TaskStateResponse(getEnvironmentsForObject(fc,
-                    request.isUpdateClassification(),
-                    request.isUpdateProposal(),
-                    request.isNoUpdate()));
+            if(request.getObjectId() != null) {
+                FileCollection fc = objects.getFileCollection(request.getArchiveId(), request.getObjectId());
+                return new TaskStateResponse(getEnvironmentsForObject(fc,
+                        request.isUpdateClassification(),
+                        request.isUpdateProposal(),
+                        request.isNoUpdate()));
+            }
+            else if(request.getUrl() != null && request.getFilename() != null)
+            {
+                return new TaskStateResponse(getEnvironmentsForObject(request.getUrl(), request.getFilename()));
+            }
+            else
+                throw new BadRequestException(Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity(new ErrorInformation("invalid request"))
+                        .build());
         } catch (BWFLAException e) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -136,6 +147,23 @@ public class ObjectClassification {
         }
     }
 
+
+    public String getEnvironmentsForObject(String url, String filename) throws BWFLAException {
+
+        ClassificationTask.ClassifyObjectRequest request = new ClassificationTask.ClassifyObjectRequest();
+        request.url = url;
+        request.filename = filename;
+        request.classification = this;
+        request.environments = environments;
+        request.metadata = metadata;
+        request.input = null;
+        request.userCtx = null;
+
+        if(authenticatedUser != null)
+            request.userCtx = authenticatedUser.getUsername();
+
+        return taskManager.submitTask(new ClassificationTask(request));
+    }
 
     public String getEnvironmentsForObject(FileCollection fc,
                                                          boolean forceCharacterization,

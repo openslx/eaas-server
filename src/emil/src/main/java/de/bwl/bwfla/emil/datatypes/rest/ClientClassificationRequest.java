@@ -24,6 +24,12 @@ public class ClientClassificationRequest extends JaxbType {
     @XmlElement(defaultValue = "false")
     private boolean noUpdate;
 
+    @XmlElement
+    private String url;
+
+    @XmlElement
+    private String filename;
+
     public String getArchiveId() {
         return archiveId;
     }
@@ -62,5 +68,13 @@ public class ClientClassificationRequest extends JaxbType {
 
     public void setNoUpdate(boolean noUpdate) {
         this.noUpdate = noUpdate;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getFilename() {
+        return filename;
     }
 }

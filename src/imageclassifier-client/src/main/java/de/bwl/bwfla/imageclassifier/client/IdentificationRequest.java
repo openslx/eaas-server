@@ -29,27 +29,36 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement
-public class IdentificationRequest
-{
-    public static final String MEDIATYPE_AS_JSON = "application/vnd.bwfla.imageclassifier.request.v1+json";
-    public static final String MEDIATYPE_AS_XML = "application/vnd.bwfla.imageclassifier.request.v1+xml";
-    
-	@XmlElement(name="fileCollection")
+public class IdentificationRequest {
+	public static final String MEDIATYPE_AS_JSON = "application/vnd.bwfla.imageclassifier.request.v1+json";
+	public static final String MEDIATYPE_AS_XML = "application/vnd.bwfla.imageclassifier.request.v1+xml";
+
+	@XmlElement(name = "fileCollection")
 	private FileCollection fileCollection;
-	
-	@XmlElement(name="policy_url")
+
+	@XmlElement(name = "fileUrl")
+	private String fileUrl;
+
+	@XmlElement(name = "fileName")
+	private String fileName;
+
+	@XmlElement(name = "policy_url")
 	private String policyUrl;
 
-	public IdentificationRequest()
-	{
+	public IdentificationRequest() {
 		this.fileCollection = null;
 		this.policyUrl = null;
 	}
-	
-	public IdentificationRequest(FileCollection fc, String policyUrl)
-	{
+
+	public IdentificationRequest(FileCollection fc, String policyUrl) {
 		this.fileCollection = fc;
 		this.policyUrl = policyUrl;
+	}
+
+	public IdentificationRequest(String fileUrl, String fileName)
+	{
+		this.fileUrl = fileUrl;
+		this.fileName = fileName;
 	}
 	
 	public String getPolicyUrl()
@@ -57,17 +66,15 @@ public class IdentificationRequest
 		return policyUrl;
 	}
 
-	public void setPolicyUrl(String url)
-	{
-		this.policyUrl = url;
-	}
-
-
 	public FileCollection getFileCollection() {
 		return fileCollection;
 	}
 
-	public void setFileCollection(FileCollection fileCollection) {
-		this.fileCollection = fileCollection;
+	public String getFileUrl() {
+		return fileUrl;
+	}
+
+	public String getFileName() {
+		return fileName;
 	}
 }

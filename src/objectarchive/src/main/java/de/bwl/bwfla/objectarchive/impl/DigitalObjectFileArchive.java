@@ -167,6 +167,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	private Path resolveTarget(String id, Drive.DriveType type) throws BWFLAException
 	{
+		if(type == null)
+			return null;
+
 		File objectDir = new File(localPath);
 		if(!objectDir.exists() && !objectDir.isDirectory())
 		{
@@ -237,7 +240,15 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	void importObjectFile(String objectId, FileCollectionEntry resource) throws BWFLAException
 	{
-		Path targetDir = resolveTarget(objectId, resource.getType());
+		Path targetDir;
+
+		if(resource.getType() != null)
+			targetDir= resolveTarget(objectId, resource.getType());
+		else if(resource.getResourceType() != null)
+		{
+			targetDir = resolveTarget(objectId, resource.getResourceType());
+		}
+		else throw new BWFLAException("could not determine drive/resource type of object");
 		
 		String fileName = resource.getLocalAlias();
 		if(fileName == null || fileName.isEmpty())
@@ -354,11 +365,18 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		Mets m = MetsUtil.createMets(fc.id, label);
 		for(FileCollectionEntry entry : fc.files) {
 			MetsUtil.FileTypeProperties properties = new MetsUtil.FileTypeProperties();
-			Path targetDir = resolveTarget(objectId, entry.getType());
-			String url = Paths.get(localPath).relativize(targetDir).toString();
+			Path targetDir = null;
+			if(entry.getType() != null)
+			 	targetDir = resolveTarget(objectId, entry.getType());
+			else if(entry.getResourceType() != null)
+				targetDir = resolveTarget(objectId, entry.getResourceType());
+			else
+				throw new BWFLAException("invalid file entry type");
 
+			String url = Paths.get(localPath).relativize(targetDir).toString();
+			log.warning(" local path url " + url);
 			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQId(): null;
-			properties.deviceId = entry.getType().toQid();
+			properties.deviceId = entry.getType() != null ? entry.getType().toQid() : null;
 
 			MetsUtil.addFile(m, url, properties);
 		}
@@ -543,8 +561,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 		MetsObject o = loadMetsData(objectId);
 		Mets m = MetsUtil.export(o.getMets(), getExportPrefix());
-		DigitalObjectMetadata md = new DigitalObjectMetadata(o.getMets());
-
+		DigitalObjectMetadata md = new DigitalObjectMetadata(m);
 
 		String thumb = null;
 		try {

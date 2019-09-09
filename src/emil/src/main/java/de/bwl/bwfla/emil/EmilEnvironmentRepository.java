@@ -685,7 +685,7 @@ public class EmilEnvironmentRepository {
 		for (EmilEnvironment e : envs) {
 			if (e.getParentEnvId() != null && e.getParentEnvId().equals(envId)) {
 				LOG.info("getChildren: found child " + e.getEnvId() + " for envId " + envId);
-				result.addAll(getChildren(e.getEnvId(), envs));
+				result.addAll(getChildren(e.getEnvId(), envs, userCtx));
 			}
 		}
 		if (result.size() == 0) {

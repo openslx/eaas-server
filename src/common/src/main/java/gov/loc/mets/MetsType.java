@@ -177,7 +177,7 @@ public class MetsType extends JaxbType {
     protected List<MdSecType> dmdSec;
     protected List<AmdSecType> amdSec;
     protected MetsType.FileSec fileSec;
-    @XmlElement(required = true)
+    // @XmlElement(required = true)
     protected List<StructMapType> structMap;
     protected MetsType.StructLink structLink;
     protected List<BehaviorSecType> behaviorSec;

@@ -55,6 +55,8 @@ public class ClassificationTask extends AbstractTask<Object> {
         public EmilEnvironmentRepository metadata;
         public ClassificationResult input;
         public FileCollection fileCollection;
+        public String url;
+        public String filename;
         public boolean noUpdate;
         public boolean forceProposal;
         public String userCtx;
@@ -130,6 +132,48 @@ public class ClassificationTask extends AbstractTask<Object> {
         return result;
     }
 
+    private ClassificationResult classifyObject(String url, String filename) throws BWFLAException {
+        try {
+
+            ClassificationResult response;
+
+            IdentificationRequest req = new IdentificationRequest(url, filename);
+            Identification<ClassificationEntry> id = this.imageClassifier.getClassification(req);
+
+            HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> data = id.getIdentificationData();
+            if(data == null)
+            {
+                LOG.warning("identification failed for objectID:" + filename );
+                return new ClassificationResult();
+            }
+
+            HashMap<String, ClassificationResult.IdentificationData> fileFormats = new HashMap<>();
+            HashMap<String, DiskType> mediaFormats = new HashMap<>();
+
+            Identification.IdentificationDetails<ClassificationEntry> details = data.get(filename);
+
+            // FIXME
+            List<ClassificationResult.FileFormat> fmts = details.getEntries().stream().map((ClassificationEntry ce) -> {
+                return new ClassificationResult.FileFormat(ce.getType(), ce.getTypeName(), ce.getCount(), ce.getFromDate(), ce.getToDate());
+            }).collect(Collectors.toList());
+
+            ClassificationResult.IdentificationData d = new ClassificationResult.IdentificationData();
+            d.setFileFormats(fmts);
+            fileFormats.put(filename, d);
+
+            if(details.getDiskType() != null)
+                mediaFormats.put(filename, details.getDiskType());
+
+            response = new ClassificationResult(filename, fileFormats, mediaFormats);
+
+            return response;
+        } catch (Throwable t) {
+            LOG.warning("classification failed: " + t.getMessage());
+            LOG.log(Level.SEVERE, t.getMessage(), t);
+            return new ClassificationResult();
+        }
+
+    }
 
     private ClassificationResult classifyObject(FileCollection fc) throws BWFLAException {
         try {
@@ -291,8 +335,18 @@ public class ClassificationTask extends AbstractTask<Object> {
         if(request.noUpdate)
             return result;
 
-        if(request.input == null || request.input.getMediaFormats().size() == 0)
-            request.input = classifyObject(request.fileCollection);
+        if(request.fileCollection != null) {
+            if (request.input == null || request.input.getMediaFormats().size() == 0)
+                request.input = classifyObject(request.fileCollection);
+        }
+        else if(request.url != null && request.filename != null)
+        {
+            request.input = classifyObject(request.url, request.filename);
+            return propose(request.input);
+        }
+        else {
+            throw new BWFLAException("invalid request");
+        }
 
         if(request.forceProposal || request.input.getEnvironmentList().size() == 0)
             result = propose(request.input);
