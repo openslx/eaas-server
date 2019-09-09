@@ -70,6 +70,7 @@ import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
+import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -270,7 +271,38 @@ public class Components {
         sessions.remove(session.getId());
         sessionStatsWriter.append(session);
     }
-    
+
+    ComponentResponse createComponent(ComponentRequest request) throws BWFLAException
+    {
+        ComponentResponse result;
+
+        final TaskStack cleanups = new TaskStack();
+        final List<EventObserver> observer = new ArrayList<>();
+
+        if (request.getClass().equals(MachineComponentRequest.class)) {
+            result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(ContainerComponentRequest.class)) {
+            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(SlirpComponentRequest.class)) {
+            result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(SocksComponentRequest.class)) {
+            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
+        }  else {
+            throw new BWFLAException("Invalid component request");
+        }
+
+        final String cid = result.getId();
+        final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
+        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
+
+        this.register(session);
+
+        // Submit a trigger for session cleanup
+        final Runnable trigger = new ComponentSessionCleanupTrigger(session, sessionExpirationTimeout);
+        scheduler.schedule(trigger, sessionExpirationTimeout.toMillis(), TimeUnit.MILLISECONDS);
+
+        return result;
+    }
     
     /**
      * Creates and starts a new component (e.g emulator) the EaaS framework.
@@ -296,35 +328,16 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request,
                                              @Context final HttpServletResponse response) {
-        ComponentResponse result;
 
-        final TaskStack cleanups = new TaskStack();
-        final List<EventObserver> observer = new ArrayList<>();
-
-        if (request.getClass().equals(MachineComponentRequest.class)) {
-            result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(ContainerComponentRequest.class)) {
-            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(SlirpComponentRequest.class)) {
-            result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(SocksComponentRequest.class)) {
-            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
-        }  else {
+        ComponentResponse result = null;
+        try {
+            result = createComponent(request);
+        } catch (BWFLAException e) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation("Invalid component request"))
+                    .entity(new ErrorInformation(e.getMessage()))
                     .build());
         }
-
-        final String cid = result.getId();
-        final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
-        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
-
-        this.register(session);
-
-        // Submit a trigger for session cleanup
-        final Runnable trigger = new ComponentSessionCleanupTrigger(session, sessionExpirationTimeout);
-        scheduler.schedule(trigger, sessionExpirationTimeout.toMillis(), TimeUnit.MILLISECONDS);
 
         response.setStatus(Response.Status.CREATED.getStatusCode());
         response.addHeader("Location", result.getId());
