@@ -13,7 +13,7 @@ import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.TaskManager;
-import de.bwl.bwfla.emil.utils.tasks.ClassificationTask;
+import de.bwl.bwfla.emil.tasks.ClassificationTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.imageclassifier.client.ImageClassifier;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;

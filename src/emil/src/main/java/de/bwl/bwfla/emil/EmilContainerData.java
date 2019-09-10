@@ -23,7 +23,7 @@ import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
-import de.bwl.bwfla.emil.utils.tasks.ImportContainerTask;
+import de.bwl.bwfla.emil.tasks.ImportContainerTask;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;

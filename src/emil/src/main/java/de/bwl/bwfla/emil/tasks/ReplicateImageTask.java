@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.utils.tasks;
+package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -13,7 +13,6 @@ import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;

@@ -1,11 +1,10 @@
-package de.bwl.bwfla.emil.utils.tasks;
+package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
-import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;

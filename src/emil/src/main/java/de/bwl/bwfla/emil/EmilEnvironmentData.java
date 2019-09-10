@@ -31,8 +31,8 @@ import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
-import de.bwl.bwfla.emil.utils.tasks.ImportImageTask;
-import de.bwl.bwfla.emil.utils.tasks.ReplicateImageTask;
+import de.bwl.bwfla.emil.tasks.ImportImageTask;
+import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emucomp.api.*;
 
 import com.google.gson.JsonIOException;
@@ -44,7 +44,7 @@ import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
-import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
+import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 
 @Path("EmilEnvironmentData")
 @ApplicationScoped

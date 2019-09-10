@@ -10,7 +10,7 @@ import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.TaskManager;
-import de.bwl.bwfla.emil.utils.tasks.ImportObjectTask;
+import de.bwl.bwfla.emil.tasks.ImportObjectTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;

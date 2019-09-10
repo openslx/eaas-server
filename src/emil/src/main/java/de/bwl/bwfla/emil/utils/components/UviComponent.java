@@ -1,14 +1,14 @@
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.utils.components;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
-import de.bwl.bwfla.api.emucomp.Component;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentWithExternalFilesRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.emil.datatypes.rest.UviComponentRequest;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import org.apache.tamaya.inject.api.Config;
 
@@ -23,9 +23,8 @@ import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 
-@Path("/uvi")
 @ApplicationScoped
-public class UVI {
+public class UviComponent {
 
     @Inject
     private Components components;
@@ -44,15 +43,25 @@ public class UVI {
     private BlobStoreClient blobStoreClient;
 
     @PostConstruct
-    public void init()
-    {
-        this.blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
+    public void init() {
+        try {
+            this.blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
+        } catch (BWFLAException e) {
+            e.printStackTrace();
+            throw new RuntimeException("Constructing web-services failed!", e);
+        }
     }
 
-    BlobHandle createAutostart(String filename, String applicationName) throws IOException, BWFLAException {
-        String autostart = "[autorun]\n\r" + "open=start " + filename;
-        File tmpfile = File.createTempFile("metadata.json", null, null);
-        Files.write(tmpfile.toPath(), autostart.getBytes(), StandardOpenOption.CREATE);
+    BlobHandle createAutostart(String filename, String applicationName) throws BWFLAException {
+        String autostart = "[autorun]\r\n" + "open=start " + filename;
+        File tmpfile = null;
+        try {
+            tmpfile = File.createTempFile("metadata.json", null, null);
+            Files.write(tmpfile.toPath(), autostart.getBytes(), StandardOpenOption.CREATE);
+        } catch (IOException e) {
+            e.printStackTrace();
+            throw new BWFLAException(e);
+        }
 
         BlobDescription blobDescription = new BlobDescription();
         blobDescription.setDataFromFile(tmpfile.toPath())
@@ -64,21 +73,25 @@ public class UVI {
         return blobstore.put(blobDescription);
     }
 
-    @Path("/")
-    public Response createUVIComponent(MachineComponentRequest request, url )
-    {
+    public MachineComponentRequest createUVIComponent(UviComponentRequest request) throws BWFLAException {
         ArrayList<ComponentWithExternalFilesRequest.InputMedium> media;
-        if(request.getInputMedia() == null)
-        {
-            media = new ArrayList<>();
-        }
 
-        BlobHandle blobHandle = createAutostart(filename, null);
+        BlobHandle blobHandle = createAutostart(request.getUviFilename(), null);
 
         ComponentWithExternalFilesRequest.InputMedium m = new ComponentWithExternalFilesRequest.InputMedium();
         m.setMediumType(MediumType.CDROM);
 
-        ComponentWithExternalFilesRequest.FileURL inputFile = new ComponentWithExternalFilesRequest.FileURL("copy", url, filename);
-        ComponentWithExternalFilesRequest.FileURL autoRun = new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false), "autorun.inf");
+        ComponentWithExternalFilesRequest.FileURL inputFile =
+                new ComponentWithExternalFilesRequest.FileURL("copy",
+                        request.getUviUrl(), request.getUviFilename());
+        ComponentWithExternalFilesRequest.FileURL autoRun =
+                new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
+                        "autorun.inf");
+
+        m.getExtFiles().add(inputFile);
+        m.getExtFiles().add(autoRun);
+
+        request.getInputMedia().add(m);
+        return (MachineComponentRequest)request;
     }
 }

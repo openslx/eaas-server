@@ -20,7 +20,6 @@
 package de.bwl.bwfla.emil;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
@@ -65,12 +64,10 @@ import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
-import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
-import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -80,13 +77,14 @@ import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
+import de.bwl.bwfla.emil.utils.components.ContainerComponent;
+import de.bwl.bwfla.emil.utils.components.UviComponent;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tamaya.inject.api.Config;
 
@@ -194,6 +192,12 @@ public class Components {
     private EmilObjectData objects;
 
     @Inject
+    private ContainerComponent containerHelper;
+
+    @Inject
+    private UviComponent uviHelper;
+
+    @Inject
     @AuthenticatedUser
     private UserContext authenticatedUser;
 
@@ -279,7 +283,11 @@ public class Components {
         final TaskStack cleanups = new TaskStack();
         final List<EventObserver> observer = new ArrayList<>();
 
-        if (request.getClass().equals(MachineComponentRequest.class)) {
+        if(request.getClass().equals(UviComponentRequest.class)) {
+            MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest)request);
+            result = createMachineComponent(machineComponentRequest, cleanups, observer);
+        }
+        else if (request.getClass().equals(MachineComponentRequest.class)) {
             result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(ContainerComponentRequest.class)) {
             result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
@@ -397,120 +405,6 @@ public class Components {
                             + e.getMessage(),
                     e);
         }
-    }
-
-    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
-        ArrayList<String> args = new ArrayList<String>();
-        ContainerMetadata metadata = new ContainerMetadata();
-        final String inputDir = "container-input";
-        final String outputDir = "container-output";
-        metadata.setDhcp(isDHCPenabled);
-        metadata.setTelnet(true);
-        metadata.setProcess("/bin/sh");
-        args.add("-c");
-        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
-        args.add("");
-
-        args.add("--output");
-        args.add("config.json");
-
-
-        if(requiresInputFiles) {
-            args.add("--mount");
-            args.add(getMountStr(inputDir, config.getInput(), true));
-        }
-        args.add("--mount");
-        args.add(getMountStr(outputDir, config.getOutputPath(), false));
-
-        if (config.getCustomSubdir() != null) {
-            args.add("--rootfs");
-            args.add("rootfs/" + config.getCustomSubdir());
-        }
-
-        // Add environment variables
-        if(config.getProcess().getEnvironmentVariables() != null) {
-            for (String env : config.getProcess().getEnvironmentVariables()) {
-                args.add("--env");
-                args.add(env);
-            }
-        }
-
-        // Add emulator's command
-        args.add("--");
-        for (String arg : config.getProcess().getArguments())
-            args.add(arg);
-
-        metadata.setArgs(args);
-
-        return metadata.jsonValueWithoutRoot(true);
-    }
-
-    private String getMountStr(String src, String dst, boolean isReadonly) throws BWFLAException {
-        if (src != null && dst != null) {
-            return src + ":" + dst + ":bind:" + (isReadonly ? "ro" : "rw");
-        } else {
-            throw new BWFLAException("src or dst is null! src:" + src + " dst:" + dst);
-        }
-    }
-
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
-        File tmpfile = File.createTempFile("metadata.json", null, null);
-        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
-
-        BlobDescription blobDescription = new BlobDescription();
-        blobDescription.setDataFromFile(tmpfile.toPath())
-                .setNamespace("random")
-                .setDescription("random")
-                .setName("metadata")
-                .setType(".json");
-
-        return blobstore.put(blobDescription);
-    }
-
-    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
-        if (inputMedia.size() != 1)
-            throw new BWFLAException("Size of Input drives cannot exceed 1");
-
-        ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
-        final FileSystemType fileSystemType = FileSystemType.EXT4;
-        int sizeInMb = medium.getSizeInMb();
-        if (sizeInMb <= 0)
-            sizeInMb = 1024;
-
-        final ImageDescription description = new ImageDescription()
-                .setMediumType(MediumType.HDD)
-                .setPartitionTableType(PartitionTableType.NONE)
-                .setPartitionStartBlock(0)
-                .setFileSystemType(fileSystemType)
-                .setLabel("eaas-job")
-                .setSizeInMb(sizeInMb);
-
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
-        final ImageContentDescription metadataEntry = new ImageContentDescription();
-        metadataEntry.setAction(ImageContentDescription.Action.COPY)
-                .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
-                .setName("metadata.json");
-        description.addContentEntry(metadataEntry);
-
-
-        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
-            final ImageContentDescription entry = new ImageContentDescription()
-                    .setAction(extfile.getAction())
-                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                    .setURL(new URL(extfile.getUrl()))
-                    .setSubdir("container-input");
-
-
-            if (extfile.getName() == null || extfile.getName().isEmpty())
-                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-            else
-                entry.setName(extfile.getName());
-
-            description.addContentEntry(entry);
-        }
-
-        return description;
     }
 
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
@@ -740,7 +634,7 @@ public class Components {
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
+                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

@@ -1,16 +1,31 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 
 @XmlType(name = "uvi")
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class UviComponentRequest extends MachineComponentRequest {
 
-    private String url;
-    
-    private String filename;
+    @XmlElement
+    private String uviUrl;
+
+    @XmlElement
+    private String uviFilename;
+
+    public String getUviUrl() {
+        return uviUrl;
+    }
+
+    public void setUviUrl(String uviUrl) {
+        this.uviUrl = uviUrl;
+    }
+
+    public String getUviFilename() {
+        return uviFilename;
+    }
+
+    public void setUviFilename(String uviFilename) {
+        this.uviFilename = uviFilename;
+    }
 }
