@@ -654,7 +654,7 @@ public class EmilEnvironmentRepository {
 
 	public List<EmilEnvironment> getEmilEnvironments(String userCtx)
 	{
-		final Stream<EmilEnvironment> all = loadEmilEnvironments(userCtx);
+		final Stream<EmilEnvironment> all = loadEmilEnvironments(getCollectionCtx(userCtx));
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(e -> {
@@ -668,10 +668,7 @@ public class EmilEnvironmentRepository {
 
 	public List<EmilEnvironment> getEmilEnvironments() {
 
-		String userCtx = null;
-		if(authenticatedUser != null)
-			userCtx = authenticatedUser.getUsername();
-
+		String userCtx = getUserCtx();
 		return getEmilEnvironments(userCtx);
 	}
 
