@@ -190,26 +190,16 @@ public class EmilEnvironmentRepository {
 		return db.count(MetadataCollection.PUBLIC, filter);
 	}
 
-
-	private Stream<EmilEnvironment> loadEmilEnvironments() {
-		return loadEmilEnvironments(getCollectionCtx());
-	}
-
-	private Stream<EmilEnvironment> loadEmilEnvironments(String collectionCtx) {
-		Stream<EmilEnvironment> all = db.find(collectionCtx, new MongodbEaasConnector.FilterBuilder(), "type");
+	private Stream<EmilEnvironment> loadEmilEnvironments(String userCtx) {
+		Stream<EmilEnvironment> all = db.find(getCollectionCtx(userCtx), new MongodbEaasConnector.FilterBuilder(), "type");
 		all = Stream.concat(all, db.find(MetadataCollection.PUBLIC, new MongodbEaasConnector.FilterBuilder(), "type"));
 		all = Stream.concat(all, db.find(MetadataCollection.REMOTE, new MongodbEaasConnector.FilterBuilder(), "type"));
 		return all;
 	}
 
-	private List<EmilObjectEnvironment> loadEmilObjectEnvironments() throws BWFLAException {
-		String userCtx = getUserCtx();
-		return loadEmilObjectEnvironments(userCtx);
-	}
-
 	private List<EmilObjectEnvironment> loadEmilObjectEnvironments(String userCtx) throws BWFLAException {
 		//TODO: refactor to stream
-		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(userCtx,
+		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(getCollectionCtx(userCtx),
 				EmilObjectEnvironment.class.getCanonicalName(), "type");
 
 		result.addAll(db.getRootlessJaxbObjects(MetadataCollection.PUBLIC,
@@ -654,7 +644,7 @@ public class EmilEnvironmentRepository {
 
 	public List<EmilEnvironment> getEmilEnvironments(String userCtx)
 	{
-		final Stream<EmilEnvironment> all = loadEmilEnvironments(getCollectionCtx(userCtx));
+		final Stream<EmilEnvironment> all = loadEmilEnvironments(userCtx);
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(e -> {
