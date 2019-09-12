@@ -1,5 +1,5 @@
 imagearchive:
-    default_backend_name: default
+    default_backend_name: public
     backends:
         defaults:
             all:
