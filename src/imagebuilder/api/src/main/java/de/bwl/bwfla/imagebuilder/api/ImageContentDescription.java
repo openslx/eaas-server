@@ -254,8 +254,8 @@ public class ImageContentDescription
 	public static void checkName(String name)
 	{
 		ImageContentDescription.check(name, "Image's name");
-		if (!name.matches(NAME_PATTERN))
-			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
+//		if (!name.matches(NAME_PATTERN))
+//			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
 	}
 
 	@XmlRootElement
