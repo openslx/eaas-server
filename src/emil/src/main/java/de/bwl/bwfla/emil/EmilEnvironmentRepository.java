@@ -307,15 +307,15 @@ public class EmilEnvironmentRepository {
 
 	public EmilEnvironment getEmilEnvironmentById(String envid)
 	{
-		return getEmilEnvironmentById(getCollectionCtx(), envid, getUserCtx());
+		return getEmilEnvironmentById(getUserCtx(), envid, getUserCtx());
 	}
 
-	public EmilEnvironment getEmilEnvironmentById(String collection, String envid, String userCtx) {
+	public EmilEnvironment getEmilEnvironmentById(String userCtx, String envid, String userCtx) {
 		if (envid == null)
 			return null;
 
 		try {
-			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
+			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(userCtx), "type", envid, "envId");
 
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				return getSharedEmilEnvironmentById(envid);
@@ -362,7 +362,7 @@ public class EmilEnvironmentRepository {
 			String lastPrivateChild = env.getEnvId();
 			while(parent != null)
 			{
-				EmilEnvironment p = getEmilEnvironmentById(collection, parent, username);
+				EmilEnvironment p = getEmilEnvironmentById(username, parent, username);
 				if(p == null)
 				{
 					throw new BWFLAException("parent image " + parent + " not found");
