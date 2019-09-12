@@ -53,7 +53,7 @@ public class UviComponent {
     }
 
     BlobHandle createAutostart(String filename, String applicationName) throws BWFLAException {
-        String autostart = "[autorun]\r\n" + "open=start " + filename;
+        String autostart = "[autorun]\r\n" + "open=start " + "\"" + filename + "\"";
         File tmpfile = null;
         try {
             tmpfile = File.createTempFile("metadata.json", null, null);
