@@ -9,7 +9,9 @@ import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentWithExternalFilesRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.UviComponentRequest;
+import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.MediumType;
+import de.bwl.bwfla.emucomp.api.PartitionTableType;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
@@ -79,7 +81,14 @@ public class UviComponent {
         BlobHandle blobHandle = createAutostart(request.getUviFilename(), null);
 
         ComponentWithExternalFilesRequest.InputMedium m = new ComponentWithExternalFilesRequest.InputMedium();
-        m.setMediumType(MediumType.CDROM);
+        if(request.isUviWriteable())
+        {
+            m.setMediumType(MediumType.HDD);
+            m.setPartitionTableType(PartitionTableType.MBR);
+            m.setFileSystemType(FileSystemType.FAT32);
+        }
+        else
+            m.setMediumType(MediumType.CDROM);
 
         ComponentWithExternalFilesRequest.FileURL inputFile =
                 new ComponentWithExternalFilesRequest.FileURL("copy",
