@@ -63,10 +63,10 @@ public class Machine
 //		EmucompSingleton.executor.submit(task);
 	}
 	
-	public void stop(String componentId) throws BWFLAException
+	public String stop(String componentId) throws BWFLAException
 	{
 		final EmulatorComponent emul = nodeManager.getComponentById(componentId, EmulatorComponent.class);
-		emul.stop();
+		return emul.stop();
 		
 //		Runnable task = new Runnable()
 //		{

@@ -57,6 +57,7 @@ import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.SessionOptions;
@@ -68,6 +69,7 @@ import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -1037,6 +1039,21 @@ public class Components {
         }
     }
 
+    @XmlRootElement
+    public class ResultUrl extends JaxbType {
+
+        @XmlElement
+        private String url;
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+    }
+
     /**
      * Stops a machine component.
      *
@@ -1049,7 +1066,7 @@ public class Components {
     @Secured({Role.PUBLIC})
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response stop(@PathParam("componentId") String componentId,
+    public ResultUrl stop(@PathParam("componentId") String componentId,
                              @Context HttpServletResponse servletResponse) {
         try {
             final ComponentSession session = sessions.get(componentId);
@@ -1058,16 +1075,20 @@ public class Components {
             final ComponentRequest request = session.getRequest();
             if (request instanceof MachineComponentRequest) {
                 final Machine machine = componentClient.getMachinePort(eaasGw);
-                machine.stop(componentId);
+                String url = machine.stop(componentId);
+                LOG.severe(url);
+                ResultUrl result = new ResultUrl();
+                result.url = url;
+                return result;
             }
             else if (request instanceof ContainerComponentRequest) {
                 final Container container = componentClient.getContainerPort(eaasGw);
                 container.stopContainer(componentId);
             }
         } catch (BWFLAException e) {
-            return Emil.errorMessageResponse("stop failed: " + e.getMessage());
+            return null;
         }
-        return Emil.successMessageResponse("stopped component " + componentId);
+        return null;
     }
 
     @GET

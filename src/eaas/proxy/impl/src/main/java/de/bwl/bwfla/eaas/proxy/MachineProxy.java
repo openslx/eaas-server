@@ -65,9 +65,9 @@ public class MachineProxy implements Machine
     }
 
     @Override
-    public void stop(String componentId) throws BWFLAException
+    public String stop(String componentId) throws BWFLAException
     {
-        getMachine(componentId).stop(componentId);
+        return getMachine(componentId).stop(componentId);
     }
 
 	@Override
