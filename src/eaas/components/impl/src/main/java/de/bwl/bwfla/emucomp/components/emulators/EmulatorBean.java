@@ -111,6 +111,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	public boolean isSnapshotEnabled = false;
 
 	@Inject
+	@Config("emucomp.enable_pulseaudio")
+	private boolean isPulseAudioEnabled = false;
+
+	@Inject
 	@Config("emucomp.blobstore_soap")
 	private String blobStoreAddressSoap = null;
 	@Inject
@@ -238,8 +242,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public boolean isPulseAudioEnabled()
 	{
-		// TODO: make this configurable!
-		return true;
+		return isPulseAudioEnabled;
 	}
 
 	public boolean isLocalModeEnabled()
