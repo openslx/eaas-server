@@ -22,9 +22,10 @@ package de.bwl.bwfla.common.exceptions;
 import de.bwl.bwfla.common.utils.EaasBuildInfo;
 
 import javax.ejb.ApplicationException;
+import javax.xml.bind.annotation.XmlRootElement;
 
 
-
+@XmlRootElement
 @ApplicationException
 public class BWFLAException extends Exception
 {
