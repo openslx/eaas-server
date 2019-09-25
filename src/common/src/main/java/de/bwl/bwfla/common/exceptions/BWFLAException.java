@@ -32,7 +32,7 @@ public class BWFLAException extends Exception
 
 	private static String getBuildHeader()
 	{
-		return "(build " + EaasBuildInfo.getVersion() +"): ";
+		return " (BUILD: " + EaasBuildInfo.getVersion() + ")";
 	}
 
 	public BWFLAException() {
@@ -40,11 +40,11 @@ public class BWFLAException extends Exception
 	}
 
 	public BWFLAException(String message) {
-		super(getBuildHeader() + message);
+		super(message + getBuildHeader());
 	}
 	
 	public BWFLAException(String message, Throwable cause) {
-		super(getBuildHeader() + message, cause);
+		super(message + getBuildHeader(), cause);
 	}
 	
 	public BWFLAException(Throwable cause) {
