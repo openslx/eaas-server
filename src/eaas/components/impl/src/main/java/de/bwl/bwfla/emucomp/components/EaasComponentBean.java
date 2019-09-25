@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.emucomp.components;
 
+import de.bwl.bwfla.common.logging.PrefixLogger;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -30,18 +32,17 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 
 public abstract class EaasComponentBean extends AbstractEaasComponent 
 {
-	protected final Logger LOG;
+	protected final PrefixLogger LOG;
 	private final Path workdir;
 	
 	protected EaasComponentBean()
 	{
-		LOG = Logger.getLogger(this.getClass().getName());
+		LOG = new PrefixLogger(this.getClass().getSimpleName());
 
 		// Create component's working directory
 		try {
@@ -58,6 +59,14 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 		catch (IOException error) {
 			throw new UncheckedIOException("Creating working directory failed!", error);
 		}
+	}
+
+	@Override
+	public void setComponentId(String id)
+	{
+		super.setComponentId(id);
+
+		LOG.getContext().add("id", id);
 	}
 
 	public Path getWorkingDir()
@@ -85,11 +94,11 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 			stream.sorted(Comparator.reverseOrder())
 					.forEach(deleter);
 
-			LOG.info("Working directory for component " + this.getComponentId() + " removed: " + workdir.toString());
+			LOG.info("Working directory removed: " + workdir.toString());
 
 		}
 		catch (Exception error) {
-			String message = "Deleting working directory for component " + this.getComponentId() + " failed!\n";
+			String message = "Deleting working directory failed!\n";
 			LOG.log(Level.WARNING, message, error);
 		}
 	}

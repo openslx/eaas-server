@@ -499,8 +499,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		final String compid = this.getComponentId();
-		LOG.info("Emulation session '" + compid + "' initialized in " + emuBeanMode.name() + " mode.");
-		LOG.info("Working directory for session '" + compid + "' created at: " + this.getWorkingDir());
+		LOG.info("Emulation session initialized in " + emuBeanMode.name() + " mode.");
+		LOG.info("Working directory created at: " + this.getWorkingDir());
 		emuBeanState.update(EmuCompState.EMULATOR_READY);
 	}
 
@@ -572,7 +572,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		emuRunner.printStdErr();
 		emuRunner.cleanup();
 
-		LOG.info("EmulatorBean for session " + this.getComponentId() + " destroyed.");
+		LOG.info("EmulatorBean destroyed.");
 
 		// Destroy base class!
 		super.destroy();
