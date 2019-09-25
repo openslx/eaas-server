@@ -602,8 +602,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 		catch(Throwable error) {
 			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			LOG.log(Level.SEVERE, error.getMessage(), error);
-			throw new BWFLAException(error);
+			LOG.log(Level.SEVERE, "Starting emulator failed!", error);
+			throw new BWFLAException("Starting emulator failed!", error);
 		}
 	}
 
@@ -1921,6 +1921,18 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return true;
 	}
 
+	private void ensureEmuCompState(EmuCompState expstate, String msgsuffix) throws BWFLAException
+	{
+		if (emuBeanState.get() != expstate)
+			throw new BWFLAException("Expected state changed, abort waiting for " + msgsuffix +  "!");
+	}
+
+	private void ensureEmulatorRunning(String msgsuffix) throws BWFLAException
+	{
+		if (!emuRunner.isProcessRunning())
+			throw new BWFLAException("Emulator failed, abort waiting for " + msgsuffix +  "!");
+	}
+
 	private boolean waitForReadyNotification(int expevent, String message, int timeout, EmuCompState expstate)
 	{
 		LOG.info(message);
@@ -1933,6 +1945,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				isMsgAvailable = ctlMsgReader.read(waittime);
 				if (isMsgAvailable)
 					break;
+
+				this.ensureEmulatorRunning("notification");
 
 				if (emuBeanState.get() != expstate) {
 					LOG.warning("Expected state changed, abort waiting for notification!");
@@ -1988,11 +2002,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				// Ignore it!
 			}
 
-			if (emuBeanState.get() != expstate) {
-				final String message = "Expected state changed, abort waiting for emulator's control-socket!";
-				LOG.warning(message);
-				throw new BWFLAException(message);
-			}
+			final String msgsuffix = "emulator's control-socket";
+			this.ensureEmuCompState(expstate, msgsuffix);
+			this.ensureEmulatorRunning(msgsuffix);
 		}
 
 		emuBeanState.update(EmuCompState.EMULATOR_FAILED);
@@ -2044,11 +2056,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				// Ignore it!
 			}
 
-			if (emuBeanState.get() != expstate) {
-				final String message = "Expected state changed, abort waiting for path!";
-				LOG.warning(message);
-				throw new BWFLAException(message);
-			}
+			final String msgsuffix = "path";
+			this.ensureEmuCompState(expstate, msgsuffix);
+			this.ensureEmulatorRunning(msgsuffix);
 		}
 
 		throw new BWFLAException("Path '" + path.toString() +"' does not exist!");
