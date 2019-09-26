@@ -1,6 +1,8 @@
 package de.bwl.bwfla.common.utils;
 
 import java.io.*;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.zip.ZipEntry;
@@ -15,8 +17,13 @@ import org.apache.commons.io.IOUtils;
 public abstract class Zip32Utils
 {
 	private static final Logger	LOG	= Logger.getLogger(Zip32Utils.class.getName());
-	
+
 	public static void zip(File zipFile, File src)
+	{
+		zip(zipFile, src, new HashSet<>());
+	}
+
+	public static void zip(File zipFile, File src, Set<String> exclude)
 	{
 		if(zipFile.exists())
 		{
@@ -28,8 +35,11 @@ public abstract class Zip32Utils
 		{
 			if(src.isDirectory())
 			{
-				for(File fl: src.listFiles())
+				for(File fl: src.listFiles()) {
+					if(exclude.contains(fl.getName()))
+						continue;
 					Zip32Utils.addToZip("", fl, zip);
+				}
 			}
 			else
 			{
