@@ -39,6 +39,7 @@
 				<configuration>
 					<failOnNoGitDirectory>false</failOnNoGitDirectory>
 					<commitIdGenerationMode>flat</commitIdGenerationMode>
+					<abbrevLength>10</abbrevLength>
 					<gitDescribe>
 						<skip>true</skip>
 					</gitDescribe>
