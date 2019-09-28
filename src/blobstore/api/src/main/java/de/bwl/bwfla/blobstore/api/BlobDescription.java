@@ -115,6 +115,9 @@ public class BlobDescription
 
 	public BlobDescription setType(String type)
 	{
+		if(type == null)
+			return this;
+
 		BlobDescription.checkType(type);
 		this.type = type;
 		return this;

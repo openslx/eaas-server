@@ -121,6 +121,9 @@ public class BlobStoreEntry
 
 	public BlobStoreEntry setType(String type)
 	{
+		if(type == null)
+			return this;
+
 		Blob.checkType(type);
 		this.type = type;
 		return this;

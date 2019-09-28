@@ -105,7 +105,9 @@ public class BlobStore
 			final BlobHandle handle = BlobStore.toBlobHandle(request, namespace, id);
 			final Blob blob = backend.get(handle);
 
-			final String filename = ((blob.hasName()) ? blob.getName() : "output") + blob.getType();
+			String filename = ((blob.hasName()) ? blob.getName() : "output");
+			if(blob.getType() != null)
+				filename += blob.getType();
 			final long length = (padded) ? HttpUtils.computeBlockDeviceLength(blob.getSize()) : blob.getSize();
 			final boolean sendBlobData = request.getMethod().contentEquals("GET");
 
