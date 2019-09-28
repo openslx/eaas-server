@@ -342,7 +342,38 @@ public class Binding extends AbstractDataResource {
             }
             throw new IllegalArgumentException(v);
         }
-        
+
+        public static ResourceType fromQID(String qid)
+        {
+            switch(qid)
+            {
+                case "Q82753":
+                    return FILE;
+                case "Q136218":
+                    return ZIP;
+                case "Q283579":
+                    return TAR;
+                default:
+                    System.out.println("unknow qid " + qid);
+                return null;
+            }
+        }
+
+        public String toQID() {
+            switch (this)
+            {
+                case FILE:
+                    return "Q82753";
+                case ZIP:
+                    return "Q136218";
+                case TAR:
+                    return "Q283579";
+
+                default:
+                    return null;
+            }
+        }
+
         public String value() {
             return value;
         }

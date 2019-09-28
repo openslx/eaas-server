@@ -322,5 +322,18 @@ public class Drive
                     return null;
             }
         }
+
+        public String toQID() {
+            switch(this) {
+                case CDROM:
+                    return "Q495265";
+                case FLOPPY:
+                    return "Q493576";
+                default:
+                    return null;
+            }
+        }
+
+
     }
 }
