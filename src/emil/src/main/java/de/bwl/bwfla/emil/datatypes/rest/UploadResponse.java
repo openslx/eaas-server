@@ -7,25 +7,26 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.ArrayList;
+import java.util.List;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class UploadFileResponse extends EmilResponseType {
+public class UploadResponse extends EmilResponseType {
 
     @XmlElement(required = true)
-    String userDataUrl;
+    private List<String> uploads;
 
-    public UploadFileResponse(BWFLAException e) {
+    public UploadResponse(BWFLAException e) {
         super(e);
     }
 
-    public UploadFileResponse() {}
+    public UploadResponse() {}
 
-    public String getUserDataUrl() {
-        return userDataUrl;
-    }
+    public List<String> getUploads() {
+        if(uploads == null)
+            uploads = new ArrayList<>();
 
-    public void setUserDataUrl(String userDataUrl) {
-        this.userDataUrl = userDataUrl;
+        return uploads;
     }
 }

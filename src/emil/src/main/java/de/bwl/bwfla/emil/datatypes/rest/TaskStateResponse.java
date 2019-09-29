@@ -2,6 +2,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import de.bwl.bwfla.api.objectarchive.TaskState;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -21,6 +22,9 @@ public class TaskStateResponse extends EmilResponseType{
 
     @XmlElement(required = false)
     private Map<String, String> userData;
+
+    @XmlElement
+    private String object;
 
     public TaskStateResponse(TaskState objArchiveTaskState)
     {
@@ -64,5 +68,10 @@ public class TaskStateResponse extends EmilResponseType{
 
     public void setUserData(Map<String, String> userData) {
         this.userData = userData;
+    }
+
+    public void setObject(JaxbType object)
+    {
+        this.object = object.jsonValueWithoutRoot(false);
     }
 }

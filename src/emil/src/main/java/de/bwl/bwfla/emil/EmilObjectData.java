@@ -11,7 +11,8 @@ import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
-import de.bwl.bwfla.emucomp.api.Drive.DriveType;
+import de.bwl.bwfla.emil.utils.TaskManager;
+import de.bwl.bwfla.emil.tasks.ImportObjectTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
@@ -56,11 +57,18 @@ public class EmilObjectData extends EmilRest {
 	@Config(value="commonconf.serverdatadir")
 	private String serverdatadir;
 
-	private static final String tmpArchiveDir = "emil-temp-objects";
-	private static final String tmpArchiveName = "emil-temp-objects";
+	@Inject
+	private TaskManager taskManager;
+
 	private static Set<String> objArchives;
 
 	private final String USER_ARCHIVE_PREFIX = "user_archive";
+
+	static private ObjectArchiveHelper objHelper;
+
+	@Inject
+	@Config(value = "ws.objectarchive")
+	private String objectArchive;
 
 	@Inject
 	@Config(value="objectarchive.userarchive")
@@ -68,9 +76,11 @@ public class EmilObjectData extends EmilRest {
 
 	@PostConstruct
     private void init() {
+
+		objHelper = new ObjectArchiveHelper(objectArchive);
         swHelper = new SoftwareArchiveHelper(softwareArchive);
 		try {
-			objArchives = new HashSet<>(archive.objects().getArchives());
+			objArchives = new HashSet<>(objHelper.getArchives());
 		} catch (BWFLAException e) {
 			e.printStackTrace();
 		}
@@ -83,7 +93,7 @@ public class EmilObjectData extends EmilRest {
 	public Response sync()
 	{
 		try {
-			archive.objects().sync();
+			objHelper.sync();
 		} catch (BWFLAException e) {
 			return Emil.internalErrorResponse(e);
 		}
@@ -101,7 +111,7 @@ public class EmilObjectData extends EmilRest {
 			return new TaskStateResponse(new BWFLAException("invalid arguments"));
 		
 		try {
-			return new TaskStateResponse(archive.objects().sync(req.getArchive(), req.getObjectIDs()));
+			return new TaskStateResponse(objHelper.sync(req.getArchive(), req.getObjectIDs()));
 		} catch (BWFLAException e) {
 			return new TaskStateResponse(e);
 		}
@@ -114,7 +124,7 @@ public class EmilObjectData extends EmilRest {
 	public TaskStateResponse getObjectImportTaskState(@QueryParam("taskId") String taskId)
 	{
 		try {
-			return new TaskStateResponse(archive.objects().getTaskState(taskId));
+			return new TaskStateResponse(objHelper.getTaskState(taskId));
 		} catch (BWFLAException e) {
 			return new TaskStateResponse(e);
 		}
@@ -147,7 +157,7 @@ public class EmilObjectData extends EmilRest {
 		}
 
 		try {
-			List<String> objects = archive.objects().getObjectList(archiveId);
+			List<String> objects = objHelper.getObjectList(archiveId);
 			if(objects == null) {
 				LOG.warning("objects null");
 				return Response.status(Response.Status.BAD_REQUEST).entity("Objects are null").build();
@@ -161,7 +171,7 @@ public class EmilObjectData extends EmilRest {
 				if(software != null)
 					continue;
 
-				DigitalObjectMetadata md = archive.objects().getObjectMetadata(archiveId, id);
+				DigitalObjectMetadata md = objHelper.getObjectMetadata(archiveId, id);
 				ObjectListItem item = new ObjectListItem(id);
 				item.setTitle(md.getTitle());
 				item.setArchiveId(archiveId);
@@ -205,7 +215,7 @@ public class EmilObjectData extends EmilRest {
 		}
 
 		try {
-			archive.objects().delete(archiveId, objectId);
+			objHelper.delete(archiveId, objectId);
 			return Response.status(Response.Status.OK).build();
 		}
 		catch (BWFLAException e)
@@ -229,9 +239,7 @@ public class EmilObjectData extends EmilRest {
 	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public MediaDescriptionResponse mediaDescription(@PathParam("objectId") String objectId,
-												     @PathParam("objectArchive") String archiveId,
-													 @QueryParam("updateClassification") @DefaultValue("false") boolean updateClassification,
-													 @QueryParam("updateProposal") @DefaultValue("false") boolean updateProposal)
+												     @PathParam("objectArchive") String archiveId)
 	{
 		if(archiveId == null || archiveId.equals("default")) {
 			try {
@@ -243,62 +251,20 @@ public class EmilObjectData extends EmilRest {
 
 		MediaDescriptionResponse resp = new MediaDescriptionResponse();
 		try {
-			String chosenObjRef = null;
+			FileCollection fc = null;
 			try {
-				chosenObjRef = archive.getFileCollectionForObject(archiveId, objectId);
+				fc = getFileCollection(archiveId, objectId);
 			} catch (BWFLAException e) {
 				return resp;
 			}
 
-			FileCollection fc = FileCollection.fromValue(chosenObjRef);
 			resp.setMediaItems(fc);
-			resp.setMetadata(archive.objects().getObjectMetadata(archiveId, objectId));
-			resp.setMetsdata(archive.objects().getMetsdata(archiveId, objectId));
-
-			resp.setObjectEnvironments(archive.getEnvironmentsForObject(archiveId, objectId, updateClassification, updateProposal));
+			resp.setMetadata(objHelper.getObjectMetadata(archiveId, objectId));
 			return resp;
 		}
-		catch (BWFLAException | JAXBException exception) {
+		catch (BWFLAException exception) {
 			return new MediaDescriptionResponse(new BWFLAException(exception));
 		}
-	}
-
-	private static String partToString(List<InputPart> partList) throws BWFLAException, IOException {
-		if(partList.size() == 0)
-			throw new BWFLAException("partList empty");
-
-		InputPart part = partList.get(0);
-		return part.getBodyAsString();
-
-	}
-
-	@Secured({Role.RESTRCITED})
-	@POST
-	@Path("/pushUpload")
-	@Consumes(MediaType.APPLICATION_JSON)
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response pushUpload(UploadObjectRequest req)
-	{
-		String objId = req.getObjectId();
-		String archive = req.getArchive();
-		if(archive ==  null)
-			archive = "default";
-		try {
-			archive = manageUserCtx(archive);
-		} catch (BWFLAException e) {
-			return Emil.errorMessageResponse(e.getMessage());
-		}
-
-		ObjectArchiveHelper localhelper = new ObjectArchiveHelper("http://localhost:8080");
-		try {
-			ObjectFileCollection object = localhelper.getObjectHandle(tmpArchiveName, objId);
-			this.archive.objects().importObject(archive, object);
-			localhelper.delete(tmpArchiveName, objId);
-		} catch (BWFLAException e) {
-			e.printStackTrace();
-		}
-
-		return Emil.successMessageResponse("done");
 	}
 
 	@Secured({Role.RESTRCITED})
@@ -311,13 +277,13 @@ public class EmilObjectData extends EmilRest {
 
 			String defaultArchive = manageUserCtx("default");
 
-			objArchives = new HashSet<>(archive.objects().getArchives());
+			objArchives = new HashSet<>(objHelper.getArchives());
 			List<String> archives = objArchives.stream().filter(
 					e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(defaultArchive))
 			).filter(
 					e -> !e.equals("default")
 			).filter(
-					e -> !(!defaultArchive.equals("default") && e.equals("zero conf")) // remove zero conf archive is usercontext is available
+					e -> !(!defaultArchive.equals("default") && e.equals("zero conf")) // remove zero conf archive if usercontext is available
 			).collect(Collectors.toList());
 			ObjectArchivesResponse response = new ObjectArchivesResponse();
 			response.setArchives(archives);
@@ -327,106 +293,56 @@ public class EmilObjectData extends EmilRest {
 		}
 	}
 
-
 	@Secured({Role.RESTRCITED})
 	@POST
-	@Path("/upload")
-	@Consumes("multipart/form-data")
-	public Response upload(MultipartFormDataInput input)
+	@Path("/import")
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public TaskStateResponse importObject(ImportObjectRequest req)
 	{
-		String fileName = null;
-		String objectId = null;
-		String mediaType = null;
-		InputStream inputFile =  null;
-
-		if(serverdatadir == null)
-			return Emil.errorMessageResponse("invalid configuration");
-
-		File tempObjectPath = new File(serverdatadir, tmpArchiveDir);
-		if(!tempObjectPath.exists())
-		{
-			if(!tempObjectPath.mkdirs())
-				return Emil.errorMessageResponse("unable to create " + tempObjectPath);
-		}
-
-		Map<String, List<InputPart>> uploadForm = input.getFormDataMap();
-		List<InputPart> inputPartsFiles = uploadForm.get("file");
-		List<InputPart> metadataPart = uploadForm.get("mediaType");
-		List<InputPart> objectIdPart = uploadForm.get("objectId");
-
-		if(inputPartsFiles == null || metadataPart == null || objectIdPart == null)
-			return Emil.errorMessageResponse("invalid form data");
-
-		for (InputPart inputPart : inputPartsFiles) {
-
+		String archiveId = req.getObjectArchive();
+		if(archiveId == null || archiveId.equals("default")) {
 			try {
-				MultivaluedMap<String, String> header = inputPart.getHeaders();
-				fileName = getFileName(header);
-				if(fileName == null)
-					fileName = UUID.randomUUID().toString();
-				fileName = fileName.replaceAll("[^a-zA-Z0-9\\.\\-]", "_");
-
-				inputFile = inputPart.getBody(InputStream.class,null);
-			} catch (IOException e) {
-				return Emil.internalErrorResponse(e);
+				archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				archiveId = "default";
 			}
 		}
 
-		try {
-			mediaType = partToString(metadataPart);
-			objectId = partToString(objectIdPart);
-		}
-		catch (Exception e)
-		{
-			return Emil.internalErrorResponse(e);
-		}
-
-		File objectDir = new File(tempObjectPath, objectId);
-		if(!objectDir.exists())
-			objectDir.mkdirs();
-
-		File targetDir = new File(objectDir, mediaType);
-		if(!targetDir.exists())
-			targetDir.mkdirs();
-
-		File target = new File(targetDir, fileName);
-		try (OutputStream outputStream = new FileOutputStream(target)) {
-			IOUtils.copy(inputFile, outputStream);
-		}
-		catch (Exception e)
-		{
-			return Emil.internalErrorResponse(e);
-		}
-
-		return Emil.successMessageResponse("uploadFile is called, Uploaded file name : " + fileName);
+		return new TaskStateResponse(taskManager.submitTask(new ImportObjectTask(req, archiveId, objHelper)));
 	}
 
-	private String getFileName(MultivaluedMap<String, String> header) {
-
-		String[] contentDisposition = header.getFirst("Content-Disposition").split(";");
-
-		for (String filename : contentDisposition) {
-			if ((filename.trim().startsWith("filename"))) {
-
-				String[] name = filename.split("=");
-
-				String finalFileName = name[1].trim().replaceAll("\"", "");
-				return finalFileName;
-			}
-		}
-		return "unknown";
-	}
 
 	private String manageUserCtx(String archiveId) throws BWFLAException {
 		if(authenticatedUser != null && authenticatedUser.getUsername() != null) {
 			LOG.info("got user context: " + authenticatedUser.getUsername());
 			archiveId = USER_ARCHIVE_PREFIX + authenticatedUser.getUsername();
 			if (!objArchives.contains(archiveId)) {
-				archive.objects().registerUserArchive(archiveId);
-				objArchives = new HashSet<>(archive.objects().getArchives());
+				objHelper.registerUserArchive(archiveId);
+				objArchives = new HashSet<>(objHelper.getArchives());
 			}
 			return USER_ARCHIVE_PREFIX + authenticatedUser.getUsername();
 		}
 		return archiveId;
+	}
+
+	FileCollection getFileCollection(String archiveId, String objectId)
+			throws  BWFLAException {
+		if(archiveId == null || archiveId.equals("default")) {
+			try {
+				archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				archiveId = "default";
+			}
+		}
+
+		FileCollection fc = objHelper.getObjectReference(archiveId, objectId);
+		if (fc == null)
+			throw new BWFLAException("Returned FileCollection is null for '" + archiveId + "/" + objectId + "'!");
+		return fc;
+	}
+
+	ObjectArchiveHelper helper() {
+		return objHelper;
 	}
 }

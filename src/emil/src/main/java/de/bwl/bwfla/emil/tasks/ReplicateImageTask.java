@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.utils.tasks;
+package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;

@@ -24,7 +24,6 @@ import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
-import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.classification.ArchiveAdapter;
@@ -36,8 +35,9 @@ import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
-import de.bwl.bwfla.emil.utils.tasks.ImportImageTask;
-import de.bwl.bwfla.emil.utils.tasks.ReplicateImageTask;
+import de.bwl.bwfla.emil.utils.TaskManager;
+import de.bwl.bwfla.emil.tasks.ImportImageTask;
+import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emucomp.api.*;
 
 import com.google.gson.JsonIOException;
@@ -46,14 +46,10 @@ import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
-import jdk.nashorn.internal.objects.annotations.Getter;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
-import de.bwl.bwfla.emil.utils.tasks.ImportImageTask.ImportImageTaskRequest;
-import org.openjena.atlas.logging.Log;
+import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 
 @Path("EmilEnvironmentData")
 @ApplicationScoped
@@ -72,11 +68,13 @@ public class EmilEnvironmentData extends EmilRest {
 	@Inject
 	private ArchiveAdapter archive;
 
-	private AsyncIoTaskManager taskManager;
 	private ImageProposer imageProposer;
 
 	@Inject
 	private ContainerUtil containerUtil;
+
+	@Inject
+	private TaskManager taskManager;
 
 	@Inject
 	@AuthenticatedUser
@@ -86,16 +84,7 @@ public class EmilEnvironmentData extends EmilRest {
 	private void initialize() {
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
-		} catch (IllegalArgumentException e) {
-		}
-
-		try {
-			taskManager = new AsyncIoTaskManager();
-		} catch (NamingException e) {
-			throw new IllegalStateException("failed to create AsyncIoTaskManager");
-		}
-
-		init();
+		} catch (IllegalArgumentException e) { }
 	}
 
 	@Secured({Role.PUBLIC})
@@ -923,42 +912,7 @@ public class EmilEnvironmentData extends EmilRest {
 		return response;
 	}
 
-	@Secured({Role.PUBLIC})
-	@GET
-	@Path("/taskState")
-	@Produces(MediaType.APPLICATION_JSON)
-	public TaskStateResponse taskState(@QueryParam("taskId") String taskId) {
-		final TaskInfo<Object> info = taskManager.getTaskInfo(taskId);
-		if (info == null)
-			return new TaskStateResponse(new BWFLAException("task failed"));
 
-		if (!info.result().isDone())
-			return new TaskStateResponse(taskId);
-
-		try {
-			Object o = info.result().get();
-			TaskStateResponse response = new TaskStateResponse(taskId, true);
-
-			if(o != null) {
-
-				if(o instanceof BWFLAException)
-					return new TaskStateResponse((BWFLAException)o);
-
-				if(o instanceof Map)
-					response.setUserData((Map<String,String>)o);
-			}
-
-			return response;
-
-		} catch (InterruptedException|ExecutionException e) {
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			return new TaskStateResponse(new BWFLAException(e));
-		}
-
-		finally {
-			taskManager.removeTaskInfo(taskId);
-		}
-	}
 
 	private String createEnvIdJson(String envId) throws IOException {
 		JsonBuilder json = new JsonBuilder();
@@ -967,12 +921,6 @@ public class EmilEnvironmentData extends EmilRest {
 		json.endObject();
 		json.finish();
 		return json.toString();
-	}
-
-	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
-		public AsyncIoTaskManager() throws NamingException {
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
-		}
 	}
 
 //	class ExportImageTask extends AbstractTask<Object>
