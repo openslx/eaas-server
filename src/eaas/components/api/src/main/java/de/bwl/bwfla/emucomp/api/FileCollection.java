@@ -13,7 +13,7 @@ import javax.xml.bind.annotation.XmlType;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "fileCollection", propOrder = {"files", "id"}, namespace="http://bwfla.bwl.de/common/datatypes")
+@XmlType(name = "fileCollection", namespace="http://bwfla.bwl.de/common/datatypes")
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class FileCollection extends JaxbType {
 	@XmlElement(name="file", namespace="http://bwfla.bwl.de/common/datatypes")
@@ -21,15 +21,18 @@ public class FileCollection extends JaxbType {
 
 	@XmlElement(namespace="http://bwfla.bwl.de/common/datatypes")
 	public String id;
-	
+
+	@XmlElement
+	private String label;
+
 	public FileCollection()
 	{
 		id = null;
 	}
 	
-	public FileCollection(String label)
+	public FileCollection(String id)
 	{
-		this.id = label;
+		this.id = id;
 	}
 	
     public static FileCollection fromValue(String data) throws JAXBException {
@@ -55,4 +58,12 @@ public class FileCollection extends JaxbType {
     		return null;
     	}
     }
+
+	public String getLabel() {
+		return label;
+	}
+
+	public void setLabel(String label) {
+		this.label = label;
+	}
 }
