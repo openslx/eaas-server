@@ -125,6 +125,10 @@ public class DatabaseEnvironmentsAdapter {
       return environmentsAdapter.getPatches();
     }
 
+    public Environment getEnvironmentById(String id) throws BWFLAException {
+        return getEnvironmentById(environmentsAdapter.getDefaultBackendName(), id);
+    }
+
     public Environment getEnvironmentById(String archive, String id) throws BWFLAException {
         try {
             Environment environment = db.getObjectWithClassFromDatabaseKey(archive, classNameDBKey, id, metaDataIdKey);
@@ -139,7 +143,6 @@ public class DatabaseEnvironmentsAdapter {
             return environment;
         }
     }
-
 
     public void delete(String archive, String envId, boolean deleteMetadata, boolean deleteImage) throws BWFLAException {
 //      it doesn't matter, whether we preserve metaData or not.

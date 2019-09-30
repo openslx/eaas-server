@@ -1,10 +1,8 @@
 package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
-import de.bwl.bwfla.api.objectarchive.ObjectFileCollection;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
@@ -14,14 +12,9 @@ import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportObjectTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
-import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
-import org.apache.commons.io.IOUtils;
 import org.apache.tamaya.inject.api.Config;
-import org.jboss.resteasy.plugins.providers.multipart.InputPart;
-import org.jboss.resteasy.plugins.providers.multipart.MultipartFormDataInput;
-
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -29,22 +22,15 @@ import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
-import java.io.*;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.stream.Collectors;
 
 @Path("/objects")
 @ApplicationScoped
 public class EmilObjectData extends EmilRest {
 
-    SoftwareArchiveHelper swHelper;
-
-    @Inject
-	private ArchiveAdapter archive;
+    private static SoftwareArchiveHelper swHelper;
 
 	@Inject
 	@AuthenticatedUser
@@ -176,12 +162,12 @@ public class EmilObjectData extends EmilRest {
 				item.setTitle(md.getTitle());
 				item.setArchiveId(archiveId);
 
-				try {
-					item.setDescription(archive.getClassificationResultForObject(id).getUserDescription());
-				} catch (NoSuchElementException e){
-					LOG.info("no cache for " + id + ". Getting default description");
-					item.setDescription(md.getDescription());
-				}
+//				try {
+//					item.setDescription(archive.getClassificationResultForObject(id).getUserDescription());
+//				} catch (NoSuchElementException e){
+//					LOG.info("no cache for " + id + ". Getting default description");
+//					item.setDescription(md.getDescription());
+//				}
 
 				item.setThumbnail(md.getThumbnail());
 				item.setSummary(md.getSummary());
