@@ -190,25 +190,17 @@ public class EmilEnvironmentRepository {
 		return db.count(MetadataCollection.PUBLIC, filter);
 	}
 
-	private Stream<EmilEnvironment> loadEmilEnvironments() {
-		return loadEmilEnvironments(getCollectionCtx());
-	}
 
-	private Stream<EmilEnvironment> loadEmilEnvironments(String collectionCtx) {
-		Stream<EmilEnvironment> all = db.find(collectionCtx, new MongodbEaasConnector.FilterBuilder(), "type");
+	private Stream<EmilEnvironment> loadEmilEnvironments(String userCtx) {
+		Stream<EmilEnvironment> all = db.find(getCollectionCtx(userCtx), new MongodbEaasConnector.FilterBuilder(), "type");
 		all = Stream.concat(all, db.find(MetadataCollection.PUBLIC, new MongodbEaasConnector.FilterBuilder(), "type"));
 		all = Stream.concat(all, db.find(MetadataCollection.REMOTE, new MongodbEaasConnector.FilterBuilder(), "type"));
 		return all;
 	}
 
-	private List<EmilObjectEnvironment> loadEmilObjectEnvironments() throws BWFLAException {
-		String userCtx = getUserCtx();
-		return loadEmilObjectEnvironments(userCtx);
-	}
-
 	private List<EmilObjectEnvironment> loadEmilObjectEnvironments(String userCtx) throws BWFLAException {
 		//TODO: refactor to stream
-		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(userCtx,
+		List<EmilObjectEnvironment> result = db.getRootlessJaxbObjects(getCollectionCtx(userCtx),
 				EmilObjectEnvironment.class.getCanonicalName(), "type");
 
 		result.addAll(db.getRootlessJaxbObjects(MetadataCollection.PUBLIC,
@@ -321,15 +313,15 @@ public class EmilEnvironmentRepository {
 
 	public EmilEnvironment getEmilEnvironmentById(String envid)
 	{
-		return getEmilEnvironmentById(getCollectionCtx(), envid, getUserCtx());
+		return getEmilEnvironmentById(envid, getUserCtx());
 	}
 
-	public EmilEnvironment getEmilEnvironmentById(String collection, String envid, String userCtx) {
+	public EmilEnvironment getEmilEnvironmentById(String envid, String userCtx) {
 		if (envid == null)
 			return null;
 
 		try {
-			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(collection, "type", envid, "envId");
+			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(userCtx), "type", envid, "envId");
 
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				return getSharedEmilEnvironmentById(envid);
@@ -376,7 +368,7 @@ public class EmilEnvironmentRepository {
 			String lastPrivateChild = env.getEnvId();
 			while(parent != null)
 			{
-				EmilEnvironment p = getEmilEnvironmentById(collection, parent, username);
+				EmilEnvironment p = getEmilEnvironmentById(parent, username);
 				if(p == null)
 				{
 					throw new BWFLAException("parent image " + parent + " not found");
@@ -653,10 +645,7 @@ public class EmilEnvironmentRepository {
 
 	public List<EmilEnvironment> getEmilEnvironments() {
 
-		String userCtx = null;
-		if(authenticatedUser != null)
-			userCtx = authenticatedUser.getUsername();
-
+		String userCtx = getUserCtx();
 		return getEmilEnvironments(userCtx);
 	}
 
@@ -675,7 +664,7 @@ public class EmilEnvironmentRepository {
 		}
 		if (result.size() == 0) {
 			LOG.info("no child found for " + envId);
-			EmilEnvironment emilEnvironment = getEmilEnvironmentById(userCtx, envId, userCtx);
+			EmilEnvironment emilEnvironment = getEmilEnvironmentById(envId, userCtx);
 			if (emilEnvironment != null)
 				result.add(emilEnvironment);
 		}
