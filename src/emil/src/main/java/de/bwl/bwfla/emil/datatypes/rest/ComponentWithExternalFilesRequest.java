@@ -106,7 +106,7 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 
 		public void setFileSystemType(FileSystemType fstype)
 		{
-			this.fileSystemType = fileSystemType;
+			this.fileSystemType = fstype;
 		}
 
 		public void setFileSystemType(String fstype)
