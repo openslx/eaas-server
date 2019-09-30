@@ -20,7 +20,6 @@
 package de.bwl.bwfla.emil;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.*;
@@ -65,7 +64,6 @@ import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
-import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
@@ -79,13 +77,14 @@ import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
+import de.bwl.bwfla.emil.utils.components.ContainerComponent;
+import de.bwl.bwfla.emil.utils.components.UviComponent;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.tamaya.inject.api.Config;
 
@@ -96,7 +95,6 @@ import de.bwl.bwfla.common.datatypes.EaasState;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
-import de.bwl.bwfla.emil.classification.ArchiveAdapter;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
@@ -191,9 +189,13 @@ public class Components {
     private static ConcurrentHashMap<String, ComponentSession> sessions;
 
     @Inject
-    private ArchiveAdapter archive;
+    private EmilObjectData objects;
 
-    ObjectArchiveHelper objectArchiveHelper;
+    @Inject
+    private ContainerComponent containerHelper;
+
+    @Inject
+    private UviComponent uviHelper;
 
     @Inject
     @AuthenticatedUser
@@ -217,7 +219,6 @@ public class Components {
     @PostConstruct
     private void init() {
         swHelper = new SoftwareArchiveHelper(softwareArchive);
-        objectArchiveHelper = new ObjectArchiveHelper(objectArchive);
         sessions = new ConcurrentHashMap<>();
 
         this.sessionStatsPath = Paths.get(serverdatadir).resolve("sessions.csv");
@@ -274,7 +275,42 @@ public class Components {
         sessions.remove(session.getId());
         sessionStatsWriter.append(session);
     }
-    
+
+    ComponentResponse createComponent(ComponentRequest request) throws BWFLAException
+    {
+        ComponentResponse result;
+
+        final TaskStack cleanups = new TaskStack();
+        final List<EventObserver> observer = new ArrayList<>();
+
+        if(request.getClass().equals(UviComponentRequest.class)) {
+            MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest)request);
+            result = createMachineComponent(machineComponentRequest, cleanups, observer);
+        }
+        else if (request.getClass().equals(MachineComponentRequest.class)) {
+            result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(ContainerComponentRequest.class)) {
+            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(SlirpComponentRequest.class)) {
+            result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(SocksComponentRequest.class)) {
+            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
+        }  else {
+            throw new BWFLAException("Invalid component request");
+        }
+
+        final String cid = result.getId();
+        final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
+        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
+
+        this.register(session);
+
+        // Submit a trigger for session cleanup
+        final Runnable trigger = new ComponentSessionCleanupTrigger(session, sessionExpirationTimeout);
+        scheduler.schedule(trigger, sessionExpirationTimeout.toMillis(), TimeUnit.MILLISECONDS);
+
+        return result;
+    }
     
     /**
      * Creates and starts a new component (e.g emulator) the EaaS framework.
@@ -300,35 +336,16 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request,
                                              @Context final HttpServletResponse response) {
-        ComponentResponse result;
 
-        final TaskStack cleanups = new TaskStack();
-        final List<EventObserver> observer = new ArrayList<>();
-
-        if (request.getClass().equals(MachineComponentRequest.class)) {
-            result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(ContainerComponentRequest.class)) {
-            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(SlirpComponentRequest.class)) {
-            result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(SocksComponentRequest.class)) {
-            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
-        }  else {
+        ComponentResponse result = null;
+        try {
+            result = createComponent(request);
+        } catch (BWFLAException e) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorInformation("Invalid component request"))
                     .build());
         }
-
-        final String cid = result.getId();
-        final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
-        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
-
-        this.register(session);
-
-        // Submit a trigger for session cleanup
-        final Runnable trigger = new ComponentSessionCleanupTrigger(session, sessionExpirationTimeout);
-        scheduler.schedule(trigger, sessionExpirationTimeout.toMillis(), TimeUnit.MILLISECONDS);
 
         response.setStatus(Response.Status.CREATED.getStatusCode());
         response.addHeader("Location", result.getId());
@@ -388,120 +405,6 @@ public class Components {
                             + e.getMessage(),
                     e);
         }
-    }
-
-    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
-        ArrayList<String> args = new ArrayList<String>();
-        ContainerMetadata metadata = new ContainerMetadata();
-        final String inputDir = "container-input";
-        final String outputDir = "container-output";
-        metadata.setDhcp(isDHCPenabled);
-        metadata.setTelnet(true);
-        metadata.setProcess("/bin/sh");
-        args.add("-c");
-        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
-        args.add("");
-
-        args.add("--output");
-        args.add("config.json");
-
-
-        if(requiresInputFiles) {
-            args.add("--mount");
-            args.add(getMountStr(inputDir, config.getInput(), true));
-        }
-        args.add("--mount");
-        args.add(getMountStr(outputDir, config.getOutputPath(), false));
-
-        if (config.getCustomSubdir() != null) {
-            args.add("--rootfs");
-            args.add("rootfs/" + config.getCustomSubdir());
-        }
-
-        // Add environment variables
-        if(config.getProcess().getEnvironmentVariables() != null) {
-            for (String env : config.getProcess().getEnvironmentVariables()) {
-                args.add("--env");
-                args.add(env);
-            }
-        }
-
-        // Add emulator's command
-        args.add("--");
-        for (String arg : config.getProcess().getArguments())
-            args.add(arg);
-
-        metadata.setArgs(args);
-
-        return metadata.jsonValueWithoutRoot(true);
-    }
-
-    private String getMountStr(String src, String dst, boolean isReadonly) throws BWFLAException {
-        if (src != null && dst != null) {
-            return src + ":" + dst + ":bind:" + (isReadonly ? "ro" : "rw");
-        } else {
-            throw new BWFLAException("src or dst is null! src:" + src + " dst:" + dst);
-        }
-    }
-
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
-        File tmpfile = File.createTempFile("metadata.json", null, null);
-        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
-
-        BlobDescription blobDescription = new BlobDescription();
-        blobDescription.setDataFromFile(tmpfile.toPath())
-                .setNamespace("random")
-                .setDescription("random")
-                .setName("metadata")
-                .setType(".json");
-
-        return blobstore.put(blobDescription);
-    }
-
-    private ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
-        if (inputMedia.size() != 1)
-            throw new BWFLAException("Size of Input drives cannot exceed 1");
-
-        ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
-        final FileSystemType fileSystemType = FileSystemType.EXT4;
-        int sizeInMb = medium.getSizeInMb();
-        if (sizeInMb <= 0)
-            sizeInMb = 1024;
-
-        final ImageDescription description = new ImageDescription()
-                .setMediumType(MediumType.HDD)
-                .setPartitionTableType(PartitionTableType.NONE)
-                .setPartitionStartBlock(0)
-                .setFileSystemType(fileSystemType)
-                .setLabel("eaas-job")
-                .setSizeInMb(sizeInMb);
-
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
-        final ImageContentDescription metadataEntry = new ImageContentDescription();
-        metadataEntry.setAction(ImageContentDescription.Action.COPY)
-                .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
-                .setName("metadata.json");
-        description.addContentEntry(metadataEntry);
-
-
-        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
-            final ImageContentDescription entry = new ImageContentDescription()
-                    .setAction(extfile.getAction())
-                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                    .setURL(new URL(extfile.getUrl()))
-                    .setSubdir("container-input");
-
-
-            if (extfile.getName() == null || extfile.getName().isEmpty())
-                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-            else
-                entry.setName(extfile.getName());
-
-            description.addContentEntry(entry);
-        }
-
-        return description;
     }
 
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
@@ -731,7 +634,7 @@ public class Components {
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
+                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -872,17 +775,8 @@ public class Components {
                 archiveId = authenticatedUser.getUsername();
         }
 
-        String chosenObjRef = archive.getFileCollectionForObject(archiveId, objectId);
-        if (chosenObjRef == null) {
-            throw new BadRequestException(Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation(
-                            "Could not find object with ID: " + objectId))
-                    .build());
-        }
-
+        FileCollection fc = objects.getFileCollection(archiveId, objectId);
         ObjectArchiveBinding binding = new ObjectArchiveBinding(envHelper.toString(), archiveId, objectId);
-        FileCollection fc = FileCollection.fromValue(chosenObjRef);
 
         int driveId = EmulationEnvironmentHelper.addArchiveBinding((MachineConfiguration) chosenEnv, binding, fc);
         return driveId;
@@ -1307,19 +1201,16 @@ public class Components {
 
         String objurl = null;
         try {
-            chosenObjRef = archive.getFileCollectionForObject(changeRequest.getArchiveId(),
+            FileCollection fc  = objects.getFileCollection(changeRequest.getArchiveId(),
                     changeRequest.getObjectId());
-            if(chosenObjRef == null)
-                return Emil.errorMessageResponse("no file collection found for object " + changeRequest.getObjectId());
 
-            FileCollection fc = FileCollection.fromValue(chosenObjRef);
             for(FileCollectionEntry fce : fc.files)
                 if(fce.getId().equals(changeRequest.getLabel()))
                 {
                     objurl = fce.getId();
                     break;
                 }
-        } catch (NoSuchElementException | BWFLAException | JAXBException e1) {
+        } catch (NoSuchElementException | BWFLAException e1) {
             LOG.log(Level.SEVERE, e1.getMessage(), e1);
             return Emil.internalErrorResponse("failed loading object meta data");
         }

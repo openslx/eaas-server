@@ -23,7 +23,11 @@ import javax.xml.bind.annotation.XmlSeeAlso;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 
-@XmlSeeAlso({MachineComponentRequest.class, ContainerComponentRequest.class, SlirpComponentRequest.class, SocksComponentRequest.class})
+@XmlSeeAlso({MachineComponentRequest.class,
+        ContainerComponentRequest.class,
+        SlirpComponentRequest.class,
+        SocksComponentRequest.class,
+        UviComponentRequest.class})
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
 public abstract class ComponentRequest extends EmilRequestType {
 }
