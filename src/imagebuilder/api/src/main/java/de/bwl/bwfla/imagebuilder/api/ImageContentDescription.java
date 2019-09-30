@@ -107,6 +107,8 @@ public class ImageContentDescription
 	@XmlElement(required = true)
 	private ArchiveFormat archiveFormat;
 
+	private boolean strictNameCheck = true;
+
 	/** Pattern representing valid names and namespaces */
 	private static final String NAME_PATTERN = "[\\w.-]+";
 
@@ -131,6 +133,12 @@ public class ImageContentDescription
 		this.setAction(action);
 		this.setData(dataHandler);
 		this.setName(name);
+	}
+
+	public ImageContentDescription disableStrictNameChecks()
+	{
+		this.strictNameCheck = false;
+		return this;
 	}
 
 	public Action getAction()
@@ -161,7 +169,7 @@ public class ImageContentDescription
 
 	public ImageContentDescription setName(String name)
 	{
-		ImageContentDescription.checkName(name);
+		ImageContentDescription.checkName(name, strictNameCheck);
 		this.name = name;
 		return this;
 	}
@@ -171,7 +179,7 @@ public class ImageContentDescription
 	}
 
 	public ImageContentDescription setSubdir(String subdir) {
-		ImageContentDescription.checkName(subdir);
+		ImageContentDescription.checkName(subdir, strictNameCheck);
 		this.subdir = subdir;
 		return this;
 	}
@@ -253,8 +261,13 @@ public class ImageContentDescription
 
 	public static void checkName(String name)
 	{
+		checkName(name, false);
+	}
+
+	public static void checkName(String name, boolean strict)
+	{
 		ImageContentDescription.check(name, "Image's name");
-		if (!name.matches(NAME_PATTERN))
+		if (strict && !name.matches(NAME_PATTERN))
 			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
 	}
 
