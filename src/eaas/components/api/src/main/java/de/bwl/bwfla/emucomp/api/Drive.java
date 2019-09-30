@@ -323,7 +323,7 @@ public class Drive
             }
         }
 
-        public String toQid() {
+        public String toQID() {
             switch(this) {
                 case CDROM:
                     return "Q495265";

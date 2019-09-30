@@ -190,6 +190,7 @@ public class EmilEnvironmentRepository {
 		return db.count(MetadataCollection.PUBLIC, filter);
 	}
 
+
 	private Stream<EmilEnvironment> loadEmilEnvironments(String userCtx) {
 		Stream<EmilEnvironment> all = db.find(getCollectionCtx(userCtx), new MongodbEaasConnector.FilterBuilder(), "type");
 		all = Stream.concat(all, db.find(MetadataCollection.PUBLIC, new MongodbEaasConnector.FilterBuilder(), "type"));
@@ -276,8 +277,8 @@ public class EmilEnvironmentRepository {
 				}
 			}
 		}
-		init(true);
 
+		init(true);
 
 //		try {
 //			try {

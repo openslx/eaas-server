@@ -1,7 +1,6 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
-
 import javax.xml.bind.annotation.*;
 
 @XmlType(name = "uvi")
@@ -38,4 +37,5 @@ public class UviComponentRequest extends MachineComponentRequest {
     public boolean isUviWriteable() {
         return uviWriteable;
     }
+
 }

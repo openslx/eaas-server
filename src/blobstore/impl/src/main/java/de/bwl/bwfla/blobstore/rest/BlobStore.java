@@ -107,7 +107,7 @@ public class BlobStore
 
 			String filename = ((blob.hasName()) ? blob.getName() : "output");
 			if(blob.getType() != null)
-					filename += blob.getType();
+				filename += blob.getType();
 			final long length = (padded) ? HttpUtils.computeBlockDeviceLength(blob.getSize()) : blob.getSize();
 			final boolean sendBlobData = request.getMethod().contentEquals("GET");
 

@@ -24,7 +24,7 @@ public class FileCollection extends JaxbType {
 
 	@XmlElement
 	private String label;
-	
+
 	public FileCollection()
 	{
 		id = null;

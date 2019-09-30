@@ -19,14 +19,9 @@
 
 package de.bwl.bwfla.emucomp.control;
 
-import java.io.IOException;
-import java.io.OutputStream;
-import java.nio.ByteBuffer;
-import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.inject.Inject;
 import javax.websocket.*;
 import javax.websocket.server.PathParam;
@@ -36,13 +31,14 @@ import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
 import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
 import de.bwl.bwfla.emucomp.NodeManager;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
-import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 
 
 @ServerEndpoint(value = "/components/{componentId}/xpra", subprotocols = {"binary"})
 public class XpraWebsocketProxy extends IPCWebsocketProxy
 {
 	private final Logger log = Logger.getLogger(this.getClass().getName());
+
+	private XpraConnector connector;
 
 	@Inject
 	private NodeManager nodeManager = null;
@@ -55,7 +51,7 @@ public class XpraWebsocketProxy extends IPCWebsocketProxy
 		log.info("Setting up websocket proxy for component '" + componentId + "'...");
 		try {
 			final AbstractEaasComponent component = nodeManager.getComponentById(componentId, AbstractEaasComponent.class);
-			final XpraConnector connector = (XpraConnector) component.getControlConnector(XpraConnector.PROTOCOL);
+			this.connector = (XpraConnector) component.getControlConnector(XpraConnector.PROTOCOL);
 			this.iosock = IpcSocket.connect(connector.getIoSocketPath().toString(), IpcSocket.Type.STREAM);
 
 			// Start background thread for streaming from io-socket to client
@@ -72,7 +68,7 @@ public class XpraWebsocketProxy extends IPCWebsocketProxy
 						streamer.stop();
 					}
 					catch (Exception error) {
-						throw new RuntimeException("Stopping websocket streamer failed!", error);
+						log.log(Level.WARNING, "Stopping websocket streamer failed!", error);
 					}
 				});
 			}
@@ -82,5 +78,4 @@ public class XpraWebsocketProxy extends IPCWebsocketProxy
 			this.stop(session);
 		}
 	}
-
 }

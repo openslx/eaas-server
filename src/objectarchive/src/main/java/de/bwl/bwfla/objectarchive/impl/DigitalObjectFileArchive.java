@@ -375,8 +375,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 			String url = Paths.get(localPath).relativize(targetDir).toString();
 			log.warning(" local path url " + url);
-			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQId(): null;
-			properties.deviceId = entry.getType() != null ? entry.getType().toQid() : null;
+			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQID(): null;
+			properties.deviceId = entry.getType() != null ? entry.getType().toQID() : null;
 
 			MetsUtil.addFile(m, url, properties);
 		}

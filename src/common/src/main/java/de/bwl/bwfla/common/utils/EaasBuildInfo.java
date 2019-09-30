@@ -1,31 +1,40 @@
 package de.bwl.bwfla.common.utils;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class EaasBuildInfo {
-	public static String getVersion() {
-		Properties prop = new Properties();
-		InputStream in = EaasBuildInfo.class.getClassLoader().getResourceAsStream("/eaas-version.properties");
-		if(in == null)
-			return "no build version: file not found";
-		try {
-			prop.load(in);
-		} catch (IOException e) {
 
-			e.printStackTrace();
-			return "no build version";
+public class EaasBuildInfo
+{
+	private static final Properties PROPERTIES = EaasBuildInfo.load("/eaas-version.properties");
+
+	public static String getVersion()
+	{
+		return EaasBuildInfo.get("git.commit.id");
+	}
+
+	private static String get(String key)
+	{
+		final String value = PROPERTIES.getProperty(key);
+		return (value != null) ? value.toUpperCase() : "UNKNOWN";
+	}
+
+	private static Properties load(String url)
+	{
+		final Properties properties = new Properties();
+
+		try (InputStream istream = EaasBuildInfo.class.getClassLoader().getResourceAsStream(url)) {
+			if (istream != null) {
+				properties.load(istream);
+			}
+		}
+		catch (Throwable error) {
+			Logger.getLogger(EaasBuildInfo.class.getSimpleName())
+					.log(Level.WARNING, "Loading build-info properties failed", error);
 		}
 
-		try {
-			in.close();
-		} catch (IOException e) {
-			return "no build version";
-		}
-		String ret = prop.getProperty("git.commit.id");
-		if(ret == null)
-			return "no build version";
-		return ret;
+		return properties;
 	}
 }

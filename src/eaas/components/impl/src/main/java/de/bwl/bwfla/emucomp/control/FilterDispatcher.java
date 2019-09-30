@@ -28,6 +28,7 @@ import javax.servlet.*;
 import javax.servlet.annotation.WebFilter;
 import javax.servlet.http.HttpServletRequest;
 
+import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
 import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
 
 /*
@@ -82,6 +83,12 @@ public class FilterDispatcher implements Filter
                     case GuacamoleConnector.PROTOCOL: {
                         // use the guacamole tunnel servlet for tunnel requests
                         servletName = BWFLAGuacamoleTunnelServlet.SERVLET_NAME;
+                        break;
+                    }
+
+                    case AudioConnector.PROTOCOL: {
+                        // use the custom signalling servlet for incoming requests
+                        servletName = WebRtcSignallingServlet.SERVLET_NAME;
                         break;
                     }
                 }

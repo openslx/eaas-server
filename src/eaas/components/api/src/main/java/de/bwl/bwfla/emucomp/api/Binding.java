@@ -355,22 +355,28 @@ public class Binding extends AbstractDataResource {
                     return TAR;
                 default:
                     System.out.println("unknow qid " + qid);
-                    return null;
+
+                return null;
             }
         }
-        public String value() {
-            return value;
-        }
 
-        public String toQId() {
+        public String toQID() {
             switch (this)
             {
                 case FILE:
                     return "Q82753";
+                case ZIP:
+                    return "Q136218";
+                case TAR:
+                    return "Q283579";
 
                 default:
                     return null;
             }
+        }
+
+        public String value() {
+            return value;
         }
     }
     

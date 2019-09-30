@@ -147,5 +147,10 @@
 			<groupId>javax.activation</groupId>
 			<artifactId>activation</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.freedesktop.gstreamer</groupId>
+			<artifactId>gst1-java-core</artifactId>
+			<version>1.0.0</version>
+		</dependency>
 	</dependencies>
 </project>
