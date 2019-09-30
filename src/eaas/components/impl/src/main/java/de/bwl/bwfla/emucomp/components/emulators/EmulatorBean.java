@@ -1007,10 +1007,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				EmulatorUtils.mountFileSystem(rawimg, fusemnt, fsType);
 
 				output = workdir.resolve("output.zip");
+				Set<String> exclude = new HashSet<>();
+				exclude.add("autorun.inf");
 				if (emuEnvironment.isLinuxRuntime())
 					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
 				else
-					Zip32Utils.zip(output.toFile(), fusemnt.toFile());
+					Zip32Utils.zip(output.toFile(), fusemnt.toFile(), exclude);
 
 				type = ".zip";
 

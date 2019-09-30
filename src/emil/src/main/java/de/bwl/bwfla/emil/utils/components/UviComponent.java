@@ -9,14 +9,14 @@ import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentWithExternalFilesRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.UviComponentRequest;
+import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.MediumType;
+import de.bwl.bwfla.emucomp.api.PartitionTableType;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.ws.rs.Path;
-import javax.ws.rs.core.Response;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -53,7 +53,7 @@ public class UviComponent {
     }
 
     BlobHandle createAutostart(String filename, String applicationName) throws BWFLAException {
-        String autostart = "[autorun]\r\n" + "open=start " + filename;
+        String autostart = "[autorun]\r\n" + "open=start " + "\"" + filename + "\"";
         File tmpfile = null;
         try {
             tmpfile = File.createTempFile("metadata.json", null, null);
@@ -79,7 +79,14 @@ public class UviComponent {
         BlobHandle blobHandle = createAutostart(request.getUviFilename(), null);
 
         ComponentWithExternalFilesRequest.InputMedium m = new ComponentWithExternalFilesRequest.InputMedium();
-        m.setMediumType(MediumType.CDROM);
+        if(request.isUviWriteable())
+        {
+            m.setMediumType(MediumType.HDD);
+            m.setPartitionTableType(PartitionTableType.MBR);
+            m.setFileSystemType(FileSystemType.FAT32);
+        }
+        else
+            m.setMediumType(MediumType.CDROM);
 
         ComponentWithExternalFilesRequest.FileURL inputFile =
                 new ComponentWithExternalFilesRequest.FileURL("copy",
