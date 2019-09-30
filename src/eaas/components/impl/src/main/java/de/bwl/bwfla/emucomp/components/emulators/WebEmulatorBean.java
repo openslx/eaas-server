@@ -68,7 +68,7 @@ public class WebEmulatorBean extends EmulatorBean implements MessageHandlerBoth 
 	}
 
 	@Override
-	public void stop() throws BWFLAException {
+	public String stop() throws BWFLAException {
 		super.stop();
 
 		JsonObjectBuilder command = Json.createObjectBuilder();
@@ -83,6 +83,7 @@ public class WebEmulatorBean extends EmulatorBean implements MessageHandlerBoth 
 			} catch (IOException e) {
 			}
 		}
+		return null;
 	}
 
 	@Override

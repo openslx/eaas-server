@@ -1049,7 +1049,7 @@ public class Components {
     @Secured({Role.PUBLIC})
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
-    public Response stop(@PathParam("componentId") String componentId,
+    public ProcessResultUrl stop(@PathParam("componentId") String componentId,
                              @Context HttpServletResponse servletResponse) {
         try {
             final ComponentSession session = sessions.get(componentId);
@@ -1058,16 +1058,19 @@ public class Components {
             final ComponentRequest request = session.getRequest();
             if (request instanceof MachineComponentRequest) {
                 final Machine machine = componentClient.getMachinePort(eaasGw);
-                machine.stop(componentId);
+                String url = machine.stop(componentId);
+                ProcessResultUrl result = new ProcessResultUrl();
+                result.setUrl(url);
+                return result;
             }
             else if (request instanceof ContainerComponentRequest) {
                 final Container container = componentClient.getContainerPort(eaasGw);
                 container.stopContainer(componentId);
             }
         } catch (BWFLAException e) {
-            return Emil.errorMessageResponse("stop failed: " + e.getMessage());
+            return null;
         }
-        return Emil.successMessageResponse("stopped component " + componentId);
+        return null;
     }
 
     @GET

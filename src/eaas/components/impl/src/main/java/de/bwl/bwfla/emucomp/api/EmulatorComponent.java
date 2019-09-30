@@ -36,7 +36,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 public interface EmulatorComponent extends ClusterComponent 
 {	
 	public void start() throws BWFLAException;
-	public void stop() throws BWFLAException;
+	public String stop() throws BWFLAException;
 	public List<BindingDataHandler> snapshot() throws BWFLAException;
 	public int changeMedium(int containerId, String objReference) throws BWFLAException;
 	public int attachMedium(DataHandler data, String mediumType) throws BWFLAException;
