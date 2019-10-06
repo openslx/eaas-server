@@ -27,6 +27,7 @@ import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
@@ -53,11 +54,20 @@ public class EmilSoftwareData extends EmilRest {
 	@Inject
 	@AuthenticatedUser
 	private UserContext authenticatedUser;
-    
+
+	private ImageProposer imageProposer;
+
+	@Inject
+	@Config(value = "emil.imageproposerservice")
+	private String imageProposerService;
+
     @PostConstruct
     private void init() {
         swHelper = new SoftwareArchiveHelper(softwareArchive);
         objHelper = new ObjectArchiveHelper(objectArchive);
+		try {
+			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
+		} catch (IllegalArgumentException e) { }
     }
 
 	@Secured({Role.PUBLIC})
@@ -286,6 +296,7 @@ public class EmilSoftwareData extends EmilRest {
 			software.setQID(swo.getQID());
 			
 			swarchive.addSoftwarePackage(software);
+			imageProposer.refreshIndex();
 		}
 		catch(Throwable t)
 		{
