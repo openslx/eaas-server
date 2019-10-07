@@ -59,6 +59,8 @@ public class ClassificationResult extends EmilResponseType {
     }
 
     public List<EnvironmentInfo> getEnvironmentList() {
+        if(environmentList == null)
+            environmentList = new ArrayList<>();
         return environmentList;
     }
 
