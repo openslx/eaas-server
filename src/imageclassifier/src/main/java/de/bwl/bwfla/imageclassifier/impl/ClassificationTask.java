@@ -48,7 +48,7 @@ public class ClassificationTask extends BaseTask
 		Object iResult = container.getData();
 		if (iResult instanceof IdentificationResult) {
 
-			final IdentificationResult<?> identification = (IdentificationResult<?>) iResult;
+			final IdentificationResult identification = (IdentificationResult) iResult;
 
 			log.info("Constructing classification response...");
 
@@ -77,7 +77,7 @@ public class ClassificationTask extends BaseTask
 		}
 		else if(iResult instanceof FileIdentificationResult)
 		{
-			final FileIdentificationResult<?> identification = (FileIdentificationResult)iResult;
+			final FileIdentificationResult identification = (FileIdentificationResult)iResult;
 			IdentificationData<?> idData = identification.getData();
 			Identification.IdentificationDetails<ClassificationEntry> details = new Identification.IdentificationDetails<>();
 			details.setDiskType(idData.getType());

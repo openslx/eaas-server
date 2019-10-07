@@ -1,6 +1,6 @@
 package de.bwl.bwfla.imageclassifier.datatypes;
 
-public class FileIdentificationResult<T> {
+public class FileIdentificationResult {
 
     private final String url;
     private final String fileName;

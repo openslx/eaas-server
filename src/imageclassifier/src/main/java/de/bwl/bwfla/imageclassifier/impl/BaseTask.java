@@ -229,8 +229,6 @@ public abstract class BaseTask extends AbstractTask<Object>
 
 	protected IdentificationResultContainer identify() throws Exception
 	{
-		IdentificationResultContainer<?> result = null;
-
 		final Map<String, String> policy = new HashMap<String, String>();
 
 		if(request.getFileCollection() != null) {
@@ -244,7 +242,7 @@ public abstract class BaseTask extends AbstractTask<Object>
 			if (fc == null)
 				throw new BWFLAException("invalid object");
 
-			IdentificationResult<?> classificationResult = new IdentificationResult<>(fc, policy);
+			IdentificationResult classificationResult = new IdentificationResult(fc, policy);
 
 			for (FileCollectionEntry fce : fc.files) {
 				IdentificationData<?> data = identifyImage(fce);
@@ -255,7 +253,7 @@ public abstract class BaseTask extends AbstractTask<Object>
 		else if (request.getFileUrl() != null && request.getFileName() != null)
 		{
 			IdentificationData<?> data = identifyFile(request.getFileUrl(), request.getFileName());
-			FileIdentificationResult<?> classificationResult = new FileIdentificationResult<>(request.getFileUrl(), request.getFileName(), data);
+			FileIdentificationResult classificationResult = new FileIdentificationResult(request.getFileUrl(), request.getFileName(), data);
 
 			return new IdentificationResultContainer<>(classificationResult);
 		}

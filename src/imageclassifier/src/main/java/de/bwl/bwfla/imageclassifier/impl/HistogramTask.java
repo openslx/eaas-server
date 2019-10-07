@@ -52,7 +52,7 @@ public class HistogramTask extends BaseTask
 
 		Object iResult = container.getData();
 		if (iResult instanceof IdentificationResult) {
-			final IdentificationResult<?> identification = (IdentificationResult<?>) iResult;
+			final IdentificationResult identification = (IdentificationResult) iResult;
 
 			log.info("Constructing histogram response...");
 
@@ -78,7 +78,7 @@ public class HistogramTask extends BaseTask
 		}
 		else if(iResult instanceof FileIdentificationResult)
 		{
-			final FileIdentificationResult<?> identification = (FileIdentificationResult)iResult;
+			final FileIdentificationResult identification = (FileIdentificationResult)iResult;
 			IdentificationData<?> idData = identification.getData();
 			Identification.IdentificationDetails<HistogramEntry> details = new Identification.IdentificationDetails<>();
 			details.setDiskType(idData.getType());
