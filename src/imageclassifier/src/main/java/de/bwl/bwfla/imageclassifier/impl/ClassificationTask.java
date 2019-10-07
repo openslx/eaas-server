@@ -22,13 +22,16 @@ package de.bwl.bwfla.imageclassifier.impl;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
 import de.bwl.bwfla.imageclassifier.client.Identification;
+import de.bwl.bwfla.imageclassifier.datatypes.FileIdentificationResult;
 import de.bwl.bwfla.imageclassifier.datatypes.IdentificationData;
 import de.bwl.bwfla.imageclassifier.datatypes.IdentificationResult;
+import de.bwl.bwfla.imageclassifier.datatypes.IdentificationResultContainer;
 
 public class ClassificationTask extends BaseTask
 {
@@ -40,31 +43,52 @@ public class ClassificationTask extends BaseTask
 	public Object execute() throws Exception {
 		log.info("Starting classification task...");
 
-		final IdentificationResult<?> identification = super.identify();
+		final IdentificationResultContainer<?> container = super.identify();
 
-		log.info("Constructing classification response...");
+		Object iResult = container.getData();
+		if (iResult instanceof IdentificationResult) {
 
-		final Map<String, String> policy = identification.getPolicy();
-		HashMap<String, IdentificationData<?>> data = identification.getIdentificationData();
-		FileCollection fc = identification.getFileCollection();
+			final IdentificationResult identification = (IdentificationResult) iResult;
 
-		HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> resultHashMap = new HashMap<>();
-		for(FileCollectionEntry fce : fc.files)
+			log.info("Constructing classification response...");
+
+			final Map<String, String> policy = identification.getPolicy();
+			HashMap<String, IdentificationData<?>> data = identification.getIdentificationData();
+			FileCollection fc = identification.getFileCollection();
+
+			HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> resultHashMap = new HashMap<>();
+			for (FileCollectionEntry fce : fc.files) {
+				IdentificationData<?> idData = data.get(fce.getId());
+				if (idData == null)
+					continue;
+
+				Identification.IdentificationDetails<ClassificationEntry> details = new Identification.IdentificationDetails<>();
+				details.setDiskType(idData.getType());
+				if (idData.getIndex() != null)
+					details.setEntries(idData.getIndex().getClassifierList(policy));
+
+				resultHashMap.put(fce.getId(), details);
+			}
+
+			log.info("Classification response constructed.");
+
+
+			return new Identification<>(fc, resultHashMap);
+		}
+		else if(iResult instanceof FileIdentificationResult)
 		{
-			IdentificationData<?> idData = data.get(fce.getId());
-			if(idData == null)
-				continue;
-
+			final FileIdentificationResult identification = (FileIdentificationResult)iResult;
+			IdentificationData<?> idData = identification.getData();
 			Identification.IdentificationDetails<ClassificationEntry> details = new Identification.IdentificationDetails<>();
 			details.setDiskType(idData.getType());
-			if(idData.getIndex() != null)
-			details.setEntries(idData.getIndex().getClassifierList(policy));
+			if (idData.getIndex() != null)
+				details.setEntries(idData.getIndex().getClassifierList( new HashMap<String, String>()));
 
-			resultHashMap.put(fce.getId(), details);
+			HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> resultHashMap = new HashMap<>();
+			resultHashMap.put(identification.getFileName(), details);
+
+			return new Identification<>(identification.getFileName(), identification.getUrl(), resultHashMap);
 		}
-
-		log.info("Classification response constructed.");
-
-		return new Identification<>(fc, resultHashMap);
+		else throw new BWFLAException("unknown identification result");
 	}
 }

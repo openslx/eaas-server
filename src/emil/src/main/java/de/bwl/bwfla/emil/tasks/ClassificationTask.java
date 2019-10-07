@@ -132,7 +132,7 @@ public class ClassificationTask extends AbstractTask<Object> {
         return result;
     }
 
-    /*private ClassificationResult classifyObject(String url, String filename) throws BWFLAException {
+    private ClassificationResult classifyObject(String url, String filename) throws BWFLAException {
         try {
 
             ClassificationResult response;
@@ -173,7 +173,7 @@ public class ClassificationTask extends AbstractTask<Object> {
             return new ClassificationResult();
         }
 
-    }*/
+    }
 
     private ClassificationResult classifyObject(FileCollection fc) throws BWFLAException {
         try {
@@ -339,11 +339,11 @@ public class ClassificationTask extends AbstractTask<Object> {
             if (request.input == null || request.input.getMediaFormats().size() == 0)
                 request.input = classifyObject(request.fileCollection);
         }
-//        else if(request.url != null && request.filename != null)
-//        {
-//            request.input = classifyObject(request.url, request.filename);
-//            return propose(request.input);
-//        }
+        else if(request.url != null && request.filename != null)
+        {
+            request.input = classifyObject(request.url, request.filename);
+            return propose(request.input);
+        }
         else {
             throw new BWFLAException("invalid request");
         }

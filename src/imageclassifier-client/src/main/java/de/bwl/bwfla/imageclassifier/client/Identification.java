@@ -48,6 +48,12 @@ public class Identification<T>
     @XmlElement
 	private HashMap<String, IdentificationDetails<T>> identificationData;
 
+    @XmlElement
+	private String url;
+
+    @XmlElement
+	private String filename;
+
 	Identification() {}
 
 	public Identification(FileCollection fc, HashMap<String, IdentificationDetails<T>> data)
@@ -56,20 +62,27 @@ public class Identification<T>
 		identificationData = data;
 	}
 
-	public FileCollection getFileCollection() {
-		return fileCollection;
+	public Identification(String filename, String url,  HashMap<String, IdentificationDetails<T>> data)
+	{
+		this.url = url;
+		this.filename = filename;
+		this.identificationData = data;
 	}
 
-	public void setFileCollection(FileCollection fileCollection) {
-		this.fileCollection = fileCollection;
+	public FileCollection getFileCollection() {
+		return fileCollection;
 	}
 
 	public HashMap<String, IdentificationDetails<T>> getIdentificationData() {
 		return identificationData;
 	}
 
-	public void setIdentificationData(HashMap<String, IdentificationDetails<T>> identificationData) {
-		this.identificationData = identificationData;
+	public String getUrl() {
+		return url;
+	}
+
+	public String getFilename() {
+		return filename;
 	}
 
 	public static class IdentificationDetails<T>

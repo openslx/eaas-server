@@ -23,13 +23,17 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
+import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
 import de.bwl.bwfla.imageclassifier.client.HistogramEntry;
 import de.bwl.bwfla.imageclassifier.client.Identification;
+import de.bwl.bwfla.imageclassifier.datatypes.FileIdentificationResult;
 import de.bwl.bwfla.imageclassifier.datatypes.IdentificationData;
 import de.bwl.bwfla.imageclassifier.datatypes.IdentificationResult;
+import de.bwl.bwfla.imageclassifier.datatypes.IdentificationResultContainer;
 
 
 public class HistogramTask extends BaseTask
@@ -43,29 +47,49 @@ public class HistogramTask extends BaseTask
 	public Object execute() throws Exception
 	{
 		log.info("Starting histogram task...");
-		
-		final IdentificationResult<?> identification = super.identify();
-		
-		log.info("Constructing histogram response...");
 
-		final Map<String, String> policy = identification.getPolicy();
-		HashMap<String, IdentificationData<?>> data = identification.getIdentificationData();
-		FileCollection fc = identification.getFileCollection();
+		final IdentificationResultContainer<?> container = super.identify();
 
-		HashMap<String, Identification.IdentificationDetails<HistogramEntry>> resultHashMap = new HashMap<>();
-		for(FileCollectionEntry fce : fc.files)
+		Object iResult = container.getData();
+		if (iResult instanceof IdentificationResult) {
+			final IdentificationResult identification = (IdentificationResult) iResult;
+
+			log.info("Constructing histogram response...");
+
+			final Map<String, String> policy = identification.getPolicy();
+			HashMap<String, IdentificationData<?>> data = identification.getIdentificationData();
+			FileCollection fc = identification.getFileCollection();
+
+			HashMap<String, Identification.IdentificationDetails<HistogramEntry>> resultHashMap = new HashMap<>();
+			for(FileCollectionEntry fce : fc.files)
+			{
+				IdentificationData<?> idData = data.get(fce.getId());
+				if(idData == null)
+					continue;
+
+				Identification.IdentificationDetails<HistogramEntry> details = new Identification.IdentificationDetails<>();
+				details.setDiskType(idData.getType());
+				details.setEntries(idData.getIndex().getSummaryClassifierList(policy));
+
+				resultHashMap.put(fce.getId(), details);
+			}
+			log.info("Histogram response constructed.");
+			return new Identification<>(fc, resultHashMap);
+		}
+		else if(iResult instanceof FileIdentificationResult)
 		{
-			IdentificationData<?> idData = data.get(fce.getId());
-			if(idData == null)
-				continue;
-
+			final FileIdentificationResult identification = (FileIdentificationResult)iResult;
+			IdentificationData<?> idData = identification.getData();
 			Identification.IdentificationDetails<HistogramEntry> details = new Identification.IdentificationDetails<>();
 			details.setDiskType(idData.getType());
-			details.setEntries(idData.getIndex().getSummaryClassifierList(policy));
+			if (idData.getIndex() != null)
+				details.setEntries(idData.getIndex().getSummaryClassifierList(null));
 
-			resultHashMap.put(fce.getId(), details);
+			HashMap<String, Identification.IdentificationDetails<HistogramEntry>> resultHashMap = new HashMap<>();
+			resultHashMap.put(identification.getFileName(), details);
+
+			return new Identification<>(identification.getFileName(), identification.getUrl(), resultHashMap);
 		}
-		log.info("Histogram response constructed.");
-		return new Identification<>(fc, resultHashMap);
+		else throw new BWFLAException("unknown identification result");
 	}
 }
