@@ -21,7 +21,6 @@ import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
-import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
 import gov.loc.mets.Mets;
 import solutions.emulation.preservica.client.*;
@@ -227,7 +226,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 						System.out.println("no mets info");
 
 					try {
-						fileCache.importObjectFile(fce);
+						fileCache.importObjectFile(objectId, fce);
 					} catch (BWFLAException e) {
 						log.log(Level.WARNING, e.getMessage(), e);
 					}
@@ -251,7 +250,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 						System.out.println("no mets info");
 
 					try {
-						fileCache.importObjectFile(fce);
+						fileCache.importObjectFile(objectId, fce);
 					} catch (BWFLAException e) {
 						e.printStackTrace();
 					}
@@ -277,16 +276,6 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 
 		// try again
 		return fileCache.getObjectReference(objectId);
-	}
-
-	@Override
-	public ObjectFileCollection getObjectHandle(String objectId) {
-		return null;
-	}
-
-	@Override
-	public void importObject(ObjectFileCollection fc) throws BWFLAException {
-
 	}
 
 	@Override
@@ -412,10 +401,4 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	public void delete(String id) throws BWFLAException {
 		throw new BWFLAException("not supported");
 	}
-
-	@Override
-	public Mets getMetsMetadata(String id) {
-		return null;
-	}
-
 }

@@ -53,7 +53,7 @@ public class ObjectArchiveHelper {
 
 		// make this threadsafe
 		// https://stackoverflow.com/questions/10599959/is-this-jax-ws-client-call-thread-safe
-		bp.getRequestContext().put("thread.local.request.context","true");
+		bp.getRequestContext().put("thread.local.request.context", "true");
 		bp.getRequestContext().put(BindingProvider.ENDPOINT_ADDRESS_PROPERTY, host + "/objectarchive/ObjectArchiveFacadeWS?wsdl");
 
 		return archive;
@@ -73,12 +73,6 @@ public class ObjectArchiveHelper {
 	{
 		connectArchive();
 		return archive.getObjectMetadata(_archive, id);
-	}
-
-	public String getMetsdata(String _archive, String id) throws BWFLAException
-	{
-		connectArchive();
-		return archive.getMetsMetadata(_archive, id);
 	}
 
 	public void importFromMetadata(String _archive, String metadata) throws BWFLAException
@@ -106,11 +100,6 @@ public class ObjectArchiveHelper {
 		return uniqueList;
 	}
 
-	public ObjectFileCollection getObjectHandle(String _archive, String id) throws BWFLAException {
-		connectArchive();
-		return archive.getObjectHandle(_archive, id);
-	}
-
 	public FileCollection getObjectReference(String _archive, String id) throws BWFLAException
 	{
 		connectArchive();
@@ -135,11 +124,6 @@ public class ObjectArchiveHelper {
 			return null;
 		
 		return fc;
-	}
-
-	public void importObject(String _archive, ObjectFileCollection collection) throws BWFLAException {
-		connectArchive();
-		archive.importObject(_archive, collection);
 	}
 	
 	public void sync(String _archive) throws BWFLAException

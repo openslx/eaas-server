@@ -2,6 +2,7 @@ package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.BwflaFileInputStream;
+import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
@@ -18,6 +19,7 @@ import java.io.File;
 import java.io.StringReader;
 import java.math.BigInteger;
 import java.net.URLEncoder;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -116,7 +118,7 @@ public class MetsObject {
                 for (FileType file : fileGrp.getFile()) {
                     try {
                         ObjectFile of = new ObjectFile();
-                        of.fileLocations = getFileLocation(file);
+                        getFileLocation(of, file);
                         setTypeInfo(of, file);
 
                         if(file.getSIZE() != null)
@@ -217,18 +219,21 @@ public class MetsObject {
         throw new MetsObjectMetadataException("invalid amdSecType for id Provenance");
     }
 
-    private static List<String> getFileLocation(FileType file) throws MetsObjectMetadataException {
+    private static void getFileLocation(ObjectFile of, FileType file) throws MetsObjectMetadataException {
         List<FileType.FLocat> locationList = file.getFLocat();
         List<String> result = new ArrayList<>();
+        String filename = null;
         for (FileType.FLocat fLocat : locationList) {
             if (fLocat.getLOCTYPE() != null && fLocat.getLOCTYPE().equals("URL")) {
                 if (fLocat.getHref() != null)
                     result.add(fLocat.getHref());
+                if(fLocat.getTitle() != null)
+                    of.filename = fLocat.getTitle();
             }
         }
         if(result.size() == 0)
             throw new MetsObjectMetadataException("no file locations found");
-        return result;
+        of.fileLocations = result;
     }
 
     public String getWikiId() {
@@ -323,6 +328,7 @@ public class MetsObject {
     {
         log.severe("get object file collection");
         FileCollection c = new FileCollection(getId());
+        c.setLabel(getLabel());
         for(String fileId : objectFiles.keySet())
         {
             log.severe("adding object: " + fileId);
@@ -333,19 +339,23 @@ public class MetsObject {
             }
 
             String url = of.fileLocations.get(0);
-            Drive.DriveType t;
+            Drive.DriveType t = null;
+            Binding.ResourceType rt = null;
             try {
-                if(of.mediumType != null)
+                if (of.mediumType != null) {
                     t = Drive.DriveType.fromQID(of.mediumType);
-                else if (of.fileType != null)
-                    t = Drive.DriveType.fromQID(of.fileType);
-                else {
-                    log.severe("can't resolve drive type: ");
-                    continue;
                 }
-                if(t == null)
+                else if (of.fileType != null) {
+                    rt = Binding.ResourceType.fromQID(of.fileType);
+                }
+                else {
+                    log.warning("can't resolve drive type: " + of.mediumType + " " + of.fileType);
+                }
+
+                if (t == null && rt == null)
                     continue;
             }
+
             catch (IllegalArgumentException e)
             {
                 e.printStackTrace();
@@ -356,7 +366,13 @@ public class MetsObject {
                 if(!url.startsWith("http://"))
                     url = exportPrefix + "/" + url;
             }
+
+
+            log.warning("adding fc: " + url + " of.id" + of.id );
             FileCollectionEntry fce = new FileCollectionEntry(url, t, of.id);
+            fce.setResourceType(rt);
+            if(of.filename != null)
+                fce.setLocalAlias(of.filename);
             c.files.add(fce);
         }
         try {
@@ -406,6 +422,7 @@ public class MetsObject {
         String mediumType;
         long size;
         String id;
+        String filename;
 
         public String toString() {
             String out = "fileId: " + id + "\n";

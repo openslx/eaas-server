@@ -1,20 +1,38 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import gov.loc.mets.Mets;
 
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlElement;
 import java.util.HashMap;
 
 public class DigitalObjectMetadata extends JaxbType{
 
+	@XmlElement
 	private String id;
+
 	private String title;
 	private String description;
 	private String thumbnail;
 	private String summary;
 	private String wikiDataId;
 	private HashMap<String, String> customData;
+	private String metsData;
 
 	DigitalObjectMetadata() {}
+
+
+	public DigitalObjectMetadata(Mets mets)
+	{
+		this.id = mets.getID();
+		this.title = mets.getLabel1();
+		try {
+			this.metsData = mets.value(true);
+		} catch (JAXBException e) {
+			e.printStackTrace();
+		}
+	}
 
 	public DigitalObjectMetadata(String id, String title, String description)
 	{
@@ -74,5 +92,13 @@ public class DigitalObjectMetadata extends JaxbType{
 
 	public void setWikiDataId(String wikiDataId) {
 		this.wikiDataId = wikiDataId;
+	}
+
+	public String getMetsData() {
+		return metsData;
+	}
+
+	public void setMetsData(String metsData) {
+		this.metsData = metsData;
 	}
 }

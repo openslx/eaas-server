@@ -10,7 +10,6 @@ import de.bwl.bwfla.objectarchive.datatypes.TaskState;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollectionEntry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.objectarchive.datatypes.ObjectFileCollection;
 import gov.loc.mets.Mets;
 import org.apache.commons.io.IOUtils;
 
@@ -72,16 +71,6 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 	}
 
 	@Override
-	public ObjectFileCollection getObjectHandle(String objectId) {
-		return null;
-	}
-
-	@Override
-	public void importObject(ObjectFileCollection fc) throws BWFLAException {
-
-	}
-
-	@Override
 	public void importObject(String metsdata) throws BWFLAException {
 
 	}
@@ -128,10 +117,5 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 	@Override
 	public void delete(String id) throws BWFLAException {
 		throw new BWFLAException("not supported");
-	}
-
-	@Override
-	public Mets getMetsMetadata(String id) {
-		return null;
 	}
 }

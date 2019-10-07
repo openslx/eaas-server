@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emil.datatypes;
 
+import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.EmilSoftwareData;
@@ -40,13 +41,13 @@ public class SoftwareCollection implements Iterable<EaasiSoftwareObject> {
             SoftwarePackage p = null;
             try {
                 p = swArchiveHelper.getSoftwarePackageById(swid);
-                String metsdata = objectArchivHelper.getMetsdata(p.getArchive(), p.getObjectId());
-                if(metsdata == null)
+                DigitalObjectMetadata md = objectArchivHelper.getObjectMetadata(p.getArchive(), p.getObjectId());
+                if(md.getMetsData() == null)
                 {
                     System.out.println("metsdata null ... skipping");
                     continue;
                 }
-                softwarePackages.put(p.getId(), new EaasiSoftwareObject(p, metsdata));
+                softwarePackages.put(p.getId(), new EaasiSoftwareObject(p, md.getMetsData()));
             } catch (BWFLAException e) {
                 e.printStackTrace();
             }
