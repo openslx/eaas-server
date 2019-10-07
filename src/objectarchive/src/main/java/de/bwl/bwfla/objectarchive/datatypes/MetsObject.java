@@ -2,6 +2,7 @@ package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.BwflaFileInputStream;
+import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -82,6 +83,12 @@ public class MetsObject {
     private void init() {
         metsContextMap = new HashMap<>();
         objectFiles = new HashMap<>();
+
+        List<StructMapType> listStructMap = metsRoot.getStructMap();
+        if(listStructMap == null || listStructMap.size() == 0)
+        {
+            MetsUtil.initStructMap(metsRoot);
+        }
 
 //        List<StructMapType> listStructMap = metsRoot.getStructMap();
 //        for (StructMapType struct : listStructMap) {
