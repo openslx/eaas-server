@@ -6,7 +6,7 @@
 	<display-name>emil</display-name>
 	<context-param>
 		<param-name>resteasy.providers</param-name>
-		<param-value>de.bwl.bwfla.emil.JacksonConfig</param-value>
+		<param-value>de.bwl.bwfla.emil.utils.JacksonConfig</param-value>
 	</context-param>
  
 	<servlet-mapping>

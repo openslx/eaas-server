@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil;
+package de.bwl.bwfla.emil.utils;
 
 import java.io.IOException;
 import java.io.OutputStream;
