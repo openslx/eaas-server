@@ -12,7 +12,8 @@ import java.util.logging.Level;
 public class LinAppleBean extends EmulatorBean {
     @Override
     protected void prepareEmulatorRunner() throws BWFLAException {
-        emuRunner.setCommand("/usr/local/bin/linapple");
+        emuRunner.setCommand("/linapple-pie/linapple");
+        emuRunner.addArgument("-r");
     }
 
     @Override
