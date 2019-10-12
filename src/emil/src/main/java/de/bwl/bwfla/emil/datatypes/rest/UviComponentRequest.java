@@ -2,6 +2,8 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import javax.xml.bind.annotation.*;
+import java.util.ArrayList;
+import java.util.List;
 
 @XmlType(name = "uvi")
 @XmlRootElement
@@ -17,6 +19,9 @@ public class UviComponentRequest extends MachineComponentRequest {
 
     @XmlElement (defaultValue = "false")
     private boolean uviWriteable;
+
+    @XmlElement
+    private List<UviFile> auxFiles;
 
     public String getUviUrl() {
         return uviUrl;
@@ -38,4 +43,36 @@ public class UviComponentRequest extends MachineComponentRequest {
         return uviWriteable;
     }
 
+    public List<UviFile> getAuxFiles() {
+        if (auxFiles == null)
+            auxFiles = new ArrayList<>();
+
+        return auxFiles;
+    }
+
+    @XmlRootElement
+    public class UviFile
+    {
+        @XmlElement
+        private String url;
+
+        @XmlElement
+        private String filename;
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public void setFilename(String filename) {
+            this.filename = filename;
+        }
+    }
 }

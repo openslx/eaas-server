@@ -98,6 +98,14 @@ public class UviComponent {
         m.getExtFiles().add(inputFile);
         m.getExtFiles().add(autoRun);
 
+        for(UviComponentRequest.UviFile auxFile : request.getAuxFiles())
+        {
+            ComponentWithExternalFilesRequest.FileURL _inputFile =
+                    new ComponentWithExternalFilesRequest.FileURL("copy",
+                            auxFile.getUrl(), auxFile.getFilename());
+            m.getExtFiles().add(_inputFile);
+        }
+
         request.getInputMedia().add(m);
         return (MachineComponentRequest)request;
     }
