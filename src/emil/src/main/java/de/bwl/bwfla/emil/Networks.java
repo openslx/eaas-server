@@ -106,7 +106,7 @@ public class Networks {
             if (network.hasInternet()) {
                 VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
                 String slirpMac = slirpConfig.getHwAddress();
-                slirpConfig.setDhcpEnabled(false);
+                slirpConfig.setDhcpEnabled(true);
                 String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
                 sessions.addComponent(session, slirpId);
 
@@ -116,7 +116,7 @@ public class Networks {
                 componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, slirpUrl);
             }
 
-            if(network.isDhcp())
+            if(false && network.isDhcp())
             {
                 NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
                 nodeConfig.setDhcp(true);
