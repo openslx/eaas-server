@@ -185,6 +185,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			case FLOPPY:
 				targetDir = targetDir.resolve("floppy");
 				break;
+			case DISK:
+				targetDir = targetDir.resolve("disk");
+				break;
 			default:
 				throw new BWFLAException("unsupported type " + type);
 		}
