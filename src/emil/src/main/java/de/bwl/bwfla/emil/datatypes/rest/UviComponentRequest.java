@@ -51,7 +51,7 @@ public class UviComponentRequest extends MachineComponentRequest {
     }
 
     @XmlRootElement
-    public class UviFile
+    public static class UviFile
     {
         @XmlElement
         private String url;
