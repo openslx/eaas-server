@@ -34,11 +34,32 @@ public class SiegfriedOutputIndex extends IdentificationOutputIndex<Siegfried.Fi
             if(m.getMime() != null)
                 this.add(mimetypes, m.getMime(), output);
 
-            if(m.getNs() != null && m.getNs().equals("pronom") && m.getId() != null)
-                this.add(exttypes, m.getId(), output);
+            if(m.getNs() != null && m.getNs().equals("pronom") && m.getId() != null) {
+                if(m.getId().equalsIgnoreCase("unknown"))
+                    unclassified.add(output);
+                else if(m.getId().equals("x-fmt/111") && m.getWarning() != null && m.getWarning().contains("extension mismatch"))
+                {
+                    unclassified.add(output);
+                }
+                else
+                    this.add(exttypes, m.getId(), output);
+            }
             else
                 unclassified.add(output);
         }
+    }
+
+
+
+    private static String getExtension(String fileName)
+    {
+        String extension = null;
+
+        int i = fileName.lastIndexOf('.');
+        if (i > 0) {
+            extension = fileName.substring(i+1);
+        }
+        return extension;
     }
 
     @Override
@@ -89,6 +110,7 @@ public class SiegfriedOutputIndex extends IdentificationOutputIndex<Siegfried.Fi
             entries.add(cf);
         }
 
+        LOG.warning("unclassified: " + unclassified.size());
         if (unclassified.size() > 0) {
             final String type = "unknown";
             final String value = policy.get(type);
@@ -101,7 +123,28 @@ public class SiegfriedOutputIndex extends IdentificationOutputIndex<Siegfried.Fi
                     LOG.warning("filename null in Siegfried's result");
                     continue;
                 }
-                fileNames.add(replacePathPrefix(sf.getFilename(), replacement));
+                String fullName = replacePathPrefix(sf.getFilename(), replacement);
+                String fileExtension = getExtension(fullName).toLowerCase();
+                {
+                    LOG.warning("unclassified file: " + fullName + " checking extension " + fileExtension);
+                    final List<String> _fileNames = new ArrayList<String>();
+                    if(fileExtension.equals("do"))
+                    {
+                        _fileNames.add(fullName);
+                        ClassificationEntry _cf = new ClassificationEntry("eaasi-fmt/1", value, _fileNames,
+                                null, null, "STATA");
+                        entries.add(_cf);
+                    }
+                    else if(fileExtension.equals("r"))
+                    {
+                        _fileNames.add(fullName);
+                        ClassificationEntry _cf = new ClassificationEntry("eaasi-fmt/2", value, _fileNames,
+                                null, null, "R");
+                        entries.add(_cf);
+                    }
+                    else
+                        fileNames.add(fullName);
+                }
             }
             ClassificationEntry cf = new ClassificationEntry(type, value, fileNames,
                     null, null, "unknown");
@@ -146,6 +189,32 @@ public class SiegfriedOutputIndex extends IdentificationOutputIndex<Siegfried.Fi
         if (unclassified.size() > 0) {
             final String type = "unknown";
             final String value = policy.get(type);
+
+            for(Siegfried.File sf : unclassified)
+            {
+                if(sf.getFilename() == null)
+                {
+                    LOG.warning("filename null in Siegfried's result");
+                    continue;
+                }
+
+                String fullName = sf.getFilename();
+                String fileExtension = getExtension(sf.getFilename()).toLowerCase();
+                {
+                    LOG.warning("unclassified file: " + fullName + " checking extension " + fileExtension);
+                    if(fileExtension.equals("do"))
+                    {
+                        HistogramEntry _cf = new HistogramEntry("eaasi-fmt/1", 1, value);
+                        entries.add(_cf);
+                    }
+                    else if(fileExtension.equals("r"))
+                    {
+                        HistogramEntry _cf = new HistogramEntry("eaasi-fmt/2", 1, value);
+                        entries.add(_cf);
+                    }
+                }
+            }
+
             entries.add(new HistogramEntry(type, unclassified.size(), value));
         }
         return entries;
