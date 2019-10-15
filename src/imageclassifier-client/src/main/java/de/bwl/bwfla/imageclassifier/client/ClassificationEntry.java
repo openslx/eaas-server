@@ -66,9 +66,9 @@ public class ClassificationEntry extends HistogramEntry
 	{
 		super(type, (files != null) ? files.size() : 0, value);
 		this.files = files;
-		if(!readQID.isEmpty())
+		if(readQID != null && !readQID.isEmpty())
 		    this.readQID = readQID;
-		if(!writeQID.isEmpty())
+		if(readQID != null && !writeQID.isEmpty())
 			this.writeQID = writeQID;
 		if(nameType != null)
 			this.typeName = nameType;
