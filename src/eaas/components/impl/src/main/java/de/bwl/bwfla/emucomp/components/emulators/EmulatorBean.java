@@ -1014,7 +1014,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				output = workdir.resolve("output.zip");
 				Set<String> exclude = new HashSet<>();
-				exclude.add("autorun.inf");
+				exclude.add("uvi.bat");
 				if (emuEnvironment.isLinuxRuntime())
 					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
 				else

@@ -60,12 +60,11 @@ public class UviComponent {
         {
             case "Q11248": // XP
             case "Q6072277": // XP 64bit
-                return "[autorun]\r\n" + "open=start \"\" " + "\"" + filename + "\"";
             case "Q609733": // win9x
-                return "[autorun]\r\n" + "open=start " + "\"" + filename + "\"";
-            default:
-                return "[autorun]\r\n" + "open=start " + "\"" + filename + "\"";
+                return "start \"\" \"%~dp0/" + filename + "\"";
+                // return "[autorun]\r\n" + "open=start \"\" " + "\"" + filename + "\"";
         }
+        return null;
     }
 
     BlobHandle createAutostart(String osId, String filename, String applicationName) throws BWFLAException {
@@ -117,7 +116,7 @@ public class UviComponent {
                         request.getUviUrl(), request.getUviFilename());
         ComponentWithExternalFilesRequest.FileURL autoRun =
                 new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
-                        "autorun.inf");
+                        "uvi.bat");
 
         m.getExtFiles().add(inputFile);
         m.getExtFiles().add(autoRun);
