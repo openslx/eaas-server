@@ -62,9 +62,9 @@ public class UviComponent {
             case "Q6072277": // XP 64bit
             case "Q609733": // win9x
                 return "start \"\" \"%~dp0/" + filename + "\"";
-                // return "[autorun]\r\n" + "open=start \"\" " + "\"" + filename + "\"";
+
         }
-        return null;
+        return "[autorun]\r\n" + "open=start \"\" " + "\"" + filename + "\"";
     }
 
     BlobHandle createAutostart(String osId, String filename, String applicationName) throws BWFLAException {
