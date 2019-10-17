@@ -40,7 +40,7 @@ public class MediumBuilderCD extends MediumBuilder
         final Path outputISOFile = workdir.resolve(outname + outtype);
         final Path filesToCopy = workdir.resolve("files");
 
-        final PrefixLogger log = new PrefixLogger(super.log.getName());
+        final PrefixLogger log = new PrefixLogger(this.getClass().getSimpleName());
         log.getContext().add(workdir.getFileName().toString());
         log.info("Building ISO image...");
         try {

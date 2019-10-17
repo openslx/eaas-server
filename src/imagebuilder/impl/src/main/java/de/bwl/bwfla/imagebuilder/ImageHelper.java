@@ -140,13 +140,14 @@ class ImageHelper {
 		}
 	}
 
-	public static void rsync(Path sourceDir, Path targetDir) throws BWFLAException {
+	public static void rsync(Path sourceDir, Path targetDir, Logger log) throws BWFLAException {
 		DeprecatedProcessRunner rsyncRunner = new DeprecatedProcessRunner();
 		rsyncRunner.setCommand("rsync");
 		rsyncRunner.addArgument("-crlptgoD");
 		rsyncRunner.addArguments( "--delete"); // , "--no-o", "--no-g");
 		rsyncRunner.addArgument(sourceDir.toAbsolutePath().toString() + "/");
 		rsyncRunner.addArgument(targetDir.toAbsolutePath().toString());
+		rsyncRunner.setLogger(log);
 		if (!rsyncRunner.execute())
 			throw new BWFLAException("rsync failed");
 	}
