@@ -253,7 +253,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 	private static Bin createAudioBin(String pulsesock)
 	{
 		final String description = "pulsesrc server=" + pulsesock + " device=emu-speaker.monitor "
-				+ "! audioconvert ! audioresample ! opusenc ! rtpopuspay ! "
+				+ "! audioconvert ! audioresample ! opusenc ! rtpopuspay "
 				+ "! capsfilter caps=application/x-rtp,media=audio,encoding-name=OPUS,payload=96";
 
 		return Gst.parseBinFromDescription(description, true);
