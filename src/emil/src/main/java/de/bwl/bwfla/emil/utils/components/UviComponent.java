@@ -120,15 +120,17 @@ public class UviComponent {
             ComponentWithExternalFilesRequest.FileURL autoRun =
                     new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
                             "autorun.inf");
+            m.getExtFiles().add(autoRun);
         }
         else {
             ComponentWithExternalFilesRequest.FileURL autoRun =
                     new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
                             "uvi.bat");
+            m.getExtFiles().add(autoRun);
         }
 
         m.getExtFiles().add(inputFile);
-        m.getExtFiles().add(autoRun);
+
 
         for(UviComponentRequest.UviFile auxFile : request.getAuxFiles())
         {
