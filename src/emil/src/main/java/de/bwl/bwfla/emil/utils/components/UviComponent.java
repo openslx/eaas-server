@@ -114,9 +114,18 @@ public class UviComponent {
         ComponentWithExternalFilesRequest.FileURL inputFile =
                 new ComponentWithExternalFilesRequest.FileURL("copy",
                         request.getUviUrl(), request.getUviFilename());
-        ComponentWithExternalFilesRequest.FileURL autoRun =
-                new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
-                        "uvi.bat");
+
+        if(osId.equals("Unknown") || osId.equals("Q609733"))
+        {
+            ComponentWithExternalFilesRequest.FileURL autoRun =
+                    new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
+                            "autorun.inf");
+        }
+        else {
+            ComponentWithExternalFilesRequest.FileURL autoRun =
+                    new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
+                            "uvi.bat");
+        }
 
         m.getExtFiles().add(inputFile);
         m.getExtFiles().add(autoRun);
