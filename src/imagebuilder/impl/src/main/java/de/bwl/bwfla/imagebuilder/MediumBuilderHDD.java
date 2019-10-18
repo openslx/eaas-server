@@ -91,7 +91,7 @@ public class MediumBuilderHDD extends MediumBuilder
 		final Path qcow = workdir.resolve(outname + outtype);
 
 		final Deque<Runnable> tasks = new ArrayDeque<Runnable>();
-		final PrefixLogger log = new PrefixLogger(super.log.getName());
+		final PrefixLogger log = new PrefixLogger(this.getClass().getSimpleName());
 		log.getContext().add(workdir.getFileName().toString());
 		{
 			final String message = "Building image " + description.toShortSummary()
