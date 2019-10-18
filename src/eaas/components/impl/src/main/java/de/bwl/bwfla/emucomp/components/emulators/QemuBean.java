@@ -130,6 +130,8 @@ public class QemuBean extends EmulatorBean
 		else if (this.isSdlBackendEnabled()) {
 			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 			emuRunner.addArguments("-k", "en-us");
+			if (this.isPulseAudioEnabled())
+				emuRunner.addEnvVariable("QEMU_SDL_SAMPLES", "4096");
 		} else if (this.isXpraBackendEnabled()){
 			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 		}
