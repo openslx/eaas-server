@@ -60,7 +60,7 @@ public class UviComponent {
         {
             case "Q11248": // XP
             case "Q6072277": // XP 64bit
-            case "Q609733": // win9x
+           //  case "Q609733": // win9x
                 return "start \"\" \"%~dp0/" + filename + "\"";
 
         }
