@@ -132,7 +132,7 @@ public class MetsObject {
                             of.size = file.getSIZE();
                         of.id = file.getID();
                         objectFiles.put(of.id, of);
-                        log.info(of.toString());
+                        // log.info(of.toString());
                     }
                     catch (MetsObjectMetadataException e)
                     {
