@@ -50,6 +50,7 @@ public class ContainerComponent {
     @Config(value = "rest.blobstore")
     private String blobStoreRestAddress;
 
+
     private BlobStore blobstore;
 
     @Inject
@@ -73,6 +74,7 @@ public class ContainerComponent {
     {
         try {
             this.imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
+            this.blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
         } catch (BWFLAException e) {
             throw new RuntimeException("Constructing web-services failed!", e);
         }
