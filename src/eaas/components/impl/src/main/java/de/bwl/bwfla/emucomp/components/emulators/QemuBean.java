@@ -128,10 +128,10 @@ public class QemuBean extends EmulatorBean
 			emuRunner.addArgument("-full-screen");
 		}
 		else if (this.isSdlBackendEnabled()) {
-			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 			emuRunner.addArguments("-k", "en-us");
 			if (this.isPulseAudioEnabled())
-				emuRunner.addEnvVariable("QEMU_SDL_SAMPLES", "4096");
+				emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
+			else emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 		} else if (this.isXpraBackendEnabled()){
 			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 		}
