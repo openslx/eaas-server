@@ -60,36 +60,37 @@ public class WebRtcSignallingServlet extends HttpServlet
     protected NodeManager nodeManager;
 
 
-	protected String getComponentId(HttpServletRequest request) throws ServletException
+	protected String getComponentId(HttpServletRequest request) throws WebRtcSignallingException
 	{
 		// Parse the request's path, that should contain the session's ID
 		final String path = request.getPathInfo();
 		if (path == null || !path.endsWith(PROTOCOL_SUFFIX))
-			throw new ServletException("Wrong servlet requested!");
+			throw new WebRtcSignallingException(HttpServletResponse.SC_BAD_REQUEST, "Wrong servlet requested!");
 
 		final int soffset = COMPONENT_ID_OFFSET;
 		final int eoffset = path.length() - PROTOCOL_SUFFIX_LENGTH;
 		final String componentId = path.substring(soffset, eoffset);
 		if (componentId.isEmpty())
-			throw new ServletException("Component ID is missing in request!");
+			throw new WebRtcSignallingException(HttpServletResponse.SC_BAD_REQUEST, "Component ID is missing in request!");
 
 		return componentId;
 	}
 
-	protected AudioConnector getAudioConnector(String componentId) throws ServletException
+	protected AudioConnector getAudioConnector(String componentId) throws WebRtcSignallingException
 	{
 		try {
 			AbstractEaasComponent component = nodeManager.getComponentById(componentId, AbstractEaasComponent.class);
 			IConnector connector = component.getControlConnector(AudioConnector.PROTOCOL);
 			if (!(connector instanceof AudioConnector)) {
 				String message = "No AudioConnector found for component '" + componentId + "'!";
-				throw new ServletException(message);
+				throw new WebRtcSignallingException(HttpServletResponse.SC_NOT_FOUND, message);
 			}
 
 			return (AudioConnector) connector;
 		}
 		catch (BWFLAException error) {
-			throw new ServletException("No component found with ID " + componentId, error);
+			final String message = "No component found with ID " + componentId;
+			throw new WebRtcSignallingException(HttpServletResponse.SC_NOT_FOUND, message, error);
 		}
 	}
 
@@ -97,13 +98,18 @@ public class WebRtcSignallingServlet extends HttpServlet
 	/* =============== HttpServlet Implementation =============== */
 
 	@Override
-	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void doGet(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
-		final String compid = this.getComponentId(request);
-		final AudioConnector connector = this.getAudioConnector(compid);
 		try {
+			final String compid = this.getComponentId(request);
+			final AudioConnector connector = this.getAudioConnector(compid);
 			final String message = connector.getAudioStreamer()
 					.pollServerControlMessage(30, TimeUnit.SECONDS);
+
+			if (message == null) {
+				response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
+				return;
+			}
 
 			response.setContentType("application/json");
 			response.addHeader("Access-Control-Allow-Origin", "*");
@@ -112,16 +118,19 @@ public class WebRtcSignallingServlet extends HttpServlet
 		}
 		catch (Exception error) {
 			log.log(Level.WARNING, "Forwarding S2C control-message failed!", error);
-			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			final int httpcode = (error instanceof WebRtcSignallingException) ?
+					((WebRtcSignallingException) error).getHttpCode() : HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+
+			response.sendError(httpcode, error.getMessage());
 		}
 	}
 
 	@Override
-	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws ServletException, IOException
+	protected void doPost(HttpServletRequest request, HttpServletResponse response) throws IOException
 	{
-		final String compid = this.getComponentId(request);
-		final AudioConnector connector = this.getAudioConnector(compid);
 		try {
+			final String compid = this.getComponentId(request);
+			final AudioConnector connector = this.getAudioConnector(compid);
 			final char[] buffer = new char[request.getContentLength()];
 			final int length = request.getReader()
 					.read(buffer);
@@ -137,7 +146,36 @@ public class WebRtcSignallingServlet extends HttpServlet
 		}
 		catch (Exception error) {
 			log.log(Level.WARNING, "Forwarding C2S control-message failed!", error);
-			response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+			final int httpcode = (error instanceof WebRtcSignallingException) ?
+					((WebRtcSignallingException) error).getHttpCode() : HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+
+			response.sendError(httpcode, error.getMessage());
+		}
+	}
+
+
+	private static class WebRtcSignallingException extends ServletException
+	{
+		private final int code;
+
+
+		public WebRtcSignallingException(int code, String message)
+		{
+			super(message);
+
+			this.code = code;
+		}
+
+		public WebRtcSignallingException(int code, String message, Throwable cause)
+		{
+			super(message, cause);
+
+			this.code = code;
+		}
+
+		public int getHttpCode()
+		{
+			return code;
 		}
 	}
 }
