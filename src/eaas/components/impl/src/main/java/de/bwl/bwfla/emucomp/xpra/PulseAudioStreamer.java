@@ -59,6 +59,8 @@ public class PulseAudioStreamer implements IAudioStreamer
 	private final Bin audio;
 	private boolean closed;
 
+	private static final long OUTPUT_QUEUE_OFFER_TIMEOUT = 5L;
+
 
 	public PulseAudioStreamer(String cid, Path pulsesock)
 	{
@@ -74,7 +76,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			throw error;
 		}
 
-		this.outqueue = new ArrayBlockingQueue<>(8);
+		this.outqueue = new ArrayBlockingQueue<>(16);
 		this.pipeline = PulseAudioStreamer.createPipeline(log);
 		this.audio = PulseAudioStreamer.createAudioBin(pulsesock.toString());
 		this.webrtc= PulseAudioStreamer.createWebRtcBin(pipeline, outqueue, log);
@@ -209,7 +211,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			final ControlMessage<SdpData> message = ControlMessage.wrap(sdp);
 			try {
 				log.info("Sending SDP-offer...");
-				outqueue.put(message.toString());
+				outqueue.offer(message.toString(), OUTPUT_QUEUE_OFFER_TIMEOUT, TimeUnit.SECONDS);
 			}
 			catch (InterruptedException error) {
 				log.log(Level.WARNING, "Sending SDP-offer failed!", error);
@@ -237,7 +239,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			final ControlMessage<IceData> message = ControlMessage.wrap(ice);
 			try {
 				log.info("Sending ICE-candidate: " + candidate);
-				outqueue.put(message.toString());
+				outqueue.offer(message.toString(), OUTPUT_QUEUE_OFFER_TIMEOUT, TimeUnit.SECONDS);
 			}
 			catch (InterruptedException error) {
 				log.log(Level.WARNING, "Sending ICE-candidate failed!", error);
