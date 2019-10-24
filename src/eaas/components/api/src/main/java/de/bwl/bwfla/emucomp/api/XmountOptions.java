@@ -81,10 +81,10 @@ public class XmountOptions {
 
 		String proxyUrl = MachineTokenProvider.getAuthenticationProxy();
 		if(proxyUrl != null) {
-			log.warning("using http_proxy " + proxyUrl);
+			log.warning("using http_proxy");
 
-	 		process.addEnvVariable("no_proxy", "nginx");
-			process.addEnvVariable("http_proxy", proxyUrl);
+			process.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_libcurl.so");
+	 		process.addEnvVariable("prefix_proxy", proxyUrl);
 		}
 	}
 }
