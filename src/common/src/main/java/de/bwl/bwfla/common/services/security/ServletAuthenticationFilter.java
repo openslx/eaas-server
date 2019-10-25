@@ -58,8 +58,7 @@ public class ServletAuthenticationFilter  implements Filter {
         boolean excludePath = false;
         HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
         HttpServletResponse response=(HttpServletResponse) servletResponse;
-
-        LOG.severe("path " + httpRequest.getServletPath());
+        
         String path = httpRequest.getServletPath();
         if(httpRequest.getQueryString() != null && !httpRequest.getQueryString().isEmpty())
             path += "?" + httpRequest.getQueryString();
