@@ -86,7 +86,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             throw new BWFLAException("no auth secret configured. configure 'emil.authSecret'");
 
         try {
-            System.out.println(" secret " + authSecret);
+            // System.out.println(" secret " + authSecret);
             Algorithm algorithm = Algorithm.HMAC256(authSecret);
             JWTVerifier verifier = JWT.require(algorithm)
                     .build(); //Reusable verifier instance
