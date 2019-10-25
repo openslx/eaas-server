@@ -31,6 +31,7 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean enableRelativeMouse;
 	private boolean shutdownByOs;
 	private boolean useXpra;
+	private boolean useWebRTC;
 	private String xpraEncoding;
 	private boolean canProcessAdditionalFiles;
 	private List<Drive> drives;
@@ -173,5 +174,13 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setDrives(List<Drive> drives) {
 		this.drives = drives;
+	}
+
+	public boolean isUseWebRTC() {
+		return useWebRTC;
+	}
+
+	public void setUseWebRTC(boolean useWebRTC) {
+		this.useWebRTC = useWebRTC;
 	}
 }

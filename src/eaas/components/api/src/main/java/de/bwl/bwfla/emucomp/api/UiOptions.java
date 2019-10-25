@@ -26,12 +26,7 @@ import javax.xml.bind.annotation.XmlType;
 
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "uiOptions", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
-    "html5",
-    "input",
-    "time",
-	"forwarding_system"
-})
+@XmlType(name = "uiOptions", namespace = "http://bwfla.bwl.de/common/datatypes")
 public class UiOptions {
 
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
@@ -45,6 +40,9 @@ public class UiOptions {
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 	private String forwarding_system;
+
+	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
+	private String audio_system;
 
 	public String getForwarding_system() {
 		return forwarding_system;
@@ -76,5 +74,13 @@ public class UiOptions {
 
 	public void setTime(TimeOptions time) {
 		this.time = time;
+	}
+
+	public String getAudio_system() {
+		return audio_system;
+	}
+
+	public void setAudio_system(String audio_system) {
+		this.audio_system = audio_system;
 	}
 }

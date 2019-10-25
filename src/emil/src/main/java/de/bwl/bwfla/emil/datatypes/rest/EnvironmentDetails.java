@@ -85,8 +85,11 @@ public class EnvironmentDetails {
     @XmlElement
     private String nativeConfig;
 
-    @XmlElement
-    private boolean useXpra;
+    @XmlElement(defaultValue = "false")
+    private boolean useXpra = false;
+
+    @XmlElement(defaultValue = "false")
+    private boolean useWebRTC = false;
 
     @XmlElement private String containerName;
     @XmlElement private String containerVersion;
@@ -193,13 +196,16 @@ public class EnvironmentDetails {
             if(machineConf.getNativeConfig() != null)
                 this.nativeConfig = machineConf.getNativeConfig().getValue();
 
-            if(machineConf.getUiOptions() != null && machineConf.getUiOptions().getForwarding_system() != null)
+            if(machineConf.getUiOptions() != null )
             {
-                if (machineConf.getUiOptions().getForwarding_system().equalsIgnoreCase("xpra"))
+                if (machineConf.getUiOptions().getForwarding_system() != null &&
+                        machineConf.getUiOptions().getForwarding_system().equalsIgnoreCase("xpra"))
                     this.useXpra = true;
+
+                if (machineConf.getUiOptions().getAudio_system() != null &&
+                        machineConf.getUiOptions().getAudio_system().equalsIgnoreCase("webRTC"))
+                    this.useWebRTC = true;
             }
-            else
-                this.useXpra = false;
 
             if (machineConf.getEmulator().getBean() != null) {
                 this.emulator = machineConf.getEmulator().getBean();

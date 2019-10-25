@@ -110,8 +110,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Config("components.emulator_containers.snapshot")
 	public boolean isSnapshotEnabled = false;
 
-	@Inject
-	@Config("emucomp.enable_pulseaudio")
 	private boolean isPulseAudioEnabled = false;
 
 	@Inject
@@ -1435,11 +1433,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 						this.setEmulatorTime(offset);
 					}
 				}
+
+				this.isPulseAudioEnabled = false;
+				if(uiOptions.getAudio_system() != null
+						&& !uiOptions.getAudio_system().isEmpty()
+						&& uiOptions.getAudio_system().equalsIgnoreCase("webrtc")) {
+					this.isPulseAudioEnabled = true;
+				}
 			}
 
 			this.setupEmulatorBackend();
-
-
+			
 			for(Drive drive: emuEnvironment.getDrive())
 				prepareDrive(drive);
 
