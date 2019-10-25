@@ -967,7 +967,10 @@ public class ImageHandler
 
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
-		options.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
+		if(MachineTokenProvider.getAuthenticationProxy() != null)
+			options.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
+		else
+			options.setProxyUrl(MachineTokenProvider.getProxy());
 
 		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
 		ImageGeneralizer.applyScriptIfCompatible(destImgFile, generalization, emulatorArchiveprefix);

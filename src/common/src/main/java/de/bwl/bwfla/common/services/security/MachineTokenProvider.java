@@ -11,7 +11,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Date;
 
 public class MachineTokenProvider {
-    private static final String authProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
+    private static String authProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
     private static String apiSecret;
 
     static {
@@ -48,6 +48,8 @@ public class MachineTokenProvider {
     {
         if(authProxy != null && (authProxy.isEmpty() || authProxy.equals("null")))
             return null;
+        if(!authProxy.endsWith("/"))
+            authProxy += "/";
         return authProxy;
     }
 
@@ -55,6 +57,14 @@ public class MachineTokenProvider {
     {
         if( getApiKey() != null && getAuthProxy() != null)
             return "http://jwt:" + getApiKey() + "@" + getAuthProxy();
+        else
+            return null;
+    }
+
+    public static String getProxy()
+    {
+        if( getAuthProxy() != null)
+            return "http://" + getAuthProxy();
         else
             return null;
     }

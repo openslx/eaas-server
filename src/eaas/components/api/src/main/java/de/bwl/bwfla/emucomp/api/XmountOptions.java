@@ -2,6 +2,7 @@ package de.bwl.bwfla.emucomp.api;
 
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import org.apache.tamaya.ConfigurationProvider;
 
 import java.util.logging.Logger;
 
@@ -11,7 +12,7 @@ public class XmountOptions {
 	private EmulatorUtils.XmountInputFormat inFmt;
 	private long offset = 0;
 	private long size = -1;
-	private String proxyUrl = null;
+	private static String curlProxySo = ConfigurationProvider.getConfiguration().get("emucomp.curl_proxy");
 
 	protected final Logger log	= Logger.getLogger(this.getClass().getName());
 	
@@ -80,11 +81,12 @@ public class XmountOptions {
 		}
 
 		String proxyUrl = MachineTokenProvider.getAuthenticationProxy();
-		if(proxyUrl != null) {
-			log.warning("using http_proxy");
+		if(proxyUrl == null)
+			proxyUrl = MachineTokenProvider.getProxy();
 
-			process.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_libcurl.so");
-	 		process.addEnvVariable("prefix_proxy", proxyUrl);
-		}
+		log.warning("using http_proxy " + proxyUrl);
+		process.addEnvVariable("LD_PRELOAD", curlProxySo);
+		process.addEnvVariable("prefix_proxy", proxyUrl);
+
 	}
 }

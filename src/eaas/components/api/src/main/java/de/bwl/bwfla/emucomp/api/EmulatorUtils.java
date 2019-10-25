@@ -29,6 +29,7 @@ import org.apache.tamaya.ConfigurationProvider;
 
 public class EmulatorUtils {
 	protected static final Logger log = Logger.getLogger("EmulatorUtils");
+	private static String curlProxySo = ConfigurationProvider.getConfiguration().get("emucomp.curl_proxy");
 
 	public enum XmountOutputFormat {
 		RAW("raw"),
@@ -120,6 +121,9 @@ public class EmulatorUtils {
 
 				if(MachineTokenProvider.getAuthenticationProxy() != null)
 					qcowOptions.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
+				else
+					qcowOptions.setProxyUrl(MachineTokenProvider.getProxy());
+
 				EmulatorUtils.createCowFile(cowPath, qcowOptions);
 
 				Path fuseMountpoint = cowPath
@@ -272,7 +276,7 @@ public class EmulatorUtils {
 			log.severe("using proxy " +  options.getProxyUrl());
 			// process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			// process.addEnvVariable("http_proxy", options.getProxyUrl());
-			process.addEnvVariable("LD_PRELOAD", "/usr/local/lib/LD_PRELOAD_libcurl.so");
+			process.addEnvVariable("LD_PRELOAD", curlProxySo);
 			process.addEnvVariable("prefix_proxy", options.getProxyUrl());
 		}
 
