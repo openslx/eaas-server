@@ -476,11 +476,10 @@ public class EmilEnvironmentData extends EmilRest {
 
 				if(desc.isUseWebRTC())
 				{
-					LOG.severe("webRTC");
 					machineConfiguration.getUiOptions().setAudio_system("webRTC");
 				}
 				else
-					machineConfiguration.getUiOptions().setForwarding_system(null);
+					machineConfiguration.getUiOptions().setAudio_system(null);
 
 				if (machineConfiguration.getUiOptions().getHtml5() == null)
 					machineConfiguration.getUiOptions().setHtml5(new Html5Options());
