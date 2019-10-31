@@ -355,9 +355,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return this.getWorkingDir().resolve("state");
 	}
 
-	public Path getPrintDir()
+	public Path getPrinterDir()
 	{
-		return this.getDataDir().resolve("print");
+		return this.getDataDir().resolve("printer");
 	}
 
 	private void createWorkingSubDirs() throws IOException
@@ -379,7 +379,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		Files.createDirectories(this.getNetworksDir());
 		Files.createDirectories(this.getSocketsDir());
 		Files.createDirectories(this.getUploadsDir());
-		Files.createDirectories(this.getPrintDir());
+		Files.createDirectories(this.getPrinterDir());
 	}
 
 	private Path getXpraSocketPath()
@@ -886,9 +886,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		emuObserver.start();
 
 		if (printer != null) {
-			// TODO: check stop condition of printer thread!
-			workerThreadFactory.newThread(printer)
-					.start();
+			final Thread worker = workerThreadFactory.newThread(printer);
+			printer.setWorkerThread(worker);
+			worker.start();
 		}
 
 		if (this.isSdlBackendEnabled()) {
@@ -1065,9 +1065,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (player != null)
 			player.stop();
 
-		if(printer != null)
-			printer.stop();
-
 		if (this.isSdlBackendEnabled()) {
 			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
 			final GuacTunnel tunnel = (connector != null) ? connector.getTunnel() : null;
@@ -1103,6 +1100,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		if (emuRunner.isProcessRunning())
 			this.stopProcessRunner(emuRunner);
+
+		if (printer != null)
+			printer.stop();
 	}
 
 	private void stopProcessRunner(DeprecatedProcessRunner runner)
