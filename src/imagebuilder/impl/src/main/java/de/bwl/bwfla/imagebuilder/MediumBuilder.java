@@ -30,10 +30,7 @@ import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
 
 import javax.activation.DataHandler;
 import javax.activation.URLDataSource;
-import javax.json.Json;
-import javax.json.JsonObject;
-import javax.json.JsonReader;
-import javax.json.JsonValue;
+import javax.json.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -183,12 +180,14 @@ public abstract class MediumBuilder
 							try (final JsonReader reader = Json.createReader(runner.getStdOutReader())) {
 								final JsonObject json = reader.readObject();
 								final ArrayList<String> envvars = new ArrayList<>();
-								for (JsonValue value : json.getJsonArray("Env"))
-									envvars.add(value.toString());
+								JsonArray envArray = json.getJsonArray("Env");
+								for(int i = 0; i < envArray.size(); i++)
+									envvars.add(envArray.getString(i));
 
 								final ArrayList<String> cmds = new ArrayList<>();
-								for (JsonValue value : json.getJsonArray("Cmd"))
-									cmds.add(value.toString());
+								JsonArray cmdJson = json.getJsonArray("Cmd");
+								for(int i = 0; i < cmdJson.size(); i++)
+									cmds.add(cmdJson.getString(i));
 
 								dockerMd.setEntryProcesses(cmds);
 								dockerMd.setEnvVariables(envvars);
