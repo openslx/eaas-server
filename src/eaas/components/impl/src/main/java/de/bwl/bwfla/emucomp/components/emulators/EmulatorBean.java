@@ -1419,7 +1419,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			MachineConfiguration.NativeConfig nativeConfig = emuEnvironment.getNativeConfig();
 			this.prepareNativeConfig(nativeConfig);
-			this.prepareEmulatorRunner();
 
 			UiOptions uiOptions = emuEnvironment.getUiOptions();
 			if (uiOptions != null) {
@@ -1442,6 +1441,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				}
 			}
 
+			this.prepareEmulatorRunner();
 			this.setupEmulatorBackend();
 			
 			for(Drive drive: emuEnvironment.getDrive())
@@ -1594,6 +1594,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		emuRunner.addEnvVariable("SDL_SRVCTLSOCKET", ctlSocket.getName());
 		emuRunner.addEnvVariable("SDL_EMUCTLSOCKET", emuCtlSocketName);
 		emuConfig.setIoSocket(emusocket);
+
+		// HACK: Qemu uses a custom audio setup!
+		if (this instanceof QemuBean) {
+			emuRunner.getEnvVariables()
+					.remove("SDL_AUDIODRIVER");
+		}
 
 		emuConfig.setInactivityTimeout(this.getInactivityTimeout());
 
