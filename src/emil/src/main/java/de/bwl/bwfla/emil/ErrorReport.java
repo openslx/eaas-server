@@ -32,6 +32,8 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoField;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -61,7 +63,9 @@ public class ErrorReport
 			if (!runner.execute())
 				throw new InternalServerErrorException("Generating error-report failed!");
 
-			final String name = "eaas-error-report-" + System.currentTimeMillis() + ".gpg";
+			final LocalDateTime timestamp = LocalDateTime.now();
+			final String name = "eaas-error-report-" + timestamp.get(ChronoField.DAY_OF_YEAR)
+					 + "-" + timestamp.get(ChronoField.MINUTE_OF_DAY) + ".gpg";
 
 			// Set response headers...
 			return Response.status(Response.Status.OK)
