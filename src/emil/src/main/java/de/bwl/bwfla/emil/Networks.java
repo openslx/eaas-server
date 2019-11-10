@@ -107,6 +107,8 @@ public class Networks {
                 VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
                 String slirpMac = slirpConfig.getHwAddress();
                 slirpConfig.setDhcpEnabled(false);
+                slirpConfig.setIp4Address("10.0.1.199");
+                slirpConfig.setNetmask(24);
                 String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
                 sessions.addComponent(session, slirpId);
 
