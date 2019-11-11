@@ -434,14 +434,14 @@ public class QemuBean extends EmulatorBean
 	private String fmtDate(long epoch)
 	{
 		Date d = new Date(epoch);
-		DateFormat format = new SimpleDateFormat("YYYY-MM-DD'T'hh:mm:ss"); // 2006-06-17T16:01:21
+		DateFormat format = new SimpleDateFormat("YYYY-MM-dd'T'hh:mm:ss"); // 2006-06-17T16:01:21
 		String formatted = format.format(d);
 		return formatted;
 	}
 
 	protected void setEmulatorTime(long epoch)
 	{
-		// LOG.info("set emulator time: "  + epoch + " " + "fmtStr" + fmtDate(epoch));
+		LOG.info("set emulator time: "  + epoch + " " + "fmtStr" + fmtDate(epoch));
 		emuRunner.addArgument("-rtc");
 		emuRunner.addArgument("base="+fmtDate(epoch));
 	}
