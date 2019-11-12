@@ -1422,6 +1422,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			UiOptions uiOptions = emuEnvironment.getUiOptions();
 			if (uiOptions != null) {
+				this.isPulseAudioEnabled = false;
+				if(uiOptions.getAudio_system() != null
+						&& !uiOptions.getAudio_system().isEmpty()
+						&& uiOptions.getAudio_system().equalsIgnoreCase("webrtc")) {
+					this.isPulseAudioEnabled = true;
+				}
+			}
+
+			this.prepareEmulatorRunner();
+
+			if (uiOptions != null) {
 				TimeOptions timeOptions = uiOptions.getTime();
 				if (timeOptions != null) {
 					if (timeOptions.getEpoch() != null) {
@@ -1432,16 +1443,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 						this.setEmulatorTime(offset);
 					}
 				}
-
-				this.isPulseAudioEnabled = false;
-				if(uiOptions.getAudio_system() != null
-						&& !uiOptions.getAudio_system().isEmpty()
-						&& uiOptions.getAudio_system().equalsIgnoreCase("webrtc")) {
-					this.isPulseAudioEnabled = true;
-				}
 			}
 
-			this.prepareEmulatorRunner();
 			this.setupEmulatorBackend();
 			
 			for(Drive drive: emuEnvironment.getDrive())
