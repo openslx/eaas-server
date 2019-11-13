@@ -136,12 +136,17 @@ public class QemuBean extends EmulatorBean
 			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 		}
 
+		// Qemu's pipe-based character-device requires two pipes (<name>.in + <name>.out) to be created
+		final String printerFileName = "parallel-port";
+		final Path printerBasePath = this.getPrinterDir().resolve(printerFileName);
+		final Path printerOutPath = this.getPrinterDir().resolve(printerFileName + ".out");
+		PostScriptPrinter.createUnixPipe(printerBasePath.toString() + ".in");
+		PostScriptPrinter.createUnixPipe(printerOutPath.toString());
+
 		// Configure printer device
-		final Path printerDataFile = this.getPrinterDir().resolve("printer.out");
-		super.printer = new PostScriptPrinter(printerDataFile, this, LOG);
-		emuRunner.addArguments("-chardev", "file,id=printer,path=" + printerDataFile.toString());
+		super.printer = new PostScriptPrinter(printerOutPath, this, LOG);
+		emuRunner.addArguments("-chardev", "pipe,id=printer,path=" + printerBasePath.toString());
 		emuRunner.addArguments("-parallel", "chardev:printer");
-		emuContainerFilesToCheckpoint.add(printerDataFile.toString());
 	}
 
 	@Override

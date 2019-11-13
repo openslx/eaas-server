@@ -72,8 +72,8 @@ public class AmigaBean extends EmulatorBean {
             imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
             //check if this is first image
             if (floppyDriveCounter < 4)
-                emuRunner.addArgument("--floppy-drive-" + floppyDriveCounter + "=" + imagePath.toRealPath());
-            emuRunner.addArgument("--floppy-image-" + (floppyDriveCounter) + "=" + imagePath.toRealPath());
+                emuRunner.addArgument("--floppy-drive-" + floppyDriveCounter + "=" + imagePath.toAbsolutePath());
+            emuRunner.addArgument("--floppy-image-" + (floppyDriveCounter) + "=" + imagePath.toAbsolutePath());
 
 
             ++floppyDriveCounter;
