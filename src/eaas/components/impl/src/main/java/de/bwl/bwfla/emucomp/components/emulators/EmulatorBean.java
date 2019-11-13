@@ -134,6 +134,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private String blobStoreRestAddress;
 
 	private final String containerOutput = "container-output";
+
+	private static final String emulatorDataBase = "/home/bwfla/server-data/emulator-data/";
     
 	protected final TunnelConfig tunnelConfig = new TunnelConfig();
 
@@ -1409,6 +1411,26 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		else return EmulatorBeanMode.SDLONP;
 	}
 
+	protected void prepareUserData(MachineConfiguration environment) throws BWFLAException {
+		File src = new File(emulatorDataBase + getEmuContainerName(environment));
+		if(!src.exists()) {
+			LOG.info("no user data folder found " + src.getAbsolutePath());
+			return;
+		}
+
+		File userData = new File(getDataDir().toFile(), getEmuContainerName(environment));
+		if(userData.exists())
+			throw new BWFLAException("copied user data twice");
+
+		DeprecatedProcessRunner cp = new DeprecatedProcessRunner();
+		cp.setCommand("cp");
+		cp.addArgument("-rv");
+		cp.addArgument(src.getAbsolutePath());
+		cp.addArgument(userData.getAbsolutePath());
+		if(!cp.execute())
+			throw new BWFLAException("preparing emulator user data failed.");
+	}
+
 	protected void setRuntimeConfiguration(MachineConfiguration environment) throws BWFLAException
 	{
 		try {
@@ -1416,6 +1438,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			LOG.info(emuEnvironment.value());
 			for (AbstractDataResource resource: emuEnvironment.getAbstractDataResource())
 				this.prepareResource(resource);
+
+			prepareUserData(environment);
 
 			MachineConfiguration.NativeConfig nativeConfig = emuEnvironment.getNativeConfig();
 			this.prepareNativeConfig(nativeConfig);
