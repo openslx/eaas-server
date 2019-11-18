@@ -95,7 +95,7 @@ public class ClassificationTask extends AbstractTask<Object> {
                             if(_env instanceof EmilObjectEnvironment)
                                 break;
 
-                            if(_env != null && _env.isVisible())
+                            if(_env != null && emilEnvRepo.isEnvironmentVisible(_env))
                             {
                                 resultList.add(_env);
                             }

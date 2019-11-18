@@ -23,26 +23,34 @@ import java.util.Set;
 @XmlAccessorType(XmlAccessType.NONE)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironment> {
-	@XmlElement(required = false)
-	private String parentEnvId;
+
+	/*
+	properties to be inherited (as defaults) by clones/derivatives
+	 */
 	@XmlElement(required = true)
 	protected String envId;
+
 	@XmlElement(required = false, defaultValue = "default")
 	protected String archive = "default";
+
 	@XmlElement(required = false)
 	private String os;
+
 	@XmlElement(required = false)
 	private String title;
+
 	@XmlElement(required = false)
 	private String description;
+
 	@XmlElement(required = false)
 	private String version;
-	@XmlElement(required = false)
-	private String status;
+
 	@XmlElement(required = false)
 	private String emulator;
+
 	@XmlElement(required = false)
 	private String timeContext;
+
 	@XmlElement(required = false)
 	private String author;
 
@@ -50,24 +58,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private boolean isLinuxRuntime;
 
 	@XmlElement(required = false)
-	private String type = getClass().getCanonicalName();
-
-	@XmlElement(required = false)
-	private Set<String> childrenEnvIds = new HashSet<>();
-
-	@XmlElement(required = false)
-	private Set<String> branches = new HashSet<>();
-
-	@XmlElement(required = false)
-	private boolean visible = true;
-	@XmlElement(required = false)
 	private boolean enableRelativeMouse = false;
+
 	@XmlElement(required = false)
 	private boolean enablePrinting = false;
+
 	@XmlElement(required = false)
 	private boolean shutdownByOs = false;
-	@XmlElement(required = false)
-	private EmilNetworkingType networking;
 
 	@XmlElement(required = false)
 	private EmilEnvironmentOwner owner;
@@ -75,28 +72,17 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	@XmlElement(required = false)
 	private EmilEnvironmentPermissions permissions;
 
-	@XmlElement(required = false, defaultValue = "jpeg")
-	private String xpraEncoding;
-
-	@XmlElement
-	private String helpText;
-
-
-	public boolean isCanProcessAdditionalFiles() {
-		return canProcessAdditionalFiles;
-	}
-
-	public void setCanProcessAdditionalFiles(boolean canProcessAdditionalFiles) {
-		this.canProcessAdditionalFiles = canProcessAdditionalFiles;
-	}
-
 	@XmlElement(required = false)
 	private boolean canProcessAdditionalFiles;
 
-	@XmlElement
-	private String timestamp = Instant.now().toString();
+	@XmlElement(required = false, defaultValue = "jpeg")
+	private String xpraEncoding;
 
-	public EmilEnvironment() {}
+	@XmlElement(required = false)
+	private EmilNetworkingType networking;
+
+	@XmlElement
+	private String helpText;
 
 	public EmilEnvironment(EmilEnvironment template)
 	{
@@ -106,10 +92,10 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		title = template.title;
 		description = template.description;
 		version = template.version;
-		status = template.status;
 		emulator = template.emulator;
 		timeContext = template.timeContext;
-		visible = template.visible;
+		author = template.author;
+		isLinuxRuntime = template.isLinuxRuntime;
 		enableRelativeMouse = template.enableRelativeMouse;
 		enablePrinting = template.enablePrinting;
 		shutdownByOs = template.shutdownByOs;
@@ -118,7 +104,28 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		canProcessAdditionalFiles = template.canProcessAdditionalFiles;
 		xpraEncoding = template.xpraEncoding;
 		networking = template.networking;
+		helpText = template.helpText;
 	}
+
+	/*
+	additional properties to be set explicitly;
+	 */
+	@XmlElement(required = false)
+	private String parentEnvId;
+
+	@XmlElement(required = false)
+	private Set<String> childrenEnvIds = new HashSet<>();
+
+	@XmlElement(required = false)
+	private Set<String> branches = new HashSet<>();
+
+	@XmlElement(required = false)
+	private String type = getClass().getCanonicalName();
+
+	@XmlElement
+	private String timestamp = Instant.now().toString();
+
+	public EmilEnvironment() {}
 
 	public String getArchive() {
 		return archive;
@@ -172,12 +179,6 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	}
 	public void setVersion(String version) {
 		this.version = version;
-	}
-	public String getStatus() {
-		return status;
-	}
-	public void setStatus(String status) {
-		this.status = status;
 	}
 	public String getOs() {
 		return os;
@@ -320,5 +321,13 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setHelpText(String helpText) {
 		this.helpText = helpText;
+	}
+
+	public boolean isCanProcessAdditionalFiles() {
+		return canProcessAdditionalFiles;
+	}
+
+	public void setCanProcessAdditionalFiles(boolean canProcessAdditionalFiles) {
+		this.canProcessAdditionalFiles = canProcessAdditionalFiles;
 	}
 }

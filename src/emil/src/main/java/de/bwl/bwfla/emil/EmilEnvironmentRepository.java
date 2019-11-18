@@ -332,6 +332,22 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
+	public boolean isEnvironmentVisible(EmilEnvironment env)
+	{
+		Set<String> ids = env.getChildrenEnvIds();
+		if(ids == null || ids.size() == 0)
+			return true;
+
+		if(!env.getArchive().equals("default"))
+		{
+			for(String id : ids)
+			{
+				if(getSharedEmilEnvironmentById(id) != null)
+					return true;
+			}
+		}
+		return false;
+	}
 
 	//TODO: refactor
 	public List<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId, String userCtx) throws BWFLAException {
@@ -341,7 +357,7 @@ public class EmilEnvironmentRepository {
 
 		List<EmilObjectEnvironment> all = loadEmilObjectEnvironments(userCtx);
 		for (EmilObjectEnvironment objEnv : all) {
-			if (objEnv.getObjectId().equals(objectId) && objEnv.isVisible()
+			if (objEnv.getObjectId().equals(objectId) && isEnvironmentVisible(objEnv)
 					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ, userCtx))
 				result.add(objEnv);
 		}
@@ -638,7 +654,7 @@ public class EmilEnvironmentRepository {
 			if(known.contains(e.getEnvId()))
 				return false;
 			return known.add(e.getEnvId());
-		}).filter( e -> (e.isVisible()))
+		}).filter(this::isEnvironmentVisible)
 				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
 				.collect(Collectors.toList());
 	}
