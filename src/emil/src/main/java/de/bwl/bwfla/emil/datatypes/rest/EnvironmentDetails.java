@@ -96,6 +96,8 @@ public class EnvironmentDetails {
 
     @XmlElement private List<Drive> drives;
 
+    @XmlElement private String timestamp;
+
     /* Object Environments */
 
     @XmlElement
@@ -147,6 +149,7 @@ public class EnvironmentDetails {
         this.xpraEncoding = emilenv.getXpraEncoding();
         this.isLinuxRuntime = emilenv.isLinuxRuntime();
         this.helpText = emilenv.getHelpText();
+        this.timestamp = emilenv.getTimestamp();
 
         if(machineConf != null)
             this.drives = machineConf.getDrive();
