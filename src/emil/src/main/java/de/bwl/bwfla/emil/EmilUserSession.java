@@ -79,7 +79,7 @@ public class EmilUserSession extends EmilRest {
             json.beginArray();
 
             for (EmilSessionEnvironment emilenv : sessions) {
-                if(!emilenv.isVisible())
+                if(!emilEnvRepo.isEnvironmentVisible(emilenv))
                     continue;
 
                 json.beginObject();
