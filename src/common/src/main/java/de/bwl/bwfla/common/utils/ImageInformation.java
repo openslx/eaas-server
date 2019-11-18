@@ -36,6 +36,16 @@ public class ImageInformation {
         }
     }
 
+    static public String getBackingImageId(String bf) throws BWFLAException {
+        if (bf.contains("exportname")) {
+            return bf.substring(bf.lastIndexOf('=') + 1);
+        }
+        else if (bf.startsWith("http")) {
+            return bf.substring(bf.lastIndexOf('/') + 1);
+        }
+        throw new BWFLAException("cannot determine image id. unsupported schema: " + bf);
+    }
+
     public ImageInformation(String imageFile, Logger log) throws IOException, BWFLAException {
         DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 

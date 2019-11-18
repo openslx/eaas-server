@@ -93,16 +93,7 @@ public class ImageHandler
 	}
 
 
-	static private String getBackingImageId(String bf)
-	{
-		if (bf.contains("exportname")) {
-			return bf.substring(bf.lastIndexOf('=') + 1);
-		}
-		else if (bf.startsWith("http")) {
-			return bf.substring(bf.lastIndexOf('/') + 1);
-		}
-		else return null;
-	}
+
 
 	private String getArchivePrefix()
 	{
@@ -165,9 +156,7 @@ public class ImageHandler
 
 			log.info(f.getAbsolutePath() + " got backing file: " + info.getBackingFile());
 
-			String id = getBackingImageId(info.getBackingFile());
-			if (id == null)
-				return null;
+			String id = ImageInformation.getBackingImageId(info.getBackingFile());
 			log.info(" got id: " + id);
 
 			File tmpTarget = getImageTargetPath(ImageType.tmp.name());
@@ -817,9 +806,7 @@ public class ImageHandler
 		if(info.getBackingFile() == null)
 			return;
 
-		String id = getBackingImageId(info.getBackingFile());
-		if(id == null)
-			return;
+		String id = ImageInformation.getBackingImageId(info.getBackingFile());
 
 		log.info("update image: got id: " + id);
 		File backing = null;

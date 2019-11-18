@@ -343,8 +343,9 @@ public class EmilEnvironmentRepository {
 			for(String id : ids)
 			{
 				if(getSharedEmilEnvironmentById(id) != null)
-					return true;
+					return false;
 			}
+			return true;
 		}
 		return false;
 	}
