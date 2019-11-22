@@ -7,7 +7,8 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 @Entity
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EnvironmentDeleteRequest {
-    private String envId;
+	@Deprecated
+    private String envId;  // TODO: remove it!
     private boolean deleteMetaData = false;
     private boolean deleteImage = false;
     private boolean force = true;
