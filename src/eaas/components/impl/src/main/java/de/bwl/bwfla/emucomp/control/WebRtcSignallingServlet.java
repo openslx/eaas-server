@@ -24,6 +24,7 @@ import de.bwl.bwfla.emucomp.NodeManager;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
+import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
 
 import javax.inject.Inject;
 import javax.servlet.ServletException;
@@ -103,9 +104,13 @@ public class WebRtcSignallingServlet extends HttpServlet
 		try {
 			final String compid = this.getComponentId(request);
 			final AudioConnector connector = this.getAudioConnector(compid);
-			final String message = connector.getAudioStreamer()
-					.pollServerControlMessage(30, TimeUnit.SECONDS);
+			final IAudioStreamer streamer = connector.getAudioStreamer();
+			if (streamer == null) {
+				final String message = "No AudioStreamer found for component " + compid + "!";
+				throw new WebRtcSignallingException(HttpServletResponse.SC_NOT_FOUND, message);
+			}
 
+			final String message = streamer.pollServerControlMessage(30, TimeUnit.SECONDS);
 			if (message == null) {
 				response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
 				return;
@@ -131,6 +136,17 @@ public class WebRtcSignallingServlet extends HttpServlet
 		try {
 			final String compid = this.getComponentId(request);
 			final AudioConnector connector = this.getAudioConnector(compid);
+			final String query = request.getQueryString();
+			if (query != null && query.equals("connect")) {
+				log.info("New audio stream was requested for component " + compid);
+				connector.newAudioStreamer()
+						.play();
+
+				response.addHeader("Access-Control-Allow-Origin", "*");
+				response.setStatus(HttpServletResponse.SC_OK);
+				return;
+			}
+
 			final char[] buffer = new char[request.getContentLength()];
 			final int length = request.getReader()
 					.read(buffer);
@@ -138,8 +154,13 @@ public class WebRtcSignallingServlet extends HttpServlet
 			if (length != buffer.length)
 				throw new IOException("Reading payload failed! Expected " + buffer.length + " bytes, received " + length);
 
-			connector.getAudioStreamer()
-					.postClientControlMessage(buffer);
+			final IAudioStreamer streamer = connector.getAudioStreamer();
+			if (streamer == null) {
+				final String message = "No AudioStreamer found for component " + compid + "!";
+				throw new WebRtcSignallingException(HttpServletResponse.SC_NOT_FOUND, message);
+			}
+
+			streamer.postClientControlMessage(buffer);
 
 			response.addHeader("Access-Control-Allow-Origin", "*");
 			response.setStatus(HttpServletResponse.SC_OK);
