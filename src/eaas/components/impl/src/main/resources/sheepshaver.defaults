@@ -10,7 +10,7 @@ ramsize 268435456
 frameskip 0
 gfxaccel false
 nonet false
-ether slirp
+ether vde
 nosound false
 nogui true
 nocdrom false

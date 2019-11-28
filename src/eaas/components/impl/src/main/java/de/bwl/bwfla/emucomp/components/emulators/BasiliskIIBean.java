@@ -187,8 +187,9 @@ public class BasiliskIIBean extends EmulatorBean
 
 	@Override
 	protected boolean addNic(Nic nic) {
-		LOG.warning("Network connection is currently not implemented.");
-		return false;
+
+	    emuRunner.addArguments("--switch", this.getNetworksDir().resolve("nic_" + nic.getHwaddress()).toString());
+		return true;
 	}
 
     private HashMap prepareConfig(String config)
