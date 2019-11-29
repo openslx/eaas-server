@@ -10,6 +10,7 @@ import java.util.List;
 @XmlAccessorType(XmlAccessType.NONE)
 public class SyncObjectRequest extends EmilRequestType {
 
+    @Deprecated
     @XmlElement(required = true)
     private String archive;
 
