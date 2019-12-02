@@ -11,7 +11,29 @@ image: maven:3-jdk-8
 standalone-server-build:
   <<: *caching
   script:
-   - mvn -f src/pom.xml clean install
+    - mvn -f src/pom.xml clean install
+    - docsrc="${PWD}/src/emil/target/apidocs"
+
+    # Prepare SSH for working with Git repositories
+    - which ssh-agent || (apt-get update -y && apt-get install openssh-client -y)
+    - mkdir -p ~/.ssh && chmod 700 ~/.ssh && eval $(ssh-agent -s)
+    - echo "${EAAS_API_DOCS_SSHKEY}" | tr -d '\r' | ssh-add -
+    - echo "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts && chmod 644 ~/.ssh/known_hosts
+
+    # Clone docs repository and update it with generated pages
+    - docdir="/tmp/eaas-api-docs"
+    - doctgt="${docdir}/public/${CI_COMMIT_REF_NAME}"
+    - mkdir -p "${docdir}" && cd "${docdir}" && git clone git@gitlab.com:openslx/eaas-api-docs.git .
+    - mkdir -p "${doctgt}" && rm -r -v ${doctgt}/* || true
+    - cp -r -v ${docsrc}/* "${doctgt}"
+
+    # Finally, commit and push new pages...
+    - git config --local user.email "nobody@openslx.com"
+    - git config --local user.name "eaas-server-ci"
+    - git add public/
+    - git commit -m "Update triggered by pipeline ${CI_PIPELINE_URL}" || true
+    - git push origin master
+
   artifacts:
     paths:
     - eaas-server.ear
