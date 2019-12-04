@@ -29,11 +29,13 @@ public class AudioConnector implements IConnector
 {
 	public final static String PROTOCOL = "audio";
 
-	private final IAudioStreamer streamer;
+	private final IThrowingSupplier<IAudioStreamer> constructor;
+	private IAudioStreamer streamer;
 
-	public AudioConnector(IAudioStreamer streamer)
+	public AudioConnector(IThrowingSupplier<IAudioStreamer> constructor)
 	{
-		this.streamer = streamer;
+		this.constructor = constructor;
+		this.streamer = null;
 	}
 
 	@Override
@@ -46,6 +48,17 @@ public class AudioConnector implements IConnector
 	public String getProtocol()
 	{
 		return AudioConnector.PROTOCOL;
+	}
+
+	public IAudioStreamer newAudioStreamer() throws Exception
+	{
+		if (streamer != null) {
+			streamer.stop();
+			streamer.close();
+		}
+
+		streamer = constructor.get();
+		return streamer;
 	}
 
 	public IAudioStreamer getAudioStreamer()

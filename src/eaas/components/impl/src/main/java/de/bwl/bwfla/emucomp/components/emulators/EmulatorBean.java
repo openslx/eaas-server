@@ -58,7 +58,6 @@ import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 import org.glyptodon.guacamole.GuacamoleException;
-import org.glyptodon.guacamole.net.GuacamoleTunnel;
 import org.glyptodon.guacamole.protocol.GuacamoleClientInformation;
 import org.glyptodon.guacamole.protocol.GuacamoleConfiguration;
 
@@ -940,9 +939,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isPulseAudioEnabled()) {
 			final String cid = this.getComponentId();
 			final Path pulsesock = this.getPulseAudioSocketPath();
-			final PulseAudioStreamer streamer = new PulseAudioStreamer(cid, pulsesock);
-			this.addControlConnector(new AudioConnector(streamer));
-			streamer.play();
+			this.addControlConnector(new AudioConnector(() -> new PulseAudioStreamer(cid, pulsesock)));
 		}
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
@@ -1067,6 +1064,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (player != null)
 			player.stop();
 
+		this.closeAllConnectors();
+
+		if (emuRunner.isProcessRunning())
+			this.stopProcessRunner(emuRunner);
+
+		if (printer != null)
+			printer.stop();
+	}
+
+	private void closeAllConnectors()
+	{
 		if (this.isSdlBackendEnabled()) {
 			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
 			final GuacTunnel tunnel = (connector != null) ? connector.getTunnel() : null;
@@ -1075,21 +1083,27 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					tunnel.disconnect();
 					tunnel.close();
 				}
-				catch (GuacamoleException e) {
-					LOG.log(Level.SEVERE, e.getMessage(), e);
+				catch (GuacamoleException error) {
+					LOG.log(Level.SEVERE, "Closing Guacamole connector failed!", error);
 				}
 			}
 		}
 		else if (this.isXpraBackendEnabled()) {
 			final XpraConnector connector = (XpraConnector) this.getControlConnector(XpraConnector.PROTOCOL);
-			if (connector != null)
-				connector.disconnect();
+			if (connector != null) {
+				try {
+					connector.disconnect();
+				}
+				catch (Exception error) {
+					LOG.log(Level.SEVERE, "Closing Xpra connector failed!", error);
+				}
+			}
 		}
 
 		if (this.isPulseAudioEnabled()) {
 			final AudioConnector connector = (AudioConnector) this.getControlConnector(AudioConnector.PROTOCOL);
-			if (connector != null && !connector.getAudioStreamer().isClosed()) {
-				final IAudioStreamer streamer = connector.getAudioStreamer();
+			final IAudioStreamer streamer = (connector != null) ? connector.getAudioStreamer() : null;
+			if (streamer != null && !streamer.isClosed()) {
 				try {
 					streamer.stop();
 					streamer.close();
@@ -1099,12 +1113,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				}
 			}
 		}
-
-		if (emuRunner.isProcessRunning())
-			this.stopProcessRunner(emuRunner);
-
-		if (printer != null)
-			printer.stop();
 	}
 
 	private void stopProcessRunner(DeprecatedProcessRunner runner)
@@ -1676,31 +1684,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					.setId(this.getComponentId());
 		}
 
-		if (this.isSdlBackendEnabled()) {
-			final GuacamoleConnector connector = (GuacamoleConnector) this.getControlConnector(GuacamoleConnector.PROTOCOL);
-			final GuacamoleTunnel tunnel = connector.getTunnel();
-			if (tunnel != null) {
-				try {
-					LOG.info("Closing guacamole-tunnel...");
-					tunnel.close();
-
-					// Client must be disconnected from emulator for checkpointing to succeed!
-					LOG.info("Waiting for emulator's detach-notification...");
-					this.waitForClientDetachAck(10, TimeUnit.SECONDS);
-				}
-				catch (Exception error) {
-					final String message = "Waiting for emulator's detach-notification failed!"
-							+ " Checkpointing not possible with connected clients.";
-
-					throw new BWFLAException(message, error)
-							.setId(this.getComponentId());
-				}
-			}
-		}
-		else if (this.isXpraBackendEnabled()) {
-			final XpraConnector connector = (XpraConnector) this.getControlConnector(XpraConnector.PROTOCOL);
-			connector.disconnect();
-		}
+		this.closeAllConnectors();
 
 		final Path imgdir = this.getStateDir();
 		try {
