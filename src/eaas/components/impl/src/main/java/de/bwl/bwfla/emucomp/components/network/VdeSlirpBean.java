@@ -49,18 +49,7 @@ public class VdeSlirpBean extends EaasComponentBean {
     public void initialize(ComponentConfiguration compConfig) throws BWFLAException {
         try {
             config = (VdeSlirpConfiguration) compConfig;
-            runner.setCommand(vdeslirp_bin);
-            
-            if (config.getIp4Address() != null && !config.getIp4Address().isEmpty()) {
-                runner.addArguments("--host", config.getIp4Address() + "/" + config.getNetmask());
-            }
-            if (config.isDhcpEnabled()) {
-                runner.addArgument("--dhcp");
-            }
-            if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
-                runner.addArguments("--dns", config.getDnsServer());
-            }
-            
+
             // create a vde_switch in hub mode
             // the switch can later be identified using the NIC's MAC address
             String switchName = "nic_" + config.getHwAddress();
@@ -72,8 +61,35 @@ public class VdeSlirpBean extends EaasComponentBean {
             if(!process.start())
                 throw new BWFLAException("Cannot create vde_switch hub for VdeSlirpBean");
             vdeProcesses.add(process);
-            
+
+            runner.setCommand("/libexec/vde/vde_plug");
+            runner.addEnvVariable("LD_LIBRARY_PATH", "/libexec/vde");
             runner.addArguments("-s", this.getWorkingDir().resolve(switchName).toString());
+            runner.addArgument("--");
+
+            runner.addArguments("/libexec/vde/slirp-helper", "--fd", "3");
+
+            if (config.getIp4Address() != null && !config.getIp4Address().isEmpty()) {
+                runner.addArguments("--host", config.getIp4Address() + "/" + config.getNetmask());
+            }
+
+            runner.addArguments("--net", "10.0.2.0");
+            runner.addArguments("--mask", "255.255.255.0");
+            runner.addArguments("--host", config.getIp4Address());
+            runner.addArguments("--dhcp-start", "0.0.0.0");
+
+//            if (config.isDhcpEnabled()) {
+//                runner.addArgument("--dhcp");
+//            }
+//            if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
+//                runner.addArguments("--dns", config.getDnsServer());
+//            }
+            
+
+
+
+            
+
             
             if (!runner.start())
                 throw new BWFLAException("Cannot start vdeslirp process");
