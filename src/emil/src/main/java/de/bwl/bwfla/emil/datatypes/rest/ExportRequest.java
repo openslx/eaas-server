@@ -5,6 +5,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import javax.xml.bind.annotation.XmlElement;
 
 public class ExportRequest extends JaxbType {
+    @Deprecated
     @XmlElement
     private String envId;
 

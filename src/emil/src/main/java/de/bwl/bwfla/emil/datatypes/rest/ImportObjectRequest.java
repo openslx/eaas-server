@@ -12,6 +12,7 @@ public class ImportObjectRequest {
     @XmlElement(required = true)
     private String label;
 
+    @Deprecated
     @XmlElement(defaultValue = "default")
     private String objectArchive = "default";
 
