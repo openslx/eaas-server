@@ -32,9 +32,11 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 
+import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.components.containers.ContainerBean;
 import de.bwl.bwfla.emucomp.components.network.NodeTcpBean;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -206,6 +208,9 @@ public class NodeManager {
             } else {
                 throw new BWFLAException("(Valid) Configuration does not correspond to a component type. This is almost certainly a programming error!");
             }
+
+            // Explicitly run Tamaya's configuration injection
+            ConfigHelpers.configure(component, ConfigurationProvider.getConfiguration());
 
             component.setComponentId(componentId);
             component.setKeepaliveTimestamp(NodeManager.timestamp());
