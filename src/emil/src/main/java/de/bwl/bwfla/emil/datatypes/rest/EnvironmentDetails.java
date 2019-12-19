@@ -1,10 +1,13 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
+import de.bwl.bwfla.common.datatypes.SoftwarePackage;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
@@ -74,7 +77,7 @@ public class EnvironmentDetails {
     private List<ParentEnvironment> revisions;
 
     @XmlElement
-    private List<String> installedSoftwareIds;
+    private List<SoftwareInfo> installedSoftwareIds;
 
     @XmlElement
     private String userTag;
@@ -128,7 +131,10 @@ public class EnvironmentDetails {
 
     EnvironmentDetails() {}
 
-    public EnvironmentDetails(EmilEnvironment emilenv, MachineConfiguration machineConf, List<EmilEnvironment> parents) {
+    public EnvironmentDetails(EmilEnvironment emilenv,
+                              MachineConfiguration machineConf,
+                              List<EmilEnvironment> parents,
+                              SoftwareArchiveHelper swHelper) {
 
         this.envType = "base";
         this.parentEnvId = emilenv.getParentEnvId();
@@ -192,7 +198,22 @@ public class EnvironmentDetails {
         }
 
         if (machineConf != null) {
-            this.installedSoftwareIds = machineConf.getInstalledSoftwareIds();
+            List<String> swIds = machineConf.getInstalledSoftwareIds();
+            installedSoftwareIds = new ArrayList<>();
+            for(String swId : swIds)
+            {
+                try {
+                    SoftwarePackage software = swHelper.getSoftwarePackageById(swId);
+                    SoftwareInfo info = new SoftwareInfo();
+                    info.id = swId;
+                    info.label = software.getName();
+                    info.archive = software.getArchive();
+                    installedSoftwareIds.add(info);
+                } catch (BWFLAException e) {
+                    e.printStackTrace();
+                }
+            }
+
             this.userTag = machineConf.getUserTag();
             this.os = machineConf.getOperatingSystemId();
 
@@ -231,6 +252,18 @@ public class EnvironmentDetails {
 
         @XmlElement
         String text;
+
+        @XmlElement
+        String archive;
+    }
+
+    @XmlRootElement
+    public static class SoftwareInfo {
+        @XmlElement
+        String id;
+
+        @XmlElement
+        String label;
 
         @XmlElement
         String archive;
