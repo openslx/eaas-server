@@ -204,6 +204,11 @@ public class EnvironmentDetails {
             {
                 try {
                     SoftwarePackage software = swHelper.getSoftwarePackageById(swId);
+                    if(software == null)
+                    {
+                        System.out.println("Software: " + swId + " not found.");
+                        continue;
+                    }
                     SoftwareInfo info = new SoftwareInfo();
                     info.id = swId;
                     info.label = software.getName();
