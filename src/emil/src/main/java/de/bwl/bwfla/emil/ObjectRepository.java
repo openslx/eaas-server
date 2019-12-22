@@ -73,6 +73,9 @@ public class ObjectRepository extends EmilRest
 	private ObjectArchiveHelper objHelper;
 
 	@Inject
+	private ObjectClassification classification;
+
+	@Inject
 	@AuthenticatedUser
 	private UserContext userctx = null;
 
@@ -327,6 +330,7 @@ public class ObjectRepository extends EmilRest
 
 				resp.setMediaItems(fc);
 				resp.setMetadata(objHelper.getObjectMetadata(archiveId, objectId));
+				resp.setObjectEnvironments(classification.getCachedEnvironmentsForObject(objectId));
 				return resp;
 			}
 			catch (BWFLAException error) {

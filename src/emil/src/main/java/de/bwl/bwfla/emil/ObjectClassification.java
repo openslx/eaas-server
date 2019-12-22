@@ -191,6 +191,15 @@ public class ObjectClassification {
         return taskManager.submitTask(new ClassificationTask(request));
     }
 
+    public ClassificationResult getCachedEnvironmentsForObject(String objectId)
+    {
+        try {
+            return load(objectId);
+        } catch (NoSuchElementException e) {
+            LOG.severe("no classification data found");
+            return new ClassificationResult();
+        }
+    }
 
     private void setCachedEnvironmentsForObject(String objectId, List<EnvironmentInfo> environments, String userDescription)
             throws BWFLAException {
@@ -199,7 +208,7 @@ public class ObjectClassification {
         try {
             result = load(objectId);
         } catch (NoSuchElementException e) {
-            result = new ClassificationResult();
+            result = new ClassificationResult(objectId);
         }
 
         result.setEnvironmentList(environments);

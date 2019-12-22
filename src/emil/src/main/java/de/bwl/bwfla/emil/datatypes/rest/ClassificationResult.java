@@ -50,6 +50,12 @@ public class ClassificationResult extends EmilResponseType {
         super(e);
     }
 
+    public ClassificationResult(String objectId)
+    {
+        this();
+        this.objectId = objectId;
+    }
+
     public ClassificationResult() {
         environmentList = new ArrayList<>();
         suggested = new ArrayList<>();
