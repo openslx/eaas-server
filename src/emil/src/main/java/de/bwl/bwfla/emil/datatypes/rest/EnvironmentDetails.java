@@ -2,6 +2,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
@@ -15,10 +16,13 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Logger;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class EnvironmentDetails {
+
+    private static final Logger LOG = Logger.getLogger(EmilEnvironmentRepository.class.getName());
 
     @XmlElement
     private EmilNetworkingType networking;
@@ -131,10 +135,13 @@ public class EnvironmentDetails {
 
     EnvironmentDetails() {}
 
+
     public EnvironmentDetails(EmilEnvironment emilenv,
                               MachineConfiguration machineConf,
                               List<EmilEnvironment> parents,
                               SoftwareArchiveHelper swHelper) {
+
+
 
         this.envType = "base";
         this.parentEnvId = emilenv.getParentEnvId();
@@ -206,7 +213,7 @@ public class EnvironmentDetails {
                     SoftwarePackage software = swHelper.getSoftwarePackageById(swId);
                     if(software == null)
                     {
-                        System.out.println("Software: " + swId + " not found.");
+                        LOG.severe("Software: " + swId + " not found. Probably software archive is not configured.");
                         continue;
                     }
                     SoftwareInfo info = new SoftwareInfo();
