@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Set;
+import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionException;
 import java.util.concurrent.TimeUnit;
@@ -112,7 +113,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 		this.nodeTemplate = NodeAllocatorJCLOUDS.newNodeTemplate(compute, config);
 		this.nodeCapacity = NodeAllocatorJCLOUDS.toNodeCapacity(nodeTemplate);
 		this.nodeRegistry = new HashMap<NodeID, NodeInfo>();
-		this.nodeNameGenerator = new NodeNameGenerator(config.getNodeNamePrefix());
+		this.nodeNameGenerator = new NodeNameGenerator();
 		this.onDownCallback = onDownCallback;
 		this.executors = executors;
 		this.tasks = new SequentialExecutor(log, executors.computation(), 64);
@@ -480,35 +481,43 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 	{
 		try {
 			log.info("Starting " + numRequestedNodes + " requested node(s)...");
-			
-			// Prepare a list of names for requested nodes...
-			final List<String> names = new ArrayList<String>(numRequestedNodes);
-			for (int i = 0; i < numRequestedNodes; ++i)
-				names.add(nodeNameGenerator.next());
 
-			// Update options for node template...
-			final TemplateOptions options = nodeTemplate.getOptions()
-					.securityGroups(config.getSecurityGroupName())
-					.networks(config.getVmNetworkId())
-					.nodeNames(names);
+			final Set<NodeMetadata> nodes = new TreeSet<>();
 
-			switch (config.getProviderType()) {
-				case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
-					if (request.getUserMetaData() != null) {
-						final String userdata = request.getUserMetaData().apply("*");
-						options.as(NovaTemplateOptions.class)
-								.userData(userdata.getBytes());
-					}
-					break;
+			// Prepare a list of requests...
+			for (int i = 0; i < numRequestedNodes; ++i) {
+				final String rndsuffix = nodeNameGenerator.next();
+				final String subdomain = config.getSubDomainPrefix() + rndsuffix;
+				final List<String> names = new ArrayList<>(1);
+				names.add(config.getNodeNamePrefix() + rndsuffix);
+
+				// Update options for node template...
+				final TemplateOptions options = nodeTemplate.getOptions()
+						.securityGroups(config.getSecurityGroupName())
+						.networks(config.getVmNetworkId())
+						.nodeNames(names);
+
+				switch (config.getProviderType()) {
+					case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
+						if (request.getUserMetaData() != null) {
+							final String userdata = request.getUserMetaData().apply(subdomain);
+							options.as(NovaTemplateOptions.class)
+									.userData(userdata.getBytes());
+						}
+						break;
+				}
+
+				// Update template...
+				final Template template = compute.templateBuilder()
+						.fromTemplate(nodeTemplate)
+						.options(options)
+						.build();
+
+				// Submit requests...
+				nodes.addAll(compute.createNodesInGroup(config.getNodeGroupName(), names.size(), template));
 			}
 
-			// Update template...
-			final Template template = compute.templateBuilder()
-					.fromTemplate(nodeTemplate)
-					.options(options)
-					.build();
-			
-			return compute.createNodesInGroup(config.getNodeGroupName(), numRequestedNodes, template);
+			return nodes;
 		}
 		catch (RunNodesException exception) {
 			final BiConsumer<NodeMetadata, Throwable> destroyer = (node, error) -> {
@@ -547,6 +556,8 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 	{
 		final Function<NodeMetadata, NodeInfo> functor = (instance) -> {
 			final String vmname = instance.getName();
+			final String subdomain = config.getSubDomainPrefix()
+					+ vmname.substring(config.getNodeNamePrefix().length());
 	
 			// Lookup the public IP address of the instance
 			final String extip = instance.getPublicAddresses()
@@ -561,6 +572,7 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 			// Signal that a machine is allocated
 			final NodeID nid = new NodeID(extip);
 			try {
+				nid.setSubDomainName(subdomain);
 				onNodeAllocatedCallback.accept(nid);
 			}
 			catch (Exception error) {

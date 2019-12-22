@@ -114,9 +114,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Inject
 	@Config("emucomp.blobstore_soap")
 	private String blobStoreAddressSoap = null;
-	@Inject
-	@Config("emucomp.blobstore_rest")
-	private String blobStoreAddressRest = null;
 
 	@Inject
 	@Config(value = "ws.imagearchive")

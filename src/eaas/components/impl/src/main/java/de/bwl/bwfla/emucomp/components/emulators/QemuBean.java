@@ -185,19 +185,19 @@ public class QemuBean extends EmulatorBean
 				break;
 
 			case DISK:
-				// FIXME
-				// we should come up with a better way of separating qemu binaries
-				if (!qemu_bin.contains("ppc")) {
-					emuRunner.addArgument("-drive");
-					emuRunner.addArgument("file=", imagePath.toString(),
-							",if=", drive.getIface(),
-							",bus=", drive.getBus(),
-							",unit=", drive.getUnit(),
-							",media=disk");
-				} else {
-					emuRunner.addArgument("-drive");
-					emuRunner.addArgument("file=", imagePath.toString());
+				emuRunner.addArgument("-drive");
+				String fileArgument= "file=" + imagePath.toString();
+				if(drive.getIface()!= null && !drive.getIface().isEmpty())
+				{
+					fileArgument += ",if=" + drive.getIface();
+					if(drive.getIface().equalsIgnoreCase("ide"))
+					{
+						fileArgument += ",bus=" + drive.getBus() + ",unit=" + drive.getUnit();
+					}
 				}
+				fileArgument += ",media=disk";
+				emuRunner.addArgument(fileArgument);
+
 				if (drive.isBoot())
 					emuRunner.addArguments("-boot", "order=c");
 
