@@ -8,6 +8,7 @@ import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.ejb.Stateless;
+import javax.inject.Inject;
 import javax.jws.WebService;
 import javax.xml.bind.JAXBException;
 import javax.xml.ws.soap.MTOM;
@@ -20,6 +21,8 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import gov.loc.mets.Mets;
+import org.apache.tamaya.inject.ConfigurationInjection;
+import org.apache.tamaya.inject.api.Config;
 
 import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveName;
 
@@ -29,19 +32,24 @@ import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveN
 public class ObjectArchiveFacadeWS 
 {
 	protected static final Logger LOG = Logger.getLogger(ObjectArchiveFacadeWS.class.getName());
+
+	@Inject
+	@Config(value="objectarchive.default_archive")
+	private String defaultArchive;
+
+	@Inject
+	@Config(value="objectarchive.user_archive_prefix")
+	private String USERARCHIVEPRIFIX;
 	
 	@PostConstruct
 	private void initialize()
 	{
-		
+		ConfigurationInjection.getConfigurationInjector().configure(this);
 	}
 	
 	/**
 	 * @return list of object IDs
 	 */
-
-	// todo: make it a configuration option
-	private static String USERARCHIVEPRIFIX = "user_archive";
 
 	private DigitalObjectArchive getArchive(String archive) throws BWFLAException
 	{
@@ -52,7 +60,7 @@ public class ObjectArchiveFacadeWS
 		}
 
 		if(archive == null)
-			archive = "default";
+			archive = defaultArchive;
 
 		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
 		if(a != null)
@@ -149,8 +157,6 @@ public class ObjectArchiveFacadeWS
 		
 		for(DigitalObjectArchive a : ObjectArchiveSingleton.archiveMap.values())
 		{
-			if(a.getName().equals("default"))
-				continue;
 			a.sync();
 		}
 	}

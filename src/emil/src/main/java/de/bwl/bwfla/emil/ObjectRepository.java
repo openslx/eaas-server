@@ -67,7 +67,6 @@ import java.util.stream.Collectors;
 @Path("/object-repository")
 public class ObjectRepository extends EmilRest
 {
-	private static final String USER_ARCHIVE_PREFIX = "user_archive";
 
 	private SoftwareArchiveHelper swHelper;
 	private ObjectArchiveHelper objHelper;
@@ -84,6 +83,14 @@ public class ObjectRepository extends EmilRest
 	private String objectArchive = null;
 
 	private Set<String> objArchives;
+
+	@Inject
+	@Config(value="objectarchive.default_archive")
+	private String defaultArchive;
+
+	@Inject
+	@Config(value="objectarchive.user_archive_prefix")
+	private String USER_ARCHIVE_PREFIX;
 
 
 	@PostConstruct
@@ -108,10 +115,10 @@ public class ObjectRepository extends EmilRest
 	{
 		if (archiveId == null || archiveId.equals("default")) {
 			try {
-				archiveId = this.manageUserCtx(archiveId);
+				archiveId = this.manageUserCtx(defaultArchive);
 			}
 			catch (BWFLAException error) {
-				archiveId = "default";
+				archiveId = defaultArchive;
 			}
 		}
 
@@ -178,12 +185,12 @@ public class ObjectRepository extends EmilRest
 				// FIXME: do we need to refresh the list of archives here?
 				objArchives = new HashSet<>(objHelper.getArchives());
 
-				final String defaultArchive = ObjectRepository.this.manageUserCtx("default");
+				final String _defaultArchive = ObjectRepository.this.manageUserCtx(defaultArchive);
 				final List<String> archives = objArchives.stream()
-						.filter(e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(defaultArchive)))
+						.filter(e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(_defaultArchive)))
 						.filter(e -> !e.equals("default"))
 						// remove zero conf archive if usercontext is available
-						.filter(e -> !(!defaultArchive.equals("default") && e.equals("zero conf")))
+						.filter(e -> !(!_defaultArchive.equals("default") && e.equals("zero conf")))
 						.collect(Collectors.toList());
 
 				ObjectArchivesResponse response = new ObjectArchivesResponse();
@@ -359,9 +366,9 @@ public class ObjectRepository extends EmilRest
 		{
 			if (archiveId == null || archiveId.equals("default")) {
 				try {
-					archiveId = ObjectRepository.this.manageUserCtx(archiveId);
+					archiveId = ObjectRepository.this.manageUserCtx(defaultArchive);
 				} catch (BWFLAException error) {
-					archiveId = "default";
+					archiveId = defaultArchive;
 				}
 			}
 
