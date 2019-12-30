@@ -36,6 +36,9 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
 
 public abstract class NodeAllocatorConfig extends BaseConfig
 {
+	@Config("subdomain_prefix")
+	private String subdomainPrefix = "ec-";
+
 	@Config("healthcheck.url_template")
 	private String healthCheckUrl = null;
 	
@@ -60,7 +63,19 @@ public abstract class NodeAllocatorConfig extends BaseConfig
 	
 	
 	/* ========== Getters and Setters ========== */
-	
+
+	public String getSubDomainPrefix()
+	{
+		return subdomainPrefix;
+	}
+
+	public void setSubDomainPrefix(String prefix)
+	{
+		ConfigHelpers.check(prefix, "Subdomain prefix is invalid!");
+
+		this.subdomainPrefix = prefix;
+	}
+
 	public String getHealthCheckUrl()
 	{
 		return healthCheckUrl;
@@ -162,6 +177,7 @@ public abstract class NodeAllocatorConfig extends BaseConfig
 	public void validate() throws ConfigException
 	{
 		// Re-check the arguments...
+		this.setSubDomainPrefix(subdomainPrefix);
 		this.setHealthCheckUrl(healthCheckUrl);
 		this.setHealthCheckConnectTimeout(healthCheckConnectTimeout);
 		this.setHealthCheckReadTimeout(healthCheckReadTimeout);
@@ -181,6 +197,7 @@ public abstract class NodeAllocatorConfig extends BaseConfig
 				.add("num_parallel_requests", numParallelHealthChecks);
 
 		return Json.createObjectBuilder()
+				.add("subdomain_prefix", subdomainPrefix)
 				.add("healthcheck", json.build())
 				.build();
 	}

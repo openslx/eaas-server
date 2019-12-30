@@ -56,7 +56,6 @@ components:
 
 emucomp:
     blobstore_soap: http://eaas:8080
-    blobstore_rest: http://eaas:8080/blobstore/api/v1/blobs
     inactivitytimeout:  0
     enable_pulseaudio: false
     enable_screenshooter: false

@@ -178,7 +178,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 		final String zone = config.getZoneName();
 		this.nodes = new TreeMap<NodeID, NodeInfo>();
 		this.vmNameRegistry = new ConcurrentSkipListSet<String>();
-		this.vmNameGenerator = new NodeNameGenerator(config.getNodeNamePrefix());
+		this.vmNameGenerator = new NodeNameGenerator();
 		this.onDownCallback = onDownCallback;
 		this.tasks = new SequentialExecutor(log, executors.computation(), 64);
 		this.numAllocationRequests = new AtomicInteger(0);
@@ -625,7 +625,9 @@ public class NodeAllocatorGCE implements INodeAllocator
 		final Executor executor = executors.io();
 		final String project = config.getProjectId();
 		final String zone = config.getZoneName();
-		final String vmname = vmNameGenerator.next();
+		final String rndsuffix = vmNameGenerator.next();
+		final String vmname = config.getNodeNamePrefix() + rndsuffix;
+		final String subdomain = config.getSubDomainPrefix() + rndsuffix;
 
 		vmNameRegistry.add(vmname);
 		cleanups.add(() -> vmNameRegistry.remove(vmname));
@@ -675,7 +677,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 				if (userdata != null) {
 					final Metadata.Items item = new Metadata.Items()
 							.setKey("user-data")
-							.setValue(userdata.apply("*"));
+							.setValue(userdata.apply(subdomain));
 
 					metadata.getItems().add(item);
 				}
@@ -782,6 +784,7 @@ public class NodeAllocatorGCE implements INodeAllocator
 			// Signal that a machine is allocated
 			final NodeID nid = new NodeID(address);
 			try {
+				nid.setSubDomainName(subdomain);
 				onNodeAllocatedCallback.accept(nid);
 			}
 			catch (Exception error) {

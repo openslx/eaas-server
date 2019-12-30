@@ -32,6 +32,11 @@ public class NodeNameGenerator
 	private final String prefix;
 	private final int randlen;
 
+	public NodeNameGenerator()
+	{
+		this("");
+	}
+
 	public NodeNameGenerator(String prefix)
 	{
 		this(prefix, 5);

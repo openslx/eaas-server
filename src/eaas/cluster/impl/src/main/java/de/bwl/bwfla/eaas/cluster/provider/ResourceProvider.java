@@ -659,7 +659,7 @@ public class ResourceProvider implements IResourceProvider
 		if (config.getDomain() == null)
 			return;
 
-		nid.setDomainName(nodeNameGenerator.next() + "." + config.getDomain());
+		nid.setDomainName(nid.getSubDomainName() + "." + config.getDomain());
 
 		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
 		for (int i = 0; i < DNS_TRANSACTION_RETRIES_NUM; ++i) {
