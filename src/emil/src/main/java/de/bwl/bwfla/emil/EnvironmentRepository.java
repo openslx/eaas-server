@@ -54,14 +54,8 @@ import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
-import de.bwl.bwfla.emucomp.api.EmulatorSpec;
-import de.bwl.bwfla.emucomp.api.Environment;
-import de.bwl.bwfla.emucomp.api.GeneralizationPatch;
-import de.bwl.bwfla.emucomp.api.Html5Options;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
-import de.bwl.bwfla.emucomp.api.Nic;
-import de.bwl.bwfla.emucomp.api.UiOptions;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
@@ -748,47 +742,11 @@ public class EnvironmentRepository extends EmilRest
 		public Response list()
 		{
 			LOG.info("Listing environment templates...");
-
 			try {
-				final StringWriter output = new StringWriter();
-				final JsonGenerator json = Json.createGenerator(output);
-				json.writeStartObject();
-				json.write("status", "0");
-				json.writeStartArray("systems");
-				for (MachineConfiguration machine : envdb.getTemplates()) {
-					json.writeStartObject();
-					json.write("id", machine.getId());
-					json.write("label", machine.getDescription().getTitle());
-					if (machine.getNativeConfig() != null)
-						json.write("native_config", machine.getNativeConfig().getValue());
-					else json.write("native_config", "");
-
-					json.writeStartArray("properties");
-					if (machine.getArch() != null && !machine.getArch().isEmpty()) {
-						json.writeStartObject();
-						json.write("name", "Architecture");
-						json.write("value", machine.getArch());
-						json.writeEnd();
-					}
-
-					final String emubean = (machine.getEmulator() != null) ? machine.getEmulator().getBean() : null;
-					if (emubean != null && !emubean.isEmpty()) {
-						json.writeStartObject();
-						json.write("name", "EmulatorContainer");
-						json.write("value", emubean);
-						json.writeEnd();
-					}
-
-					json.writeEnd();
-					json.writeEnd();
-				}
-
-				json.writeEnd();
-				json.writeEnd();
-				json.flush();
-				json.close();
-
-				return EnvironmentRepository.createResponse(Status.OK, output.toString());
+				List<MachineConfigurationTemplate> templates = envdb.getTemplates();
+				return Response.status(Status.OK)
+						.entity(templates)
+						.build();
 			}
 			catch (Throwable error) {
 				return EnvironmentRepository.internalErrorResponse(error);
