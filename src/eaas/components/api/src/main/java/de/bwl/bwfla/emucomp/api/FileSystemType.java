@@ -28,6 +28,9 @@ import javax.xml.bind.annotation.XmlType;
 @XmlType(namespace = "http://bwfla.bwl.de/components/datatypes")
 public enum FileSystemType
 {
+	@XmlEnumValue("raw")
+	RAW,
+
 	@XmlEnumValue("fat16")
 	FAT16,
 

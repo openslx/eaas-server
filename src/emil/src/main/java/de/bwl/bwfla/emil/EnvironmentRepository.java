@@ -21,14 +21,14 @@ package de.bwl.bwfla.emil;
 
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
-import de.bwl.bwfla.api.imagearchive.DefaultEntry;
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
-import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.api.imagearchive.*;
+import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
+import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
@@ -36,18 +36,13 @@ import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emil.datatypes.EnvironmentDeleteRequest;
 import de.bwl.bwfla.emil.datatypes.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
-import de.bwl.bwfla.emil.datatypes.rest.EmilResponseType;
-import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
-import de.bwl.bwfla.emil.datatypes.rest.EnvironmentListItem;
-import de.bwl.bwfla.emil.datatypes.rest.ExportRequest;
-import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesRequest;
+import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
-import de.bwl.bwfla.emil.datatypes.rest.UpdateEnvironmentDescriptionRequest;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.emil.tasks.CreateEmptyImageTask;
 import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
@@ -68,18 +63,7 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.InternalServerErrorException;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.PATCH;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -91,6 +75,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -109,6 +94,10 @@ public class EnvironmentRepository extends EmilRest
 	@Inject
 	@Config(value = "emil.imageproposerservice")
 	private String imageProposerService = null;
+
+	@Inject
+	@Config(value = "ws.imagebuilder")
+	String imageBuilderAddress;
 
 	@Inject
 	private EmilEnvironmentRepository emilEnvRepo = null;
@@ -176,6 +165,9 @@ public class EnvironmentRepository extends EmilRest
 		return new Actions();
 	}
 
+	@Path("/images")
+	public Images images() { return new Images(); }
+
 	@GET
 	@Path("/db-content")
 	@Secured({Role.RESTRCITED})
@@ -236,8 +228,46 @@ public class EnvironmentRepository extends EmilRest
         return envdb.getNameIndexes();
     }
 
+	@GET
+	@Path("/images-index")
+	@Secured({Role.PUBLIC})
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public ImageNameIndex getImagesIndex() throws BWFLAException
+	{
+		LOG.info("Loading images index...");
+		return envdb.getImagesIndex();
+	}
 
 	// ========== Subresources ==============================
+
+	public class Images
+	{
+		/** Create a new environment */
+//		@POST
+//		@Secured({Role.RESTRCITED})
+//		@Produces(MediaType.APPLICATION_JSON)
+//		@Consumes(MediaType.APPLICATION_JSON)
+//		public TaskStateResponse _import(ImageImRequest envReq)
+//		{
+//			LOG.info("Importing a new image ...");
+//
+//			try {
+//				ImageMetadata d = null;
+//				if (envReq.getLabel() != null)
+//				{
+//					d = new ImageMetadata();
+//					d.setName(envReq.getLabel());
+//				}
+//				TaskState id = envdb.importImage("default", envReq.getSize(), ImageType.USER, d);
+//				return new TaskStateResponse(id.getTaskId(), id.isDone());
+//			}
+//			catch (BWFLAException e)
+//			{
+//				return new TaskStateResponse(e);
+//			}
+//		}
+	}
 
 	public class Environments
 	{
@@ -328,6 +358,7 @@ public class EnvironmentRepository extends EmilRest
 
 				ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
 				iaMd.setType(ImageType.TMP);
+
 				String id = envdb.createEnvironment("default", env, envReq.getSize(), iaMd);
 				if (id == null) {
 					return EnvironmentRepository.errorMessageResponse("failed to create image");
@@ -810,6 +841,20 @@ public class EnvironmentRepository extends EmilRest
 			return Emil.successMessageResponse("syncing archives ");
 		}
 
+
+		/** create new image */
+		@POST
+		@Path("/create-image")
+		@Secured({Role.RESTRCITED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		@Produces(MediaType.APPLICATION_JSON)
+		public TaskStateResponse createImage(ImageCreateRequest imageReq)
+		{
+			LOG.info("Create empty image ...");
+
+			return new TaskStateResponse(taskManager.submitTask(new CreateEmptyImageTask(imageReq.getSize(), LOG)));
+		}
+
 		/** Import an image for new environment */
 		@POST
 		@Path("/import-image")
@@ -818,15 +863,15 @@ public class EnvironmentRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importImage(ImportImageRequest imageReq)
 		{
-			LOG.info("Importing image for new environment...");
+			LOG.info("Importing image ...");
 
 			ImportImageTaskRequest request = new ImportImageTaskRequest();
 
 			URL url;
 			try {
-				url = new URL(imageReq.getUrlString());
+				url = new URL(imageReq.getUrl());
 			} catch (MalformedURLException me) {
-				String filename = imageReq.getUrlString();
+				String filename = imageReq.getUrl();
 				if (filename == null || filename.contains("/"))
 					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename));
 				File image = new File("/eaas/import/", filename);
@@ -841,19 +886,9 @@ public class EnvironmentRepository extends EmilRest
 				}
 			}
 			request.url = url;
-
-			if (imageReq.getRom() != null) {
-				File romFile = new File("/eaas/roms", imageReq.getRom());
-				if (!romFile.exists())
-					return new TaskStateResponse(new BWFLAException("rom file not found"));
-				request.romFile = romFile;
-			}
 			request.destArchive = "default";
-			request.templateId = imageReq.getTemplateId();
-			request.nativeConfig = imageReq.getNativeConfig();
 			request.environmentHelper = envdb;
-			request.imageProposer = imageProposer;
-			request.patchId = imageReq.getPatchId();
+			request.label = imageReq.getLabel();
 
 			try {
 				request.validate();
@@ -920,4 +955,62 @@ public class EnvironmentRepository extends EmilRest
 			return response;
 		}
 	}
+
+	/*
+
+	@POST
+		@Path("/import-image")
+		@Secured({Role.RESTRCITED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		@Produces(MediaType.APPLICATION_JSON)
+		public TaskStateResponse importImage(ImportImageRequest imageReq)
+		{
+			LOG.info("Importing image for new environment...");
+
+			ImportImageTaskRequest request = new ImportImageTaskRequest();
+
+			URL url;
+			try {
+				url = new URL(imageReq.getUrlString());
+			} catch (MalformedURLException me) {
+				String filename = imageReq.getUrlString();
+				if (filename == null || filename.contains("/"))
+					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename));
+				File image = new File("/eaas/import/", filename);
+				LOG.info("path: " + image);
+				if (!image.exists())
+					return new TaskStateResponse(new BWFLAException("image : " + filename + " not found."));
+
+				try {
+					url = image.toURI().toURL();
+				} catch (MalformedURLException e) {
+					return new TaskStateResponse(new BWFLAException(e));
+				}
+			}
+			request.url = url;
+
+			if (imageReq.getRom() != null) {
+				File romFile = new File("/eaas/roms", imageReq.getRom());
+				if (!romFile.exists())
+					return new TaskStateResponse(new BWFLAException("rom file not found"));
+				request.romFile = romFile;
+			}
+			request.destArchive = "default";
+			request.templateId = imageReq.getTemplateId();
+			request.nativeConfig = imageReq.getNativeConfig();
+			request.environmentHelper = envdb;
+			request.imageProposer = imageProposer;
+			request.patchId = imageReq.getPatchId();
+
+			try {
+				request.validate();
+			} catch (BWFLAException e) {
+				e.printStackTrace();
+				return new TaskStateResponse(e);
+			}
+
+			return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(request, LOG)));
+		}
+
+	 */
 }

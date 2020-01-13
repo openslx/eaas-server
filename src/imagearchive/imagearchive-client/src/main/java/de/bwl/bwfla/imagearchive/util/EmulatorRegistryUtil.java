@@ -1,15 +1,15 @@
 package de.bwl.bwfla.imagearchive.util;
 
 import de.bwl.bwfla.api.imagearchive.Alias;
-import de.bwl.bwfla.api.imagearchive.Entry;
+import de.bwl.bwfla.api.imagearchive.ImageMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 
 public class EmulatorRegistryUtil {
 
 
-    private static Entry _getEntry(ImageNameIndex index, String name, String version) {
+    private static ImageMetadata _getEntry(ImageNameIndex index, String name, String version) {
         for (ImageNameIndex.Entries.Entry _entry : index.getEntries().getEntry()) {
-            Entry indexEntry = _entry.getValue();
+            ImageMetadata indexEntry = _entry.getValue();
             if (!indexEntry.getName().equals(name))
                 continue;
 
@@ -23,8 +23,8 @@ public class EmulatorRegistryUtil {
     }
 
 
-    public static Entry getEntry(ImageNameIndex index, String name, String version) {
-        Entry result = _getEntry(index, name, version);
+    public static ImageMetadata getEntry(ImageNameIndex index, String name, String version) {
+        ImageMetadata result = _getEntry(index, name, version);
         if (result != null)
             return result;
 
