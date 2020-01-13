@@ -32,7 +32,10 @@ public class AuthenticatedUserProducer {
 
         Claim usernameC = jwt.getClaim("sub");
         if(usernameC == null)
+        {
             authenticatedUser = null;
+            return;
+        }
         authenticatedUser.setUsername(usernameC.asString());
 
         Claim nameC = jwt.getClaim("name");

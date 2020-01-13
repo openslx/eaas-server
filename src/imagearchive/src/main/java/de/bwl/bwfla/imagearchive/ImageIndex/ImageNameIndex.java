@@ -57,72 +57,48 @@ public class ImageNameIndex extends JaxbType
 {
 	private final Logger log;
 
-	final static String configPath = "/home/bwfla/server-data/nameindexes.dump";
+	private String configPath;
 
 	private final SequentialExecutor executor;
 
 	/** Symbolic imageDescription-name index: name --> imageDescription's description */
 	@XmlElement
-	private final Map<String, Entry> entries = new HashMap<String, Entry>();
+	private final Map<String, ImageMetadata> entries = new HashMap<String, ImageMetadata>();
 	@XmlElement
 	private final Map<String, Alias> aliases = new HashMap<String, Alias>();
 
 	private static final String VERSION_SEPARATOR = "|";
 	private static final String LATEST_TAG = "latest";
 
-	public ImageNameIndex(String indexConfigPath, Logger log) throws BWFLAException
-	{
-		this.log = log;
-		this.executor = ImageNameIndex.lookup(log);
-
-		// Load configuration for imagename-index, if possible...
-		if (indexConfigPath == null) {
-			log.info("Disabling imagename-index! No configuration found.");
-			return;
-		}
-
-		try {
-			final List<String> paths = new ArrayList<String>();
-			final Path dir = Paths.get(indexConfigPath);
-			if (Files.isDirectory(dir)) {
-				// Multiple config files in a directory
-				Files.list(dir).forEach((path) -> {
-					if(Files.exists(path) && !Files.isDirectory(path))
-						paths.add(path.toString());
-				});
-			}
-			else {
-				// A single config file
-				if(Files.exists(dir))
-					paths.add(indexConfigPath);
-			}
-
-			for (String path : paths) {
-				this.load(path);
-			}
-		}
-		catch (Exception exception) {
-			log.log(Level.SEVERE,"Loading imagename-index config failed! Cause", exception);
-			throw new BWFLAException(exception);
-		}
-	}
-
-	public ImageNameIndex() throws BWFLAException
+	private ImageNameIndex() throws BWFLAException
 	{
 		this.log = new PrefixLogger(ImageArchiveBackend.class.getName());
 		this.executor = ImageNameIndex.lookup(log);
+		this.configPath = null;
+	}
+
+	public static ImageNameIndex parse(String path) throws BWFLAException
+	{
+		try {
+			String content = new String(Files.readAllBytes(Paths.get(path)), "UTF-8");
+			ImageNameIndex index = ImageNameIndex.fromYamlValue(content, ImageNameIndex.class);
+			index.configPath = path;
+			return index;
+		} catch (IOException e) {
+			throw new BWFLAException(e);
+		}
 	}
 
 	/** Returns index entry for specified name. */
-	public Entry get(String name)
+	public ImageMetadata get(String name)
 	{
 		return this.get(name, null);
 	}
 
 	/** Returns index entry for specified name and version. */
-	public Entry get(String name, String version) {
+	public ImageMetadata get(String name, String version) {
 		System.out.println("looking for " + ImageNameIndex.toIndexKey(name, version));
-		Entry entry = entries.get(ImageNameIndex.toIndexKey(name, version));
+		ImageMetadata entry = entries.get(ImageNameIndex.toIndexKey(name, version));
 		if (entry != null)
 			return entry;
 		else {
@@ -135,56 +111,7 @@ public class ImageNameIndex extends JaxbType
 		}
 	}
 
-	public static String getConfigPath() {
-		return configPath;
-	}
 	/* =============== Internal Helpers =============== */
-
-	private void load(String indexConfigPath) throws IOException {
-		log.info("Loading imagename-index config from '" + indexConfigPath + "'...");
-
-		final ConfigurationContext context = ConfigurationProvider.getConfigurationContextBuilder()
-				.addPropertySources(new ImageNameIndex.ConfigPropertySourceProvider(indexConfigPath).getPropertySources())
-				.addDefaultPropertyConverters()
-				.build();
-
-		final Configuration config = ConfigurationProvider.createConfiguration(context);
-
-		// Load all entries
-		{
-			final Configuration defaults = ConfigHelpers.filter(config, "defaults.");
-			while (true) {
-				// Parse next entry...
-				final String prefix = ConfigHelpers.toListKey("entries", entries.size(), ".");
-				final Configuration subconfig = ConfigHelpers.filter(config, prefix);
-				if (ConfigHelpers.isEmpty(subconfig))
-					break;  // No more entries found!
-
-				final Entry entry = new Entry(subconfig, defaults);
-				final String key = ImageNameIndex.toIndexKey(entry.name(), entry.version());
-				entries.put(key, entry);
-			}
-
-			log.info("" + entries.size() + " imageDescription entries loaded");
-		}
-
-		// Load all aliases
-		{
-			while (true) {
-				// Parse next entry...
-				final String aliasPrefix = ConfigHelpers.toListKey("aliases", aliases.size(), ".");
-				final Configuration subconfigAlias = ConfigHelpers.filter(config, aliasPrefix);
-				if (ConfigHelpers.isEmpty(subconfigAlias))
-					break;  // No more entries found!
-
-				final Alias alias = new Alias(subconfigAlias);
-				final String key = ImageNameIndex.toIndexKey(alias.getName(), alias.getAlias());
-				aliases.put(key, alias);
-			}
-
-			log.info("" + entries.size() + " imageDescription aliases loaded");
-		}
-	}
 
 	static String getOrDefault(String name, Configuration values, Configuration defaults)
 	{
@@ -210,26 +137,7 @@ public class ImageNameIndex extends JaxbType
 		return name + VERSION_SEPARATOR + version;
 	}
 
-	private static class ConfigPropertySourceProvider extends BaseConfigurationPropertySourceProvider
-	{
-		public ConfigPropertySourceProvider(String path) throws MalformedURLException
-		{
-			this(Paths.get(path));
-		}
-
-		public ConfigPropertySourceProvider(Path path) throws MalformedURLException
-		{
-			super(path.toUri().toURL());
-		}
-
-		@Override
-		public int getDefaultOrdinal()
-		{
-			return 500;
-		}
-	}
-
-	public Map<String, Entry> getEntries() {
+	public Map<String, ImageMetadata> getEntries() {
 		return entries;
 	}
 
@@ -237,11 +145,13 @@ public class ImageNameIndex extends JaxbType
 		return aliases;
 	}
 
-	public void addNameIndexesEntry(Entry entry, Alias alias) {
+	public void addNameIndexesEntry(ImageMetadata entry, Alias alias) {
 		this.entries.put(ImageNameIndex.toIndexKey(entry.getName(), entry.getVersion()), entry);
-		this.aliases.put(ImageNameIndex.toIndexKey(alias.getName(), alias.getAlias()), alias);
-		executor.execute(this::dump);
 
+		if(alias != null)
+			this.aliases.put(ImageNameIndex.toIndexKey(alias.getName(), alias.getAlias()), alias);
+
+		executor.execute(this::dump);
 		if(get(entry.getName()) == null)
 		{
 			updateLatest(entry.getName(), entry.getVersion());
@@ -258,7 +168,11 @@ public class ImageNameIndex extends JaxbType
 	private void dump()
 	{
 		try {
-			BufferedWriter writer = new BufferedWriter(new FileWriter(configPath));
+			Path outPath = Paths.get(configPath);
+			if(Files.isDirectory(outPath))
+				outPath = outPath.resolve("index.yaml");
+
+			BufferedWriter writer = new BufferedWriter(new FileWriter(outPath.toString()));
 			writer.write( this.yamlValue(false));
 			writer.close();
 		} catch (IOException e) {

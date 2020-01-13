@@ -1278,7 +1278,7 @@ public class Components {
 
             LOG.info("Saving checkpointed environment in image-archive...");
 
-            final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
+                final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
             binding.setId("checkpoint");
             binding.setLocalAlias("checkpoint.tar.gz");
             binding.setAccess(Binding.AccessType.COPY);

@@ -1,7 +1,6 @@
 package de.bwl.bwfla.emil.tasks;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
@@ -34,26 +33,57 @@ public class ImportImageTask extends AbstractTask<Object> {
     public static class ImportImageTaskRequest
     {
         public String label;
-        public String nativeConfig;
         public URL url;
 
         public DatabaseEnvironmentsAdapter environmentHelper;
-        public ImageProposer imageProposer;
 
-        public String templateId;
         public String destArchive;
-        public File romFile;
-        public String patchId;
 
         public void validate() throws BWFLAException
         {
-            if(nativeConfig == null || url == null || templateId == null || destArchive == null)
+            if(url == null || destArchive == null)
                 throw new BWFLAException("ImportImageTaskRequest: input validation failed");
 
-            if(environmentHelper == null || imageProposer == null)
+            if(environmentHelper == null )
                 throw new BWFLAException("ImportImageTaskRequest: missing dependencies");
         }
     }
+
+    @Override
+    protected Object execute() throws Exception {
+        try {
+            ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
+            iaMd.setType(ImageType.USER);
+
+            TaskState importState = request.environmentHelper.importImage(request.url, iaMd, true);
+            while(!importState.isDone())
+            {
+                importState = request.environmentHelper.getState(importState.getTaskId());
+            }
+
+            Map<String, String> userData = new HashMap<>();
+            String imageId = importState.getResult();
+            userData.put("imageId", imageId);
+
+            ImageMetadata entry = new ImageMetadata();
+            entry.setName(request.label);
+            ImageDescription description = new ImageDescription();
+            description.setId(imageId);
+            entry.setImage(description);
+
+            request.environmentHelper.addNameIndexesEntry(request.destArchive, entry,null);
+
+            return userData;
+        } catch (Exception e) {
+            log.log(Level.SEVERE, e.getMessage(), e);
+            return e;
+        }
+    }
+}
+
+// old import code.. to be refactored
+
+/*
 
     @Override
     protected Object execute() throws Exception {
@@ -73,8 +103,8 @@ public class ImportImageTask extends AbstractTask<Object> {
             if (binding == null)
                 return new BWFLAException("ImportImageTask: import image failed. Could not create binding");
             if (request.patchId != null) {
-               binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
-                    iaMd.getType(), request.patchId);
+                binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
+                        iaMd.getType(), request.patchId);
             }
             binding.setId("main_hdd");
             env.getAbstractDataResource().add(binding);
@@ -103,5 +133,4 @@ public class ImportImageTask extends AbstractTask<Object> {
             log.log(Level.SEVERE, e.getMessage(), e);
             return e;
         }
-    }
-}
+    }*/

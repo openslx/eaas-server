@@ -1,4 +1,4 @@
-package de.bwl.bwfla.objectarchive.datatypes;
+package de.bwl.bwfla.common.taskmanager;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
@@ -16,6 +16,9 @@ public class TaskState extends JaxbType{
 
     @XmlElement(required = true, defaultValue = "false")
     private boolean done;
+
+    @XmlElement
+    private String result;
 
     public TaskState()
     {
@@ -43,5 +46,13 @@ public class TaskState extends JaxbType{
 
     public void setDone(boolean done) {
         this.done = done;
+    }
+
+    public String getResult() {
+        return result;
+    }
+
+    public void setResult(String result) {
+        this.result = result;
     }
 }
