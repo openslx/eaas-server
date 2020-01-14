@@ -20,6 +20,7 @@
 package de.bwl.bwfla.imagearchive;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -134,15 +135,22 @@ public class ImageArchiveRegistry
 			return null;
 
 		TaskState state = new TaskState(taskId);
-		final TaskInfo<String> info = taskManager.getTaskInfo(taskId);
-		if(info == null)
-			return null;
+		try {
+			final TaskInfo<String> info = taskManager.getTaskInfo(taskId);
+			if (info == null)
+				return null;
 
 
-		state.setResult((String)info.userdata());
+			if (info.result().isDone()) {
+				state.setResult((String) info.result().get());
+				state.setDone(true);
+			}
+		}
+		catch (InterruptedException | ExecutionException e)
+		{
+			e.printStackTrace();
+		}
 
-		if(info.result().isDone())
-			state.setDone(true);
 		return state;
 	}
 }
