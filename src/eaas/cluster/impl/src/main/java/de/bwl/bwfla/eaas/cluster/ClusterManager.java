@@ -36,12 +36,14 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.json.stream.JsonGenerator;
 import javax.ws.rs.NotFoundException;
 
@@ -56,12 +58,14 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpTrigger;
 import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 import de.bwl.bwfla.eaas.cluster.exception.AllocationFailureException;
 import de.bwl.bwfla.eaas.cluster.exception.OutOfResourcesException;
+import de.bwl.bwfla.eaas.cluster.exception.QuotaExceededException;
 import de.bwl.bwfla.eaas.cluster.metadata.Label;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.metadata.Labels;
 import de.bwl.bwfla.eaas.cluster.provider.IResourceProvider;
 import de.bwl.bwfla.eaas.cluster.provider.ResourceProvider;
 import de.bwl.bwfla.eaas.cluster.provider.ResourceProviderComparators;
+import de.bwl.bwfla.eaas.cluster.tenant.TenantManager;
 
 
 @ApplicationScoped
@@ -73,6 +77,10 @@ public class ClusterManager implements IClusterManager
 	private Map<String, IResourceProvider> providers;
 	private Comparator<IResourceProvider> comparator;
 
+	@Inject
+	private TenantManager tenants = null;
+
+
 	public ClusterManager(ClusterManagerConfig config, ClusterManagerExecutors executors, Comparator<IResourceProvider> comparator)
 	{
 		this.initialize(config, executors, comparator);
@@ -82,99 +90,65 @@ public class ClusterManager implements IClusterManager
 	/* ========== IClusterManager Implementation ========== */
 
 	@Override
-	public ResourceHandle allocate(UUID aid, ResourceSpec spec, Duration duration)
-			throws TimeoutException, AllocationFailureException, OutOfResourcesException
+	public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, Duration duration)
+			throws TimeoutException, AllocationFailureException
 	{
-		return this.allocate(aid, spec, duration.toMillis(), TimeUnit.MILLISECONDS);
+		return this.allocate(tenant, aid, spec, duration.toMillis(), TimeUnit.MILLISECONDS);
 	}
 
 	@Override
-	public ResourceHandle allocate(UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+	public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException
 	{
-		return this.allocate(Collections.emptyList(), aid, spec, timeout, unit);
+		return this.allocate(tenant, Collections.emptyList(), aid, spec, timeout, unit);
 	}
 	
 	@Override
-	public ResourceHandle allocate(LabelSelector selector, UUID aid, ResourceSpec spec, Duration duration)
-			throws TimeoutException, AllocationFailureException, OutOfResourcesException
+	public ResourceHandle allocate(String tenant, LabelSelector selector, UUID aid, ResourceSpec spec, Duration duration)
+			throws TimeoutException, AllocationFailureException
 	{
-		return this.allocate(selector, aid, spec, duration.toMillis(), TimeUnit.MILLISECONDS);
+		return this.allocate(tenant, selector, aid, spec, duration.toMillis(), TimeUnit.MILLISECONDS);
 	}
 	
 	@Override
 	public ResourceHandle allocate(
-			LabelSelector selector, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
-			throws TimeoutException, AllocationFailureException, OutOfResourcesException
+			String tenant, LabelSelector selector, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			throws TimeoutException, AllocationFailureException
 	{
 		Collection<LabelSelector> selectors = new ArrayList<LabelSelector>(1);
 		selectors.add(selector);
 		
-		return this.allocate(selectors, aid, spec, timeout, unit);
+		return this.allocate(tenant, selectors, aid, spec, timeout, unit);
 	}
 	
 	@Override
 	public ResourceHandle allocate(
-			Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, Duration duration)
-			throws TimeoutException, AllocationFailureException, OutOfResourcesException
+			String tenant, Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, Duration duration)
+			throws TimeoutException, AllocationFailureException
 	{
-		return this.allocate(selectors, aid, spec, duration.toMillis(), TimeUnit.MILLISECONDS);
+		return this.allocate(tenant, selectors, aid, spec, duration.toMillis(), TimeUnit.MILLISECONDS);
 	}
 	
 	@Override
-	public ResourceHandle allocate(
-			Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
-			throws TimeoutException, AllocationFailureException, OutOfResourcesException
+	public ResourceHandle allocate(String tenant, Collection<LabelSelector> selectors,
+			UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			throws TimeoutException, AllocationFailureException
 	{
-		final Set<IResourceProvider> candidates = new TreeSet<IResourceProvider>(comparator);
-		if (selectors == null || selectors.isEmpty()) {
-			// No provider filtering should be done!
-			candidates.addAll(providers.values());
+		// Check tenant's quota...
+		if (tenant != null && !tenants.allocate(tenant, spec))
+			throw new QuotaExceededException("Quota exceeded for tenant " + tenant);
+
+		try {
+			return this.doAllocation(selectors, aid, spec, timeout, unit)
+					.setTenantId(tenant);
 		}
-		else {
-			// Perform provider filtering...
-			providers.values().stream()
-				.filter((provider) -> provider.apply(selectors))
-				.forEach((provider) -> candidates.add(provider));
+		catch (TimeoutException | AllocationFailureException error) {
+			// Revert quota allocation!
+			if (tenant != null)
+				tenants.free(tenant, spec);
+
+			throw error;
 		}
-		
-		final int numSelectedProviders = candidates.size();
-		final int numProviders = providers.size();
-		log.info(numSelectedProviders + " out of " + numProviders + " provider(s) selected for allocation " + aid);
-		if (numSelectedProviders == 0) {
-			final String message = "Allocation " + aid + " failed! No providers found matching selector(s)";
-			final StringBuilder sb = new StringBuilder()
-					.append(message)
-					.append(":\n");
-			
-			for (LabelSelector selector : selectors) {
-				sb.append("    ")
-					.append(selector.toString())
-					.append("\n");
-			}
-			
-			log.warning(sb.toString());
-			throw new AllocationFailureException(message + ".");
-		}
-		
-		final long deadline = ResourceProvider.getCurrentTime() + unit.toMillis(timeout);
-		if (numSelectedProviders > 1) {
-			try {
-				// Multiple providers are available!
-				// Don't scale up the resources, before trying each provider...
-				return this.doAllocation(candidates, aid, spec, false, deadline);
-			}
-			catch (TimeoutException error) {
-				// No time left to continue!
-				throw error;
-			}
-			catch (Throwable error) {
-				// Ignore it!
-			}
-		}
-		
-		// Try to allocate and scale up the resources, when possible...
-		return this.doAllocation(candidates, aid, spec, true, deadline);
 	}
 
 	@Override
@@ -184,8 +158,21 @@ public class ClusterManager implements IClusterManager
 		final IResourceProvider provider = providers.get(name);
 		if (provider == null)
 			throw new IllegalArgumentException("Unknown resource handle: " + handle.toString());
-		
-		provider.release(handle);
+
+		// Update tenant's quota allocation
+		final Consumer<ResourceSpec> finalizer = (spec) -> {
+			try {
+				final String tenant = handle.getTenantId();
+				if (tenant != null)
+					tenants.free(tenant, spec);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Updating tenant's quota usage failed!", error);
+			}
+		};
+
+		provider.release(handle)
+				.thenAccept(finalizer);
 	}
 	
 	@Override
@@ -401,6 +388,61 @@ public class ClusterManager implements IClusterManager
 		}
 		
 		throw new OutOfResourcesException();
+	}
+
+	private ResourceHandle doAllocation(Collection<LabelSelector> selectors,
+			UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			throws TimeoutException, AllocationFailureException
+	{
+		final Set<IResourceProvider> candidates = new TreeSet<IResourceProvider>(comparator);
+		if (selectors == null || selectors.isEmpty()) {
+			// No provider filtering should be done!
+			candidates.addAll(providers.values());
+		}
+		else {
+			// Perform provider filtering...
+			providers.values().stream()
+					.filter((provider) -> provider.apply(selectors))
+					.forEach((provider) -> candidates.add(provider));
+		}
+
+		final int numSelectedProviders = candidates.size();
+		final int numProviders = providers.size();
+		log.info(numSelectedProviders + " out of " + numProviders + " provider(s) selected for allocation " + aid);
+		if (numSelectedProviders == 0) {
+			final String message = "Allocation " + aid + " failed! No providers found matching selector(s)";
+			final StringBuilder sb = new StringBuilder()
+					.append(message)
+					.append(":\n");
+
+			for (LabelSelector selector : selectors) {
+				sb.append("    ")
+						.append(selector.toString())
+						.append("\n");
+			}
+
+			log.warning(sb.toString());
+			throw new AllocationFailureException(message + ".");
+		}
+
+		final long deadline = ResourceProvider.getCurrentTime() + unit.toMillis(timeout);
+		if (numSelectedProviders > 1) {
+			try {
+				// Multiple providers are available!
+				// Don't scale up the resources, before trying each provider...
+				return this.doAllocation(candidates, aid, spec, false, deadline);
+			}
+			catch (TimeoutException error) {
+				// No time left to continue!
+				throw error;
+			}
+			catch (Throwable error) {
+				// Ignore it!
+			}
+		}
+
+		// Try to allocate and scale up the resources, when possible...
+		return this.doAllocation(candidates, aid, spec, true, deadline);
 	}
 
 	@PostConstruct

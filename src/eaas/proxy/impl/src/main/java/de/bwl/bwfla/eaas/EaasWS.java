@@ -156,6 +156,7 @@ public class EaasWS
 	    
         final UUID allocationId = UUID.randomUUID();
 		final String componentId = allocationId.toString();
+		final String tenantId = options.getTenantId();
 	    try {
             for (IAccessControlList acl : sortedAcls) {
             	if(acl instanceof EnvironmentLock) {
@@ -175,8 +176,7 @@ public class EaasWS
             else
             	spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
 
-
-	        final ResourceHandle resource = clusterManager.allocate(labelSelectors, allocationId, spec, Duration.ofMinutes(2));
+	        final ResourceHandle resource = clusterManager.allocate(tenantId, labelSelectors, allocationId, spec, Duration.ofMinutes(2));
 			try {
 				final Component component = serviceCache.getComponentPort(resource.getNodeID());
 				component.initialize(componentId, config.value(false));
@@ -243,6 +243,7 @@ public class EaasWS
 		List<String> selectors;
 		String userId;
 		boolean lockEnvironment = false;
+		private String tenantId = null;
 
 		public boolean isLockEnvironment() {
 			return lockEnvironment;
@@ -266,6 +267,14 @@ public class EaasWS
 
 		public void setUserId(String userId) {
 			this.userId = userId;
+		}
+
+		public void setTenantId(String id) {
+			this.tenantId = id;
+		}
+
+		public String getTenantId() {
+			return tenantId;
 		}
 	}
 }
