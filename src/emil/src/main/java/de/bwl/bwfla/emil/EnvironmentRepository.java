@@ -55,6 +55,7 @@ import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
+import org.eclipse.persistence.annotations.DeleteAll;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -119,13 +120,15 @@ public class EnvironmentRepository extends EmilRest
 
 	private SoftwareArchiveHelper swHelper;
 
+	@Inject
+	private EmilObjectData objects;
+
 	@PostConstruct
 	private void initialize()
 	{
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
-
 		}
 		catch (IllegalArgumentException error) {
 			LOG.log(Level.WARNING, "Initializing image-proposer failed!", error);
@@ -241,8 +244,8 @@ public class EnvironmentRepository extends EmilRest
 
 	// ========== Subresources ==============================
 
-	public class Images
-	{
+	public class Images {
+
 		/** Create a new environment */
 //		@POST
 //		@Secured({Role.RESTRCITED})
@@ -347,32 +350,97 @@ public class EnvironmentRepository extends EmilRest
 			try {
 				MachineConfiguration pEnv = envdb.getTemplate(envReq.getTemplateId());
 				if (pEnv == null)
-					return EnvironmentRepository.errorMessageResponse("invalid template id: " + envReq.getTemplateId());
+					throw new BadRequestException(Response
+							.status(Response.Status.BAD_REQUEST)
+							.entity(new ErrorInformation("invalid template id: " + envReq.getTemplateId()))
+							.build());
 
 				MachineConfiguration env = pEnv.copy(); // don't modify the real template
 				env.getDescription().setTitle(envReq.getLabel());
 				if (env.getNativeConfig() == null)
 					env.setNativeConfig(new NativeConfig());
 
+				env.setOperatingSystemId(envReq.getOperatingSystemId());
 				env.getNativeConfig().setValue(envReq.getNativeConfig());
-
 				ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-				iaMd.setType(ImageType.TMP);
-
-				String id = envdb.createEnvironment("default", env, envReq.getSize(), iaMd);
-				if (id == null) {
-					return EnvironmentRepository.errorMessageResponse("failed to create image");
+				iaMd.setType(ImageType.USER);
+				for(EnvironmentCreateRequest.DriveSetting ds : envReq.getDriveSettings())
+				{
+					if(ds.getObjectId() != null && ds.getObjectArchive() != null) {
+						FileCollection fc = objects.getFileCollection(ds.getObjectArchive(), ds.getObjectId());
+						ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().toString(), ds.getObjectArchive(), ds.getObjectId());
+						if(EmulationEnvironmentHelper.addObjectArchiveBinding(env, binding, fc, ds.getDriveIndex()) <0)
+							throw new BadRequestException(Response
+									.status(Response.Status.BAD_REQUEST)
+									.entity(new ErrorInformation("could not insert object"))
+									.build());
+					}
+					else if(ds.getImageId() != null && ds.getImageArchive() != null)
+					{
+						ImageArchiveBinding binding = new ImageArchiveBinding(ds.getImageArchive(),
+								"",
+								ds.getImageId(),
+								ImageType.USER.value());
+						binding.setId(ds.getImageId());
+						env.getAbstractDataResource().add(binding);
+						EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
+						EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex());
+					}
+					else
+						throw new BadRequestException(Response
+								.status(Response.Status.BAD_REQUEST)
+								.entity(new ErrorInformation("incomplete request"))
+								.build());
 				}
 
+				if (env.getUiOptions() == null)
+					env.setUiOptions(new UiOptions());
+
+				final UiOptions uiopts = env.getUiOptions();
+				if (envReq.isUseXpra())
+					uiopts.setForwarding_system("XPRA");
+				else uiopts.setForwarding_system(null);
+
+				if (envReq.isUseWebRTC())
+					uiopts.setAudio_system("webRTC");
+				else uiopts.setAudio_system(null);
+
+				if (uiopts.getHtml5() == null)
+					uiopts.setHtml5(new Html5Options());
+
+				String id = envdb.importMetadata("default", env, iaMd, false);
+
+				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
+
+				if (newEmilEnv != null)
+					throw new BWFLAException("import failed: environment with id: " + id + " exists.");
+
+				newEmilEnv = new EmilEnvironment();
+				newEmilEnv.setTitle(envReq.getLabel());
+				newEmilEnv.setEnvId(id);
+				newEmilEnv.setEnableRelativeMouse(envReq.isEnableRelativeMouse());
+				newEmilEnv.setEnablePrinting(envReq.isEnablePrinting());
+				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());
+				newEmilEnv.setXpraEncoding(envReq.getXpraEncoding());
+				newEmilEnv.setOs(envReq.getOperatingSystemId());
+
+				newEmilEnv.setDescription("imported / user created environment");
+				emilEnvRepo.save(newEmilEnv, true);
+
 				final JsonObject json = Json.createObjectBuilder()
-						.add("status", "0")
 						.add("id", id)
 						.build();
 
-				return EnvironmentRepository.createResponse(Status.OK, json);
+				return Response.ok()
+						.entity(json)
+						.build();
 			}
 			catch (Throwable error) {
-				return EnvironmentRepository.errorMessageResponse(error.getMessage());
+				error.printStackTrace();
+				throw new BadRequestException(Response
+						.status(Response.Status.BAD_REQUEST)
+						.entity(new ErrorInformation(error.getMessage()))
+						.build());
 			}
 		}
 
@@ -763,21 +831,64 @@ public class EnvironmentRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		/**
 		 *
-		 * @return
-		 *
-		 * 		{"status": "0", "systems": [{"id": "abc", "label": "Windows XP
-		 *         SP1", "native_config": "test", "properties": [{"name":
-		 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
-		 *         "In 1936, the Russians made a computer that ran on water"}]}]}
+		 * for old-style template use ?compat=... get parameter
 		 */
-		public Response list()
+		public Response list(@QueryParam("compat") @DefaultValue("newStyle") String compat)
 		{
 			LOG.info("Listing environment templates...");
 			try {
-				List<MachineConfigurationTemplate> templates = envdb.getTemplates();
-				return Response.status(Status.OK)
-						.entity(templates)
-						.build();
+				if(compat.equals("newStyle")) {
+					List<MachineConfigurationTemplate> templates = envdb.getTemplates();
+					return Response.status(Status.OK)
+							.entity(templates)
+							.build();
+				}
+				else {
+					try {
+						final StringWriter output = new StringWriter();
+						final JsonGenerator json = Json.createGenerator(output);
+						json.writeStartObject();
+						json.write("status", "0");
+						json.writeStartArray("systems");
+						for (MachineConfiguration machine : envdb.getTemplates()) {
+							json.writeStartObject();
+							json.write("id", machine.getId());
+							json.write("label", machine.getDescription().getTitle());
+							if (machine.getNativeConfig() != null)
+								json.write("native_config", machine.getNativeConfig().getValue());
+							else json.write("native_config", "");
+
+							json.writeStartArray("properties");
+							if (machine.getArch() != null && !machine.getArch().isEmpty()) {
+								json.writeStartObject();
+								json.write("name", "Architecture");
+								json.write("value", machine.getArch());
+								json.writeEnd();
+							}
+
+							final String emubean = (machine.getEmulator() != null) ? machine.getEmulator().getBean() : null;
+							if (emubean != null && !emubean.isEmpty()) {
+								json.writeStartObject();
+								json.write("name", "EmulatorContainer");
+								json.write("value", emubean);
+								json.writeEnd();
+							}
+
+							json.writeEnd();
+							json.writeEnd();
+						}
+
+						json.writeEnd();
+						json.writeEnd();
+						json.flush();
+						json.close();
+
+						return EnvironmentRepository.createResponse(Status.OK, output.toString());
+					}
+					catch (Throwable error) {
+						return EnvironmentRepository.internalErrorResponse(error);
+					}
+				}
 			}
 			catch (Throwable error) {
 				return EnvironmentRepository.internalErrorResponse(error);
@@ -870,10 +981,12 @@ public class EnvironmentRepository extends EmilRest
 			URL url;
 			try {
 				url = new URL(imageReq.getUrl());
+				if(url.getProtocol().equalsIgnoreCase("file"))
+					return new TaskStateResponse((new BWFLAException("invalid url format")));
 			} catch (MalformedURLException me) {
 				String filename = imageReq.getUrl();
 				if (filename == null || filename.contains("/"))
-					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename));
+					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters: " + filename));
 				File image = new File("/eaas/import/", filename);
 				LOG.info("path: " + image);
 				if (!image.exists())
@@ -954,63 +1067,21 @@ public class EnvironmentRepository extends EmilRest
 			response.setTaskList(taskList);
 			return response;
 		}
-	}
 
-	/*
-
-	@POST
-		@Path("/import-image")
-		@Secured({Role.RESTRCITED})
+		@POST
+		@Path("/delete-image")
+		@Secured({Role.PUBLIC})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
-		public TaskStateResponse importImage(ImportImageRequest imageReq)
+		public Response deleteImage(DeleteImageRequest request) throws BWFLAException
 		{
-			LOG.info("Importing image for new environment...");
-
-			ImportImageTaskRequest request = new ImportImageTaskRequest();
-
-			URL url;
-			try {
-				url = new URL(imageReq.getUrlString());
-			} catch (MalformedURLException me) {
-				String filename = imageReq.getUrlString();
-				if (filename == null || filename.contains("/"))
-					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename));
-				File image = new File("/eaas/import/", filename);
-				LOG.info("path: " + image);
-				if (!image.exists())
-					return new TaskStateResponse(new BWFLAException("image : " + filename + " not found."));
-
-				try {
-					url = image.toURI().toURL();
-				} catch (MalformedURLException e) {
-					return new TaskStateResponse(new BWFLAException(e));
-				}
-			}
-			request.url = url;
-
-			if (imageReq.getRom() != null) {
-				File romFile = new File("/eaas/roms", imageReq.getRom());
-				if (!romFile.exists())
-					return new TaskStateResponse(new BWFLAException("rom file not found"));
-				request.romFile = romFile;
-			}
-			request.destArchive = "default";
-			request.templateId = imageReq.getTemplateId();
-			request.nativeConfig = imageReq.getNativeConfig();
-			request.environmentHelper = envdb;
-			request.imageProposer = imageProposer;
-			request.patchId = imageReq.getPatchId();
-
-			try {
-				request.validate();
-			} catch (BWFLAException e) {
-				e.printStackTrace();
-				return new TaskStateResponse(e);
-			}
-
-			return new TaskStateResponse(taskManager.submitTask(new ImportImageTask(request, LOG)));
+			LOG.info("delete image");
+			envdb.deleteNameIndexesEntry(request.getImageArchive(), request.getImageId(), null);
+			envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
+			return Response.status(Status.OK)
+					.build();
 		}
+	}
 
-	 */
+
 }

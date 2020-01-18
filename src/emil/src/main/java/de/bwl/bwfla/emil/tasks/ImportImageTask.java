@@ -4,16 +4,6 @@ import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
-import de.bwl.bwfla.emil.EmilEnvironmentRepository;
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
-import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
-import de.bwl.bwfla.imageproposer.client.ImageProposer;
-
-import javax.activation.DataHandler;
-import javax.activation.FileDataSource;
-import java.io.File;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
@@ -60,13 +50,18 @@ public class ImportImageTask extends AbstractTask<Object> {
             {
                 importState = request.environmentHelper.getState(importState.getTaskId());
             }
+            if(importState.isFailed())
+            {
+                return new BWFLAException("task failed");
+            }
 
             Map<String, String> userData = new HashMap<>();
             String imageId = importState.getResult();
             userData.put("imageId", imageId);
 
             ImageMetadata entry = new ImageMetadata();
-            entry.setName(request.label);
+            entry.setName(imageId);
+            entry.setLabel(request.label);
             ImageDescription description = new ImageDescription();
             description.setId(imageId);
             entry.setImage(description);
@@ -76,7 +71,7 @@ public class ImportImageTask extends AbstractTask<Object> {
             return userData;
         } catch (Exception e) {
             log.log(Level.SEVERE, e.getMessage(), e);
-            return e;
+            return new BWFLAException(e);
         }
     }
 }

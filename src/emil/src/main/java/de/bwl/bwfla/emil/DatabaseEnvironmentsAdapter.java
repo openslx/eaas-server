@@ -192,6 +192,11 @@ public class DatabaseEnvironmentsAdapter {
     public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
         environmentsAdapter.addNameIndexesEntry(backend, entry, alias);
     }
+
+    public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
+        environmentsAdapter.deleteNameIndexesEntry(backend, id, version);
+    }
+
     public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
         environmentsAdapter.updateLatestEmulator(backend, emulator, version);
     }
@@ -266,5 +271,9 @@ public class DatabaseEnvironmentsAdapter {
 
     public List<DefaultEntry> getDefaultEnvironments() throws BWFLAException {
         return environmentsAdapter.getDefaultEnvironments("default");
+    }
+
+    public void deleteImage(String backend, String id, ImageType type) throws BWFLAException {
+        environmentsAdapter.deleteImage(backend, id, type.value());
     }
 }
