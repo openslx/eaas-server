@@ -27,6 +27,9 @@ public class ImageMetadata extends JaxbType
     @XmlElement
     private String digest;
 
+    @XmlElement
+    private String label;
+
     public ImageMetadata(String name, ImageDescription image)
     {
         this.name = name;
@@ -74,5 +77,13 @@ public class ImageMetadata extends JaxbType
 
     public void setDigest(String digest) {
         this.digest = digest;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
     }
 }

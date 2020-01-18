@@ -149,6 +149,8 @@ public class ImageArchiveRegistry
 		catch (InterruptedException | ExecutionException e)
 		{
 			e.printStackTrace();
+			state.setDone(true);
+			state.setFailed(true);
 		}
 
 		return state;

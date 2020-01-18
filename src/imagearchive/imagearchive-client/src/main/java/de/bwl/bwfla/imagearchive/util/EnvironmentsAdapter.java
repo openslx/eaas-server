@@ -61,6 +61,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	public MachineConfigurationTemplate getTemplate(String backend, String id) throws BWFLAException {
 		List<MachineConfigurationTemplate> envs = this.getTemplates(backend);
 		for (MachineConfigurationTemplate e : envs) {
+			log.severe("template : " + e.getId());
 			if (e.getId().equals(id))
 				return e;
 		}
@@ -459,6 +460,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	public void cleanTempEnvironments(String backend) throws BWFLAException {
 		connectArchive();
 		archive.deleteTempEnvironments(backend);
+	}
+
+	public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
+		connectArchive();
+		archive.deleteNameIndexesEntry(backend, id, version);
 	}
 
 	public class ImportImageHandle {

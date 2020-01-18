@@ -435,4 +435,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 	public int compareTo(ImageArchiveBackend backend) {
 		return compare(getConfig().getOrder(), backend.getConfig().getOrder());
 	}
+
+    public void deleteNameIndexesEntry(String id, String version) {
+		imageHandler.deleteNameIndexesEntry(id, version);
+    }
 }

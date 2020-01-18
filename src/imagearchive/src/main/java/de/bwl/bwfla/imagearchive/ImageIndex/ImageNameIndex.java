@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -63,9 +64,9 @@ public class ImageNameIndex extends JaxbType
 
 	/** Symbolic imageDescription-name index: name --> imageDescription's description */
 	@XmlElement
-	private final Map<String, ImageMetadata> entries = new HashMap<String, ImageMetadata>();
+	private final Map<String, ImageMetadata> entries = new ConcurrentHashMap<>();
 	@XmlElement
-	private final Map<String, Alias> aliases = new HashMap<String, Alias>();
+	private final Map<String, Alias> aliases = new ConcurrentHashMap<>();
 
 	private static final String VERSION_SEPARATOR = "|";
 	private static final String LATEST_TAG = "latest";
@@ -111,6 +112,18 @@ public class ImageNameIndex extends JaxbType
 		}
 	}
 
+	public void delete(String name) {
+		delete(name, null);
+	}
+
+	public void delete(String name, String version)
+	{
+		ImageMetadata md = entries.remove(ImageNameIndex.toIndexKey(name, version));
+		if(md == null)
+			log.severe("failed to find key: " + ImageNameIndex.toIndexKey(name, version));
+		executor.execute(this::dump);
+	}
+
 	/* =============== Internal Helpers =============== */
 
 	static String getOrDefault(String name, Configuration values, Configuration defaults)
@@ -145,7 +158,7 @@ public class ImageNameIndex extends JaxbType
 		return aliases;
 	}
 
-	public void addNameIndexesEntry(ImageMetadata entry, Alias alias) {
+	public synchronized void addNameIndexesEntry(ImageMetadata entry, Alias alias) {
 		this.entries.put(ImageNameIndex.toIndexKey(entry.getName(), entry.getVersion()), entry);
 
 		if(alias != null)
@@ -158,7 +171,7 @@ public class ImageNameIndex extends JaxbType
 		}
 	}
 
-    public void updateLatest(String emulator, String version) {
+    public synchronized void updateLatest(String emulator, String version) {
         log.info("\nLatest (default) emulator update!\nemulator: " + emulator + "\nversion: " + version);
         this.aliases.put(ImageNameIndex.toIndexKey(emulator, LATEST_TAG), new Alias(emulator, version, LATEST_TAG));
         executor.execute(this::dump);

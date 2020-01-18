@@ -52,7 +52,7 @@ public class ImageHandler
 	private ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
 
-	enum ExportType {
+    enum ExportType {
 		NBD, HTTP
 	}
 
@@ -97,6 +97,10 @@ public class ImageHandler
 		// compat hack
 		if(iaConfig.getName().equals("emulators"))
 			createLocalEmulatorQcow(entry.getImage().getId());
+	}
+
+	public void deleteNameIndexesEntry(String id, String version) {
+    	imageNameIndex.delete(id, version);
 	}
 
 	public void updateLatestEmulator(String emulator, String version) {

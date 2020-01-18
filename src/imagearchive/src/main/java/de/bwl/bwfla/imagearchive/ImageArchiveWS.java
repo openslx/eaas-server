@@ -228,6 +228,11 @@ public class ImageArchiveWS
 				.addNameIndexesEntry(entry, alias);
 	}
 
+	public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
+		this.lookup(backend)
+				.deleteNameIndexesEntry(id, version);
+	}
+
 	public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
 		this.lookup(backend)
 				.updateLatestEmulator(emulator, version);
