@@ -17,6 +17,9 @@ public class TaskState extends JaxbType{
     @XmlElement(required = true, defaultValue = "false")
     private boolean done;
 
+    @XmlElement(required = true, defaultValue = "false")
+    private boolean failed;
+
     @XmlElement
     private String result;
 
@@ -54,5 +57,13 @@ public class TaskState extends JaxbType{
 
     public void setResult(String result) {
         this.result = result;
+    }
+
+    public boolean isFailed() {
+        return failed;
+    }
+
+    public void setFailed(boolean failed) {
+        this.failed = failed;
     }
 }
