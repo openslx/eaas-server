@@ -368,7 +368,7 @@ public class EnvironmentRepository extends EmilRest
 				{
 					if(ds.getObjectId() != null && ds.getObjectArchive() != null) {
 						FileCollection fc = objects.getFileCollection(ds.getObjectArchive(), ds.getObjectId());
-						ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().toString(), ds.getObjectArchive(), ds.getObjectId());
+						ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().getHost(), ds.getObjectArchive(), ds.getObjectId());
 						if(EmulationEnvironmentHelper.addObjectArchiveBinding(env, binding, fc, ds.getDriveIndex()) <0)
 							throw new BadRequestException(Response
 									.status(Response.Status.BAD_REQUEST)
