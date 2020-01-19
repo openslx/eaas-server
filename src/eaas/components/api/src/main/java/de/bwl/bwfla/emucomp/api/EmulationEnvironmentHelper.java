@@ -411,7 +411,7 @@ public class EmulationEnvironmentHelper {
 		FileCollectionEntry fce = fc.getDefaultEntry();
 		return EmulationEnvironmentHelper.registerDrive(env, binding.getId(), fce.getId(), index);
 	}
-
+	
 	public static int addArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc) throws BWFLAException {
 
 		// FIXME
@@ -445,6 +445,20 @@ public class EmulationEnvironmentHelper {
 				return driveId;
 		}
 		return -1;
+	}
+
+	public static int registerEmptyDrive(MachineConfiguration env, int index) {
+		// construct URL
+		int driveId = -1;
+		try {
+			Drive d = env.getDrive().get(index);
+			d.setData(null);
+			return index;
+		}
+		catch(IndexOutOfBoundsException e)
+		{
+			return -1;
+		}
 	}
 
 	public static int registerDrive(MachineConfiguration env, String binding, String path, int index) {

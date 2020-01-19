@@ -386,11 +386,9 @@ public class EnvironmentRepository extends EmilRest
 						EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
 						EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex());
 					}
-					else
-						throw new BadRequestException(Response
-								.status(Response.Status.BAD_REQUEST)
-								.entity(new ErrorInformation("incomplete request"))
-								.build());
+					else {
+						EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
+					}
 				}
 
 				if (env.getUiOptions() == null)
