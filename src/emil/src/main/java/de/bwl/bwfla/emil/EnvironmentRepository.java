@@ -364,32 +364,8 @@ public class EnvironmentRepository extends EmilRest
 				env.getNativeConfig().setValue(envReq.getNativeConfig());
 				ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
 				iaMd.setType(ImageType.USER);
-				for(EnvironmentCreateRequest.DriveSetting ds : envReq.getDriveSettings())
-				{
-					if(ds.getObjectId() != null && ds.getObjectArchive() != null) {
-						FileCollection fc = objects.getFileCollection(ds.getObjectArchive(), ds.getObjectId());
-						ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().getHost(), ds.getObjectArchive(), ds.getObjectId());
-						if(EmulationEnvironmentHelper.addObjectArchiveBinding(env, binding, fc, ds.getDriveIndex()) <0)
-							throw new BadRequestException(Response
-									.status(Response.Status.BAD_REQUEST)
-									.entity(new ErrorInformation("could not insert object"))
-									.build());
-					}
-					else if(ds.getImageId() != null && ds.getImageArchive() != null)
-					{
-						ImageArchiveBinding binding = new ImageArchiveBinding(ds.getImageArchive(),
-								"",
-								ds.getImageId(),
-								ImageType.USER.value());
-						binding.setId(ds.getImageId());
-						env.getAbstractDataResource().add(binding);
-						EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
-						EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex());
-					}
-					else {
-						EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
-					}
-				}
+
+				driveUpdateHelper(env, envReq.getDriveSettings(), objects);
 
 				if (env.getUiOptions() == null)
 					env.setUiOptions(new UiOptions());
@@ -521,6 +497,8 @@ public class EnvironmentRepository extends EmilRest
 					uiopts.getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
 					machineConfiguration.setDrive(desc.getDrives());
+					driveUpdateHelper(machineConfiguration, desc.getDriveSettings(), objects);
+
 					machineConfiguration.setLinuxRuntime(desc.isLinuxRuntime());
 
 					if (desc.getNetworking() != null && desc.getNetworking().isEnableInternet()) {
@@ -532,6 +510,8 @@ public class EnvironmentRepository extends EmilRest
 						}
 					}
 				}
+
+
 
 				environment.setUserTag(desc.getUserTag());
 				if (!oldenv.getArchive().equals("default")) {
@@ -1081,5 +1061,36 @@ public class EnvironmentRepository extends EmilRest
 		}
 	}
 
+	// helper
+	private static void driveUpdateHelper(MachineConfiguration env, List<EnvironmentCreateRequest.DriveSetting> driveSettings, EmilObjectData objects) throws BWFLAException {
+		if(driveSettings == null)
+			return;
 
+		for (EnvironmentCreateRequest.DriveSetting ds : driveSettings) {
+			if (ds.getObjectId() != null && ds.getObjectArchive() != null) {
+				FileCollection fc = objects.getFileCollection(ds.getObjectArchive(), ds.getObjectId());
+				ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().getHost(), ds.getObjectArchive(), ds.getObjectId());
+				if (EmulationEnvironmentHelper.addObjectArchiveBinding(env, binding, fc, ds.getDriveIndex()) < 0)
+					throw new BadRequestException(Response
+							.status(Response.Status.BAD_REQUEST)
+							.entity(new ErrorInformation("could not insert object"))
+							.build());
+			} else if (ds.getImageId() != null && ds.getImageArchive() != null) {
+				ImageArchiveBinding binding = new ImageArchiveBinding(ds.getImageArchive(),
+						"",
+						ds.getImageId(),
+						ImageType.USER.value());
+				binding.setId(ds.getImageId());
+				env.getAbstractDataResource().add(binding);
+				EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
+				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0) ;
+				throw new BadRequestException(Response
+						.status(Response.Status.BAD_REQUEST)
+						.entity(new ErrorInformation("could not insert iamge"))
+						.build());
+			} else {
+				EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
+			}
+		}
+	}
 }
