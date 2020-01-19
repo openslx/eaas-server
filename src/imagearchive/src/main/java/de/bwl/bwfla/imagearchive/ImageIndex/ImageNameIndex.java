@@ -78,6 +78,13 @@ public class ImageNameIndex extends JaxbType
 		this.configPath = null;
 	}
 
+	public ImageNameIndex(String path)
+	{
+		this.log = new PrefixLogger(ImageArchiveBackend.class.getName());
+		this.executor = ImageNameIndex.lookup(log);
+		this.configPath = path;
+	}
+
 	public static ImageNameIndex parse(String path) throws BWFLAException
 	{
 		try {

@@ -80,6 +80,7 @@ public class ImageHandler
 		if (new File(indexPath).exists()) {
 			this.imageNameIndex = ImageNameIndex.parse(indexPath);
 		}
+		else this.imageNameIndex = new ImageNameIndex(indexPath);
 
 		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
