@@ -349,11 +349,13 @@ public class EnvironmentRepository extends EmilRest
 
 			try {
 				MachineConfiguration pEnv = envdb.getTemplate(envReq.getTemplateId());
-				if (pEnv == null)
+				if (pEnv == null) {
+					LOG.severe("invalid template id: " + envReq.getTemplateId());
 					throw new BadRequestException(Response
 							.status(Response.Status.BAD_REQUEST)
 							.entity(new ErrorInformation("invalid template id: " + envReq.getTemplateId()))
 							.build());
+				}
 
 				MachineConfiguration env = pEnv.copy(); // don't modify the real template
 				env.getDescription().setTitle(envReq.getLabel());
@@ -1083,11 +1085,11 @@ public class EnvironmentRepository extends EmilRest
 				binding.setId(ds.getImageId());
 				env.getAbstractDataResource().add(binding);
 				EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
-				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0) ;
-				throw new BadRequestException(Response
-						.status(Response.Status.BAD_REQUEST)
-						.entity(new ErrorInformation("could not insert iamge"))
-						.build());
+				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
+					throw new BadRequestException(Response
+							.status(Response.Status.BAD_REQUEST)
+							.entity(new ErrorInformation("could not insert iamge"))
+							.build());
 			} else {
 				EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
 			}
