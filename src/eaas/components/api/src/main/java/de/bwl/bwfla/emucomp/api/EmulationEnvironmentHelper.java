@@ -441,7 +441,7 @@ public class EmulationEnvironmentHelper {
 		int driveId = -1;
 		for (Drive drive : env.getDrive()) {
 			++driveId; // hack: fix me
-			if(drive.getData().contains(objectId))
+			if(drive.getData() != null && drive.getData().contains(objectId))
 				return driveId;
 		}
 		return -1;
