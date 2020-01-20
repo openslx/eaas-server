@@ -72,6 +72,14 @@ public class ImageHandler
 			// compat hack pt2: old configs pointed to a directory
 			indexPath = config.getNameIndexConfigPath();
 			Path p = Paths.get(indexPath);
+			if(!Files.exists(p)) {
+				try {
+					Files.createDirectories(p);
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new BWFLAException(e);
+				}
+			}
 			if(Files.isDirectory(p)) {
 				indexPath = p.resolve(config.getName() + ".yaml").toString();
 			}
