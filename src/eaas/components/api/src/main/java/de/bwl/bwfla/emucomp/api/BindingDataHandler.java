@@ -36,6 +36,7 @@ import java.nio.file.Path;
 @XmlType(name = "bindingDataHandler", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
     "id",
     "data",
+		"url"
 })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class BindingDataHandler
@@ -45,6 +46,9 @@ public class BindingDataHandler
 
 	@XmlElement(name = "data", required = true)
 	private @XmlMimeType("application/octet-stream") DataHandler data;
+
+	@XmlElement
+	private String url;
 
 	/** Returns the ID of the binding. */
 	public String getId()
@@ -87,5 +91,15 @@ public class BindingDataHandler
 			throw new IllegalArgumentException("Bindings's data path is null!");
 
 		return this.setData(new FileDataSource(path.toFile()));
+	}
+
+
+	public String getUrl() {
+		return url;
+	}
+
+	public BindingDataHandler setUrl(String url) {
+		this.url = url;
+		return this;
 	}
 }
