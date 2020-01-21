@@ -1239,7 +1239,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			final BlobDescription blob = new BlobDescription()
 					.setDescription("Snapshot for session " + this.getComponentId())
 					.setNamespace("emulator-snapshots")
-					.setName(path);
+					.setName(id);
 
 			blob.setDataFromFile(Paths.get(path));
 			blob.setType(".qcow");
