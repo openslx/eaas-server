@@ -81,7 +81,7 @@ import javax.xml.bind.annotation.XmlType;
     "filesystem",
     "boot",
     "plugged",
-    "volatile"
+    "transientDrive"
 })
 @JsonIgnoreProperties(ignoreUnknown=true)
 public class Drive
@@ -104,6 +104,7 @@ public class Drive
     protected Boolean boot = false;
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected boolean plugged = false;
+
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", defaultValue = "false")
     protected boolean transientDrive;
 
@@ -273,6 +274,14 @@ public class Drive
     
     public void setFilesystem(String filesystem) {
     	this.filesystem = filesystem;
+    }
+
+    public boolean isTransientDrive() {
+        return transientDrive;
+    }
+
+    public void setTransientDrive(boolean transientDrive) {
+        this.transientDrive = transientDrive;
     }
 
     /**
