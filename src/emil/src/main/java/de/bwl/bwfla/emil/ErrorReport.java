@@ -75,7 +75,8 @@ public class ErrorReport
 					.build();
 		}
 		catch (IOException exception) {
-			throw new InternalServerErrorException("Generating error-report failed!", exception);
+			return Response.status(Response.Status.NO_CONTENT)
+					.build();
 		}
 		finally {
 			if (outpath != null) {

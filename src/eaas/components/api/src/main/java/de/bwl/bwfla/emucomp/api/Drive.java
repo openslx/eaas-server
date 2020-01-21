@@ -80,7 +80,8 @@ import javax.xml.bind.annotation.XmlType;
     "type",
     "filesystem",
     "boot",
-    "plugged"
+    "plugged",
+    "volatile"
 })
 @JsonIgnoreProperties(ignoreUnknown=true)
 public class Drive
@@ -103,6 +104,8 @@ public class Drive
     protected Boolean boot = false;
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected boolean plugged = false;
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", defaultValue = "false")
+    protected boolean transientDrive;
 
     /**
      * Gets the value of the data property.
