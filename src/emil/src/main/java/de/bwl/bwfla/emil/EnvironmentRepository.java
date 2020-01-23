@@ -1054,7 +1054,7 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("delete image");
 			envdb.deleteNameIndexesEntry(request.getImageArchive(), request.getImageId(), null);
-			envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
+			// envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
 			return Response.status(Status.OK)
 					.build();
 		}
@@ -1107,6 +1107,7 @@ public class EnvironmentRepository extends EmilRest
 			if(EmulationEnvironmentHelper.getDriveId(env, bindingId) > 0)
 				continue;
 
+			LOG.severe("removing: " + bindingId);
 			it.remove();
 		}
 
