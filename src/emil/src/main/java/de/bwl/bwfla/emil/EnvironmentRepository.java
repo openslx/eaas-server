@@ -1104,10 +1104,9 @@ public class EnvironmentRepository extends EmilRest
 			if(bindingId.startsWith("rom-"))
 				continue;
 
-			if(EmulationEnvironmentHelper.getDriveId(env, bindingId) > 0)
+			if(EmulationEnvironmentHelper.getDriveId(env, bindingId) >= 0)
 				continue;
 
-			LOG.severe("removing: " + bindingId);
 			it.remove();
 		}
 

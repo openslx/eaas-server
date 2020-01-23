@@ -472,7 +472,7 @@ public class EmulationEnvironmentHelper {
 		// construct URL
 		String subres = "";
 		if (path != null)
-			subres += "/" + path.toString();
+			subres += "/" + path;
 
 		String dataUrl = "binding://" + binding + subres;
 		int driveId = -1;
