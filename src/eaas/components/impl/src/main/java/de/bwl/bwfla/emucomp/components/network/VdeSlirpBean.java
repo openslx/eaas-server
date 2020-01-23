@@ -73,7 +73,7 @@ public class VdeSlirpBean extends EaasComponentBean {
                 runner.addArguments("--host", config.getIp4Address() + "/" + config.getNetmask());
             }
 
-            runner.addArguments("--net", "10.0.2.0");
+            runner.addArguments("--net", "10.0.1.0");
             runner.addArguments("--mask", "255.255.255.0");
             runner.addArguments("--host", config.getIp4Address());
             runner.addArguments("--dhcp-start", "0.0.0.0");
