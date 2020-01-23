@@ -69,14 +69,11 @@ public class VdeSlirpBean extends EaasComponentBean {
 
             runner.addArguments("/libexec/vde/slirp-helper", "--fd", "3");
 
-            if (config.getIp4Address() != null && !config.getIp4Address().isEmpty()) {
-                runner.addArguments("--host", config.getIp4Address() + "/" + config.getNetmask());
-            }
-
             runner.addArguments("--net", "10.0.1.0");
             runner.addArguments("--mask", "255.255.255.0");
             runner.addArguments("--host", config.getIp4Address());
-            runner.addArguments("--dhcp-start", "0.0.0.0");
+            runner.addArguments("--dhcp-start", "10.0.1.100");
+            runner.addArguments("--dns", "8.8.8.8");
 
 //            if (config.isDhcpEnabled()) {
 //                runner.addArgument("--dhcp");
