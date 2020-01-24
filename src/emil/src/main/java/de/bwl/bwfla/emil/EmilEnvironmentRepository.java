@@ -526,9 +526,9 @@ public class EmilEnvironmentRepository {
 		Collection<String> archives = environmentsAdapter.listBackendNames();
 		for(String a : archives) {
 			List<Environment> envs;
-			if(a.equals("default"))
-				continue;
-			else
+			//if(a.equals("default"))
+			//	continue;
+			//else
 				envs = environmentsAdapter.getEnvironments(a);
 
 			for (Environment env : envs) {
