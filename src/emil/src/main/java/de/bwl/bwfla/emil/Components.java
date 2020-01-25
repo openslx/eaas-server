@@ -59,6 +59,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
+import de.bwl.bwfla.api.eaas.ResourceSpec;
 import de.bwl.bwfla.api.eaas.SessionOptions;
 import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
@@ -702,6 +703,9 @@ public class Components {
                 options.setLockEnvironment(true);
             }
 
+            ResourceSpec spec = new ResourceSpec();
+            __hack_get_resource_spec((MachineConfiguration)chosenEnv, spec);
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -1262,6 +1266,54 @@ public class Components {
         session.release();
     }
 
+
+    private void __hack_get_resource_spec(MachineConfiguration env, ResourceSpec spec)
+    {
+
+        spec.setCpu(1000);
+        spec.setMemory(1000);
+
+        if(env.getNativeConfig() == null)
+            return;
+
+        String config = env.getNativeConfig().getValue();
+
+        if (config != null && !config.isEmpty()) {
+            String[] tokens = config.trim().split("\\s+");
+            for (int i = 0; i < tokens.length; i++)
+            {
+                if(tokens[i].isEmpty())
+                    continue;
+                if(i+1 == tokens.length)
+                    continue;
+
+                String key = tokens[i];
+                String value = tokens[i+1];
+
+                if(key.equals("-smp")){
+                    try {
+                        int cpus = Integer.parseInt(value);
+                        spec.setCpu(cpus * 1000);
+                    }
+                    catch (NumberFormatException e)
+                    {
+
+                    }
+                }
+
+                if(key.equals("-m")){
+                    try {
+                        int mem = Integer.parseInt(value);
+                        spec.setMemory(mem);
+                    }
+                    catch (NumberFormatException e)
+                    {
+
+                    }
+                }
+            }
+        }
+    }
 
     private List<MachineComponentResponse.RemovableMedia> getRemovableMedialist(MachineConfiguration env)
     {
