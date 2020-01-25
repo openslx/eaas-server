@@ -705,6 +705,8 @@ public class Components {
 
             ResourceSpec spec = new ResourceSpec();
             __hack_get_resource_spec((MachineConfiguration)chosenEnv, spec);
+            LOG.severe("mem " + spec.getMemory());
+            LOG.severe("cpu" + spec.getCpu());
 
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
