@@ -42,7 +42,7 @@ public class SoftwareCollection implements Iterable<EaasiSoftwareObject> {
             try {
                 p = swArchiveHelper.getSoftwarePackageById(swid);
                 DigitalObjectMetadata md = objectArchivHelper.getObjectMetadata(p.getArchive(), p.getObjectId());
-                if(md.getMetsData() == null)
+                if(md == null || md.getMetsData() == null)
                 {
                     System.out.println("metsdata null ... skipping");
                     continue;
