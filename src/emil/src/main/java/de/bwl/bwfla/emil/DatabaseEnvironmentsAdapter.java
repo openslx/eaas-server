@@ -184,7 +184,7 @@ public class DatabaseEnvironmentsAdapter {
 
     public void updateMetadata(String archive, Environment environment) throws BWFLAException {
         environment.setTimestamp(Instant.now().toString());
-        environmentsAdapter.updateMetadata(archive, environment.toString());
+        environmentsAdapter.updateMetadata(archive, environment);
 
         Environment newEnv = environmentsAdapter.getEnvironmentById(archive, environment.getId());
         db.saveDoc(archive, newEnv.getId(), metaDataIdKey, newEnv.jsonValueWithoutRoot(false));
