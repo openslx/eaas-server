@@ -1272,8 +1272,8 @@ public class Components {
     private void __hack_get_resource_spec(MachineConfiguration env, ResourceSpec spec)
     {
 
-        spec.setCpu(1000);
-        spec.setMemory(1000);
+        spec.setCpu(500);
+        spec.setMemory(512);
 
         if(env.getNativeConfig() == null)
             return;
@@ -1295,7 +1295,7 @@ public class Components {
                 if(key.equals("-smp")){
                     try {
                         int cpus = Integer.parseInt(value);
-                        spec.setCpu(cpus * 1000);
+                        spec.setCpu(cpus * 500);
                     }
                     catch (NumberFormatException e)
                     {
