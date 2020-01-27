@@ -170,7 +170,7 @@ public class EaasWS
             ResourceSpec spec = null;
             if (config instanceof Environment) {
 				// TODO: use per environment spec!
-				spec = options.resourceSpec;
+				spec = defaultSessionSpec;
 			}
             else
             	spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
