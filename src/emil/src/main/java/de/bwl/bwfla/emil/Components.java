@@ -1295,7 +1295,7 @@ public class Components {
                 if(key.equals("-smp")){
                     try {
                         int cpus = Integer.parseInt(value);
-                        spec.setCpu(cpus * 500);
+                        spec.setCpu(cpus * 250);
                     }
                     catch (NumberFormatException e)
                     {
