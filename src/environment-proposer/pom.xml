@@ -1,0 +1,40 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+	<modelVersion>4.0.0</modelVersion>
+	<artifactId>environment-proposer</artifactId>
+	<packaging>war</packaging>
+	<name>environment-proposer</name>
+	<description>A WAR module for environment-proposer REST API</description>
+	<parent>
+		<groupId>de.bwl.bwfla</groupId>
+		<artifactId>root</artifactId>
+		<version>0.0.1-SNAPSHOT</version>
+		<relativePath>..</relativePath>
+	</parent>
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>rest-utils</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>blobstore-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>imagebuilder-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>imageclassifier-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>imageproposer-client</artifactId>
+		</dependency>
+	</dependencies>
+</project>

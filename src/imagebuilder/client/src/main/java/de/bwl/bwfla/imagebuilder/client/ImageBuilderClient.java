@@ -29,7 +29,6 @@ import de.bwl.bwfla.api.imagebuilder.ImageBuilderService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.inject.spi.CDI;
 
-import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.AbstractServiceClient;
 import de.bwl.bwfla.imagebuilder.api.ImageBuildHandle;

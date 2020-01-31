@@ -105,7 +105,7 @@ class ImageHelper {
 		process.addArguments("--non-interactive");
 		process.addArgument("tar");
 		process.addArgument("--no-same-owner");
-		process.addArguments("-v", "-xzf", "-");
+		process.addArguments("-xzf", "-");
 		process.setWorkingDirectory(dstdir);
 		process.setLogger(log);
 		process.start();
