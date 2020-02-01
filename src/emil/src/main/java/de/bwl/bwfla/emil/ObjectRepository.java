@@ -364,7 +364,7 @@ public class ObjectRepository extends EmilRest
 
 		private String lookupArchiveId(String archiveId)
 		{
-			if (archiveId == null || archiveId.equals("default")) {
+			if (archiveId == null || archiveId.equals(defaultArchive)) {
 				try {
 					archiveId = ObjectRepository.this.manageUserCtx(defaultArchive);
 				} catch (BWFLAException error) {
