@@ -113,7 +113,7 @@ public class ObjectRepository extends EmilRest
 
 	FileCollection getFileCollection(String archiveId, String objectId) throws BWFLAException
 	{
-		if (archiveId == null || archiveId.equals("default")) {
+		if (archiveId == null || archiveId.equals(defaultArchive)) {
 			try {
 				archiveId = this.manageUserCtx(defaultArchive);
 			}
