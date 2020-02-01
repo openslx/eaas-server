@@ -190,7 +190,7 @@ public class ObjectRepository extends EmilRest
 						.filter(e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(_defaultArchive)))
 						.filter(e -> !e.equals("default"))
 						// remove zero conf archive if usercontext is available
-						.filter(e -> !(!_defaultArchive.equals("default") && e.equals("zero conf")))
+						.filter(e -> !(!_defaultArchive.equals(defaultArchive) && e.equals("zero conf")))
 						.collect(Collectors.toList());
 
 				ObjectArchivesResponse response = new ObjectArchivesResponse();
