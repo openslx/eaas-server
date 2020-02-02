@@ -63,6 +63,7 @@ import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
 import de.bwl.bwfla.emucomp.api.Nic;
 import de.bwl.bwfla.emucomp.api.UiOptions;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
+import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
@@ -133,12 +134,15 @@ public class EnvironmentRepository extends EmilRest
 	@Inject
 	private ObjectClassification classification = null;
 
+	private SoftwareArchiveHelper swHelper;
 
 	@PostConstruct
 	private void initialize()
 	{
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
+			swHelper = new SoftwareArchiveHelper(softwareArchive);
+
 		}
 		catch (IllegalArgumentException error) {
 			LOG.log(Level.WARNING, "Initializing image-proposer failed!", error);
@@ -290,7 +294,7 @@ public class EnvironmentRepository extends EmilRest
 				Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
 				MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;
 				List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
-				EnvironmentDetails result = new EnvironmentDetails(emilenv, machine, parents);
+				EnvironmentDetails result = new EnvironmentDetails(emilenv, machine, parents, swHelper);
 				return Response.ok()
 						.entity(result)
 						.build();
