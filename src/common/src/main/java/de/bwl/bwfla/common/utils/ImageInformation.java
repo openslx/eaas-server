@@ -82,6 +82,7 @@ public class ImageInformation {
         VHD("vpc"),
         VMDK("vmdk"),
         EWF("ewf"),
+        VHDX("vhdx"),
         QCOW2("qcow2");
 
         private final String format;

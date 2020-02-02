@@ -1234,6 +1234,7 @@ public class ImageHandler
 				switch (fmt) {
 					case VMDK:
 					case VHD:
+					case VHDX:
 						File convertedImgFile = new File(target, "convertTmp");
 						destImgFile.renameTo(convertedImgFile);
 						File outFile = new File(target, importId);
