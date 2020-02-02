@@ -21,7 +21,6 @@ import javax.ws.rs.core.Response;
 @Path("/objects")
 @ApplicationScoped
 public class EmilObjectData extends EmilRest {
-
 	@Inject
 	private ObjectRepository objrepo = null;
 
