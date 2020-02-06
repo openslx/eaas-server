@@ -22,6 +22,8 @@ package de.bwl.bwfla.envproposer.api;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import de.bwl.bwfla.emucomp.api.MediumType;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.Collection;
@@ -29,14 +31,18 @@ import java.util.Map;
 
 
 @XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class Proposal
 {
+	/** @documentationExample https://emulation.cloud/blobs/image-123 */
 	@XmlElement(name="image_url")
 	private String imageurl;
 
+	/** @documentationExample cdrom */
 	@XmlElement(name="image_type")
 	private MediumType imagetype;
 
+	/** @documentationExample env-id-3 */
 	@XmlElement(name="environments")
 	private Collection<String> environments;
 	

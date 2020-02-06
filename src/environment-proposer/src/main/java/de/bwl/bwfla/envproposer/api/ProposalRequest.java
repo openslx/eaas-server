@@ -19,18 +19,24 @@
 
 package de.bwl.bwfla.envproposer.api;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 
 
 @XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class ProposalRequest
 {
+	/** @documentationExample https://example.com/blobs/bagit-archive.zip */
 	@XmlElement(name="data_url", required = true)
 	private String dataurl;
 
+	/** @documentationExample bagit+zip */
 	@XmlElement(name="data_type", required = true)
 	private DataType datatype;
 
@@ -71,18 +77,26 @@ public class ProposalRequest
 
 
 	@XmlEnum
+	@XmlType(name = "data-type", namespace = "http://bwfla.bwl.de/components/datatypes")
 	public enum DataType
 	{
 		@XmlEnumValue("zip")
-		ZIP,
+		ZIP("zip"),
 
 		@XmlEnumValue("tar")
-		TAR,
+		TAR("tar"),
 
 		@XmlEnumValue("bagit+zip")
-		BAGIT_ZIP,
+		BAGIT_ZIP("bagit+zip"),
 
 		@XmlEnumValue("bagit+tar")
-		BAGIT_TAR,
+		BAGIT_TAR("bagit+tar");
+
+		private final String value;
+
+		DataType(String v)
+		{
+			this.value = v;
+		}
 	}
 }

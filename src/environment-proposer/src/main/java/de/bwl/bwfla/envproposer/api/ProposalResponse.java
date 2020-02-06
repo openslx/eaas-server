@@ -19,13 +19,17 @@
 
 package de.bwl.bwfla.envproposer.api;
 
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 
 @XmlRootElement
+@XmlAccessorType(XmlAccessType.FIELD)
 public class ProposalResponse
 {
+	/** @documentationExample Task submitted successfully. */
     @XmlElement(name="message")
 	private String message;
 

@@ -11,6 +11,21 @@
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
+	<build>
+		<plugins>
+			<plugin>
+				<groupId>com.webcohesion.enunciate</groupId>
+				<artifactId>enunciate-maven-plugin</artifactId>
+				<executions>
+					<execution>
+						<goals>
+							<goal>docs</goal>
+						</goals>
+					</execution>
+				</executions>
+			</plugin>
+		</plugins>
+	</build>
 	<dependencies>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
@@ -35,6 +50,15 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>imageproposer-client</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.jboss.resteasy</groupId>
+			<artifactId>resteasy-jackson2-provider</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.webcohesion.enunciate</groupId>
+			<artifactId>enunciate-core-annotations</artifactId>
 		</dependency>
 	</dependencies>
 </project>

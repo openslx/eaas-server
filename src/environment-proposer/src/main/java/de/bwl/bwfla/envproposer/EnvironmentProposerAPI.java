@@ -58,7 +58,17 @@ public class EnvironmentProposerAPI
 	private UriInfo uri;
 	
 	
-	/** Submit a new proposal task */
+	/**
+	 * Submit a new proposal task
+	 *
+	 * @returnWrapped de.bwl.bwfla.envproposer.api.ProposalResponse
+	 *
+	 * @ResponseHeader Location The location URL for polling task completion.
+	 *
+	 * @HTTP 202 If task was submitted successfully.
+	 * @HTTP 503 If server is out of resources. Request should be retried later.
+	 * @HTTP 500 If other internal errors occure.
+	 */
 	@POST
     @Path("/proposals")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -92,7 +102,14 @@ public class EnvironmentProposerAPI
 		}
 	}
 	
-	/** Poll a proposal task for completion */
+	/**
+	 * Poll a proposal task for completion
+	 *
+	 * @ResponseHeader Location URL for next polling request or task result.
+	 *
+	 * @HTTP 200 Task not completed, retry later.
+	 * @HTTP 303 If task completed. Location header will contain the URL for fetching result.
+	 */
 	@GET
 	@Path("/waitqueue/{id}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -127,7 +144,11 @@ public class EnvironmentProposerAPI
 		}
 	}
 	
-	/** Get a proposal resource */
+	/**
+	 * Get and remove a proposal resource
+	 *
+	 * @returnWrapped de.bwl.bwfla.envproposer.api.Proposal
+	 */
 	@GET
     @Path("/proposals/{id}")
     @Produces(MediaType.APPLICATION_JSON)
