@@ -29,6 +29,6 @@ public class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Obj
 {
 	public TaskManager() throws NamingException
 	{
-		super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/batch"));
+		super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 	}
 }
