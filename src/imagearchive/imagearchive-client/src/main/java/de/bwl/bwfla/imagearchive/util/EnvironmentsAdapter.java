@@ -392,14 +392,14 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.importMetadata(backend, emuEnv.toString(), iaMd, false);
 	}
 
-	public void updateMetadata(String conf) throws BWFLAException {
+	public void updateMetadata(Environment conf) throws BWFLAException {
 		this.updateMetadata(this.getDefaultBackendName(), conf);
 	}
 
-	public void updateMetadata(String backend, String conf) throws BWFLAException {
+	public void updateMetadata(String backend, Environment conf) throws BWFLAException {
 		connectArchive();
-
-		archive.updateConfiguration(backend, conf);
+		updateUrlPrefix(backend, conf);
+		archive.updateConfiguration(backend, conf.toString());
 	}
 
 	public String importMetadata(String conf, ImageArchiveMetadata iaMd, boolean preserveId) throws BWFLAException {

@@ -48,8 +48,8 @@ public class DatabaseEnvironmentsAdapter {
     }
 
     @Override
-    public String toString(){
-    return environmentsAdapter.toString();
+    public String toString() {
+        return environmentsAdapter.toString();
     }
 
     public ImageArchiveBinding generalizedImport(String archive, String id, ImageType imageType, String patchId) throws BWFLAException {
@@ -184,8 +184,10 @@ public class DatabaseEnvironmentsAdapter {
 
     public void updateMetadata(String archive, Environment environment) throws BWFLAException {
         environment.setTimestamp(Instant.now().toString());
-        db.saveDoc(archive, environment.getId(), metaDataIdKey, environment.jsonValueWithoutRoot(false));
-        environmentsAdapter.updateMetadata(archive, environment.toString());
+        environmentsAdapter.updateMetadata(archive, environment);
+
+        Environment newEnv = environmentsAdapter.getEnvironmentById(archive, environment.getId());
+        db.saveDoc(archive, newEnv.getId(), metaDataIdKey, newEnv.jsonValueWithoutRoot(false));
     }
 
 
