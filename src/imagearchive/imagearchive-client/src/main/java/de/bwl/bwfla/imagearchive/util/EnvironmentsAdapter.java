@@ -2,6 +2,7 @@ package de.bwl.bwfla.imagearchive.util;
 
 import java.io.File;
 
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -310,20 +311,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
 	}
 
-	public String importMachineEnvironment(MachineConfiguration env, DataHandler dataHandler, ImageArchiveMetadata iaMd) throws BWFLAException {
-		return this.importMachineEnvironment(this.getDefaultBackendName(), env, dataHandler, iaMd);
-	}
-
-	public String importMachineEnvironment(String backend, MachineConfiguration env, DataHandler dataHandler, ImageArchiveMetadata iaMd) throws BWFLAException {
-		if(dataHandler != null) {
-			ImportImageHandle handle = this.importImage(backend, dataHandler, iaMd);
-			ImageArchiveBinding binding = handle.getBinding(60 * 60 * 60); // wait an hour
-			EmulationEnvironmentHelper.setMainHdd(env, binding);
-		}
-
-		return this.importMetadata(backend, env.toString(), iaMd, false);
-	}
-
 	public String importMachineEnvironment(MachineConfiguration env, List<BindingDataHandler> data, ImageArchiveMetadata iaMd) throws BWFLAException {
 		return this.importMachineEnvironment(this.getDefaultBackendName(), env, data, iaMd);
 	}
@@ -332,9 +319,22 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 			throws BWFLAException
 	{
 		if (data != null) {
+			ImportImageHandle handle = null;
+			ImageArchiveBinding binding = null;
 			for (BindingDataHandler bdh : data) {
-				ImportImageHandle handle = this.importImage(backend, bdh.getData(), iaMd);
-				ImageArchiveBinding binding = handle.getBinding(60 * 60 * 60); // wait an hour
+				if(bdh.getData() != null) {
+					handle = this.importImage(backend, bdh.getData(), iaMd);
+					binding = handle.getBinding(60 * 60 * 60); // wait an hour
+				}
+				else
+				{
+					try {
+						handle = this.importImage(backend, new URL(bdh.getUrl()), iaMd, true);
+					} catch (MalformedURLException e) {
+						e.printStackTrace();
+					}
+					binding = handle.getBinding(60 * 60 * 60); // wait an hour
+				}
 				binding.setId(bdh.getId());
 				EmulationEnvironmentHelper.replace(env, binding);
 			}
