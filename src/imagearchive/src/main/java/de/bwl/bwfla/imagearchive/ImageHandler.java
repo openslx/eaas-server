@@ -21,20 +21,21 @@ import javax.xml.bind.JAXBException;
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
-import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizer;
+import de.bwl.bwfla.imagearchive.tasks.ImportImageTask;
 import org.apache.commons.io.FileUtils;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.ImageInformation.QemuImageFormat;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import org.apache.commons.io.IOUtils;
 
@@ -48,7 +49,7 @@ public class ImageHandler
 	private final ImageArchiveBackendConfig iaConfig;
 	private final ImageMetadataCache cache;
 	private final HandleClient handleClient;
-	private final ImageNameIndex imageNameIndex;
+	private ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
 
 	enum ExportType {
@@ -61,15 +62,33 @@ public class ImageHandler
 		this.cache = cache;
 		pool = Executors.newFixedThreadPool(20);
 
-		if (new File(ImageNameIndex.getConfigPath()).exists()) {
-			try {
-				String content = new String(Files.readAllBytes(Paths.get(ImageNameIndex.getConfigPath())), "UTF-8");
-				this.imageNameIndex = ImageNameIndex.fromYamlValue(content, ImageNameIndex.class);
-			} catch (IOException e) {
-				throw new BWFLAException(e);
+		// compatibility hack: keep old installations working
+		String indexPath;
+		if(config.getName().equals("emulators"))
+		{
+			indexPath = "/home/bwfla/server-data/nameindexes.dump";
+		}
+		else {
+			// compat hack pt2: old configs pointed to a directory
+			indexPath = config.getNameIndexConfigPath();
+			Path p = Paths.get(indexPath);
+			if(!Files.exists(p)) {
+				try {
+					Files.createDirectories(p);
+				} catch (IOException e) {
+					e.printStackTrace();
+					throw new BWFLAException(e);
+				}
 			}
-		} else
-			this.imageNameIndex = new ImageNameIndex(config.getNameIndexConfigPath(), log);
+			if(Files.isDirectory(p)) {
+				indexPath = p.resolve(config.getName() + ".yaml").toString();
+			}
+		}
+
+		if (new File(indexPath).exists()) {
+			this.imageNameIndex = ImageNameIndex.parse(indexPath);
+		}
+		else this.imageNameIndex = new ImageNameIndex(indexPath);
 
 		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
@@ -81,11 +100,16 @@ public class ImageHandler
 		return imageNameIndex;
 	}
 
-	public void addNameIndexesEntry(Entry entry, Alias alias) throws BWFLAException{
-
+	public void addNameIndexesEntry(ImageMetadata entry, Alias alias) throws BWFLAException {
 		imageNameIndex.addNameIndexesEntry(entry, alias);
-		createLocalEmulatorQcow(entry.getImage().getId());
 
+		// compat hack
+		if(iaConfig.getName().equals("emulators"))
+			createLocalEmulatorQcow(entry.getImage().getId());
+	}
+
+	public void deleteNameIndexesEntry(String id, String version) {
+    	imageNameIndex.delete(id, version);
 	}
 
 	public void updateLatestEmulator(String emulator, String version) {
@@ -147,7 +171,7 @@ public class ImageHandler
 //	}
 
 	// return backing file if not resolved locally
-	private String resolveLocalBackingFile(File f)
+	public String resolveLocalBackingFile(File f)
 	{
 		try {
 			ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
@@ -404,6 +428,7 @@ public class ImageHandler
 		map.put(id, env);		
 	}
 
+	@Deprecated
 	String importImageUrl(URL url, ImageArchiveMetadata iaMd, boolean delete) throws BWFLAException, IOException {
 		
 		File target = getImageTargetPath(iaMd.getType().name());
@@ -429,6 +454,57 @@ public class ImageHandler
 		return uuid;
 	}
 
+	TaskState importImageUrlAsync(URL url, ImageArchiveMetadata iaMd, boolean delete) throws BWFLAException, IOException {
+
+		File target = getImageTargetPath(iaMd.getType().name());
+		String importId;
+		if(iaMd.getImageId() != null)
+			importId = iaMd.getImageId();
+		else
+			importId = UUID.randomUUID().toString();
+
+		File destImgFile = new File(target, importId);
+
+		if (destImgFile.exists()) {
+			if (!delete) {
+				log.warning("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
+			} else
+				destImgFile.delete();
+		}
+
+		return ImageArchiveRegistry.submitTask(new ImportImageTask(url, target, importId, this, log));
+	}
+
+	TaskState importImageStreamAsync(DataHandler image, ImageArchiveMetadata iaMd) throws BWFLAException {
+		File target = getImageTargetPath(iaMd.getType().name());
+
+		String importId;
+		if(iaMd.getImageId() == null)
+			importId = UUID.randomUUID().toString();
+		else
+			importId = iaMd.getImageId();
+
+		File destImgFile = new File(target, importId);
+		if (destImgFile.exists()) {
+			if (!iaMd.isDeleteIfExists()) {
+				log.warning("the following file already exists, will not overwrite: " + destImgFile.getAbsolutePath());
+			} else
+				destImgFile.delete();
+		}
+
+		try
+		{
+			InputStream inputStream = image.getInputStream();
+			return ImageArchiveRegistry.submitTask(new ImportImageTask(inputStream, target, importId, this, log));
+		}
+		catch (IOException e)
+		{
+			log.log(Level.SEVERE, e.getMessage(), e);
+			throw new BWFLAException(" image getInputStream: " + e);
+		}
+	}
+
+	@Deprecated
 	String importImageStream(DataHandler image, ImageArchiveMetadata iaMd) throws BWFLAException {
 		File target = getImageTargetPath(iaMd.getType().name());
 
@@ -465,6 +541,7 @@ public class ImageHandler
 		}
 	}
 
+	@Deprecated
 	public ImageImportResult getImageImportResult(String session) throws BWFLAException {
 		FutureTask<ImageLoaderResult> ft = importTasks.get(session);
 		if(ft.isDone())
@@ -691,7 +768,7 @@ public class ImageHandler
 		if (name == null || name.isEmpty())
 			return null;
 
-		final Entry entry = imageNameIndex.get(name, version);
+		final ImageMetadata entry = imageNameIndex.get(name, version);
 		if (entry == null)
 			return null;
 
@@ -905,6 +982,7 @@ public class ImageHandler
 	 * @return A list of import-task IDs, one for each image to import.
 	 * @see #getImageImportResult(String)
 	 */
+	@Deprecated
 	public List<String> replicateImages(List<String> images) {
 		final List<String> taskids = new ArrayList<String>(images.size());
 		images.forEach((urlstr) -> {
@@ -917,6 +995,33 @@ public class ImageHandler
 				metadata.setDeleteIfExists(true);
 				metadata.setImageId(imageid);
 				taskids.add(this.importImageUrl(url, metadata, false));
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Preparing image-import from URL failed!", error);
+			}
+		});
+
+		return taskids;
+	}
+
+	/**
+	 * Asynchronously replicates specified images by importing them into this image archive.
+	 * @param images A list of source URLs for images to import.
+	 * @return A list of import-task IDs, one for each image to import.
+	 * @see ImageArchiveWS#getTaskState(String)
+	 */
+	public List<TaskState> replicateImagesAsync(List<String> images) {
+		final List<TaskState> taskids = new ArrayList<>(images.size());
+		images.forEach((urlstr) -> {
+			try {
+				log.severe("replicating " + urlstr);
+				final URL url = new URL(urlstr);
+				final String urlpath = url.getPath();
+				final String imageid = urlpath.substring(urlpath.lastIndexOf("/") + 1);
+				final ImageArchiveMetadata metadata = new ImageArchiveMetadata(ImageType.base);
+				metadata.setDeleteIfExists(true);
+				metadata.setImageId(imageid);
+				taskids.add(this.importImageUrlAsync(url, metadata, false));
 			}
 			catch (Exception error) {
 				log.log(Level.WARNING, "Preparing image-import from URL failed!", error);
@@ -964,8 +1069,11 @@ public class ImageHandler
 		return cowId;
 	}
 
-	private void createOrUpdateHandle(String imageId) throws BWFLAException
+	public void createOrUpdateHandle(String imageId) throws BWFLAException
 	{
+		if(handleClient == null)
+			return;
+
 		final String url = this.getArchivePrefix() + imageId;
 		try {
 			log.info("Trying to create new handle for image '" + imageId + "'...");
@@ -995,7 +1103,14 @@ public class ImageHandler
 
 		log.info("Trying to add new URL for image '" + imageId + "'...");
 		handleClient.add(imageId, url);
-		log.info("URL added to exisiting handle for image '" + imageId + "'");
+		log.info("URL added to existing handle for image '" + imageId + "'");
+	}
+
+	public String getHandleUrl(String id)
+	{
+		if(handleClient == null)
+			return null;
+		return "http://hdl.handle.net/" + handleClient.toHandle(id);
 	}
 
 	private static class ImageLoaderResult
@@ -1112,7 +1227,7 @@ public class ImageHandler
 				if(!destImgFile.exists()) {
 					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
 				}
-				QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
+				ImageInformation.QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");
 				}

@@ -27,6 +27,8 @@
 
 package de.bwl.bwfla.emucomp.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -80,6 +82,7 @@ import javax.xml.bind.annotation.XmlType;
     "boot",
     "plugged"
 })
+@JsonIgnoreProperties(ignoreUnknown=true)
 public class Drive
     extends Device
 {

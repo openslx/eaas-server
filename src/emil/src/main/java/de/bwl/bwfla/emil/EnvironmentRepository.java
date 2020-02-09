@@ -21,14 +21,14 @@ package de.bwl.bwfla.emil;
 
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
-import de.bwl.bwfla.api.imagearchive.DefaultEntry;
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
-import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.api.imagearchive.*;
+import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
+import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
@@ -36,36 +36,26 @@ import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emil.datatypes.EnvironmentDeleteRequest;
 import de.bwl.bwfla.emil.datatypes.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
-import de.bwl.bwfla.emil.datatypes.rest.EmilResponseType;
-import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
-import de.bwl.bwfla.emil.datatypes.rest.EnvironmentListItem;
-import de.bwl.bwfla.emil.datatypes.rest.ExportRequest;
-import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesRequest;
+import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
-import de.bwl.bwfla.emil.datatypes.rest.UpdateEnvironmentDescriptionRequest;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.emil.tasks.CreateEmptyImageTask;
 import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
-import de.bwl.bwfla.emucomp.api.EmulatorSpec;
-import de.bwl.bwfla.emucomp.api.Environment;
-import de.bwl.bwfla.emucomp.api.GeneralizationPatch;
-import de.bwl.bwfla.emucomp.api.Html5Options;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
-import de.bwl.bwfla.emucomp.api.Nic;
-import de.bwl.bwfla.emucomp.api.UiOptions;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
+import org.eclipse.persistence.annotations.DeleteAll;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -74,18 +64,7 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.stream.JsonGenerator;
 import javax.servlet.http.HttpServletResponse;
-import javax.ws.rs.BadRequestException;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.DELETE;
-import javax.ws.rs.GET;
-import javax.ws.rs.InternalServerErrorException;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.PATCH;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.QueryParam;
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
@@ -97,6 +76,7 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -117,6 +97,10 @@ public class EnvironmentRepository extends EmilRest
 	private String imageProposerService = null;
 
 	@Inject
+	@Config(value = "ws.imagebuilder")
+	String imageBuilderAddress;
+
+	@Inject
 	private EmilEnvironmentRepository emilEnvRepo = null;
 
 	private ImageProposer imageProposer = null;
@@ -135,6 +119,9 @@ public class EnvironmentRepository extends EmilRest
 	private ObjectClassification classification = null;
 
 	private SoftwareArchiveHelper swHelper;
+
+	@Inject
+	private EmilObjectData objects;
 
 	@PostConstruct
 	private void initialize()
@@ -181,6 +168,9 @@ public class EnvironmentRepository extends EmilRest
 	{
 		return new Actions();
 	}
+
+	@Path("/images")
+	public Images images() { return new Images(); }
 
 	@GET
 	@Path("/db-content")
@@ -242,8 +232,46 @@ public class EnvironmentRepository extends EmilRest
         return envdb.getNameIndexes();
     }
 
+	@GET
+	@Path("/images-index")
+	@Secured({Role.PUBLIC})
+	@Consumes(MediaType.APPLICATION_JSON)
+	@Produces(MediaType.APPLICATION_JSON)
+	public ImageNameIndex getImagesIndex() throws BWFLAException
+	{
+		LOG.info("Loading images index...");
+		return envdb.getImagesIndex();
+	}
 
 	// ========== Subresources ==============================
+
+	public class Images {
+
+		/** Create a new environment */
+//		@POST
+//		@Secured({Role.RESTRCITED})
+//		@Produces(MediaType.APPLICATION_JSON)
+//		@Consumes(MediaType.APPLICATION_JSON)
+//		public TaskStateResponse _import(ImageImRequest envReq)
+//		{
+//			LOG.info("Importing a new image ...");
+//
+//			try {
+//				ImageMetadata d = null;
+//				if (envReq.getLabel() != null)
+//				{
+//					d = new ImageMetadata();
+//					d.setName(envReq.getLabel());
+//				}
+//				TaskState id = envdb.importImage("default", envReq.getSize(), ImageType.USER, d);
+//				return new TaskStateResponse(id.getTaskId(), id.isDone());
+//			}
+//			catch (BWFLAException e)
+//			{
+//				return new TaskStateResponse(e);
+//			}
+//		}
+	}
 
 	public class Environments
 	{
@@ -322,32 +350,74 @@ public class EnvironmentRepository extends EmilRest
 
 			try {
 				MachineConfiguration pEnv = envdb.getTemplate(envReq.getTemplateId());
-				if (pEnv == null)
-					return EnvironmentRepository.errorMessageResponse("invalid template id: " + envReq.getTemplateId());
+				if (pEnv == null) {
+					LOG.severe("invalid template id: " + envReq.getTemplateId());
+					throw new BadRequestException(Response
+							.status(Response.Status.BAD_REQUEST)
+							.entity(new ErrorInformation("invalid template id: " + envReq.getTemplateId()))
+							.build());
+				}
 
 				MachineConfiguration env = pEnv.copy(); // don't modify the real template
 				env.getDescription().setTitle(envReq.getLabel());
 				if (env.getNativeConfig() == null)
 					env.setNativeConfig(new NativeConfig());
 
+				env.setOperatingSystemId(envReq.getOperatingSystemId());
 				env.getNativeConfig().setValue(envReq.getNativeConfig());
-
 				ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-				iaMd.setType(ImageType.TMP);
-				String id = envdb.createEnvironment("default", env, envReq.getSize(), iaMd);
-				if (id == null) {
-					return EnvironmentRepository.errorMessageResponse("failed to create image");
-				}
+				iaMd.setType(ImageType.USER);
+
+				driveUpdateHelper(env, envReq.getDriveSettings(), objects);
+
+				if (env.getUiOptions() == null)
+					env.setUiOptions(new UiOptions());
+
+				final UiOptions uiopts = env.getUiOptions();
+				if (envReq.isUseXpra())
+					uiopts.setForwarding_system("XPRA");
+				else uiopts.setForwarding_system(null);
+
+				if (envReq.isUseWebRTC())
+					uiopts.setAudio_system("webRTC");
+				else uiopts.setAudio_system(null);
+
+				if (uiopts.getHtml5() == null)
+					uiopts.setHtml5(new Html5Options());
+
+				String id = envdb.importMetadata("default", env, iaMd, false);
+
+				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
+
+				if (newEmilEnv != null)
+					throw new BWFLAException("import failed: environment with id: " + id + " exists.");
+
+				newEmilEnv = new EmilEnvironment();
+				newEmilEnv.setTitle(envReq.getLabel());
+				newEmilEnv.setEnvId(id);
+				newEmilEnv.setEnableRelativeMouse(envReq.isEnableRelativeMouse());
+				newEmilEnv.setEnablePrinting(envReq.isEnablePrinting());
+				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());
+				newEmilEnv.setXpraEncoding(envReq.getXpraEncoding());
+				newEmilEnv.setOs(envReq.getOperatingSystemId());
+
+				newEmilEnv.setDescription("imported / user created environment");
+				emilEnvRepo.save(newEmilEnv, true);
 
 				final JsonObject json = Json.createObjectBuilder()
-						.add("status", "0")
 						.add("id", id)
 						.build();
 
-				return EnvironmentRepository.createResponse(Status.OK, json);
+				return Response.ok()
+						.entity(json)
+						.build();
 			}
 			catch (Throwable error) {
-				return EnvironmentRepository.errorMessageResponse(error.getMessage());
+				error.printStackTrace();
+				throw new BadRequestException(Response
+						.status(Response.Status.BAD_REQUEST)
+						.entity(new ErrorInformation(error.getMessage()))
+						.build());
 			}
 		}
 
@@ -430,6 +500,8 @@ public class EnvironmentRepository extends EmilRest
 					uiopts.getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
 					machineConfiguration.setDrive(desc.getDrives());
+					driveUpdateHelper(machineConfiguration, desc.getDriveSettings(), objects);
+
 					machineConfiguration.setLinuxRuntime(desc.isLinuxRuntime());
 
 					if (desc.getNetworking() != null && desc.getNetworking().isEnableInternet()) {
@@ -441,6 +513,8 @@ public class EnvironmentRepository extends EmilRest
 						}
 					}
 				}
+
+
 
 				environment.setUserTag(desc.getUserTag());
 				if (!oldenv.getArchive().equals("default")) {
@@ -738,57 +812,64 @@ public class EnvironmentRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		/**
 		 *
-		 * @return
-		 *
-		 * 		{"status": "0", "systems": [{"id": "abc", "label": "Windows XP
-		 *         SP1", "native_config": "test", "properties": [{"name":
-		 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
-		 *         "In 1936, the Russians made a computer that ran on water"}]}]}
+		 * for old-style template use ?compat=... get parameter
 		 */
-		public Response list()
+		public Response list(@QueryParam("compat") @DefaultValue("newStyle") String compat)
 		{
 			LOG.info("Listing environment templates...");
-
 			try {
-				final StringWriter output = new StringWriter();
-				final JsonGenerator json = Json.createGenerator(output);
-				json.writeStartObject();
-				json.write("status", "0");
-				json.writeStartArray("systems");
-				for (MachineConfiguration machine : envdb.getTemplates()) {
-					json.writeStartObject();
-					json.write("id", machine.getId());
-					json.write("label", machine.getDescription().getTitle());
-					if (machine.getNativeConfig() != null)
-						json.write("native_config", machine.getNativeConfig().getValue());
-					else json.write("native_config", "");
-
-					json.writeStartArray("properties");
-					if (machine.getArch() != null && !machine.getArch().isEmpty()) {
-						json.writeStartObject();
-						json.write("name", "Architecture");
-						json.write("value", machine.getArch());
-						json.writeEnd();
-					}
-
-					final String emubean = (machine.getEmulator() != null) ? machine.getEmulator().getBean() : null;
-					if (emubean != null && !emubean.isEmpty()) {
-						json.writeStartObject();
-						json.write("name", "EmulatorContainer");
-						json.write("value", emubean);
-						json.writeEnd();
-					}
-
-					json.writeEnd();
-					json.writeEnd();
+				if(compat.equals("newStyle")) {
+					List<MachineConfigurationTemplate> templates = envdb.getTemplates();
+					return Response.status(Status.OK)
+							.entity(templates)
+							.build();
 				}
+				else {
+					try {
+						final StringWriter output = new StringWriter();
+						final JsonGenerator json = Json.createGenerator(output);
+						json.writeStartObject();
+						json.write("status", "0");
+						json.writeStartArray("systems");
+						for (MachineConfiguration machine : envdb.getTemplates()) {
+							json.writeStartObject();
+							json.write("id", machine.getId());
+							json.write("label", machine.getDescription().getTitle());
+							if (machine.getNativeConfig() != null)
+								json.write("native_config", machine.getNativeConfig().getValue());
+							else json.write("native_config", "");
 
-				json.writeEnd();
-				json.writeEnd();
-				json.flush();
-				json.close();
+							json.writeStartArray("properties");
+							if (machine.getArch() != null && !machine.getArch().isEmpty()) {
+								json.writeStartObject();
+								json.write("name", "Architecture");
+								json.write("value", machine.getArch());
+								json.writeEnd();
+							}
 
-				return EnvironmentRepository.createResponse(Status.OK, output.toString());
+							final String emubean = (machine.getEmulator() != null) ? machine.getEmulator().getBean() : null;
+							if (emubean != null && !emubean.isEmpty()) {
+								json.writeStartObject();
+								json.write("name", "EmulatorContainer");
+								json.write("value", emubean);
+								json.writeEnd();
+							}
+
+							json.writeEnd();
+							json.writeEnd();
+						}
+
+						json.writeEnd();
+						json.writeEnd();
+						json.flush();
+						json.close();
+
+						return EnvironmentRepository.createResponse(Status.OK, output.toString());
+					}
+					catch (Throwable error) {
+						return EnvironmentRepository.internalErrorResponse(error);
+					}
+				}
 			}
 			catch (Throwable error) {
 				return EnvironmentRepository.internalErrorResponse(error);
@@ -852,6 +933,20 @@ public class EnvironmentRepository extends EmilRest
 			return Emil.successMessageResponse("syncing archives ");
 		}
 
+
+		/** create new image */
+		@POST
+		@Path("/create-image")
+		@Secured({Role.RESTRCITED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		@Produces(MediaType.APPLICATION_JSON)
+		public TaskStateResponse createImage(ImageCreateRequest imageReq)
+		{
+			LOG.info("Create empty image ...");
+
+			return new TaskStateResponse(taskManager.submitTask(new CreateEmptyImageTask(imageReq.getSize(), LOG)));
+		}
+
 		/** Import an image for new environment */
 		@POST
 		@Path("/import-image")
@@ -860,17 +955,19 @@ public class EnvironmentRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importImage(ImportImageRequest imageReq)
 		{
-			LOG.info("Importing image for new environment...");
+			LOG.info("Importing image ...");
 
 			ImportImageTaskRequest request = new ImportImageTaskRequest();
 
 			URL url;
 			try {
-				url = new URL(imageReq.getUrlString());
+				url = new URL(imageReq.getUrl());
+				if(url.getProtocol().equalsIgnoreCase("file"))
+					return new TaskStateResponse((new BWFLAException("invalid url format")));
 			} catch (MalformedURLException me) {
-				String filename = imageReq.getUrlString();
+				String filename = imageReq.getUrl();
 				if (filename == null || filename.contains("/"))
-					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters:" + filename));
+					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters: " + filename));
 				File image = new File("/eaas/import/", filename);
 				LOG.info("path: " + image);
 				if (!image.exists())
@@ -883,19 +980,9 @@ public class EnvironmentRepository extends EmilRest
 				}
 			}
 			request.url = url;
-
-			if (imageReq.getRom() != null) {
-				File romFile = new File("/eaas/roms", imageReq.getRom());
-				if (!romFile.exists())
-					return new TaskStateResponse(new BWFLAException("rom file not found"));
-				request.romFile = romFile;
-			}
 			request.destArchive = "default";
-			request.templateId = imageReq.getTemplateId();
-			request.nativeConfig = imageReq.getNativeConfig();
 			request.environmentHelper = envdb;
-			request.imageProposer = imageProposer;
-			request.patchId = imageReq.getPatchId();
+			request.label = imageReq.getLabel();
 
 			try {
 				request.validate();
@@ -960,6 +1047,53 @@ public class EnvironmentRepository extends EmilRest
 
 			response.setTaskList(taskList);
 			return response;
+		}
+
+		@POST
+		@Path("/delete-image")
+		@Secured({Role.PUBLIC})
+		@Consumes(MediaType.APPLICATION_JSON)
+		@Produces(MediaType.APPLICATION_JSON)
+		public Response deleteImage(DeleteImageRequest request) throws BWFLAException
+		{
+			LOG.info("delete image");
+			envdb.deleteNameIndexesEntry(request.getImageArchive(), request.getImageId(), null);
+			envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
+			return Response.status(Status.OK)
+					.build();
+		}
+	}
+
+	// helper
+	private static void driveUpdateHelper(MachineConfiguration env, List<EnvironmentCreateRequest.DriveSetting> driveSettings, EmilObjectData objects) throws BWFLAException {
+		if(driveSettings == null)
+			return;
+
+		for (EnvironmentCreateRequest.DriveSetting ds : driveSettings) {
+			if (ds.getObjectId() != null && ds.getObjectArchive() != null) {
+				FileCollection fc = objects.getFileCollection(ds.getObjectArchive(), ds.getObjectId());
+				ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().getHost(), ds.getObjectArchive(), ds.getObjectId());
+				if (EmulationEnvironmentHelper.addObjectArchiveBinding(env, binding, fc, ds.getDriveIndex()) < 0)
+					throw new BadRequestException(Response
+							.status(Response.Status.BAD_REQUEST)
+							.entity(new ErrorInformation("could not insert object"))
+							.build());
+			} else if (ds.getImageId() != null && ds.getImageArchive() != null) {
+				ImageArchiveBinding binding = new ImageArchiveBinding(ds.getImageArchive(),
+						"",
+						ds.getImageId(),
+						ImageType.USER.value());
+				binding.setId(ds.getImageId());
+				env.getAbstractDataResource().add(binding);
+				EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
+				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
+					throw new BadRequestException(Response
+							.status(Response.Status.BAD_REQUEST)
+							.entity(new ErrorInformation("could not insert iamge"))
+							.build());
+			} else {
+				EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
+			}
 		}
 	}
 }

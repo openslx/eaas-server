@@ -5,6 +5,7 @@ import javax.xml.bind.annotation.XmlElement;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emucomp.api.Drive;
 
 import java.util.List;
@@ -36,6 +37,8 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private boolean canProcessAdditionalFiles;
 	private List<Drive> drives;
 	private boolean isLinuxRuntime;
+
+	private List<EnvironmentCreateRequest.DriveSetting> driveSettings;
 
 	public boolean isLinuxRuntime() {
 		return isLinuxRuntime;
@@ -182,5 +185,13 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 
 	public void setUseWebRTC(boolean useWebRTC) {
 		this.useWebRTC = useWebRTC;
+	}
+
+	public List<EnvironmentCreateRequest.DriveSetting> getDriveSettings() {
+		return driveSettings;
+	}
+
+	public void setDriveSettings(List<EnvironmentCreateRequest.DriveSetting> driveSettings) {
+		this.driveSettings = driveSettings;
 	}
 }

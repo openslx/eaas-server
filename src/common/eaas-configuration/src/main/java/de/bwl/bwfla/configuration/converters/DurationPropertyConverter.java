@@ -33,23 +33,21 @@ import org.apache.tamaya.spi.PropertyConverter;
 /** A converter for strings of the form <i>"25 seconds"</i> to durations */
 public class DurationPropertyConverter implements PropertyConverter<Duration>
 {
-	private final DurationParser parser;
+	private final static DurationParser parser = new DurationParser();
 
-	
-	public DurationPropertyConverter()
-	{
-		this.parser = new DurationParser();
-	}
-	
 	@Override
 	public Duration convert(String value, ConversionContext context)
 	{
 		return Duration.ofMillis(parser.parse(value, TimeUnit.MILLISECONDS));
 	}
-	
-	
+
+	public static Duration parse(String value)
+	{
+		return Duration.ofMillis(parser.parse(value, TimeUnit.MILLISECONDS));
+	}
+
 	/** A parser for strings of the form <i>"25 seconds"</i>. */
-	private class DurationParser
+	private static class DurationParser
 	{
 	    private final Map<String, TimeUnit> units;
 	    private final Pattern pattern;
