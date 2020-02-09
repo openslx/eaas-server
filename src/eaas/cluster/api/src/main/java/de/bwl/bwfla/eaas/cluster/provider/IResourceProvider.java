@@ -34,7 +34,7 @@ import de.bwl.bwfla.eaas.cluster.metadata.LabelIndex;
 public interface IResourceProvider extends IDumpable
 {
 	public CompletableFuture<ResourceHandle> allocate(UUID allocationId, ResourceSpec spec, boolean scaleup, long timeout, TimeUnit unit);
-	public void release(ResourceHandle handle);
+	public CompletableFuture<ResourceSpec> release(ResourceHandle handle);
 	
 	/** Initiates a proper shutdown of this provider. */
 	public CompletableFuture<Boolean> shutdown();

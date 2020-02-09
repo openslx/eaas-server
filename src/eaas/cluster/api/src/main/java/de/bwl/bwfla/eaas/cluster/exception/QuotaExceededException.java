@@ -17,26 +17,24 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.eaas.cluster.provider.allocation;
-
-import java.util.UUID;
-
-import de.bwl.bwfla.eaas.cluster.NodeID;
-import de.bwl.bwfla.eaas.cluster.ResourceHandle;
-import de.bwl.bwfla.eaas.cluster.ResourceSpec;
-import de.bwl.bwfla.eaas.cluster.dump.IDumpable;
-import de.bwl.bwfla.eaas.cluster.provider.Node;
+package de.bwl.bwfla.eaas.cluster.exception;
 
 
-public interface IResourceAllocator extends IDumpable
+public class QuotaExceededException extends AllocationFailureException
 {
-	public boolean registerNode(Node node);
-	public void unregisterNode(NodeID id);
-	
-	public ResourceSpec getFreeResources();
-	public ResourceSpec getUsedResources();
-	public int getNumAllocations();
-	
-	public ResourceHandle allocate(UUID allocationId, ResourceSpec spec);
-	public ResourceSpec release(ResourceHandle id);
+    public QuotaExceededException() {
+        super();
+    }
+
+    public QuotaExceededException(String message, Throwable throwable) {
+        super(message, throwable);
+    }
+
+    public QuotaExceededException(String message) {
+        super(message);
+    }
+
+    public QuotaExceededException(Throwable throwable) {
+        super(throwable);
+    }
 }

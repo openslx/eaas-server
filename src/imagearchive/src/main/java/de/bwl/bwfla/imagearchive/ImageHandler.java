@@ -455,7 +455,7 @@ public class ImageHandler
 	}
 
 	TaskState importImageUrlAsync(URL url, ImageArchiveMetadata iaMd, boolean delete) throws BWFLAException, IOException {
-		
+
 		File target = getImageTargetPath(iaMd.getType().name());
 		String importId;
 		if(iaMd.getImageId() != null)

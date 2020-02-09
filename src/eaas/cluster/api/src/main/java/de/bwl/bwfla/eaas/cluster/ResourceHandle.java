@@ -31,6 +31,7 @@ public class ResourceHandle implements Comparable<ResourceHandle>
 	private final String provider;
 	private final NodeID nid;
 	private final UUID aid;
+	private String tenant;
 	
 	public ResourceHandle(String provider, NodeID nid, UUID aid)
 	{
@@ -47,7 +48,18 @@ public class ResourceHandle implements Comparable<ResourceHandle>
 		this.nid = nid;
 		this.aid = aid;
 	}
-	
+
+	public ResourceHandle setTenantId(String tenant)
+	{
+		this.tenant = tenant;
+		return this;
+	}
+
+	public String getTenantId()
+	{
+		return tenant;
+	}
+
 	public String getProviderName()
 	{
 		return provider;

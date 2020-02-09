@@ -1,7 +1,6 @@
 package de.bwl.bwfla.objectarchive.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
 

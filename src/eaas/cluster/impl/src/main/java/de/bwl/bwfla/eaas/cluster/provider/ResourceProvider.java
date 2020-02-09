@@ -250,19 +250,22 @@ public class ResourceProvider implements IResourceProvider
 	}
 	
 	@Override
-	public void release(ResourceHandle handle)
+	public CompletableFuture<ResourceSpec> release(ResourceHandle handle)
 	{
 		if (handle == null)
 			throw new IllegalArgumentException();
-		
+
+		CompletableFuture<ResourceSpec> result = new CompletableFuture<>();
+
 		Runnable task = () -> {
-			resources.release(handle);
+			result.complete(resources.release(handle));
 			log.info("Resources for allocation " + handle.getAllocationID() + " released");
 			log.info("Resources from " + resources.getNumAllocations() + " allocation(s) still reserved");
 			this.processDeferredAllocations();
 		};
 		
 		this.submit(PRIORITY_RELEASE, task);
+		return result;
 	}
 	
 	@Override

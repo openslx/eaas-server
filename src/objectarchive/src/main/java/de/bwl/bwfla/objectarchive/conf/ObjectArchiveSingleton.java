@@ -72,6 +72,10 @@ public class ObjectArchiveSingleton
 	@Config(value="commonconf.serverdatadir")
 	private String serverdatadir;
 
+	@Inject
+	@Config(value="objectarchive.default_archive")
+	private String defaultArchive;
+
 	public static final String tmpArchiveDir = "emil-temp-objects";
 	public static final String tmpArchiveName = "emil-temp-objects";
 	public static final String remoteArchiveName = "Remote Objects";
@@ -142,16 +146,16 @@ public class ObjectArchiveSingleton
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
 			LOG.info("adding object archive" + a.getName());
-			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default")) {
-				ObjectArchiveSingleton.archiveMap.put("default", a);
+			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase(defaultArchive)) {
+				ObjectArchiveSingleton.archiveMap.put(defaultArchive, a);
 				LOG.warning("setting archive " + a.getName() + " as default");
 			}
 		}
 
 		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
 		archiveMap.put(_a.getName(), _a);
-		if(!archiveMap.containsKey("default")) {
-			ObjectArchiveSingleton.archiveMap.put("default", _a);
+		if(!archiveMap.containsKey(defaultArchive)) {
+			ObjectArchiveSingleton.archiveMap.put(defaultArchive, _a);
 		}
 	}
 

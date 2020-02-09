@@ -145,24 +145,29 @@ public class ResourceAllocator implements IResourceAllocator, IDumpable
 	}
 
 	@Override
-	public void release(ResourceHandle handle)
+	public ResourceSpec release(ResourceHandle handle)
 	{
 		NodeInfo node = nodes.get(handle.getNodeID());
 		if (node == null)
-			return;
+			return null;
 
 		// Update index
 		index.remove(node);
-		
+
+		ResourceSpec spec = null;
+
 		// Update node
 		ResourceAllocation allocation = node.removeAllocation(handle);
 		if (allocation != null) {
-			available.free(allocation.getResourceSpec());
+			spec = allocation.getResourceSpec();
+			available.free(spec);
 			--numAllocations;
 		}
 		
 		// Re-add the modified node to the index
 		index.add(node);
+
+		return spec;
 	}
 	
 	@Override

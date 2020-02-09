@@ -16,6 +16,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @XmlRootElement
@@ -222,7 +223,7 @@ public class EnvironmentDetails {
                     info.archive = software.getArchive();
                     installedSoftwareIds.add(info);
                 } catch (BWFLAException e) {
-                    e.printStackTrace();
+                    LOG.log(Level.WARNING, "Looking up software-package failed: " + swId, e);
                 }
             }
 

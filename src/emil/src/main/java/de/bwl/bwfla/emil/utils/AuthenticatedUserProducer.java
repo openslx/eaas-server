@@ -23,7 +23,7 @@ public class AuthenticatedUserProducer {
     public void handleAuthenticationEvent(@Observes @AuthenticatedUser AuthenticationFilter.JwtLoginEvent event) {
 
         DecodedJWT jwt = event.getJwt();
-        if(jwt == null)
+        if(jwt == null || jwt.getClaim("sub") == null)
         {
             authenticatedUser.setRole(Role.PUBLIC);
             authenticatedUser.setUsername("anonymous");
@@ -31,11 +31,6 @@ public class AuthenticatedUserProducer {
         }
 
         Claim usernameC = jwt.getClaim("sub");
-        if(usernameC == null)
-        {
-            authenticatedUser = null;
-            return;
-        }
         authenticatedUser.setUsername(usernameC.asString());
 
         Claim nameC = jwt.getClaim("name");

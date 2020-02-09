@@ -19,6 +19,9 @@
 
 package de.bwl.bwfla.eaas.cluster;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -48,10 +51,10 @@ public class ResourceSpec
 	
 	/** Internal unit for memory resources */
 	public static final MemoryUnit MEMORY_UNIT = MemoryUnit.MEGABYTES;
-	
+
 	@XmlElement(name="cpu", required=true)
 	protected int cpu;  // in millicores
-	
+
 	@XmlElement(name="memory", required=true)
 	protected int memory;  // in megabytes
 
@@ -71,17 +74,20 @@ public class ResourceSpec
 	{
 		this(other.cpu, other.memory);
 	}
-	
+
+	@JsonProperty("cpu")
 	public int cpu()
 	{
 		return cpu;
 	}
-	
+
+	@JsonProperty("memory")
 	public int memory()
 	{
 		return memory;
 	}
-	
+
+	@JsonIgnore
 	public boolean isDefined()
 	{
 		return (cpu > 0 || memory > 0);

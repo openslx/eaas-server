@@ -36,25 +36,25 @@ import de.bwl.bwfla.eaas.cluster.provider.IResourceProvider;
 
 public interface IClusterManager extends IDumpable
 {
-    public ResourceHandle allocate(UUID aid, ResourceSpec spec, Duration duration)
+    public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, Duration duration)
             throws TimeoutException, AllocationFailureException, OutOfResourcesException;
     
-    public ResourceHandle allocate(UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+    public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 	
-    public ResourceHandle allocate(LabelSelector selector, UUID aid, ResourceSpec spec, Duration duration)
+    public ResourceHandle allocate(String tenant, LabelSelector selector, UUID aid, ResourceSpec spec, Duration duration)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
     
 	public ResourceHandle allocate(
-			LabelSelector selector, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			String tenant, LabelSelector selector, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 	
 	public ResourceHandle allocate(
-			Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, Duration duration)
+			String tenant, Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, Duration duration)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 	
 	public ResourceHandle allocate(
-			Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			String tenant, Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 			
 	public void release(ResourceHandle handle);
