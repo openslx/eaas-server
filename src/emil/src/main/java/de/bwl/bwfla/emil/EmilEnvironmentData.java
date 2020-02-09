@@ -125,7 +125,7 @@ public class EmilEnvironmentData
 	 */
 	public Response getEnvironmentTemplates() {
 		return envrepo.templates()
-				.list("oldStyle");
+				.list("oldStyle	");
 	}
 
 	@Secured({Role.RESTRCITED})
