@@ -97,7 +97,7 @@ public class Snapshot
         EmilEnvironment newEnv = null;
         MachineConfiguration machineConfiguration;
         if(!checkpoint)
-            machineConfiguration = EmulationEnvironmentHelper.clean(configuration);
+            machineConfiguration = EmulationEnvironmentHelper.clean(configuration, req.isCleanRemovableDrives());
         else
             machineConfiguration = configuration.copy();
 
@@ -157,7 +157,7 @@ public class Snapshot
         if (data == null)
             throw new BWFLAException("empty snapshots not supported.");
 
-        MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration);
+        MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration, true);
         env.getDescription().setTitle("user session: " + request.getUserId());
 
         ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
@@ -210,7 +210,7 @@ public class Snapshot
         if(request.getObjectId() == null)
             throw new BWFLAException("invalid request: invalid object data");
 
-        MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration);
+        MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration, true);
         env.getDescription().setTitle(request.getTitle());
 
         ImageArchiveMetadata iaMd = new ImageArchiveMetadata();

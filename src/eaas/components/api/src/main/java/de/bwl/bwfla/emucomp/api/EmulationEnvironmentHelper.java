@@ -105,7 +105,7 @@ public class EmulationEnvironmentHelper {
 		}
 	}
 
-	public static MachineConfiguration clean(final MachineConfiguration original) {
+	public static MachineConfiguration clean(final MachineConfiguration original, boolean cleanRemovableDrives) {
 		MachineConfiguration env = original.copy();
 
 		// remove all removable drives from the environment
@@ -124,8 +124,9 @@ public class EmulationEnvironmentHelper {
 			}
 
 			if (d.getType() == Drive.DriveType.CDROM || d.getType() == Drive.DriveType.FLOPPY) {
-				resourcesRemoveMap.put(resourceUrl, true);
-				d.setData("");
+				resourcesRemoveMap.put(resourceUrl, cleanRemovableDrives);
+				if(cleanRemovableDrives)
+					d.setData("");
 			} else {
 				resourcesRemoveMap.put(resourceUrl, false);
 			}
@@ -334,6 +335,15 @@ public class EmulationEnvironmentHelper {
 			}
 
 			current = (ImageArchiveBinding) entry;
+			int driveId = getDriveId(env, current.imageId);
+			Drive d = getDrive(env, driveId);
+			if(d != null){
+				d.setData("binding://" + replacement.getImageId());
+			}
+			else
+			{
+				log.severe("XXX: replace(): drive not found");
+			}
 			current.update(replacement);
 			break;
 		}
@@ -470,7 +480,7 @@ public class EmulationEnvironmentHelper {
 		// construct URL
 		String subres = "";
 		if (path != null)
-			subres += "/" + path.toString();
+			subres += "/" + path;
 
 		String dataUrl = "binding://" + binding + subres;
 		int driveId = -1;
