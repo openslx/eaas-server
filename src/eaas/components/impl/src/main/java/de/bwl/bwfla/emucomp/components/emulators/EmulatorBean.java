@@ -1235,11 +1235,35 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// Create one DataHandler per image
 		final List<BindingDataHandler> handlers = new ArrayList<BindingDataHandler>();
 		images.forEach((id, path) -> {
-			final BindingDataHandler handler = new BindingDataHandler()
-					.setDataFromFile(Paths.get(path))
-					.setId(id);
 
-			handlers.add(handler);
+			final BlobDescription blob = new BlobDescription()
+					.setDescription("Snapshot for session " + this.getComponentId())
+					.setNamespace("emulator-snapshots")
+					.setName(id);
+
+			blob.setDataFromFile(Paths.get(path));
+			blob.setType(".qcow");
+
+			// Upload archive to the BlobStore
+			try {
+				BlobHandle handle = BlobStoreClient.get()
+						.getBlobStorePort(blobStoreAddressSoap)
+						.put(blob);
+				String location = handle.toRestUrl(blobStoreRestAddress);
+
+				final BindingDataHandler handler = new BindingDataHandler()
+						.setUrl(location)
+						.setId(id);
+
+				handlers.add(handler);
+
+				if (handle == null) {
+					throw new BWFLAException("could not create blob")
+							.setId(this.getComponentId());
+				}
+			} catch (BWFLAException e) {
+				e.printStackTrace();
+			}
 		});
 
 		return handlers;
