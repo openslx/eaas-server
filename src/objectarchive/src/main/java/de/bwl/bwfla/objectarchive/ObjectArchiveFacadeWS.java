@@ -18,7 +18,7 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
-import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import gov.loc.mets.Mets;
 import org.apache.tamaya.inject.ConfigurationInjection;

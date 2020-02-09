@@ -20,6 +20,7 @@
 package de.bwl.bwfla.objectarchive.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 import gov.loc.mets.FileType;

@@ -6,11 +6,10 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 
-import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollectionEntry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import gov.loc.mets.Mets;
 import org.apache.commons.io.IOUtils;
 
 import com.google.gson.GsonBuilder;

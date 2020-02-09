@@ -35,7 +35,7 @@ import javax.naming.NamingException;
 
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import org.apache.tamaya.inject.api.Config;
 
