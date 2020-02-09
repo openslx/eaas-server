@@ -38,6 +38,15 @@ public class EnvironmentListItem {
     private String envType;
 
     @XmlElement
+    private String operatingSystem;
+
+    @XmlElement
+    private String timestamp;
+
+    @XmlElement
+    private String description;
+
+    @XmlElement
     private boolean isLinuxRuntime;
 
     @XmlElement
@@ -50,6 +59,10 @@ public class EnvironmentListItem {
         this.archive = emilenv.getArchive();
         this.envType = "base";
         this.isLinuxRuntime = emilenv.isLinuxRuntime();
+        this.timestamp = emilenv.getTimestamp();
+        this.operatingSystem = emilenv.getOs();
+        this.description = emilenv.getDescription();
+
         if (emilenv.getNetworking() != null)
             this.networkEnabled = (emilenv.getNetworking().isConnectEnvs() || emilenv.getNetworking().isEnableInternet() || emilenv.getNetworking().isServerMode() || emilenv.getNetworking().isLocalServerMode());
         else this.networkEnabled = false;
