@@ -77,10 +77,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
 
@@ -1058,7 +1055,7 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("delete image");
 			envdb.deleteNameIndexesEntry(request.getImageArchive(), request.getImageId(), null);
-			envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
+			// envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
 			return Response.status(Status.OK)
 					.build();
 		}
@@ -1094,6 +1091,24 @@ public class EnvironmentRepository extends EmilRest
 			} else {
 				EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
 			}
+		}
+
+		// cleanup unused resources
+		for (Iterator<AbstractDataResource> it = env.getAbstractDataResource().iterator(); it.hasNext();) {
+			AbstractDataResource resource = it.next();
+			String bindingId = resource.getId();
+			if(bindingId == null || bindingId.isEmpty()) {
+				LOG.severe("empty binding");
+				continue;
+			}
+
+			if(bindingId.startsWith("rom-"))
+				continue;
+
+			if(EmulationEnvironmentHelper.getDriveId(env, bindingId) >= 0)
+				continue;
+
+			it.remove();
 		}
 	}
 }
