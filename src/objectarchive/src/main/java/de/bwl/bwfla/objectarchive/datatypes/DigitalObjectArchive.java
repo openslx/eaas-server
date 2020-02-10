@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.List;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 
 /**
