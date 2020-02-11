@@ -68,6 +68,7 @@ import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
+import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -690,6 +691,12 @@ public class Components {
             SessionOptions options = new SessionOptions();
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
+
+            if(((MachineConfiguration) chosenEnv).getNic().size() > 0)
+            {
+                Nic n = ((MachineConfiguration) chosenEnv).getNic().get(0);
+                n.setHwaddress(NetworkUtils.getRandomHWAddress());
+            }
 
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
