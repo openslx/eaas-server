@@ -3,7 +3,6 @@ package de.bwl.bwfla.imageclassifier.datatypes;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
 import de.bwl.bwfla.imageclassifier.client.HistogramEntry;
-import edu.harvard.hul.ois.fits.FitsOutput;
 import pronom.nationalarchives.gov.impl.PronomParser;
 
 import java.util.*;

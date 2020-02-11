@@ -46,18 +46,14 @@
 				</configuration>
 			</plugin>
 
+
 			<!-- END OF GIT COMMIT ID PLUGIN CONFIGURATION -->
 
 			<!-- other plugins -->
 		</plugins>
 	</build>
 
-
 	<dependencies>
-		<dependency>
-			<groupId>net.handle</groupId>
-			<artifactId>handle</artifactId>
-		</dependency>
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
@@ -136,6 +132,11 @@
 			<groupId>com.auth0</groupId>
 			<artifactId>java-jwt</artifactId>
 			<version>3.3.0</version>
+		</dependency>
+		<dependency>
+			<groupId>net.handle</groupId>
+			<artifactId>handle-client</artifactId>
+			<version>LATEST</version>
 		</dependency>
 	</dependencies>
 </project>

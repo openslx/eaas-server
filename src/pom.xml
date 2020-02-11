@@ -24,7 +24,6 @@
 		<commons.codec.version>1.10</commons.codec.version>
 		<commons.fileupload.version>1.2.2</commons.fileupload.version>
 		<gson.version>2.5</gson.version>
-		<handle.hjs.version>8.1.4</handle.hjs.version>
 		<fits.version>1.0.1</fits.version>
 		<guacamole.version>0.9.4</guacamole.version>
 		<snakeyaml.version>1.16</snakeyaml.version>
@@ -221,36 +220,6 @@
 			</plugins>
 		</pluginManagement>
 	</build>
-
-	<repositories>
-		<repository>
-			<id>bwfla-internal</id>
-			<name>The bwFLA Internal Repository</name>
-			<url>http://eaas.uni-freiburg.de/maven-repository</url>
-			<snapshots>
-				<checksumPolicy>ignore</checksumPolicy>
-				<enabled>true</enabled>
-			</snapshots>
-			<releases>
-				<checksumPolicy>ignore</checksumPolicy>
-				<enabled>true</enabled>
-			</releases>
-		</repository>
-		<repository>
-			<id>bwfla</id>
-			<name>Repository</name>
-			<url>https://raw.githubusercontent.com/eaas-framework/external-libraries/handle</url>
-			<snapshots>
-				<checksumPolicy>ignore</checksumPolicy>
-				<enabled>true</enabled>
-			</snapshots>
-			<releases>
-				<checksumPolicy>ignore</checksumPolicy>
-				<enabled>true</enabled>
-			</releases>
-		</repository>
-	</repositories>
-
 	<modules>
 		<module>ear</module>
 		<module>common</module>
@@ -312,11 +281,6 @@
 				<groupId>commons-codec</groupId>
 				<artifactId>commons-codec</artifactId>
 				<version>${commons.codec.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>net.handle</groupId>
-				<artifactId>handle</artifactId>
-				<version>${handle.hjs.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>edu.harvard.hul.ois</groupId>
