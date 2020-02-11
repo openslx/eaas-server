@@ -224,19 +224,6 @@
 
 	<repositories>
 		<repository>
-			<id>bwfla-internal</id>
-			<name>The bwFLA Internal Repository</name>
-			<url>http://eaas.uni-freiburg.de/maven-repository</url>
-			<snapshots>
-				<checksumPolicy>ignore</checksumPolicy>
-				<enabled>true</enabled>
-			</snapshots>
-			<releases>
-				<checksumPolicy>ignore</checksumPolicy>
-				<enabled>true</enabled>
-			</releases>
-		</repository>
-		<repository>
 			<id>bwfla</id>
 			<name>Repository</name>
 			<url>https://raw.githubusercontent.com/eaas-framework/external-libraries/handle</url>

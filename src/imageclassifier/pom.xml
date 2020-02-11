@@ -27,10 +27,6 @@
 			<artifactId>eaas-components-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>edu.harvard.hul.ois</groupId>
-			<artifactId>fits</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
 			<artifactId>resteasy-jackson2-provider</artifactId>
 		</dependency>
