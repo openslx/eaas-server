@@ -226,7 +226,7 @@
 		<repository>
 			<id>bwfla-internal</id>
 			<name>The bwFLA Internal Repository</name>
-			<url>http://eaas.uni-freiburg.de/maven-repository</url>
+			<url>https://eaas.uni-freiburg.de/maven-repository</url>
 			<snapshots>
 				<checksumPolicy>ignore</checksumPolicy>
 				<enabled>true</enabled>
