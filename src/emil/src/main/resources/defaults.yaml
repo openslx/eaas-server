@@ -14,6 +14,7 @@ emil:
       delay: 3 secs
   authEnabled: false
   authSecret: ''
+  authAudience: ''
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification
