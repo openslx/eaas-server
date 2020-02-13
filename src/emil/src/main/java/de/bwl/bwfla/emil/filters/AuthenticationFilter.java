@@ -3,6 +3,7 @@ package de.bwl.bwfla.emil.filters;
 import javax.annotation.Priority;
 import javax.enterprise.event.Event;
 import javax.inject.Inject;
+import javax.ws.rs.Consumes;
 import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
@@ -12,6 +13,7 @@ import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+import java.util.logging.Logger;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -38,8 +40,14 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     private String authSecret;
 
     @Inject
+    @Config(value = "emil.authAudience")
+    private String authAudience;
+
+    @Inject
     @AuthenticatedUser
     Event<JwtLoginEvent> userAuthenticatedEvent;
+
+    protected static final Logger LOG = Logger.getLogger("Authentication");
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -64,16 +72,17 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         // String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9.eyJpc3MiOiJhdXRoMCJ9.AbIJTDMFc7yUa5MhvcP03nJPyCPzZtQcGEp-zWfOkEE";
 
         if(token == null) {
-            // System.out.println("anonymous");
+            LOG.warning("anonymous");
             userAuthenticatedEvent.fire(new JwtLoginEvent(null));
         }
         else {
 
             try {
                 // Validate the token
+
                 validateToken(token);
             } catch (Exception e) {
-                e.printStackTrace();
+                LOG.severe(e.getMessage());
                 requestContext.abortWith(
                         Response.status(Response.Status.UNAUTHORIZED).build());
             }
@@ -91,12 +100,18 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             JWTVerifier verifier = JWT.require(algorithm)
                     .build(); //Reusable verifier instance
             DecodedJWT jwt = verifier.verify(token);
+            if(authAudience != null && jwt.getClaim("aud") != null)
+            {
+                if(!jwt.getClaim("aud").equals(authAudience))
+                {
+                    userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+                    throw new JWTVerificationException("audience mismatch");
+                }
+
+            }
             userAuthenticatedEvent.fire(new JwtLoginEvent(jwt));
         } catch (JWTVerificationException exception){
-            // exception.printStackTrace();
-            // throw exception;
-            // System.out.println("anonymous");
-            userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+            throw exception;
         }
     }
 
