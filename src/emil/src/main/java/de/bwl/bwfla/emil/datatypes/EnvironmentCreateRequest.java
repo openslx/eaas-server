@@ -13,6 +13,9 @@ public class EnvironmentCreateRequest extends JaxbType{
 	private String label;
 	private String nativeConfig;
 	private List<DriveSetting> driveSettings;
+
+	private String romId;
+	private String romLabel;
 	
 	public String getTemplateId() {
 		return templateId;
@@ -104,6 +107,22 @@ public class EnvironmentCreateRequest extends JaxbType{
 
 	public void setOperatingSystemId(String operatingSystemId) {
 		this.operatingSystemId = operatingSystemId;
+	}
+
+	public String getRomId() {
+		return romId;
+	}
+
+	public void setRomId(String romId) {
+		this.romId = romId;
+	}
+
+	public String getRomLabel() {
+		return romLabel;
+	}
+
+	public void setRomLabel(String romLabel) {
+		this.romLabel = romLabel;
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown=true)

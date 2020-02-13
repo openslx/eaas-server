@@ -9,6 +9,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 public class ImportImageRequest extends JaxbType{
 	private String url;
 	private String label;
+	private String imageType;
 
 	public String getUrl() {
 		return url;
@@ -24,5 +25,13 @@ public class ImportImageRequest extends JaxbType{
 
 	public void setLabel(String label) {
 		this.label = label;
+	}
+
+	public String getImageType() {
+		return imageType;
+	}
+
+	public void setImageType(String imageType) {
+		this.imageType = imageType;
 	}
 }
