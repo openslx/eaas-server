@@ -472,6 +472,7 @@ public class EnvironmentRepository extends EmilRest
 
 			newenv.setTitle(desc.getTitle());
 			newenv.setAuthor(desc.getAuthor());
+			newenv.setOs(desc.getOs());
 			newenv.setDescription(desc.getDescription());
 			newenv.setEnablePrinting(desc.isEnablePrinting());
 			newenv.setEnableRelativeMouse(desc.isEnableRelativeMouse());
