@@ -33,7 +33,7 @@ import java.nio.file.Path;
 
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "bindingDataHandler", namespace = "http://bwfla.bwl.de/common/datatypes"})
+@XmlType(name = "bindingDataHandler", namespace = "http://bwfla.bwl.de/common/datatypes")
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class BindingDataHandler
 {
