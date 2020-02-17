@@ -156,6 +156,7 @@ public class SoftwareRepository extends EmilRest
 					return SoftwareRepository.createResponse(Status.OK, swo);
 				}
 
+				swo.setIsPublic(software.isPublic());
 				swo.setObjectId(software.getObjectId());
 				swo.setArchiveId(software.getArchive());
 				swo.setAllowedInstances(software.getNumSeats());
@@ -226,6 +227,8 @@ public class SoftwareRepository extends EmilRest
 					software.setName(swo.getLabel());
 				}
 
+				software.setPublic(swo.getIsPublic());
+				LOG.severe("setting public to: " + swo.getIsPublic());
 				software.setNumSeats(swo.getAllowedInstances());
 				software.setLicence(swo.getLicenseInformation());
 				software.setIsOperatingSystem(swo.getIsOperatingSystem());
@@ -303,6 +306,7 @@ public class SoftwareRepository extends EmilRest
 					json.writeStartObject();
 					json.write("id", desc.getSoftwareId());
 					json.write("label", desc.getLabel());
+					json.write("isPublic", desc.isPublic());
 					json.write("archiveId", (desc.getArchiveId() != null) ? desc.getArchiveId() : "default");
 					json.write("isOperatingSystem", desc.getIsOperatingSystem());
 					json.writeEnd();
@@ -365,6 +369,7 @@ public class SoftwareRepository extends EmilRest
 						.add("status", "0")
 						.add("id", desc.getSoftwareId())
 						.add("label", desc.getLabel())
+						.add("isPublic", desc.isPublic())
 						.add("isOperatingSystem", desc.getIsOperatingSystem())
 						.build();
 
