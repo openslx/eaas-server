@@ -41,9 +41,12 @@ import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.VolatileResource;
+import org.apache.tamaya.ConfigurationProvider;
 
 public class EmulationEnvironmentHelper {
 	protected final static Logger log = Logger.getLogger(EmulationEnvironmentHelper.class.getName());
+
+	private static final String wsObjectArchive = ConfigurationProvider.getConfiguration().get("ws.objectarchive");
 
 	/** List of beans, that support media-changing. */
 	private static final Set<String> BEANS_WITH_MEDIACHANGE_SUPPORT = new HashSet<String>();
@@ -86,7 +89,25 @@ public class EmulationEnvironmentHelper {
 		return null;
 	}
 
-	public static MachineConfiguration clean(final MachineConfiguration original) {
+	public static void setDrive(MachineConfiguration env, Drive d, int driveIndex) throws BWFLAException
+	{
+		try {
+			Drive old = env.getDrive().get(driveIndex);
+			old.setBoot(d.boot);
+			old.setIface(d.iface);
+			old.setBus(d.bus);
+			old.setData(d.data);
+			old.setFilesystem(d.filesystem);
+			old.setType(d.type);
+			old.setUnit(d.unit);
+			old.setPlugged(d.plugged);
+		}
+		catch (IndexOutOfBoundsException e) {
+			throw new BWFLAException(e);
+		}
+	}
+
+	public static MachineConfiguration clean(final MachineConfiguration original, boolean cleanRemovableDrives) {
 		MachineConfiguration env = original.copy();
 
 		// remove all removable drives from the environment
@@ -105,8 +126,9 @@ public class EmulationEnvironmentHelper {
 			}
 
 			if (d.getType() == Drive.DriveType.CDROM || d.getType() == Drive.DriveType.FLOPPY) {
-				resourcesRemoveMap.put(resourceUrl, true);
-				d.setData("");
+				resourcesRemoveMap.put(resourceUrl, cleanRemovableDrives);
+				if(cleanRemovableDrives)
+					d.setData("");
 			} else {
 				resourcesRemoveMap.put(resourceUrl, false);
 			}
@@ -315,7 +337,18 @@ public class EmulationEnvironmentHelper {
 			}
 
 			current = (ImageArchiveBinding) entry;
+			int driveId = getDriveId(env, current.imageId);
+			Drive d = getDrive(env, driveId);
+			if(d != null){
+				d.setData("binding://" + replacement.getImageId());
+			}
+			else
+			{
+				log.severe("XXX: replace(): drive not found");
+			}
 			current.update(replacement);
+
+
 			break;
 		}
 
@@ -385,6 +418,12 @@ public class EmulationEnvironmentHelper {
 		return false;
 	}
 
+	public static int addObjectArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc, int index) throws BWFLAException {
+		env.getAbstractDataResource().add(binding);
+		FileCollectionEntry fce = fc.getDefaultEntry();
+		return EmulationEnvironmentHelper.registerDrive(env, binding.getId(), fce.getId(), index);
+	}
+
 	public static int addArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc) throws BWFLAException {
 
 		// FIXME
@@ -414,10 +453,50 @@ public class EmulationEnvironmentHelper {
 		int driveId = -1;
 		for (Drive drive : env.getDrive()) {
 			++driveId; // hack: fix me
-			if(drive.getData().contains(objectId))
+			if(drive.getData() != null && drive.getData().contains(objectId))
 				return driveId;
 		}
 		return -1;
+	}
+
+	public static Drive getDrive(MachineConfiguration env, int driveIndex) {
+		if(driveIndex < 0 || env.getDrive().size() <= driveIndex)
+			return null;
+
+		return env.getDrive().get(driveIndex);
+	}
+
+	public static int registerEmptyDrive(MachineConfiguration env, int index) {
+		// construct URL
+		int driveId = -1;
+		try {
+			Drive d = env.getDrive().get(index);
+			d.setData(null);
+			return index;
+		}
+		catch(IndexOutOfBoundsException e)
+		{
+			return -1;
+		}
+	}
+
+	public static int registerDrive(MachineConfiguration env, String binding, String path, int index) {
+		// construct URL
+		String subres = "";
+		if (path != null)
+			subres += "/" + path;
+
+		String dataUrl = "binding://" + binding + subres;
+		int driveId = -1;
+		try {
+			Drive d = env.getDrive().get(index);
+			d.setData(dataUrl);
+			return index;
+		}
+		catch(IndexOutOfBoundsException e)
+		{
+			return -1;
+		}
 	}
 
 	public static int registerDrive(MachineConfiguration env, String binding, String path, Drive.DriveType driveType) {
@@ -533,6 +612,8 @@ public class EmulationEnvironmentHelper {
 		html.setPointerLock(true);
 		chosenEnv.getUiOptions().setHtml5(html);
     }
+
+
 
 
 

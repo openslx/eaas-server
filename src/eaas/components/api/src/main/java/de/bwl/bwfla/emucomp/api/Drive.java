@@ -27,6 +27,8 @@
 
 package de.bwl.bwfla.emucomp.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -78,8 +80,10 @@ import javax.xml.bind.annotation.XmlType;
     "type",
     "filesystem",
     "boot",
-    "plugged"
+    "plugged",
+    "transientDrive"
 })
+@JsonIgnoreProperties(ignoreUnknown=true)
 public class Drive
     extends Device
 {
@@ -100,6 +104,9 @@ public class Drive
     protected Boolean boot = false;
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected boolean plugged = false;
+
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", defaultValue = "false")
+    protected boolean transientDrive;
 
     /**
      * Gets the value of the data property.
@@ -267,6 +274,14 @@ public class Drive
     
     public void setFilesystem(String filesystem) {
     	this.filesystem = filesystem;
+    }
+
+    public boolean isTransientDrive() {
+        return transientDrive;
+    }
+
+    public void setTransientDrive(boolean transientDrive) {
+        this.transientDrive = transientDrive;
     }
 
     /**

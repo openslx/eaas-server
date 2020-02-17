@@ -245,6 +245,8 @@ public class EaasWS
 		boolean lockEnvironment = false;
 		private String tenantId = null;
 
+		private ResourceSpec resourceSpec;
+
 		public boolean isLockEnvironment() {
 			return lockEnvironment;
 		}
@@ -267,6 +269,14 @@ public class EaasWS
 
 		public void setUserId(String userId) {
 			this.userId = userId;
+		}
+
+		public ResourceSpec getResourceSpec() {
+			return resourceSpec;
+		}
+
+		public void setResourceSpec(ResourceSpec resourceSpec) {
+			this.resourceSpec = resourceSpec;
 		}
 
 		public void setTenantId(String id) {

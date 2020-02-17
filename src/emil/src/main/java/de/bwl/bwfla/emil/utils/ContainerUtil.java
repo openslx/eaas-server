@@ -193,7 +193,7 @@ public class ContainerUtil {
         iD.setId(binding.getImageId());
         iD.setFstype(FileSystemType.EXT4.toString());
 
-        Entry entry = new Entry();
+        ImageMetadata entry = new ImageMetadata();
         Alias alias = new Alias();
 
         entry.setImage(iD);

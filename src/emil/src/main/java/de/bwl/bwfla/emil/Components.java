@@ -59,6 +59,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
+import de.bwl.bwfla.api.eaas.ResourceSpec;
 import de.bwl.bwfla.api.eaas.SessionOptions;
 import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
@@ -702,6 +703,11 @@ public class Components {
                 options.setLockEnvironment(true);
             }
 
+            ResourceSpec spec = new ResourceSpec();
+            __hack_get_resource_spec((MachineConfiguration)chosenEnv, spec);
+            LOG.severe("mem " + spec.getMemory());
+            LOG.severe("cpu" + spec.getCpu());
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -714,13 +720,15 @@ public class Components {
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
 
+            List<MachineComponentResponse.RemovableMedia> removableMedia = getRemovableMedialist((MachineConfiguration)chosenEnv);
+
             // Register server-sent-event source
             {
                 final String srcurl = component.getEventSourceUrl(sessionId);
                 observer.add(new EventObserver(srcurl, LOG));
             }
 
-            return new MachineComponentResponse(sessionId, driveId);
+            return new MachineComponentResponse(sessionId, removableMedia);
         }
         catch (BWFLAException | JAXBException | MalformedURLException e) {
 
@@ -834,7 +842,7 @@ public class Components {
             }
 
             // TODO: find a way to get the correct driveId here
-            return new MachineComponentResponse(componentId, null);
+            return new MachineComponentResponse(componentId, new ArrayList<>());
         } catch (BWFLAException | MalformedURLException e) {
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
@@ -1261,6 +1269,84 @@ public class Components {
     }
 
 
+    private void __hack_get_resource_spec(MachineConfiguration env, ResourceSpec spec)
+    {
+
+        spec.setCpu(500);
+        spec.setMemory(512);
+
+        if(env.getNativeConfig() == null)
+            return;
+
+        String config = env.getNativeConfig().getValue();
+
+        if (config != null && !config.isEmpty()) {
+            String[] tokens = config.trim().split("\\s+");
+            for (int i = 0; i < tokens.length; i++)
+            {
+                if(tokens[i].isEmpty())
+                    continue;
+                if(i+1 == tokens.length)
+                    continue;
+
+                String key = tokens[i];
+                String value = tokens[i+1];
+
+                if(key.equals("-smp")){
+                    try {
+                        int cpus = Integer.parseInt(value);
+                        spec.setCpu(cpus * 250);
+                    }
+                    catch (NumberFormatException e)
+                    {
+
+                    }
+                }
+
+                if(key.equals("-m")){
+                    try {
+                        int mem = Integer.parseInt(value);
+                        spec.setMemory(mem);
+                    }
+                    catch (NumberFormatException e)
+                    {
+
+                    }
+                }
+            }
+        }
+    }
+
+    private List<MachineComponentResponse.RemovableMedia> getRemovableMedialist(MachineConfiguration env)
+    {
+        List<MachineComponentResponse.RemovableMedia> result = new ArrayList<>();
+        for(AbstractDataResource binding : env.getAbstractDataResource()) {
+            if (!(binding instanceof ObjectArchiveBinding))
+                continue;
+
+            ObjectArchiveBinding objectArchiveBinding = (ObjectArchiveBinding) binding;
+            int driveIndex = EmulationEnvironmentHelper.getDriveId(env, objectArchiveBinding.getObjectId());
+            Drive d = EmulationEnvironmentHelper.getDrive(env, driveIndex);
+            if (d == null) {
+                LOG.warning("could not resolve drive for objectId: " + objectArchiveBinding.getObjectId());
+                continue;
+            }
+
+            if (d.getType() != Drive.DriveType.FLOPPY && d.getType() != Drive.DriveType.CDROM)
+            {
+                LOG.warning("unsupported drive type: " + d.getType().value() + " for objectId " + objectArchiveBinding.getObjectId());
+                continue;
+            }
+
+            MachineComponentResponse.RemovableMedia rm = new MachineComponentResponse.RemovableMedia();
+            rm.setArchive(objectArchiveBinding.getArchive());
+            rm.setDriveIndex(driveIndex + "");
+            rm.setId(objectArchiveBinding.getObjectId());
+            result.add(rm);
+        }
+        return result;
+    }
+
     /* ==================== Internal Helpers ==================== */
 
     private Snapshot createSnapshot(String componentId, boolean checkpoint)
@@ -1285,7 +1371,7 @@ public class Components {
 
             LOG.info("Saving checkpointed environment in image-archive...");
 
-            final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
+                final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
             binding.setId("checkpoint");
             binding.setLocalAlias("checkpoint.tar.gz");
             binding.setAccess(Binding.AccessType.COPY);

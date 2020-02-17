@@ -526,9 +526,9 @@ public class EmilEnvironmentRepository {
 		Collection<String> archives = environmentsAdapter.listBackendNames();
 		for(String a : archives) {
 			List<Environment> envs;
-			if(a.equals("default"))
-				continue;
-			else
+			//if(a.equals("default"))
+			//	continue;
+			//else
 				envs = environmentsAdapter.getEnvironments(a);
 
 			for (Environment env : envs) {
@@ -749,6 +749,7 @@ public class EmilEnvironmentRepository {
 		return ee.getEnvId();
 	}
 
+	@Deprecated
 	String saveImport(Snapshot snapshot, SaveImportRequest request) throws BWFLAException {
 		Environment environment = environmentsAdapter.getEnvironmentById(request.getArchive(), request.getEnvId());
 		EnvironmentDescription description = new EnvironmentDescription();
