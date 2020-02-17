@@ -381,6 +381,15 @@ public class EnvironmentRepository extends EmilRest
 				if (uiopts.getHtml5() == null)
 					uiopts.setHtml5(new Html5Options());
 
+				// TODO: refactor
+				if(envReq.getRomId() != null && envReq.getRomLabel() != null)
+				{
+					ImageArchiveBinding romBinding = new ImageArchiveBinding("default", null, envReq.getRomId(), ImageType.ROMS.value());
+					romBinding.setId("rom-" + envReq.getRomLabel());
+					env.getAbstractDataResource().add(romBinding);
+					env.getNativeConfig().setValue("rom rom://" + envReq.getRomLabel());
+				}
+
 				String id = envdb.importMetadata("default", env, iaMd, false);
 
 				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
@@ -966,7 +975,6 @@ public class EnvironmentRepository extends EmilRest
 				if (filename == null || filename.contains("/"))
 					return new TaskStateResponse(new BWFLAException("filename must not be null/empty or contain '/' characters: " + filename));
 				File image = new File("/eaas/import/", filename);
-				LOG.info("path: " + image);
 				if (!image.exists())
 					return new TaskStateResponse(new BWFLAException("image : " + filename + " not found."));
 
@@ -980,6 +988,11 @@ public class EnvironmentRepository extends EmilRest
 			request.destArchive = "default";
 			request.environmentHelper = envdb;
 			request.label = imageReq.getLabel();
+
+			if(imageReq.getImageType() != null && imageReq.getImageType().equalsIgnoreCase(ImageType.ROMS.value()))
+				request.type = ImageType.ROMS;
+			else
+				request.type = ImageType.USER;
 
 			try {
 				request.validate();

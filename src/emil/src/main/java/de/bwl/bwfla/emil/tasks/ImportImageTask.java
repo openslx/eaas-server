@@ -24,6 +24,7 @@ public class ImportImageTask extends AbstractTask<Object> {
     {
         public String label;
         public URL url;
+        public ImageType type;
 
         public DatabaseEnvironmentsAdapter environmentHelper;
 
@@ -36,6 +37,9 @@ public class ImportImageTask extends AbstractTask<Object> {
 
             if(environmentHelper == null )
                 throw new BWFLAException("ImportImageTaskRequest: missing dependencies");
+
+            if(!type.equals(ImageType.USER) && !type.equals(ImageType.ROMS))
+                throw new BWFLAException("Only ImageType ROMS / USER are supported: " + type);
         }
     }
 
@@ -43,7 +47,7 @@ public class ImportImageTask extends AbstractTask<Object> {
     protected Object execute() throws Exception {
         try {
             ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-            iaMd.setType(ImageType.USER);
+            iaMd.setType(request.type);
 
             TaskState importState = request.environmentHelper.importImage(request.url, iaMd, true);
             while(!importState.isDone())
@@ -63,6 +67,7 @@ public class ImportImageTask extends AbstractTask<Object> {
             entry.setName(imageId);
             entry.setLabel(request.label);
             ImageDescription description = new ImageDescription();
+            description.setType(request.type.value());
             description.setId(imageId);
             entry.setImage(description);
 
@@ -75,57 +80,3 @@ public class ImportImageTask extends AbstractTask<Object> {
         }
     }
 }
-
-// old import code.. to be refactored
-
-/*
-
-    @Override
-    protected Object execute() throws Exception {
-        try {
-            MachineConfigurationTemplate pEnv = request.environmentHelper.getTemplate(request.templateId);
-            if (pEnv == null)
-                return new BWFLAException("invalid template id: " + request.templateId);
-            MachineConfiguration env = pEnv.implement();
-
-            ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-            iaMd.setType(ImageType.TMP);
-
-            EnvironmentsAdapter.ImportImageHandle importState = null;
-            importState = request.environmentHelper.importImage(request.destArchive, request.url, iaMd, true);
-
-            ImageArchiveBinding binding = importState.getBinding(60 * 60 * 60); // wait an hour
-            if (binding == null)
-                return new BWFLAException("ImportImageTask: import image failed. Could not create binding");
-            if (request.patchId != null) {
-                binding = request.environmentHelper.generalizedImport(request.destArchive, binding.getImageId(),
-                        iaMd.getType(), request.patchId);
-            }
-            binding.setId("main_hdd");
-            env.getAbstractDataResource().add(binding);
-
-            env.getDescription().setTitle(request.label);
-            if (env.getNativeConfig() == null)
-                env.setNativeConfig(new MachineConfiguration.NativeConfig());
-            env.getNativeConfig().setValue(request.nativeConfig);
-
-            if (request.romFile != null) {
-                iaMd.setType(ImageType.ROMS);
-                DataHandler handler = new DataHandler(new FileDataSource(request.romFile));
-
-                importState = request.environmentHelper.importImage(request.destArchive, handler, iaMd);
-                ImageArchiveBinding romBinding = importState.getBinding(60 * 60 * 60); // wait an hour
-                romBinding.setId("rom-" + request.romFile.getName());
-                env.getAbstractDataResource().add(romBinding);
-
-            }
-            String newEnvironmentId = request.environmentHelper.importMetadata(request.destArchive, env, iaMd, false);
-            Map<String, String> userData = new HashMap<>();
-            userData.put("environmentId", newEnvironmentId);
-            request.imageProposer.refreshIndex();
-            return userData;
-        } catch (Exception e) {
-            log.log(Level.SEVERE, e.getMessage(), e);
-            return e;
-        }
-    }*/

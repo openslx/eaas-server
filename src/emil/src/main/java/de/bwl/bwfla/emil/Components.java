@@ -1317,6 +1317,7 @@ public class Components {
         }
     }
 
+
     private List<MachineComponentResponse.RemovableMedia> getRemovableMedialist(MachineConfiguration env)
     {
         List<MachineComponentResponse.RemovableMedia> result = new ArrayList<>();

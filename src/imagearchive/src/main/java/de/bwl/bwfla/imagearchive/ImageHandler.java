@@ -1141,6 +1141,7 @@ public class ImageHandler
 		private String importId;
 		private ImportType type;
 		private InputStream inputStream;
+		private ImageType imageType = ImageType.user;
 
 		private final ImageHandler imageHandler;
 		private final Logger log;
@@ -1173,6 +1174,11 @@ public class ImageHandler
 			this.target = target;
 			this.importId = importId;
 			destImgFile = new File(target, importId);
+		}
+
+		public void setImageType(ImageType type)
+		{
+			this.imageType = type;
 		}
 
 		private ImageLoaderResult fromStream()
@@ -1231,11 +1237,14 @@ public class ImageHandler
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");
 				}
+				if(imageType.equals(ImageType.user))
+					return new ImageLoaderResult(importId);
+
 				switch (fmt) {
 					case VMDK:
 					case VHD:
 					case VHDX:
-						File convertedImgFile = new File(target, "convertTmp");
+						File convertedImgFile = new File(target, UUID.randomUUID().toString());
 						destImgFile.renameTo(convertedImgFile);
 						File outFile = new File(target, importId);
 						EmulatorUtils.convertImage(convertedImgFile.toPath(), outFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
