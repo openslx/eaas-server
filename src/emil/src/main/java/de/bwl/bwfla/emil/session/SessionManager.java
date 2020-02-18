@@ -23,6 +23,7 @@ import de.bwl.bwfla.api.eaas.ComponentGroupElement;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.Components;
+import de.bwl.bwfla.emil.datatypes.NetworkRequest;
 import de.bwl.bwfla.emil.session.rest.DetachRequest;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
@@ -69,9 +70,9 @@ public class SessionManager
 		this.sessions = new ConcurrentHashMap<String, Session>();
 	}
 
-	public NetworkSession createNetworkSession(String switchId) throws BWFLAException {
+	public NetworkSession createNetworkSession(String switchId, NetworkRequest request) throws BWFLAException {
 		final String id = UUID.randomUUID().toString();
-		NetworkSession session = new NetworkSession(id, groupClient.getComponentGroupPort(eaasGw).createGroup(), switchId);
+		NetworkSession session = new NetworkSession(id, groupClient.getComponentGroupPort(eaasGw).createGroup(), switchId, request);
 		addComponent(session, switchId);
 		register(session);
 		return session;
