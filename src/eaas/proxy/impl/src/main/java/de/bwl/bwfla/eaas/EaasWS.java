@@ -134,7 +134,7 @@ public class EaasWS
 	public String createSession(final String xmlConfig)
 			throws OutOfResourcesException, QuotaExceededException, BWFLAException
 	{
-		return this.createSessionWithOptions(xmlConfig, null);
+		return this.createSessionWithOptions(xmlConfig, new SessionOptions());
 	}
 
 	@WebMethod
@@ -173,13 +173,15 @@ public class EaasWS
             
             final List<LabelSelector> labelSelectors = this.parseLabelSelectors(selectors);
 
-            ResourceSpec spec = null;
-            if (config instanceof Environment) {
-				// TODO: use per environment spec!
-				spec = defaultSessionSpec;
+            ResourceSpec spec = options.getResourceSpec();
+            if (spec == null) {
+				// Resources not specified, use defaults...
+				if (config instanceof Environment) {
+					spec = defaultSessionSpec;
+				}
+				else
+					spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
 			}
-            else
-            	spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
 
 	        final ResourceHandle resource = clusterManager.allocate(tenantId, labelSelectors, allocationId, spec, Duration.ofMinutes(2));
 			try {
@@ -259,11 +261,15 @@ public class EaasWS
 		return list;
 	}
 
+
 	public static class SessionOptions {
 		List<String> selectors;
 		String userId;
 		boolean lockEnvironment = false;
 		private String tenantId = null;
+
+		// Requested session resources
+		private ResourceSpec spec = null;
 
 		public boolean isLockEnvironment() {
 			return lockEnvironment;
@@ -295,6 +301,14 @@ public class EaasWS
 
 		public String getTenantId() {
 			return tenantId;
+		}
+
+		public void setResourceSpec(ResourceSpec spec) {
+			this.spec = spec;
+		}
+
+		public ResourceSpec getResourceSpec() {
+			return spec;
 		}
 	}
 }
