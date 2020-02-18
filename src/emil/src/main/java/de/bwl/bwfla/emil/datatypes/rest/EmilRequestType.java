@@ -15,7 +15,7 @@ public class EmilRequestType extends JaxbType {
     private boolean connectEnvs;
 
     @XmlElement(required = false)
-    private EmilNetworkingType networking;
+    private NetworkingType networking;
 
     public boolean canConnectEnvs() {
         return connectEnvs;
@@ -33,11 +33,11 @@ public class EmilRequestType extends JaxbType {
         return connectEnvs;
     }
 
-    public EmilNetworkingType getNetworking() {
+    public NetworkingType getNetworking() {
         return networking;
     }
 
-    public void setNetworking(EmilNetworkingType networking) {
+    public void setNetworking(NetworkingType networking) {
         this.networking = networking;
     }
 }

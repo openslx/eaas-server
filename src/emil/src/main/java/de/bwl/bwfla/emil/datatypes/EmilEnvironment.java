@@ -6,7 +6,7 @@ import javax.xml.bind.annotation.*;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.emil.datatypes.rest.EmilNetworkingType;
+import de.bwl.bwfla.emil.datatypes.rest.NetworkingType;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
 
@@ -79,7 +79,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private String xpraEncoding;
 
 	@XmlElement(required = false)
-	private EmilNetworkingType networking;
+	private NetworkingType networking;
 
 	@XmlElement
 	private String helpText;
@@ -307,11 +307,11 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		this.xpraEncoding = xpraEncoding;
 	}
 
-	public EmilNetworkingType getNetworking() {
+	public NetworkingType getNetworking() {
 		return networking;
 	}
 
-	public void setNetworking(EmilNetworkingType networking) {
+	public void setNetworking(NetworkingType networking) {
 		this.networking = networking;
 	}
 

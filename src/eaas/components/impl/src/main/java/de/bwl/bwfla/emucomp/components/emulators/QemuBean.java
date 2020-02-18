@@ -118,7 +118,11 @@ public class QemuBean extends EmulatorBean
 				}
 
 				if(token.contains("nic,model="))
-					token += ",macaddr=" + NetworkUtils.getRandomHWAddress();
+					token += ",macaddr=" + emuEnvironment.getNic().get(0).getHwaddress();
+
+				if(emuEnvironment.getNic().size() > 1){
+					throw new BWFLAException("We do not support multiple hwAddresses ... yet");
+				}
 
 				emuRunner.addArgument(token.trim());
 			}

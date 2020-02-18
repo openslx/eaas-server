@@ -57,6 +57,7 @@ import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.SessionOptions;
@@ -69,6 +70,7 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -344,7 +346,7 @@ public class Components {
         } catch (BWFLAException e) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation("Invalid component request"))
+                    .entity(new ErrorInformation(e.getMessage()))
                     .build());
         }
 
@@ -361,9 +363,9 @@ public class Components {
                 slirpConfig.setHwAddress(desc.getHwAddress());
             }
             if (desc.getIp4Address() != null && !desc.getIp4Address().isEmpty()) {
-                slirpConfig.setIp4Address(desc.getIp4Address());
+                slirpConfig.setNetwork(desc.getIp4Address());
             }
-            if (desc.getNetmask() != null && desc.getNetmask() != 0) {
+            if (desc.getNetmask() != null) {
                 slirpConfig.setNetmask(desc.getNetmask());
             }
             if (desc.getDnsServer() != null && !desc.getDnsServer().isEmpty()) {
@@ -701,6 +703,20 @@ public class Components {
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
             }
+            String hwAddress;
+            if (machineDescription.getNic() == null) {
+                LOG.warning("HWAddress is null! Using random..." );
+                hwAddress = NetworkUtils.getRandomHWAddress();
+            } else {
+                hwAddress = machineDescription.getNic();
+            }
+//          set MacAddress from the request
+
+            List<Nic> nics = ((MachineConfiguration) chosenEnv).getNic();
+            Nic nic = new Nic();
+            nic.setHwaddress(hwAddress);
+            nics.clear();
+            nics.add(nic);
 
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {

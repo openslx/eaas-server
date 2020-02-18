@@ -19,11 +19,17 @@
 
 package de.bwl.bwfla.emil.session;
 
+import de.bwl.bwfla.api.eaas.ComponentGroupElement;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.security.Role;
 import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.session.rest.DetachRequest;
+import de.bwl.bwfla.emil.session.rest.RunningNetworkEnvironmentResponse;
+import de.bwl.bwfla.emil.session.rest.SessionComponent;
+import de.bwl.bwfla.emil.session.rest.SessionResponse;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
@@ -37,6 +43,9 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import javax.xml.bind.JAXBException;
+import java.io.IOException;
+import java.net.URI;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -157,12 +166,72 @@ public class Sessions
 
 	@GET
 	@Produces(MediaType.APPLICATION_JSON)
-	public Collection<Session> list()
-	{
+	public Collection<Session> list() {
 		return sessions.list();
 	}
 
+	@GET
+	@Path("/network-environments")
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<RunningNetworkEnvironmentResponse> getSessionsWithNetworkEnvID() {
+		ArrayList<RunningNetworkEnvironmentResponse> builder = new ArrayList<>();
+		for (Session session : sessions.list()) {
+			if (session instanceof NetworkSession) {
+				final SessionResponse result = new SessionResponse(((NetworkSession) session).getNetworkRequest());
+				builder.add(new RunningNetworkEnvironmentResponse(session, result.getNetwork().getNetworkEnvironmentId()));
+			}
+		}
+		return builder;
+	}
+
 	/* ========================= Internal Helpers ========================= */
+
+	@GET
+	@Secured({Role.PUBLIC})
+	@Path("/{id}")
+	public SessionResponse listComponents(@PathParam("id") String id) {
+		try {
+			Session session = sessions.get(id);
+			if(session == null || !(session instanceof NetworkSession))
+				throw new BWFLAException("session not found " + id);
+
+			SessionResponse result = new SessionResponse(((NetworkSession) session).getNetworkRequest());
+
+
+			List<ComponentGroupElement> components = sessions.getComponents(session);
+			for (ComponentGroupElement componentElement : components) {
+
+				String type = componentClient.getComponentPort(eaasGw).getComponentType(componentElement.getComponentId());
+				if(type.equals("nodetcp")) {
+					NetworkResponse networkResponse = new NetworkResponse(session.id());
+
+					Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
+
+					URI uri = controlUrls.get("info");
+					if(uri == null)
+						continue;
+					String nodeInfoUrl = uri.toString();
+					networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
+					SessionComponent sc = new SessionComponent(componentElement.getComponentId(), type, null);
+					sc.addNetworkData(networkResponse);
+
+				} else if (type.equals("machine")){
+                    String environmentId = componentClient.getComponentPort(eaasGw).getEnvironmentId(componentElement.getComponentId());
+                    result.add(new SessionComponent(componentElement.getComponentId(), type, environmentId));
+				} else
+					result.add(new SessionComponent(componentElement.getComponentId(), type, null));
+
+			}
+			return result;
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+			throw new ServerErrorException(Response
+					.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.entity(new ErrorInformation(
+							"Could not acquire group information.", e.getMessage()))
+					.build());
+		}
+	}
 
 	@PostConstruct
 	private void initialize()

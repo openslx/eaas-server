@@ -7,7 +7,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class EmilContainerNetworkingType extends EmilNetworkingType {
+public class ContainerNetworkingType extends NetworkingType {
     @XmlElement
     private boolean isDHCPenabled;
 

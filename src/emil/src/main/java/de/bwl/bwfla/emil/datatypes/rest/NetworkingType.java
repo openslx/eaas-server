@@ -7,7 +7,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class EmilNetworkingType {
+public class NetworkingType {
 
     @XmlElement(required = false)
     private boolean enableInternet;

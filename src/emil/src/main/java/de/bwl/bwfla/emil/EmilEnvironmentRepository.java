@@ -75,6 +75,7 @@ public class EmilEnvironmentRepository {
 	private EmilDataImport importHelper;
 
 	private String emilDbCollectionName = "eaasEnv";
+	private String emilDbNetworkEnvCollectionName = "emilNetworkEnvironments";
 
 	@Inject
 	private EmilObjectData objects;
@@ -311,6 +312,14 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
+	public NetworkEnvironment getEmilNetworkEnvironmentById(String envid) throws BWFLAException {
+		return db.getObjectWithClassFromDatabaseKey(emilDbNetworkEnvCollectionName, "type", envid, "envId");
+	}
+
+	public void deleteEmilNetworkEnvironment(NetworkEnvironment env) {
+		db.deleteDoc(emilDbNetworkEnvCollectionName, env.getEnvId(), env.getIdDBkey());
+	}
+
 	public EmilEnvironment getEmilEnvironmentById(String envid)
 	{
 		return getEmilEnvironmentById(envid, getUserCtx());
@@ -455,6 +464,10 @@ public class EmilEnvironmentRepository {
 				db.saveDoc(getCollectionCtx(), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 		}
 		// LOG.severe(env.toString());
+	}
+
+	public void saveNetworkEnvironemnt(NetworkEnvironment env) throws BWFLAException {
+		db.saveDoc(emilDbNetworkEnvCollectionName , env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 	}
 
 	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
@@ -658,6 +671,11 @@ public class EmilEnvironmentRepository {
 		}).filter(this::isEnvironmentVisible)
 				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
 				.collect(Collectors.toList());
+	}
+
+	public List<NetworkEnvironment> getNetworkEnvironments() {
+		Stream<NetworkEnvironment> emilNetworkEnvironments = db.find(emilDbNetworkEnvCollectionName, new MongodbEaasConnector.FilterBuilder(), "type");
+		return emilNetworkEnvironments.collect(Collectors.toList());
 	}
 
 	public List<EmilEnvironment> getEmilEnvironments() {
