@@ -59,6 +59,8 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
+import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
+import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
 import de.bwl.bwfla.api.eaas.SessionOptions;
 import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
@@ -277,16 +279,21 @@ public class Components {
         sessionStatsWriter.append(session);
     }
 
-    ComponentResponse createComponent(ComponentRequest request) throws BWFLAException
+    private ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
 
         final TaskStack cleanups = new TaskStack();
         final List<EventObserver> observer = new ArrayList<>();
 
-        if(request.getClass().equals(UviComponentRequest.class)) {
-            MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest)request);
-            result = createMachineComponent(machineComponentRequest, cleanups, observer);
+        if (request.getClass().equals(UviComponentRequest.class)) {
+            try {
+                MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest) request);
+                result = this.createMachineComponent(machineComponentRequest, cleanups, observer);
+            }
+            catch (BWFLAException error) {
+                throw Components.newInternalError(error);
+            }
         }
         else if (request.getClass().equals(MachineComponentRequest.class)) {
             result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
@@ -297,7 +304,7 @@ public class Components {
         } else if (request.getClass().equals(SocksComponentRequest.class)) {
             result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
         }  else {
-            throw new BWFLAException("Invalid component request");
+            throw new BadRequestException("Invalid component request");
         }
 
         final String cid = result.getId();
@@ -326,6 +333,7 @@ public class Components {
      * @HTTP 400 if the request does not contain an environment id
      * @HTTP 400 if the given environment id is invalid or cannot be associated
      *       with an existing environment
+     * @HTTP 429 if backend resources are exhausted or quota limits are reached
      * @HTTP 500 if the backend was not able to instantiate a new component
      * @HTTP 500 if any other internal server error occured
      * 
@@ -335,25 +343,17 @@ public class Components {
     @Secured({Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public ComponentResponse createComponent(ComponentRequest request,
-                                             @Context final HttpServletResponse response) {
-
-        ComponentResponse result = null;
-        try {
-            result = createComponent(request);
-        } catch (BWFLAException e) {
-            throw new BadRequestException(Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation("Invalid component request"))
-                    .build());
-        }
-
+    public ComponentResponse createComponent(ComponentRequest request, @Context final HttpServletResponse response)
+    {
+        final ComponentResponse result = this.createComponent(request);
         response.setStatus(Response.Status.CREATED.getStatusCode());
         response.addHeader("Location", result.getId());
         return result;
     }
 
-    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         try {
             VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
             
@@ -374,16 +374,19 @@ public class Components {
             String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
             cleanups.push("release-session/" + slirpId, () -> eaas.releaseSession(slirpId));
             return new ComponentResponse(slirpId);
-        } catch (Throwable e) {
+        }
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
-            throw new InternalServerErrorException(
-                    "Server has encountered an internal error: "
-                            + e.getMessage(),
-                    e);
+
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
-    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         try {
             VdeSocksConfiguration socksConfig = new VdeSocksConfiguration();
             
@@ -399,16 +402,19 @@ public class Components {
             String socksId = eaasClient.getEaasWSPort(eaasGw).createSession(socksConfig.value(false));
             cleanups.push("release-session/" + socksId, () -> eaas.releaseSession(socksId));
             return new ComponentResponse(socksId);
-        } catch (Throwable e) {
+        }
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
-            throw new InternalServerErrorException(
-                    "Server has encountered an internal error: "
-                            + e.getMessage(),
-                    e);
+
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
-    protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         if (desc.getEnvironment() == null) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -510,14 +516,12 @@ public class Components {
             container.startContainer(sessionId);
             return new ComponentResponse(sessionId);
         }
-        catch (BWFLAException | JAXBException | IOException error) {
-
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
 
-            throw new InternalServerErrorException(
-                    Response.serverError()
-                            .entity(new ErrorInformation("Server has encountered an internal error: " + error.getMessage()))
-                            .build(), error);
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
@@ -594,7 +598,9 @@ public class Components {
         return binding;
     }
 
-    protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         if (machineDescription.getEnvironment() == null) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -722,14 +728,12 @@ public class Components {
 
             return new MachineComponentResponse(sessionId, driveId);
         }
-        catch (BWFLAException | JAXBException | MalformedURLException e) {
-
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
-            e.printStackTrace();
-            throw new InternalServerErrorException(
-            		Response.serverError()
-                    .entity(new ErrorInformation("Server has encountered an internal error: " + e.getMessage()))
-                    .build(),e);
+
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
@@ -1262,6 +1266,27 @@ public class Components {
 
 
     /* ==================== Internal Helpers ==================== */
+
+    static WebApplicationException newInternalError(Exception error)
+    {
+        Response.Status status = null;
+        String message = null;
+
+        if (error instanceof OutOfResourcesException_Exception || error instanceof QuotaExceededException_Exception) {
+            status = Response.Status.TOO_MANY_REQUESTS;
+            message = "RESOURCES-EXHAUSTED-ERROR: " + error.getMessage();
+        }
+        else {
+            status = Response.Status.INTERNAL_SERVER_ERROR;
+            message = "INTERNAL-SERVER-ERROR: " + error.getMessage();
+        }
+
+        final Response response = Response.status(status)
+                .entity(new ErrorInformation(message))
+                .build();
+
+        return new WebApplicationException(error, response);
+    }
 
     private Snapshot createSnapshot(String componentId, boolean checkpoint)
             throws BWFLAException, InterruptedException, JAXBException
