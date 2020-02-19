@@ -301,27 +301,6 @@ public class EmulationEnvironmentHelper {
 		return null;
 	}
 
-	public static void setMainHdd(MachineConfiguration env, ImageArchiveBinding b)
-	{
-		ImageArchiveBinding mainHdd = null;
-		for (AbstractDataResource r : env.getAbstractDataResource()) {
-			if (r.getId().equals("main_hdd")) {
-
-				if(r instanceof ImageArchiveBinding) {
-					mainHdd = (ImageArchiveBinding)r;
-					mainHdd.copy(b);
-				}
-				//	else
-				//		emuEnv.getAbstractDataResource().remove(r);
-			}
-		}
-		if(mainHdd == null) // env did not contain a binding
-		{
-			b.setId("main_hdd");
-			env.getAbstractDataResource().add(b);
-		}
-	}
-
 	/** Replaces current binding in machine-config with specified binding */
 	public static void replace(MachineConfiguration env, ImageArchiveBinding replacement)
 			throws BWFLAException
@@ -337,7 +316,7 @@ public class EmulationEnvironmentHelper {
 			}
 
 			current = (ImageArchiveBinding) entry;
-			int driveId = getDriveId(env, current.imageId);
+			int driveId = getDriveId(env, replacement.getId());
 			Drive d = getDrive(env, driveId);
 			if(d != null){
 				d.setData("binding://" + replacement.getImageId());
@@ -346,6 +325,7 @@ public class EmulationEnvironmentHelper {
 			{
 				log.severe("XXX: replace(): drive not found");
 			}
+			replacement.setId(replacement.getImageId());
 			current.update(replacement);
 
 
@@ -354,6 +334,7 @@ public class EmulationEnvironmentHelper {
 
 		if (current == null) {
 			// env did not contain a binding
+			replacement.setId(replacement.getImageId());
 			env.getAbstractDataResource()
 					.add(replacement);
 		}
