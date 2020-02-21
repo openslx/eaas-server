@@ -373,25 +373,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.importMetadata(backend, env.toString(), iaMd, false);
 	}
 
-	@Deprecated
-	public String createEnvironment(MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
-		return this.createEnvironment(this.getDefaultBackendName(), emuEnv, size, iaMd);
-	}
-
-	@Deprecated
-	public String createEnvironment(String backend, MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
-		connectArchive();
-
-		String id = archive.createImage(backend, size, iaMd.getType().value());
-		if (id == null)
-			throw new BWFLAException("image creation failed");
-		ImageArchiveBinding b = new ImageArchiveBinding(backend, this.getExportPrefix(), id, iaMd.getType().value());
-		b.setId("main_hdd");
-		emuEnv.getAbstractDataResource().add(b);
-
-		return this.importMetadata(backend, emuEnv.toString(), iaMd, false);
-	}
-
 	public void updateMetadata(Environment conf) throws BWFLAException {
 		this.updateMetadata(this.getDefaultBackendName(), conf);
 	}

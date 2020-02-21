@@ -325,6 +325,7 @@ public class EmulationEnvironmentHelper {
 			{
 				log.severe("XXX: replace(): drive not found");
 			}
+
 			replacement.setId(replacement.getImageId());
 			current.update(replacement);
 

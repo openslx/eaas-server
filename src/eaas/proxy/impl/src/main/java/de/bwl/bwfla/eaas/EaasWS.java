@@ -49,7 +49,10 @@ import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec.CpuUnit;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec.MemoryUnit;
 import de.bwl.bwfla.eaas.cluster.config.util.ConfigHelpers;
+import de.bwl.bwfla.eaas.cluster.exception.AllocationFailureException;
 import de.bwl.bwfla.eaas.cluster.exception.MalformedLabelSelectorException;
+import de.bwl.bwfla.eaas.cluster.exception.OutOfResourcesException;
+import de.bwl.bwfla.eaas.cluster.exception.QuotaExceededException;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelectorParser;
 import de.bwl.bwfla.eaas.proxy.DirectComponentClient;
@@ -128,13 +131,15 @@ public class EaasWS
 	}
 
 	@WebMethod
-	public String createSession(final String xmlConfig) throws BWFLAException
+	public String createSession(final String xmlConfig)
+			throws OutOfResourcesException, QuotaExceededException, BWFLAException
 	{
-		return this.createSessionWithOptions(xmlConfig, null);
+		return this.createSessionWithOptions(xmlConfig, new SessionOptions());
 	}
 
 	@WebMethod
-	public String createSessionWithOptions(final String xmlConfig, SessionOptions options) throws BWFLAException
+	public String createSessionWithOptions(final String xmlConfig, SessionOptions options)
+			throws OutOfResourcesException, QuotaExceededException, BWFLAException
 	{
 	    final ComponentConfiguration config;
 
@@ -168,13 +173,15 @@ public class EaasWS
             
             final List<LabelSelector> labelSelectors = this.parseLabelSelectors(selectors);
 
-            ResourceSpec spec = null;
-            if (config instanceof Environment) {
-				// TODO: use per environment spec!
-				spec = defaultSessionSpec;
+            ResourceSpec spec = options.getResourceSpec();
+            if (spec == null) {
+				// Resources not specified, use defaults...
+				if (config instanceof Environment) {
+					spec = defaultSessionSpec;
+				}
+				else
+					spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
 			}
-            else
-            	spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
 
 	        final ResourceHandle resource = clusterManager.allocate(tenantId, labelSelectors, allocationId, spec, Duration.ofMinutes(2));
 			try {
@@ -195,6 +202,21 @@ public class EaasWS
             for (IAccessControlList acl : sortedAcls) {
                 acl.release(allocationId, null);
             }
+
+            // Rethrow the error, using its original type...
+
+			if (error instanceof QuotaExceededException)
+				throw (QuotaExceededException) error;
+
+			if (error instanceof OutOfResourcesException)
+				throw (OutOfResourcesException) error;
+
+			// Threat allocation errors as out-of-resources errors
+			if (error instanceof AllocationFailureException)
+				throw new OutOfResourcesException(error.getMessage(), error);
+
+            if (error instanceof BWFLAException)
+				throw (BWFLAException) error;
 
             throw new BWFLAException("Creating new session failed!", error);
         }
@@ -239,13 +261,15 @@ public class EaasWS
 		return list;
 	}
 
+
 	public static class SessionOptions {
 		List<String> selectors;
 		String userId;
 		boolean lockEnvironment = false;
 		private String tenantId = null;
 
-		private ResourceSpec resourceSpec;
+		// Requested session resources
+		private ResourceSpec spec = null;
 
 		public boolean isLockEnvironment() {
 			return lockEnvironment;
@@ -285,6 +309,14 @@ public class EaasWS
 
 		public String getTenantId() {
 			return tenantId;
+		}
+
+		public void setResourceSpec(ResourceSpec spec) {
+			this.spec = spec;
+		}
+
+		public ResourceSpec getResourceSpec() {
+			return spec;
 		}
 	}
 }

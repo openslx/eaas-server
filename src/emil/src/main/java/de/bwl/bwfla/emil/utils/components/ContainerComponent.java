@@ -112,7 +112,9 @@ public class ContainerComponent {
         metadata.setTelnet(true);
         metadata.setProcess("/bin/sh");
         args.add("-c");
-        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
+        args.add("mkdir " + outputDir
+                + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job | tee "
+                + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
         args.add("");
 
         args.add("--output");

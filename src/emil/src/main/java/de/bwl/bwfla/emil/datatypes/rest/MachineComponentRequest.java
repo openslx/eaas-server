@@ -19,11 +19,14 @@
 
 package de.bwl.bwfla.emil.datatypes.rest;
 
+import de.bwl.bwfla.emucomp.api.Nic;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.List;
 
 
 @XmlType(name = "machine")
@@ -56,6 +59,9 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     @XmlElement(required = false, defaultValue = "latest")
     private String emulatorVersion = "latest";
+
+    @XmlElement(required = false)
+    private String nic;
 
     @XmlElement(required = false)
     private LinuxRuntimeContainerReq linuxRuntimeData;
@@ -138,5 +144,13 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     public void setLinuxRuntimeData(LinuxRuntimeContainerReq linuxRuntimeData) {
         this.linuxRuntimeData = linuxRuntimeData;
+    }
+
+    public String getNic() {
+        return nic;
+    }
+
+    public void setNic(String nic) {
+        this.nic = nic;
     }
 }

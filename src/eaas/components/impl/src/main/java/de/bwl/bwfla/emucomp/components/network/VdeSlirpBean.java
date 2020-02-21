@@ -23,9 +23,9 @@ import java.util.ArrayList;
 
 import javax.enterprise.inject.spi.CDI;
 import javax.inject.Inject;
-import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
+import org.apache.commons.net.util.SubnetUtils;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -69,23 +69,43 @@ public class VdeSlirpBean extends EaasComponentBean {
 
             runner.addArguments("/libexec/vde/slirp-helper", "--fd", "3");
 
-            runner.addArguments("--net", "10.0.1.0");
-            runner.addArguments("--mask", "255.255.255.0");
-            runner.addArguments("--host", config.getIp4Address());
-            runner.addArguments("--dhcp-start", "10.0.1.100");
-            runner.addArguments("--dns", "8.8.8.8");
+            if (config.getNetwork() != null && !config.getNetwork().isEmpty()) {
+                String network;
+                String mask;
+                if(config.getNetwork().contains("/")) {
+                    try {
+                        SubnetUtils net = new SubnetUtils(config.getNetwork());
+                        network = net.getInfo().getAddress();
+                        mask = net.getInfo().getNetmask();
+                    } catch (IllegalArgumentException e) {
+                        throw new BWFLAException("failed to extract network info from " + config.getNetwork());
+                    }
+                } else {
+                     network = config.getNetwork();
+                     mask = config.getNetmask();
+                }
+                LOG.severe("using " +  network + " " + mask);
 
-//            if (config.isDhcpEnabled()) {
-//                runner.addArgument("--dhcp");
-//            }
-//            if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
-//                runner.addArguments("--dns", config.getDnsServer());
-//            }
-            
+                runner.addArguments("--net", network);
+                runner.addArguments("--mask",  mask);
+            }
+
+            if (config.getGateway() != null)
+                runner.addArguments("--host", config.getGateway());
+
+            if (!config.isDhcpEnabled()) {
+//              0.0.0.0 means disable dhcp
+                runner.addArguments("--dhcp-start", "0.0.0.0");
+            }
+
+            if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
+                runner.addArguments("--dns", config.getDnsServer());
+            }
 
 
 
-            
+
+
 
             
             if (!runner.start())

@@ -21,11 +21,7 @@ package de.bwl.bwfla.emil.datatypes;
 
 import java.util.List;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
@@ -41,14 +37,40 @@ public class NetworkRequest extends JaxbType {
         this.dhcp = dhcp;
     }
 
+    public String getDhcpNetworkAddress() {
+        return dhcpNetworkAddress;
+    }
+
+    public void setDhcpNetworkAddress(String dhcpNetworkAddress) {
+        this.dhcpNetworkAddress = dhcpNetworkAddress;
+    }
+
+    public String getDhcpNetworkMask() {
+        return dhcpNetworkMask;
+    }
+
+    public void setDhcpNetworkMask(String dhcpNetworkMask) {
+        this.dhcpNetworkMask = dhcpNetworkMask;
+    }
+
     @XmlType
     @XmlAccessorType(XmlAccessType.NONE)
     public static class ComponentSpec {
         @XmlElement(required = true)
         private String componentId;
-        
+
+        @XmlElement(required = false)
+        private String networkLabel;
+
+        @XmlElement(required = false)
+        private List<Short> serverPorts;
+
+        @XmlElement(required = false)
+        private String serverIp;
+
         @XmlElement(required = false, defaultValue = "auto")
         private String hwAddress = "auto";
+
 
         public String getComponentId() {
             return componentId;
@@ -56,6 +78,31 @@ public class NetworkRequest extends JaxbType {
 
         public void setComponentId(String componentId) {
             this.componentId = componentId;
+        }
+
+        public String getNetworkLabel() {
+            return networkLabel;
+        }
+
+
+        public void setNetworkLabel(String networkLabel) {
+            this.networkLabel = networkLabel;
+        }
+
+        public List<Short> getServerPorts() {
+            return serverPorts;
+        }
+
+        public void setServerPorts(List<Short> serverPorts) {
+            this.serverPorts = serverPorts;
+        }
+
+        public String getServerIp() {
+            return serverIp;
+        }
+
+        public void setServerIp(String serverIp) {
+            this.serverIp = serverIp;
         }
 
         public String getHwAddress() {
@@ -108,14 +155,37 @@ public class NetworkRequest extends JaxbType {
     @XmlElement(required = true)
     private List<ComponentSpec> components;
 
+    @XmlElement
+    private String networkEnvironmentId;
+
     @XmlElement(name = "hasInternet", required = false, defaultValue = "false")
     private boolean internet = false;
 
     @XmlElement(name = "enableDhcp", required = false, defaultValue = "false")
     private boolean dhcp = false;
 
+    @XmlElement
+    private String dhcpNetworkAddress;
+
+    @XmlElement
+    private String dhcpNetworkMask;
+
     @XmlElement(name= "hasTcpGateway", required = false, defaultValue = "false")
     private boolean tcpGateway = false;
+
+    @XmlElement
+    private String gateway;
+
+    @XmlElement
+    private String network;
+
+    public String getNetwork() {
+        return network;
+    }
+
+    public String getGateway() {
+        return gateway;
+    }
 
     @XmlElement
     private TcpGatewayConfig tcpGatewayConfig;
@@ -146,6 +216,10 @@ public class NetworkRequest extends JaxbType {
 
     public TcpGatewayConfig getTcpGatewayConfig() {
         return tcpGatewayConfig;
+    }
+
+    public String getNetworkEnvironmentId() {
+        return networkEnvironmentId;
     }
 
     public void setTcpGatewayConfig(TcpGatewayConfig tcpGatewayConfig) {

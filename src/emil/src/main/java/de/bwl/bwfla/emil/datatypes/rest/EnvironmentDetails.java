@@ -26,7 +26,7 @@ public class EnvironmentDetails {
     private static final Logger LOG = Logger.getLogger(EmilEnvironmentRepository.class.getName());
 
     @XmlElement
-    private EmilNetworkingType networking;
+    private NetworkingType networking;
     @XmlElement
     private String parentEnvId;
 

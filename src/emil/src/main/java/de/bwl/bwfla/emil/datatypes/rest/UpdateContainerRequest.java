@@ -22,14 +22,14 @@ public class UpdateContainerRequest extends EmilRequestType {
     private ArrayList<String> processArgs;
     private ArrayList<String> processEnvs;
     @XmlElement(required = false)
-    private EmilContainerNetworkingType networking;
+    private ContainerNetworkingType networking;
 
     @Override
-    public EmilContainerNetworkingType getNetworking() {
+    public ContainerNetworkingType getNetworking() {
         return networking;
     }
 
-    public void setNetworking(EmilContainerNetworkingType networking) {
+    public void setNetworking(ContainerNetworkingType networking) {
         this.networking = networking;
     }
 

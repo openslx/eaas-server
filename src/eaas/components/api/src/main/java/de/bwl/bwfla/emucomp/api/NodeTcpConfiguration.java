@@ -12,6 +12,12 @@ public class NodeTcpConfiguration extends ComponentConfiguration {
     private boolean dhcp;
 
     @XmlElement
+    private String dhcpNetworkAddress;
+
+    @XmlElement
+    private String dhcpNetworkMask;
+
+    @XmlElement
     private String destIp;
 
     @XmlElement
@@ -83,6 +89,22 @@ public class NodeTcpConfiguration extends ComponentConfiguration {
 
     public void setDhcp(boolean dhcp) {
         this.dhcp = dhcp;
+    }
+
+    public String getDhcpNetworkAddress() {
+        return dhcpNetworkAddress;
+    }
+
+    public void setDhcpNetworkAddress(String dhcpNetworkAddress) {
+        this.dhcpNetworkAddress = dhcpNetworkAddress;
+    }
+
+    public String getDhcpNetworkMask() {
+        return dhcpNetworkMask;
+    }
+
+    public void setDhcpNetworkMask(String dhcpNetworkMask) {
+        this.dhcpNetworkMask = dhcpNetworkMask;
     }
 }
 
