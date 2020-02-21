@@ -72,6 +72,7 @@ import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
+import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
