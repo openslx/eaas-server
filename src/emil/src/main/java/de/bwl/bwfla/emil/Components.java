@@ -75,6 +75,7 @@ import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
+import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
@@ -725,11 +726,6 @@ public class Components {
             nics.clear();
             nics.add(nic);
 
-            ResourceSpec spec = new ResourceSpec();
-            __hack_get_resource_spec((MachineConfiguration)chosenEnv, spec);
-            LOG.severe("mem " + spec.getMemory());
-            LOG.severe("cpu" + spec.getCpu());
-
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -1286,55 +1282,6 @@ public class Components {
         }
 
         session.release();
-    }
-
-
-    private void __hack_get_resource_spec(MachineConfiguration env, ResourceSpec spec)
-    {
-
-        spec.setCpu(500);
-        spec.setMemory(512);
-
-        if(env.getNativeConfig() == null)
-            return;
-
-        String config = env.getNativeConfig().getValue();
-
-        if (config != null && !config.isEmpty()) {
-            String[] tokens = config.trim().split("\\s+");
-            for (int i = 0; i < tokens.length; i++)
-            {
-                if(tokens[i].isEmpty())
-                    continue;
-                if(i+1 == tokens.length)
-                    continue;
-
-                String key = tokens[i];
-                String value = tokens[i+1];
-
-                if(key.equals("-smp")){
-                    try {
-                        int cpus = Integer.parseInt(value);
-                        spec.setCpu(cpus * 250);
-                    }
-                    catch (NumberFormatException e)
-                    {
-
-                    }
-                }
-
-                if(key.equals("-m")){
-                    try {
-                        int mem = Integer.parseInt(value);
-                        spec.setMemory(mem);
-                    }
-                    catch (NumberFormatException e)
-                    {
-
-                    }
-                }
-            }
-        }
     }
 
 

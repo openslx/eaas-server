@@ -295,14 +295,6 @@ public class EaasWS
 			this.userId = userId;
 		}
 
-		public ResourceSpec getResourceSpec() {
-			return resourceSpec;
-		}
-
-		public void setResourceSpec(ResourceSpec resourceSpec) {
-			this.resourceSpec = resourceSpec;
-		}
-
 		public void setTenantId(String id) {
 			this.tenantId = id;
 		}
