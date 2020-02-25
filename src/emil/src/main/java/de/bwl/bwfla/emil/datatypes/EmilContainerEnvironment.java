@@ -28,6 +28,9 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     @XmlElement
     private String runtimeId;
 
+    @XmlElement(defaultValue = "false")
+    private boolean serviceContainer = false;
+
     @XmlElement
     private ContainerNetworkingType networking;
 
@@ -87,4 +90,11 @@ public class EmilContainerEnvironment extends EmilEnvironment {
         this.networking = networking;
     }
 
+    public boolean isServiceContainer() {
+        return serviceContainer;
+    }
+
+    public void setServiceContainer(boolean serviceContainer) {
+        this.serviceContainer = serviceContainer;
+    }
 }
