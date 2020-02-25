@@ -19,6 +19,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.*;
+import de.bwl.bwfla.emil.datatypes.rest.ContainerNetworkingType;
 import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
@@ -795,29 +796,35 @@ public class EmilEnvironmentRepository {
 	}
 
 
-	void saveImportedContainer(String id, String title, String description, String author) throws BWFLAException {
-		environmentsAdapter.commitTempEnvironmentWithCustomType("default", id, "containers");
+	void saveImportedContainer(SaveImportedContainerRequest req) throws BWFLAException {
+		environmentsAdapter.commitTempEnvironmentWithCustomType("default", req.getId(), "containers");
 
-		EmilEnvironment newEmilEnv = getEmilEnvironmentById(id);
+		EmilEnvironment newEmilEnv = getEmilEnvironmentById(req.getId());
 		if (newEmilEnv != null)
-			throw new BWFLAException("import failed: environment with id: " + id + " exists.");
+			throw new BWFLAException("import failed: environment with id: " + req.getId() + " exists.");
 
-
-		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", id);
-
+		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
 
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
-		env.setEnvId(id);
-		env.setTitle(title);
-		env.setDescription(description);
+		env.setEnvId(req.getId());
+		env.setTitle(req.getTitle());
+		env.setDescription(req.getDescription());
 		env.setInput(containerConfiguration.getInput());
 		env.setOutput(containerConfiguration.getOutputPath());
 		env.setArgs(containerConfiguration.getProcess().getArguments());
+		if(req.getRuntimeId() != null)
+			env.setRuntimeId(req.getRuntimeId());
+		if(req.isEnableNetwork())
+		{
+			ContainerNetworkingType net = new ContainerNetworkingType();
+			net.setConnectEnvs(true);
+			env.setNetworking(net);
+		}
 		if (containerConfiguration.getProcess().getEnvironmentVariables() != null)
 			env.setEnv(containerConfiguration.getProcess().getEnvironmentVariables());
 
-		env.setAuthor(author);
-
+		env.setServiceContainer(req.isServiceContainer());
+		env.setAuthor(req.getAuthor());
 		save(env, true);
 	}
 

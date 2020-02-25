@@ -264,10 +264,7 @@ public class EmilContainerData extends EmilRest {
     @Produces(MediaType.APPLICATION_JSON)
     public Response saveImportedContainer(SaveImportedContainerRequest saveImpContainerReq) {
         try {
-            emilEnvRepo.saveImportedContainer(saveImpContainerReq.getId(),
-                    saveImpContainerReq.getTitle(),
-                    saveImpContainerReq.getDescription(),
-                    saveImpContainerReq.getAuthor());
+            emilEnvRepo.saveImportedContainer(saveImpContainerReq);
         } catch (BWFLAException e1) {
             return Emil.internalErrorResponse(e1);
         }

@@ -354,7 +354,10 @@ public class EnvironmentRepository extends EmilRest
 							.build());
 				}
 
+
+
 				MachineConfiguration env = pEnv.copy(); // don't modify the real template
+				LOG.severe(env.toString());
 				env.getDescription().setTitle(envReq.getLabel());
 				if (env.getNativeConfig() == null)
 					env.setNativeConfig(new NativeConfig());
@@ -400,6 +403,7 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv = new EmilEnvironment();
 				newEmilEnv.setTitle(envReq.getLabel());
 				newEmilEnv.setEnvId(id);
+				newEmilEnv.setLinuxRuntime(env.isLinuxRuntime());
 				newEmilEnv.setEnableRelativeMouse(envReq.isEnableRelativeMouse());
 				newEmilEnv.setEnablePrinting(envReq.isEnablePrinting());
 				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());
@@ -991,6 +995,8 @@ public class EnvironmentRepository extends EmilRest
 
 			if(imageReq.getImageType() != null && imageReq.getImageType().equalsIgnoreCase(ImageType.ROMS.value()))
 				request.type = ImageType.ROMS;
+			else if(imageReq.getImageType() != null && imageReq.getImageType().equalsIgnoreCase(ImageType.RUNTIME.value()))
+				request.type = ImageType.RUNTIME;
 			else
 				request.type = ImageType.USER;
 
