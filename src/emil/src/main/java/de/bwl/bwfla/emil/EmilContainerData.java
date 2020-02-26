@@ -266,6 +266,7 @@ public class EmilContainerData extends EmilRest {
         try {
             emilEnvRepo.saveImportedContainer(saveImpContainerReq);
         } catch (BWFLAException e1) {
+            e1.printStackTrace();
             return Emil.internalErrorResponse(e1);
         }
         return Emil.successMessageResponse("save success!");
