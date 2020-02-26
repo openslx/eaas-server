@@ -83,7 +83,7 @@ public class AuthenticationFilter implements ContainerRequestFilter {
 
 
         if(provider == null && authJwksUri != null) {
-            JwkProvider provider = new JwkProviderBuilder(new URL(authJwksUri))
+            provider = new JwkProviderBuilder(new URL(authJwksUri))
                     .cached(10, 24, TimeUnit.HOURS)
                     .rateLimited(10, 1, TimeUnit.MINUTES)
                     .build();
@@ -94,10 +94,8 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             userAuthenticatedEvent.fire(new JwtLoginEvent(null));
         }
         else {
-
             try {
                 // Validate the token
-
                 validateToken(token);
             } catch (Exception e) {
                 LOG.severe(e.getMessage());
@@ -118,15 +116,17 @@ public class AuthenticationFilter implements ContainerRequestFilter {
             String keyId = jwt.getKeyId();
             Jwk jwk = provider.get(keyId);
 
-            Algorithm algorithm = Algorithm.RSA256((RSAPublicKey)jwk);
+            Algorithm algorithm = Algorithm.RSA256((RSAPublicKey)(jwk.getPublicKey()));
             JWTVerifier verifier = JWT.require(algorithm)
                     .build(); //Reusable verifier instance
             jwt = verifier.verify(token);
-            if(authAudience != null && jwt.getClaim("aud") != null)
+            if(authAudience != null && jwt.getClaim("aud").asString() != null)
             {
-                if(!jwt.getClaim("aud").equals(authAudience))
+                if(!jwt.getClaim("aud").asString().equals(authAudience))
                 {
                     userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+                   // LOG.severe("configured audience " + authAudience);
+                   // LOG.severe("claim: " + jwt.getClaim("aud").asString());
                     throw new JWTVerificationException("audience mismatch");
                 }
             }
