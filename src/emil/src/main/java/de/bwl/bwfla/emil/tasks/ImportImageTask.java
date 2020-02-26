@@ -38,8 +38,8 @@ public class ImportImageTask extends AbstractTask<Object> {
             if(environmentHelper == null )
                 throw new BWFLAException("ImportImageTaskRequest: missing dependencies");
 
-            if(!type.equals(ImageType.USER) && !type.equals(ImageType.ROMS))
-                throw new BWFLAException("Only ImageType ROMS / USER are supported: " + type);
+            if(!type.equals(ImageType.USER) && !type.equals(ImageType.ROMS) && !type.equals(ImageType.RUNTIME))
+                throw new BWFLAException("Only ImageType ROMS / USER / RUNTIME are supported: " + type);
         }
     }
 

@@ -134,6 +134,10 @@ public class EnvironmentDetails {
     @XmlElement
     private boolean isLinuxRuntime;
 
+    @XmlElement
+    private boolean isServiceContainer;
+
+
     EnvironmentDetails() {}
 
 
@@ -193,6 +197,7 @@ public class EnvironmentDetails {
 
             this.processArgs = cEnv.getArgs();
             this.processEnvs = cEnv.getEnv();
+            this.isServiceContainer = cEnv.isServiceContainer();
         }
 
         this.revisions = new ArrayList<>();
