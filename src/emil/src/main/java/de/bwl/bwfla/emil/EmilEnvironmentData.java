@@ -17,10 +17,10 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.*;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;

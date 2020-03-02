@@ -20,8 +20,8 @@
 package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.GET;

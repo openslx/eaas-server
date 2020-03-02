@@ -38,11 +38,14 @@ import de.bwl.bwfla.emil.datatypes.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.tasks.CreateEmptyImageTask;
+
+import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
+import de.bwl.bwfla.emil.datatypes.rest.UpdateEnvironmentDescriptionRequest;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;

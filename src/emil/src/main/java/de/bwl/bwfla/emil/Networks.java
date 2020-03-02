@@ -40,12 +40,11 @@ import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emil.session.NetworkSession;
 import de.bwl.bwfla.emil.session.Session;
 import de.bwl.bwfla.emil.session.SessionManager;
