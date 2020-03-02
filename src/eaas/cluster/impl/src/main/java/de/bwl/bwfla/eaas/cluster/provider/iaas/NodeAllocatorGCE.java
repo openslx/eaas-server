@@ -529,19 +529,18 @@ public class NodeAllocatorGCE implements INodeAllocator
 	{
 		final JsonFactory jsonFactory = JacksonFactory.getDefaultInstance();
 		final Path keysPath = Paths.get(config.getServiceAccountCredentialsFile());
-		final InputStream keysInputStream = Files.newInputStream(keysPath, StandardOpenOption.READ);
-		GoogleCredential credential = GoogleCredential.fromStream(keysInputStream, HTTP_TRANSPORT, jsonFactory);
-		if (credential.createScopedRequired()) {
-			final List<String> scopes = new ArrayList<String>(1);
-			scopes.add(ComputeScopes.COMPUTE);
-			credential = credential.createScoped(scopes);
+		try (final InputStream keysInputStream = Files.newInputStream(keysPath, StandardOpenOption.READ)) {
+			GoogleCredential credential = GoogleCredential.fromStream(keysInputStream, HTTP_TRANSPORT, jsonFactory);
+			if (credential.createScopedRequired()) {
+				final List<String> scopes = new ArrayList<String>(1);
+				scopes.add(ComputeScopes.COMPUTE);
+				credential = credential.createScoped(scopes);
+			}
+
+			return new Compute.Builder(HTTP_TRANSPORT, jsonFactory, credential)
+					.setApplicationName(config.getAppName())
+					.build();
 		}
-
-		final Compute compute = new Compute.Builder(HTTP_TRANSPORT, jsonFactory, credential)
-				.setApplicationName(config.getAppName())
-				.build();
-
-		return compute;
 	}
 
 	private Future<Network> makeNetworkRequest() throws IOException
