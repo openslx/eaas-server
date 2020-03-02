@@ -662,7 +662,7 @@ public class Components {
                 if(rootfs == null)
                     throw new BadRequestException(Response
                             .status(Response.Status.BAD_REQUEST)
-                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .entity(new ErrorInformation("could not find rootfs "))
                             .build());
                 rootfs.setFileSystemType(null);
                 this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
