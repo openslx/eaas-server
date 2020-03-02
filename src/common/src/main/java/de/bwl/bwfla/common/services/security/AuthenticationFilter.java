@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.filters;
+package de.bwl.bwfla.common.services.security;
 
 import javax.annotation.Priority;
 import javax.enterprise.event.Event;
@@ -26,8 +26,6 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
 import org.apache.tamaya.inject.api.Config;
 
 @Secured

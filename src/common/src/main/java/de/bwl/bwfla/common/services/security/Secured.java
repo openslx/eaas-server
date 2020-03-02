@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.datatypes.security;
+package de.bwl.bwfla.common.services.security;
 
 import javax.ws.rs.NameBinding;
 import java.lang.annotation.Target;

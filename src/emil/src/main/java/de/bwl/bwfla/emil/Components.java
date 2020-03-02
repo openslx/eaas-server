@@ -74,10 +74,10 @@ import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
 import de.bwl.bwfla.emil.utils.components.ContainerComponent;
@@ -662,7 +662,7 @@ public class Components {
                 if(rootfs == null)
                     throw new BadRequestException(Response
                             .status(Response.Status.BAD_REQUEST)
-                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .entity(new ErrorInformation("could not find rootfs "))
                             .build());
                 rootfs.setFileSystemType(null);
                 this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));

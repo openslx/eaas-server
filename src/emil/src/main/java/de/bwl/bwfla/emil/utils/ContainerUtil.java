@@ -63,6 +63,7 @@ public class ContainerUtil {
                 .setMediumType(MediumType.HDD)
                 .setPartitionTableType(PartitionTableType.NONE)
                 .setFileSystemType(FileSystemType.EXT4)
+                .setLabel("container")
                 .setSizeInMb(1024 * 10); // 10 Gb virtual size
     }
 
@@ -299,7 +300,7 @@ public class ContainerUtil {
 
         config.setProcess(process);
 
-        config.setId("dummy");
+        config.setId(containerRequest.getUrlString());
 
         LOG.warning(config.toString());
         LOG.info("importing config: " + config.toString());
