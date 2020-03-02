@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.datatypes.security;
+package de.bwl.bwfla.common.services.security;
 
 public enum Role {
     PUBLIC,

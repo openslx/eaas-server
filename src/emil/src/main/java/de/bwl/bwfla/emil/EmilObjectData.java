@@ -2,8 +2,8 @@ package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 

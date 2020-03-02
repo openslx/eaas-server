@@ -9,10 +9,10 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 
 
 // TODO: remove this file!
