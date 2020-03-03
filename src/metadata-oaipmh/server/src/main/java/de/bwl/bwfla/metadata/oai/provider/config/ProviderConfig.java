@@ -36,6 +36,8 @@ public class ProviderConfig extends BaseConfig
 
 	private String baseurl;
 
+	private String secret = null;
+
 	private List<BackendConfig> backends = new ArrayList<BackendConfig>();
 
 
@@ -46,11 +48,23 @@ public class ProviderConfig extends BaseConfig
 		return baseurl;
 	}
 
+	public String getSecret() {
+		return secret;
+	}
+
 	@Config("base_url")
 	public void setBaseUrl(String url)
 	{
 		ConfigHelpers.check(url, "Base URL is invalid!");
 		this.baseurl = url;
+	}
+
+	@Config(value = "secret", required = false)
+	public void setSecret(String secret)
+	{
+		if(!secret.isEmpty())
+			this.secret = secret;
+
 	}
 
 	public List<BackendConfig> getBackendConfigs()

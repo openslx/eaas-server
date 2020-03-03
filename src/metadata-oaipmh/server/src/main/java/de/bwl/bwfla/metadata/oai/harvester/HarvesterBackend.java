@@ -54,7 +54,7 @@ public class HarvesterBackend
 		this.streams = new ArrayList<>(config.getStreamConfigs().size());
 
 		for (BackendConfig.StreamConfig sc : config.getStreamConfigs())
-			streams.add(new DataStream(sc, http, log));
+			streams.add(new DataStream(sc, http, config.getSecret(), log));
 	}
 
 	public HarvesterBackend(BackendConfig config, Client http)

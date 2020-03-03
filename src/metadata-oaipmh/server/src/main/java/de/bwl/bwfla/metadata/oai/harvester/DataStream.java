@@ -62,14 +62,13 @@ public class DataStream
 	private final MetaDataRepository mdrepo;
 	private final ServiceProvider service;
 
-
-	public DataStream(BackendConfig.StreamConfig config, Client http, Logger log)
+	public DataStream(BackendConfig.StreamConfig config, Client http, String secret, Logger log)
 	{
 		this.log = log;
 		this.config = config;
 
 		final WebTarget endpoint = http.target(config.getSinkConfig().getBaseUrl());
-		this.mdrepo = new MetaDataRepository(endpoint);
+		this.mdrepo = new MetaDataRepository(endpoint, secret);
 
 		final String srcurl = config.getSourceConfig().getUrl();
 		this.service = new ServiceProvider(DataStream.newContext(srcurl));

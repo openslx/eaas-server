@@ -86,7 +86,7 @@ public class ProviderRegistry
 				final String baseurl = config.getBaseUrl();
 				log.info("Preparing provider backend '" + name + "'...");
 
-				final Repository repository = ProviderRegistry.newRepository(backend, baseurl, http, log);
+				final Repository repository = ProviderRegistry.newRepository(backend, baseurl, http, config.getSecret(), log);
 				providers.put(name, new DataProvider(context, repository));
 			}
 		}
@@ -119,7 +119,7 @@ public class ProviderRegistry
 		return context;
 	}
 
-	private static Repository newRepository(BackendConfig config, String baseurl, Client http, Logger log)
+	private static Repository newRepository(BackendConfig config, String baseurl, Client http, String secret, Logger log)
 	{
 		final Repository repository = new Repository();
 
@@ -145,7 +145,7 @@ public class ProviderRegistry
 		// Setup set and item repository sources
 		{
 			final WebTarget endpoint = http.target(config.getSourceConfig().getBaseUrl());
-			final MetaDataRepository mdrepo = new MetaDataRepository(endpoint);
+			final MetaDataRepository mdrepo = new MetaDataRepository(endpoint, secret);
 
 			repository.withSetRepository(new SetRepository(mdrepo));
 			repository.withItemRepository(new ItemRepository(mdrepo));
