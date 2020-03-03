@@ -238,9 +238,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			throw new BWFLAException(message);
 		}
 
-		if(label != null)
-			fsmaker.setLabel(label);
-		fsmaker.execute(device, log);
+		fsmaker.execute(device, label, log);
 	}
 
 	private static void lklmount(Path device, Path mountpoint, FileSystemType fstype, Logger log)
