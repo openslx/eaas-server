@@ -49,7 +49,7 @@ public class TenantAPI
 	// ========== Admin API ==============================
 
 	@GET
-	@Secured({Role.ADMIN})
+	@Secured(roles = {Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response list()
 	{
@@ -59,7 +59,7 @@ public class TenantAPI
 	}
 
 	@POST
-	@Secured({Role.ADMIN})
+	@Secured(roles = {Role.ADMIN})
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(TenantConfig config)
 	{
@@ -69,7 +69,7 @@ public class TenantAPI
 	}
 
 	@DELETE
-	@Secured({Role.ADMIN})
+	@Secured(roles = {Role.ADMIN})
 	@Path("/{name}")
 	public Response unregister(@PathParam("name") String name)
 	{
@@ -81,7 +81,7 @@ public class TenantAPI
 	}
 
 	@GET
-	@Secured({Role.ADMIN})
+	@Secured(roles = {Role.ADMIN})
 	@Path("/{name}/quota")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getQuota(@PathParam("name") String name)
@@ -97,7 +97,7 @@ public class TenantAPI
 	}
 
 	@POST
-	@Secured({Role.ADMIN})
+	@Secured(roles = {Role.ADMIN})
 	@Path("/{name}/quota")
 	public Response setQuota(@PathParam("name") String name, ResourceSpec quota)
 	{

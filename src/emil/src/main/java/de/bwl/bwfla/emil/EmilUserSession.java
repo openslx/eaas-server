@@ -40,7 +40,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @Path("delete")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete(@QueryParam("sessionId") String id) {
@@ -58,7 +58,7 @@ public class EmilUserSession extends EmilRest {
 
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response userSessionList()
@@ -100,7 +100,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/session")
     @Produces(MediaType.APPLICATION_JSON)
     public UserSessionResponse getUserSession(@QueryParam("userId") String userId, @QueryParam("objectId") String objectId) {

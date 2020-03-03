@@ -83,7 +83,7 @@ public class EmilContainerData extends EmilRest {
      * 
      * @return List of Container Runtimes
      */
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @GET
     @Path("/getOriginRuntimeList")
     @Produces(MediaType.APPLICATION_JSON)
@@ -112,7 +112,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/updateContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -189,7 +189,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("update successful");
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/importContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -198,7 +198,7 @@ public class EmilContainerData extends EmilRest {
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/importEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -207,7 +207,7 @@ public class EmilContainerData extends EmilRest {
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/updateLatestEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -215,7 +215,7 @@ public class EmilContainerData extends EmilRest {
         envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
@@ -258,7 +258,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("delete success!");
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/saveImportedContainer")
     @Produces(MediaType.APPLICATION_JSON)

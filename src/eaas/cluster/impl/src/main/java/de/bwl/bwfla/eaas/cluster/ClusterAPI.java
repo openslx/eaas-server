@@ -74,7 +74,7 @@ public class ClusterAPI
 
 	@GET
 	@Path("/")
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listClusters()
 	{
@@ -95,7 +95,7 @@ public class ClusterAPI
 	
 	@GET
 	@Path("/{cluster_name}")
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getClusterResource(
 			@PathParam("cluster_name") String name)
@@ -105,7 +105,7 @@ public class ClusterAPI
 	
 	@GET
 	@Path("/{cluster_name}/{subres:.*}")
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getClusterSubResource(
 			@PathParam("cluster_name") String name)

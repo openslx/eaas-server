@@ -340,7 +340,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request, @Context final HttpServletResponse response)
@@ -827,7 +827,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}")
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
@@ -881,7 +881,7 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
 
@@ -909,7 +909,7 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
@@ -949,7 +949,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/controlurls")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
@@ -973,7 +973,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/result")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getResult(@PathParam("componentId") String componentId)
@@ -1015,7 +1015,7 @@ public class Components {
      * @HTTP 408 if no screenshot could be retrieved from the emulator
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/screenshot")
     @Produces("image/png")
     public InputStream screenshot(@PathParam("componentId") String componentId,
@@ -1057,7 +1057,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
     public ProcessResultUrl stop(@PathParam("componentId") String componentId,
@@ -1085,7 +1085,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/downloadPrintJob")
     @Produces("application/pdf")
     public InputStream downloadPrintJob(@PathParam("componentId") String componentId,
@@ -1116,7 +1116,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/events")
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
@@ -1133,7 +1133,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/printJobs")
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> printJobs(@PathParam("componentId") String componentId) {
@@ -1160,7 +1160,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/snapshot")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1176,7 +1176,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/checkpoint")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1193,7 +1193,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/changeMedia")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1249,7 +1249,7 @@ public class Components {
      * @param componentId The component's ID to release.
      */
     @DELETE
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}")
     public void releaseComponent(@PathParam("componentId") String componentId) {
         ComponentSession session = sessions.get(componentId);

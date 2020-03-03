@@ -48,7 +48,7 @@ public class ErrorReport
 	/* ============================= API =============================== */
 
 	@GET
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_OCTET_STREAM)
 	public Response getErrorReport()
 	{
