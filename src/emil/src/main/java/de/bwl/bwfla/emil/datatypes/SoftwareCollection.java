@@ -41,6 +41,9 @@ public class SoftwareCollection implements Iterable<EaasiSoftwareObject> {
             SoftwarePackage p = null;
             try {
                 p = swArchiveHelper.getSoftwarePackageById(swid);
+                if(!p.isPublic())
+                    continue;
+
                 DigitalObjectMetadata md = objectArchivHelper.getObjectMetadata(p.getArchive(), p.getObjectId());
                 if(md.getMetsData() == null)
                 {

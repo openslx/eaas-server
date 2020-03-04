@@ -44,10 +44,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbValidator;
 import gov.loc.mets.Mets;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes",
-	propOrder = { "name", "description", "releaseDate", "infoSource", "location",
-	              "licence", "numSeats", "QID", "language", "documentation", "archive",
-	              "objectId", "supportedFileFormats", "isOperatingSystem", "timestamp" })
+@XmlType(name = "softwarePackage", namespace="http://bwfla.bwl.de/common/datatypes")
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class SoftwarePackage extends JaxbType
 {
@@ -66,6 +63,7 @@ public class SoftwarePackage extends JaxbType
 	private String language;
 	private String documentation;
 	private boolean isOperatingSystem = false;
+	private boolean isPublic = false;
 	
 	@XmlElement(required = true)
 	private String archive;
@@ -207,5 +205,13 @@ public class SoftwarePackage extends JaxbType
 
 	public void setIsOperatingSystem(boolean isOperatingSystem) {
 		this.isOperatingSystem = isOperatingSystem;
+	}
+
+	public boolean isPublic() {
+		return isPublic;
+	}
+
+	public void setPublic(boolean aPublic) {
+		isPublic = aPublic;
 	}
 }
