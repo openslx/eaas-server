@@ -30,8 +30,6 @@ import java.util.logging.Logger;
 public class FileSystemMakerFAT implements IFileSystemMaker
 {
 	private final FileSystemType fstype;
-	private String label;
-
 
 	public FileSystemMakerFAT(FileSystemType fstype)
 	{
@@ -49,6 +47,14 @@ public class FileSystemMakerFAT implements IFileSystemMaker
 
 	public void execute(Path device, Logger log) throws BWFLAException
 	{
+		execute(device, null, log);
+	}
+
+	@Override
+	public void execute(Path device, String label, Logger log) throws BWFLAException {
+		if(label != null && label.length() > 11)
+			label = label.substring(0, Math.min(label.length(), 11));
+
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("mkfs.fat");
@@ -71,12 +77,5 @@ public class FileSystemMakerFAT implements IFileSystemMaker
 		process.addArgument(device.toString());
 		if (!process.execute())
 			throw new BWFLAException("Creating " + fstype.toString() + "-filesystem failed!");
-	}
-
-	@Override
-	public void setLabel(String label) {
-		this.label = label;
-		if(this.label.length() > 11)
-			this.label = this.label.substring(0, Math.min(this.label.length(), 11));
 	}
 }

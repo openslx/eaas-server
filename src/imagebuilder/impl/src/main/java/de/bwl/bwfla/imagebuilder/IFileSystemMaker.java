@@ -28,5 +28,5 @@ import java.util.logging.Logger;
 public interface IFileSystemMaker
 {
 	void execute(Path device, Logger log) throws BWFLAException;
-	void setLabel(String label);
+	void execute(Path device, String label, Logger log) throws BWFLAException;
 }
