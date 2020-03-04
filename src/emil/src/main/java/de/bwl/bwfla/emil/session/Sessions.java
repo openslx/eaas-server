@@ -152,7 +152,7 @@ public class Sessions
 	}
 
 	@POST
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/keepalive")
 	public void keepalive(@PathParam("id") String id) {
 		final Session session = sessions.get(id);

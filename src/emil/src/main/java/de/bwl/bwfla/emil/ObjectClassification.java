@@ -99,7 +99,7 @@ public class ObjectClassification {
     }
 
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @POST
     @Path("/overrideObjectCharacterization")
     @Produces(MediaType.APPLICATION_JSON)
@@ -116,7 +116,7 @@ public class ObjectClassification {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/")

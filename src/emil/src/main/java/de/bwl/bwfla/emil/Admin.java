@@ -62,7 +62,7 @@ public class Admin extends EmilRest
 	// ========== Admin API =========================
 
 	@GET
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/build-info")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getBuildInfo()
@@ -76,7 +76,7 @@ public class Admin extends EmilRest
 	}
 
 	@GET
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@Path("/user-info")
 	@Produces(MediaType.APPLICATION_JSON)
 	public UserInfoResponse getUserInfo()
@@ -92,7 +92,7 @@ public class Admin extends EmilRest
 
 
 	@GET
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@Path("/server-log")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getServerLog()
@@ -104,7 +104,7 @@ public class Admin extends EmilRest
 	}
 
 	@GET
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@Path("/usage-log")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getUsageLog()
@@ -116,7 +116,7 @@ public class Admin extends EmilRest
 	}
 
 	@DELETE
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@Path("/usage-log")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()
@@ -135,7 +135,7 @@ public class Admin extends EmilRest
 	}
 
 	@POST
-	@Secured
+	@Secured(roles = {Role.RESTRCITED})
 	@Path("/metadata-export")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response exportMetadata()

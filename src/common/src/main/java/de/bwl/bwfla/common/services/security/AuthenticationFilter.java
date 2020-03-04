@@ -8,13 +8,18 @@ import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.ResourceInfo;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+import java.lang.reflect.AnnotatedElement;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
@@ -38,10 +43,6 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     private boolean authEnabled;
 
     @Inject
-    @Config(value = "emil.authSecret")
-    private String authSecret;
-
-    @Inject
     @Config(value = "emil.authAudience")
     private String authAudience;
 
@@ -53,9 +54,24 @@ public class AuthenticationFilter implements ContainerRequestFilter {
     @AuthenticatedUser
     Event<JwtLoginEvent> userAuthenticatedEvent;
 
+    @Context
+    private ResourceInfo resourceInfo;
+
     protected static final Logger LOG = Logger.getLogger("Authentication");
 
     private static JwkProvider provider = null;
+
+
+    private String extractLocalKey(AnnotatedElement annotatedElement)
+    {
+        Secured secured = annotatedElement.getAnnotation(Secured.class);
+        String key = secured.secret();
+
+        if(key.isEmpty())
+            return null;
+
+        return key;
+    }
 
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
@@ -79,35 +95,64 @@ public class AuthenticationFilter implements ContainerRequestFilter {
         }
         // String token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXUyJ9.eyJpc3MiOiJhdXRoMCJ9.AbIJTDMFc7yUa5MhvcP03nJPyCPzZtQcGEp-zWfOkEE";
 
-
-        if(provider == null && authJwksUri != null) {
-            provider = new JwkProviderBuilder(new URL(authJwksUri))
-                    .cached(10, 24, TimeUnit.HOURS)
-                    .rateLimited(10, 1, TimeUnit.MINUTES)
-                    .build();
-        }
-
         if(token == null) {
             LOG.warning("anonymous");
             userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+            return;
         }
-        else {
-            try {
-                // Validate the token
-                validateToken(token);
-            } catch (Exception e) {
-                LOG.severe(e.getMessage());
-                requestContext.abortWith(
-                        Response.status(Response.Status.UNAUTHORIZED).build());
+
+        // check if local key annotation exists
+        String localKey = null;
+        Class<?> resourceClass = resourceInfo.getResourceClass();
+        localKey = extractLocalKey(resourceClass);
+
+        Method resourceMethod = resourceInfo.getResourceMethod();
+        localKey = extractLocalKey(resourceMethod);
+        try {
+            if(localKey != null) {
+                validateToken(token, localKey);
             }
+            else {
+                if (provider == null && authJwksUri != null) {
+                    provider = new JwkProviderBuilder(new URL(authJwksUri))
+                            .cached(10, 24, TimeUnit.HOURS)
+                            .rateLimited(10, 1, TimeUnit.MINUTES)
+                            .build();
+                }
+                validateToken(token);
+
+            }
+        } catch (Exception e) {
+            LOG.severe(e.getMessage());
+            requestContext.abortWith(
+                    Response.status(Response.Status.UNAUTHORIZED).build());
         }
     }
 
+    private void validateToken(String token, String key) throws Exception {
+        try {
+            LOG.info("authentification using local secret " + key);
+            Algorithm algorithm = Algorithm.HMAC256(key);
+            JWTVerifier verifier = JWT.require(algorithm)
+                    .build(); //Reusable verifier instance
+            DecodedJWT jwt = verifier.verify(token);
+
+            if(authAudience != null && jwt.getClaim("aud").asString() != null)
+            {
+                if(!jwt.getClaim("aud").asString().equals(authAudience))
+                {
+                    userAuthenticatedEvent.fire(new JwtLoginEvent(null));
+                    throw new JWTVerificationException("audience mismatch");
+                }
+            }
+            userAuthenticatedEvent.fire(new JwtLoginEvent(jwt));
+        } catch (JWTVerificationException exception){
+            throw exception;
+        }
+    }
+
+
     private void validateToken(String token) throws Exception {
-
-        if(authSecret == null)
-            throw new BWFLAException("no auth secret configured. configure 'emil.authSecret'");
-
         try {
             // System.out.println(" secret " + authSecret);
             DecodedJWT jwt = JWT.decode(token);
