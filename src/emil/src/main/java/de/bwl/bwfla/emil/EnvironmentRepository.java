@@ -38,11 +38,14 @@ import de.bwl.bwfla.emil.datatypes.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import de.bwl.bwfla.emil.tasks.CreateEmptyImageTask;
+
+import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
+import de.bwl.bwfla.emil.datatypes.rest.UpdateEnvironmentDescriptionRequest;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
@@ -170,7 +173,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/db-content")
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className)
 	{
@@ -190,7 +193,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/os-metadata")
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public OperatingSystems getOperatingSystemMetadata()
 	{
@@ -219,7 +222,7 @@ public class EnvironmentRepository extends EmilRest
 	/** Get the image-name index */
 	@GET
 	@Path("/image-name-index")
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
     public ImageNameIndex getNameIndexes() throws BWFLAException
@@ -230,7 +233,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/images-index")
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public ImageNameIndex getImagesIndex() throws BWFLAException
@@ -273,7 +276,7 @@ public class EnvironmentRepository extends EmilRest
 	{
 		/** List all available environments */
 		@GET
-		@Secured({Role.PUBLIC})
+		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response list(@Context final HttpServletResponse response)
 		{
@@ -299,7 +302,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Get specific environment */
 		@GET
 		@Path("/{envId}")
-		@Secured({Role.PUBLIC})
+		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response get(@PathParam("envId") String envId, @Context final HttpServletResponse response)
 		{
@@ -334,7 +337,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** Create a new environment */
 		@POST
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		@Consumes(MediaType.APPLICATION_JSON)
 		public Response create(EnvironmentCreateRequest envReq)
@@ -457,7 +460,7 @@ public class EnvironmentRepository extends EmilRest
 		 */
 		@PATCH
 		@Path("/{envId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response update(@PathParam("envId") String envId, UpdateEnvironmentDescriptionRequest desc)
@@ -592,7 +595,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Delete a specific environment */
 		@DELETE
 		@Path("/{envId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		@Consumes(MediaType.APPLICATION_JSON)
 		public Response delete(@PathParam("envId") String envId, EnvironmentDeleteRequest desc)
@@ -626,7 +629,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Export the specified environment. */
 		@POST
 		@Path("/{envId}/export")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse export(@PathParam("envId") String envId, ExportRequest exportRequest)
 		{
@@ -647,7 +650,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** List all object dependencies of an environment */
 		@GET
-		@Secured({Role.PUBLIC})
+		@Secured(roles={Role.PUBLIC})
 		@Path("/{envId}/object-deps")
 		@Produces(MediaType.APPLICATION_JSON)
 		public List<String> getObjectDependencies(@PathParam("envId") String envId)
@@ -673,7 +676,7 @@ public class EnvironmentRepository extends EmilRest
 	{
 		/** List all default environments */
 		@GET
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Map<String, String> list()
 		{
@@ -713,7 +716,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Set default environment for a specific operating system ID */
 		@PATCH
 		@Path("/{osId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public EmilResponseType set(@PathParam("osId") String osId, @QueryParam("envId") String envId)
 		{
@@ -741,7 +744,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** Create a new revision  */
 		@POST
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response create()
@@ -773,7 +776,7 @@ public class EnvironmentRepository extends EmilRest
 
 		@POST
 		@Path("/{revId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public synchronized Response revert(@PathParam("revId") String revId)
@@ -818,7 +821,7 @@ public class EnvironmentRepository extends EmilRest
 	public class Templates
 	{
 		@GET
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		/**
 		 *
@@ -891,7 +894,7 @@ public class EnvironmentRepository extends EmilRest
 	public class Patches
 	{
 		@GET
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		/**
 		 *
@@ -917,7 +920,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Initialize internal database of environments. */
 		@POST
 		@Path("/prepare")
-		@Secured({Role.PUBLIC})
+		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response prepare()
 		{
@@ -933,7 +936,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Synchronize internal database with the image archives. */
 		@POST
 		@Path("/sync")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response sync()
 		{
@@ -947,7 +950,7 @@ public class EnvironmentRepository extends EmilRest
 		/** create new image */
 		@POST
 		@Path("/create-image")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse createImage(ImageCreateRequest imageReq)
@@ -960,7 +963,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Import an image for new environment */
 		@POST
 		@Path("/import-image")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importImage(ImportImageRequest imageReq)
@@ -1013,7 +1016,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Replicate an image from remote archives */
 		@POST
 		@Path("/replicate-image")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles={Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public ReplicateImagesResponse replicateImage(ReplicateImagesRequest replicateImagesRequest)
@@ -1067,7 +1070,7 @@ public class EnvironmentRepository extends EmilRest
 
 		@POST
 		@Path("/delete-image")
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response deleteImage(DeleteImageRequest request) throws BWFLAException

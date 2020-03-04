@@ -7,8 +7,8 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.rest.NetworkingType;
-import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentOwner;
-import de.bwl.bwfla.emil.datatypes.security.EmilEnvironmentPermissions;
+import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
+import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
 
 import java.time.Instant;
 import java.util.HashSet;

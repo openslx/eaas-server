@@ -2,8 +2,8 @@ package de.bwl.bwfla.emil;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 
@@ -25,7 +25,7 @@ public class EmilObjectData extends EmilRest {
 	private ObjectRepository objrepo = null;
 
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -35,7 +35,7 @@ public class EmilObjectData extends EmilRest {
 				.sync();
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@POST
 	@Path("/syncObjects")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -46,7 +46,7 @@ public class EmilObjectData extends EmilRest {
 				.sync(req.getArchive(), req);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@GET
 	@Path("/objectImportTaskState")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -67,7 +67,7 @@ public class EmilObjectData extends EmilRest {
 	 *
 	 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListResponse
 	 */
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@GET
 	@Path("/{objectArchive}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -79,7 +79,7 @@ public class EmilObjectData extends EmilRest {
 				.list(response);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@DELETE
 	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -97,7 +97,7 @@ public class EmilObjectData extends EmilRest {
 	 * @param objectId The object's ID to look up metadata for.
 	 * @return A JSON object with object's metadata when found, else an error message.
 	 */
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@GET
 	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -109,7 +109,7 @@ public class EmilObjectData extends EmilRest {
 				.get(objectId);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@GET
 	@Path("/archives")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -119,7 +119,7 @@ public class EmilObjectData extends EmilRest {
 				.list();
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@POST
 	@Path("/import")
 	@Consumes(MediaType.APPLICATION_JSON)

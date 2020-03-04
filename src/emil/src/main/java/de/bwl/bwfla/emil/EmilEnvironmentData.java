@@ -17,10 +17,10 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.*;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -40,7 +40,7 @@ public class EmilEnvironmentData
 	private UserContext authenticatedUser = null;
 
 
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@GET
 	@Path("/")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -49,7 +49,7 @@ public class EmilEnvironmentData
 				.list(response);
 	}
 
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@GET
 	@Path("/{envId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -63,7 +63,7 @@ public class EmilEnvironmentData
 	 *
 	 * @return
 	 */
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@GET
 	@Path("/init")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -73,7 +73,7 @@ public class EmilEnvironmentData
 	}
 
 
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@GET
 	@Path("/objectDependencies")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -82,7 +82,7 @@ public class EmilEnvironmentData
 				.getObjectDependencies(envId);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("/delete")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -92,7 +92,7 @@ public class EmilEnvironmentData
 				.delete(desc.getEnvId(), desc);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@GET
 	@Path("/getDatabaseContent")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -100,7 +100,7 @@ public class EmilEnvironmentData
 		return envrepo.getDatabaseContent(type, className);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("/createEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -110,7 +110,7 @@ public class EmilEnvironmentData
 				.create(envReq);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@GET
 	@Path("/getEnvironmentTemplates")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -128,7 +128,7 @@ public class EmilEnvironmentData
 				.list("oldStyle");
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@GET
 	@Path("/getPatches")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -171,7 +171,7 @@ public class EmilEnvironmentData
 	 * @param desc A JSON object containing description changes.
 	 * @return A JSON object containing the result message.
 	 */
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("/updateDescription")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -181,7 +181,7 @@ public class EmilEnvironmentData
 				.update(desc.getEnvId(), desc);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@GET
 	@Path("/defaultEnvironments")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -199,7 +199,7 @@ public class EmilEnvironmentData
 				.get(osId);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@GET
 	@Path("/setDefaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -208,7 +208,7 @@ public class EmilEnvironmentData
 				.set(osId, envId);
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("forkRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -219,7 +219,7 @@ public class EmilEnvironmentData
 				.create();
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("revertRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -230,7 +230,7 @@ public class EmilEnvironmentData
 				.revert(req.getRevId());
 	}
 
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@GET
 	@Path("operatingSystemMetadata")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -239,7 +239,7 @@ public class EmilEnvironmentData
 		return envrepo.getOperatingSystemMetadata();
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -248,7 +248,7 @@ public class EmilEnvironmentData
 				.sync();
 	}
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("/importImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -258,7 +258,7 @@ public class EmilEnvironmentData
 				.importImage(imageReq);
 	}
 
-	@Secured({Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@GET
 	@Path("/getNameIndexes")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -267,7 +267,7 @@ public class EmilEnvironmentData
         return envrepo.getNameIndexes();
     }
 
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@POST
 	@Path("/replicateImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -279,7 +279,7 @@ public class EmilEnvironmentData
 
 	@POST
 	@Path("/export")
-	@Secured({Role.RESTRCITED})
+	@Secured(roles={Role.RESTRCITED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public TaskStateResponse export(ExportRequest exportRequest) {
 		return envrepo.environments()

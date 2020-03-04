@@ -1,10 +1,6 @@
-package de.bwl.bwfla.emil.filters;
+package de.bwl.bwfla.common.services.security;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.Priority;
@@ -80,7 +76,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
             if (secured == null) {
                 return new ArrayList<Role>();
             } else {
-                Role[] allowedRoles = secured.value();
+                Role[] allowedRoles = secured.roles();
                 return Arrays.asList(allowedRoles);
             }
         }

@@ -5,14 +5,14 @@ import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironment;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironmentElement;
 import de.bwl.bwfla.emil.datatypes.ErrorInformation;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emucomp.api.NetworkConfiguration;
 import org.apache.tamaya.inject.api.Config;
 
@@ -35,8 +35,7 @@ import java.util.List;
 @Path("network-environments")
 @ApplicationScoped
 public class NetworkEnvironments extends EmilRest {
-
-
+    
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
     @Inject
@@ -66,7 +65,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @PUT
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -91,7 +90,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -108,7 +107,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @GET
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -174,7 +173,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @DELETE
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -191,7 +190,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @POST
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
