@@ -285,71 +285,7 @@ public class Networks {
                     .build());
         }
     }
-
-    @GET
-    @Secured(roles = {Role.PUBLIC})
-    @Path("/{id}")
-    public Collection<GroupComponent> listComponents(@PathParam("id") String id) {
-        try {
-            Collection<GroupComponent> result = new HashSet<GroupComponent>();
-
-            Session session = sessions.get(id);
-            if(session == null || !(session instanceof NetworkSession))
-                throw new BWFLAException("session not found " + id);
-
-            List<ComponentGroupElement> components = sessions.getComponents(session);
-            for (ComponentGroupElement componentElement : components) {
-
-                String type = componentClient.getComponentPort(eaasGw).getComponentType(componentElement.getComponentId());
-                try {
-                    if(type.equals("nodetcp")) {
-                        NetworkResponse networkResponse = new NetworkResponse(session.id());
-
-                        Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
-
-                        URI uri = controlUrls.get("info");
-                        if(uri == null)
-                            continue;
-                        String nodeInfoUrl = uri.toString();
-                        networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
-
-                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
-                                networkResponse ));
-
-                    } else if (type.equals("machine")){
-                        String componentName = componentClient.getComponentPort(eaasGw).getEnvironmentId(componentElement.getComponentId());
-                        if (componentName == null)
-                            componentName = componentElement.getComponentId();
-
-                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
-                                componentName));
-                    } else
-                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId())));
-                } catch (URISyntaxException e) {
-                    throw new ServerErrorException(Response
-                            .status(Response.Status.INTERNAL_SERVER_ERROR)
-                            .entity(new ErrorInformation(
-                                    "An internal server error occurred.", e.getMessage()))
-                            .build(), e);
-                } 
-            }
-            return result;
-        } catch (BWFLAException e) {
-            throw new ServerErrorException(Response
-                    .status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation(
-                            "Could not acquire group information.", e.getMessage()))
-                    .build());
-        }
-    }
-
-    @GET
-    @Secured(roles = {Role.PUBLIC})
-    @Produces(MediaType.APPLICATION_JSON)
-    public Collection<Session> getAllGroupIds() {
-            return sessions.list();
-    }
-
+    
     private void addComponent(Session session, String switchId, NetworkRequest.ComponentSpec component) {
         addComponent(session, switchId, component, true);
     }
