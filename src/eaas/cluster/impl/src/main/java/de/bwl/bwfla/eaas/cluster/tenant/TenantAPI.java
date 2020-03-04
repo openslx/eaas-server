@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.eaas.cluster.tenant;
 
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -47,6 +49,7 @@ public class TenantAPI
 	// ========== Admin API ==============================
 
 	@GET
+	@Secured(roles = {Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response list()
 	{
@@ -56,6 +59,7 @@ public class TenantAPI
 	}
 
 	@POST
+	@Secured(roles = {Role.ADMIN})
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(TenantConfig config)
 	{
@@ -65,6 +69,7 @@ public class TenantAPI
 	}
 
 	@DELETE
+	@Secured(roles = {Role.ADMIN})
 	@Path("/{name}")
 	public Response unregister(@PathParam("name") String name)
 	{
@@ -76,6 +81,7 @@ public class TenantAPI
 	}
 
 	@GET
+	@Secured(roles = {Role.ADMIN})
 	@Path("/{name}/quota")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getQuota(@PathParam("name") String name)
@@ -91,6 +97,7 @@ public class TenantAPI
 	}
 
 	@POST
+	@Secured(roles = {Role.ADMIN})
 	@Path("/{name}/quota")
 	public Response setQuota(@PathParam("name") String name, ResourceSpec quota)
 	{

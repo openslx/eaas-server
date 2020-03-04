@@ -95,6 +95,7 @@ public class Sessions
 
 	@DELETE
 	@Path("/{id}")
+	@Secured(roles = {Role.RESTRCITED})
 	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
 	{
 		sessions.unregister(id);
@@ -112,6 +113,7 @@ public class Sessions
 
 	@DELETE
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/resources")
 	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
 	{
@@ -144,6 +146,7 @@ public class Sessions
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/detach")
 	public void setLifetime(@PathParam("id") String id, DetachRequest request, @Context final HttpServletResponse response)
 	{
@@ -152,7 +155,7 @@ public class Sessions
 	}
 
 	@POST
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/keepalive")
 	public void keepalive(@PathParam("id") String id) {
 		final Session session = sessions.get(id);
@@ -165,12 +168,14 @@ public class Sessions
 	}
 
 	@GET
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Collection<Session> list() {
 		return sessions.list();
 	}
 
 	@GET
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/network-environments")
 	@Produces(MediaType.APPLICATION_JSON)
 	public List<RunningNetworkEnvironmentResponse> getSessionsWithNetworkEnvID() {
@@ -187,7 +192,7 @@ public class Sessions
 	/* ========================= Internal Helpers ========================= */
 
 	@GET
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}")
 	public SessionResponse listComponents(@PathParam("id") String id) {
 		try {

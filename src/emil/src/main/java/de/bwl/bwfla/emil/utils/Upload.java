@@ -41,7 +41,7 @@ public class Upload  {
 
     private static final String HTTP_FORM_HEADER_FILE = "file";
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @POST
     @Path("/")
     @Consumes("multipart/form-data")

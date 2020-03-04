@@ -81,7 +81,7 @@ public class Networks {
     protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
     public NetworkResponse createNetwork(NetworkRequest networkRequest, @Context final HttpServletResponse response) {
@@ -189,7 +189,7 @@ public class Networks {
     }
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
     public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -211,7 +211,7 @@ public class Networks {
     }
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
     public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -233,7 +233,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured({Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
@@ -257,7 +257,7 @@ public class Networks {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Path("/{id}/wsConnection")
     @Produces(MediaType.APPLICATION_JSON)
     public Response wsConnection(@PathParam("id") String id)

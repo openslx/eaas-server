@@ -55,7 +55,7 @@ public class TaskManager {
         return taskManager.submitTask(task);
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -105,7 +105,7 @@ public class TaskManager {
 
     @DELETE
     @Path("/{id}")
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     public void remove(@PathParam("id") String taskId)
     {
         final TaskInfo<Object> task = taskManager.getTaskInfo(taskId);

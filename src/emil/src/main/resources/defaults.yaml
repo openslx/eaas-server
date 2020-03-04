@@ -15,6 +15,7 @@ emil:
   authEnabled: false
   authSecret: ''
   authAudience: ''
+  authJwksUri: ''
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification
@@ -30,6 +31,7 @@ ws:
   softwarearchive: http://eaas:8080/
   apikey:
   apiSecret:
+
 rest:
   blobstore: http://eaas:8080/blobstore/api/v1/blobs
 

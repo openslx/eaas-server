@@ -65,7 +65,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @PUT
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -90,7 +90,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -107,7 +107,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @GET
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -173,7 +173,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @DELETE
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -190,7 +190,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @POST
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
