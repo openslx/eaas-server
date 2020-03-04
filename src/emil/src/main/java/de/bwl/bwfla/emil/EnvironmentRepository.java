@@ -234,7 +234,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/images-index")
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public ImageNameIndex getImagesIndex() throws BWFLAException
@@ -951,7 +951,7 @@ public class EnvironmentRepository extends EmilRest
 		/** create new image */
 		@POST
 		@Path("/create-image")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse createImage(ImageCreateRequest imageReq)
@@ -1071,7 +1071,7 @@ public class EnvironmentRepository extends EmilRest
 
 		@POST
 		@Path("/delete-image")
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response deleteImage(DeleteImageRequest request) throws BWFLAException
