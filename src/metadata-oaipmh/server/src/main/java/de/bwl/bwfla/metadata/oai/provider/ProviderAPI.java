@@ -45,7 +45,9 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 
-import de.bwl.bwfla.common.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import org.apache.tamaya.inject.api.Config;
 import org.dspace.xoai.dataprovider.DataProvider;
 import org.dspace.xoai.dataprovider.builder.OAIRequestParametersBuilder;
 import org.dspace.xoai.dataprovider.parameters.OAIRequest;
@@ -70,11 +72,9 @@ public class ProviderAPI
 	@Inject
 	private ProviderRegistry providers = null;
 
-
 	// ========== Admin API ==============================
-
 	@GET
-	@Secured
+	@Secured(roles={Role.RESTRCITED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listProviders()
 	{
@@ -87,7 +87,7 @@ public class ProviderAPI
 	// ========== OAI-PMH API ==============================
 
 	@GET
-	@Secured
+	@Secured(roles={Role.RESTRCITED})
 	@Path("/{name}")
 	public CompletionStage<Response> get(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
@@ -95,7 +95,7 @@ public class ProviderAPI
 	}
 
 	@POST
-	@Secured
+	@Secured(roles={Role.RESTRCITED})
 	@Path("/{name}")
 	@Consumes(MediaType.APPLICATION_FORM_URLENCODED)
 	public CompletionStage<Response> post(@PathParam("name") String name, @Context HttpServletRequest request)
