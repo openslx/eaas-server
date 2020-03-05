@@ -69,9 +69,7 @@ public class DataStream
 
 		final WebTarget endpoint = http.target(config.getSinkConfig().getBaseUrl());
 		this.mdrepo = new MetaDataRepository(endpoint, secret);
-
-		final String srcurl = config.getSourceConfig().getUrl();
-		this.service = new ServiceProvider(DataStream.newContext(srcurl));
+		this.service = new ServiceProvider(DataStream.newContext(config.getSourceConfig()));
 	}
 
 	public HarvestingResult execute() throws HarvestException
@@ -165,14 +163,15 @@ public class DataStream
 
 	// ========== Internal Helpers ==============================
 
-	private static Context newContext(String baseurl)
+	private static Context newContext(BackendConfig.SourceConfig config)
 	{
+		final String baseurl = config.getUrl();
 		final String format = HarvesterConfig.getMetaDataFormat();
 		final Transformer transformer = HarvesterConfig.getMetaDataTransformer();
 		return new Context()
 				.withBaseUrl(baseurl)
 				.withGranularity(Granularity.Second)
-				.withOAIClient(new HttpOAIClient(baseurl))
+				.withOAIClient(new HttpOAIClient(baseurl, config.getSecret()))
 				.withMetadataTransformer(format, transformer);
 	}
 

@@ -84,6 +84,7 @@ public class BackendConfig extends BaseConfig
 	public static class SourceConfig
 	{
 		private String url;
+		private String secret = null;
 
 		@JsonProperty(Fields.URL)
 		public String getUrl()
@@ -97,11 +98,25 @@ public class BackendConfig extends BaseConfig
 			ConfigHelpers.check(url, "URL is invalid!");
 			this.url = BackendConfig.sanitize(url);
 		}
+
+		@JsonProperty(Fields.SECRET)
+		public String getSecret()
+		{
+			return secret;
+		}
+
+		@Config(Fields.SECRET)
+		public void setSecret(String secret)
+		{
+			ConfigHelpers.check(secret, "Secret is invalid!");
+			this.secret = secret;
+		}
 	}
 
 	public static class SinkConfig
 	{
 		private String baseurl;
+		private String secret = null;
 
 		@JsonProperty(Fields.BASE_URL)
 		public String getBaseUrl()
@@ -114,6 +129,19 @@ public class BackendConfig extends BaseConfig
 		{
 			ConfigHelpers.check(url, "Base URL is invalid!");
 			this.baseurl = BackendConfig.sanitize(url);
+		}
+
+		@JsonProperty(Fields.SECRET)
+		public String getSecret()
+		{
+			return secret;
+		}
+
+		@Config(Fields.SECRET)
+		public void setSecret(String secret)
+		{
+			ConfigHelpers.check(secret, "Secret is invalid!");
+			this.secret = secret;
 		}
 	}
 
