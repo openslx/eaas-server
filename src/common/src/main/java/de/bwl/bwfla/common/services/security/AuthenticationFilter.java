@@ -53,7 +53,7 @@ public class AuthenticationFilter extends AbstractAuthenticationFilter {
     @Inject
     @AuthenticatedUser
     Event<JwtLoginEvent> userAuthenticatedEvent;
-    
+
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
 

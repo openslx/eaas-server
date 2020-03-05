@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.repository;
 
+import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.metadata.repository.api.HttpDefs;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
 import de.bwl.bwfla.metadata.repository.api.ItemDescriptionStream;
@@ -122,6 +123,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 
 		@HEAD
 		@Path("/{setspec}")
+		@SecuredInternal
 		public CompletionStage<Response> exists(@PathParam("setspec") String setspec)
 		{
 			final Function<Boolean, Response> responder = (isfound) -> {

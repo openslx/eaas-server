@@ -19,8 +19,8 @@
 
 package de.bwl.bwfla.emil;
 
+import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
-import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
 import de.bwl.bwfla.metadata.repository.IMetaDataRepositoryAPI;
 import de.bwl.bwfla.metadata.repository.MetaDataRepositoryAPI;
 import de.bwl.bwfla.metadata.repository.MetaDataSinkRegistry;
@@ -39,8 +39,8 @@ import javax.ws.rs.PathParam;
 import java.util.concurrent.Executor;
 import java.util.logging.Logger;
 
-
 @ApplicationScoped
+@SecuredInternal
 @Path("/metadata-repositories/{name}")
 public class MetaDataRepositories implements IMetaDataRepositoryAPI
 {
@@ -63,6 +63,7 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 	// ========== MetaDataRepository API =========================
 
 	@Override
+	@SecuredInternal
 	@Path(HttpDefs.Paths.SETS)
 	public de.bwl.bwfla.metadata.repository.MetaDataRepositoryAPI.Sets sets(@PathParam("name") String name)
 	{
@@ -70,6 +71,7 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 	}
 
 	@Override
+	@SecuredInternal
 	@Path(HttpDefs.Paths.IDENTIFIERS)
 	public de.bwl.bwfla.metadata.repository.MetaDataRepositoryAPI.ItemIdentifiers identifiers(@PathParam("name") String name)
 	{
@@ -77,6 +79,7 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 	}
 
 	@Override
+	@SecuredInternal
 	@Path(HttpDefs.Paths.ITEMS)
 	public de.bwl.bwfla.metadata.repository.MetaDataRepositoryAPI.Items items(@PathParam("name") String name)
 	{

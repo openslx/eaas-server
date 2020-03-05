@@ -65,7 +65,7 @@ public class BackendConfig extends BaseConfig
 	@Config(value = Fields.SECRET, required = false)
 	public void setSecret(String secret)
 	{
-		if(!secret.isEmpty())
+		if(secret != null && !secret.isEmpty())
 			this.secret = secret;
 	}
 
@@ -108,7 +108,7 @@ public class BackendConfig extends BaseConfig
 		@Config(Fields.SECRET)
 		public void setSecret(String secret)
 		{
-			ConfigHelpers.check(secret, "Secret is invalid!");
+			// ConfigHelpers.check(secret, "Secret is invalid!");
 			this.secret = secret;
 		}
 	}
@@ -140,7 +140,7 @@ public class BackendConfig extends BaseConfig
 		@Config(Fields.SECRET)
 		public void setSecret(String secret)
 		{
-			ConfigHelpers.check(secret, "Secret is invalid!");
+			// ConfigHelpers.check(secret, "Secret is invalid!");
 			this.secret = secret;
 		}
 	}

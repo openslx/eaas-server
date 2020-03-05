@@ -62,7 +62,7 @@ public class ProviderConfig extends BaseConfig
 	@Config(value = "secret", required = false)
 	public void setSecret(String secret)
 	{
-		if(!secret.isEmpty())
+		if(secret != null && !secret.isEmpty())
 			this.secret = secret;
 
 	}
