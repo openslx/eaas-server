@@ -19,6 +19,9 @@ http_export_servlet:
         gc_interval: 10m
         entry_eviction_timeout: 30m
 
+rest:
+    apiSecret: "please set an API Secret"
+
 handle:
     prefix: 11270
     authentication:

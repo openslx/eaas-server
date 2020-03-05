@@ -36,6 +36,8 @@ public class BackendConfig extends BaseConfig
 {
 	private String name;
 
+	private String secret = null;
+
 	private Collection<StreamConfig> streams = new ArrayList<>();
 
 
@@ -47,11 +49,24 @@ public class BackendConfig extends BaseConfig
 		return name;
 	}
 
+	@JsonProperty(Fields.SECRET)
+	public String getSecret()
+	{
+		return secret;
+	}
+
 	@Config(Fields.NAME)
 	public void setName(String name)
 	{
 		ConfigHelpers.check(name, "Name is invalid!");
 		this.name = name;
+	}
+
+	@Config(value = Fields.SECRET, required = false)
+	public void setSecret(String secret)
+	{
+		if(secret != null && !secret.isEmpty())
+			this.secret = secret;
 	}
 
 	@JsonProperty(Fields.STREAMS)
@@ -69,6 +84,7 @@ public class BackendConfig extends BaseConfig
 	public static class SourceConfig
 	{
 		private String url;
+		private String secret = null;
 
 		@JsonProperty(Fields.URL)
 		public String getUrl()
@@ -82,11 +98,25 @@ public class BackendConfig extends BaseConfig
 			ConfigHelpers.check(url, "URL is invalid!");
 			this.url = BackendConfig.sanitize(url);
 		}
+
+		@JsonProperty(Fields.SECRET)
+		public String getSecret()
+		{
+			return secret;
+		}
+
+		@Config(Fields.SECRET)
+		public void setSecret(String secret)
+		{
+			// ConfigHelpers.check(secret, "Secret is invalid!");
+			this.secret = secret;
+		}
 	}
 
 	public static class SinkConfig
 	{
 		private String baseurl;
+		private String secret = null;
 
 		@JsonProperty(Fields.BASE_URL)
 		public String getBaseUrl()
@@ -99,6 +129,19 @@ public class BackendConfig extends BaseConfig
 		{
 			ConfigHelpers.check(url, "Base URL is invalid!");
 			this.baseurl = BackendConfig.sanitize(url);
+		}
+
+		@JsonProperty(Fields.SECRET)
+		public String getSecret()
+		{
+			return secret;
+		}
+
+		@Config(Fields.SECRET)
+		public void setSecret(String secret)
+		{
+			// ConfigHelpers.check(secret, "Secret is invalid!");
+			this.secret = secret;
 		}
 	}
 
@@ -199,6 +242,7 @@ public class BackendConfig extends BaseConfig
 		private static final String SINK     = "sink";
 		private static final String URL      = "url";
 		private static final String BASE_URL = "base_url";
+		private static final String SECRET   = "secret";
 	}
 
 	private static String sanitize(String url)
