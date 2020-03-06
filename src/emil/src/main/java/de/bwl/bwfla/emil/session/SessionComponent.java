@@ -19,28 +19,48 @@
 
 package de.bwl.bwfla.emil.session;
 
-import de.bwl.bwfla.emil.datatypes.NetworkRequest;
 
-
-public class NetworkSession extends Session
+public class SessionComponent implements Comparable<SessionComponent>
 {
-    private final String switchId;
-    private final NetworkRequest networkRequest;
+	private final String id;
+
+	private String networkInfo;
+	private String customName = null;
 
 
-    public NetworkSession(String switchId, NetworkRequest request)
-    {
-        super();
+	public SessionComponent(String id)
+	{
+		this.id = id;
+	}
 
-        this.switchId = switchId;
-        this.networkRequest = request;
-    }
+	public String id()
+	{
+		return id;
+	}
 
-    public String getSwitchId() {
-        return switchId;
-    }
+	public String getNetworkInfo()
+	{
+		return networkInfo;
+	}
 
-    public NetworkRequest getNetworkRequest() {
-        return networkRequest;
-    }
+	public void setNetworkInfo(String networkInfo)
+	{
+		this.networkInfo = networkInfo;
+	}
+
+	public String getCustomName()
+	{
+		return customName;
+	}
+
+	public void setCustomName(String customName)
+	{
+		this.customName = customName;
+	}
+
+	@Override
+	public int compareTo(SessionComponent other)
+	{
+		return id.compareTo(other.id());
+	}
 }
