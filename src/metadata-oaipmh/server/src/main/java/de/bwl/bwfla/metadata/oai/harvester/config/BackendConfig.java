@@ -62,13 +62,6 @@ public class BackendConfig extends BaseConfig
 		this.name = name;
 	}
 
-	@Config(value = Fields.SECRET, required = false)
-	public void setSecret(String secret)
-	{
-		if(secret != null && !secret.isEmpty())
-			this.secret = secret;
-	}
-
 	@JsonProperty(Fields.STREAMS)
 	public Collection<StreamConfig> getStreamConfigs()
 	{
@@ -105,11 +98,11 @@ public class BackendConfig extends BaseConfig
 			return secret;
 		}
 
-		@Config(Fields.SECRET)
+		@Config(value = Fields.SECRET, required = false)
 		public void setSecret(String secret)
 		{
-			// ConfigHelpers.check(secret, "Secret is invalid!");
-			this.secret = secret;
+			if(secret != null && !secret.isEmpty())
+				this.secret = secret;
 		}
 	}
 
@@ -137,11 +130,11 @@ public class BackendConfig extends BaseConfig
 			return secret;
 		}
 
-		@Config(Fields.SECRET)
+		@Config(value = Fields.SECRET, required = false)
 		public void setSecret(String secret)
 		{
-			// ConfigHelpers.check(secret, "Secret is invalid!");
-			this.secret = secret;
+			if(secret != null && !secret.isEmpty())
+				this.secret = secret;
 		}
 	}
 

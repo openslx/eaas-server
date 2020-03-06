@@ -115,6 +115,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@HEAD
+		@SecuredInternal
 		public Response supported()
 		{
 			return Response.ok()
@@ -137,6 +138,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@GET
+		@SecuredInternal
 		public CompletionStage<Response> list(@Context HttpServletRequest request)
 		{
 			final int offset = MetaDataRepositoryAPI.getIntParam(request, HttpDefs.QueryParams.OFFSET, 0);
@@ -188,6 +190,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@GET
+		@SecuredInternal
 		public CompletionStage<Response> list(@Context HttpServletRequest request)
 		{
 			final QueryOptions options = MetaDataRepositoryAPI.getQueryOptions(request);
@@ -241,6 +244,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@GET
+		@SecuredInternal
 		public CompletionStage<Response> list(@Context HttpServletRequest request)
 		{
 			if(source == null)
@@ -280,6 +284,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@POST
+		@SecuredInternal
 		public Response insert(@Context HttpServletRequest request)
 		{
 			if(sink == null)

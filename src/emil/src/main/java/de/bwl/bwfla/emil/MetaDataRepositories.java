@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.metadata.repository.IMetaDataRepositoryAPI;
@@ -40,7 +41,6 @@ import java.util.concurrent.Executor;
 import java.util.logging.Logger;
 
 @ApplicationScoped
-@SecuredInternal
 @Path("/metadata-repositories/{name}")
 public class MetaDataRepositories implements IMetaDataRepositoryAPI
 {
