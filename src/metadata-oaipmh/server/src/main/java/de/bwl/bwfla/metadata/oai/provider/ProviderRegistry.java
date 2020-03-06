@@ -79,6 +79,9 @@ public class ProviderRegistry
 		this.http = ClientBuilder.newClient();
 		this.providers = new LinkedHashMap<>();
 
+		String apiSecret = ConfigurationProvider.getConfiguration().get("rest.internalApiSecret");
+		System.out.print("ProviderRegistry API " + apiSecret);
+
 		try {
 			config.load(ConfigurationProvider.getConfiguration());
 			for (BackendConfig backend : config.getBackendConfigs()) {
@@ -86,7 +89,7 @@ public class ProviderRegistry
 				final String baseurl = config.getBaseUrl();
 				log.info("Preparing provider backend '" + name + "'...");
 
-				final Repository repository = ProviderRegistry.newRepository(backend, baseurl, http, config.getSecret(), log);
+				final Repository repository = ProviderRegistry.newRepository(backend, baseurl, http, apiSecret, log);
 				providers.put(name, new DataProvider(context, repository));
 			}
 		}

@@ -20,6 +20,7 @@
 package de.bwl.bwfla.metadata.oai.harvester;
 
 import de.bwl.bwfla.common.services.guacplay.util.StopWatch;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
 import de.bwl.bwfla.metadata.oai.harvester.config.HarvesterConfig;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -61,6 +62,7 @@ public class DataStream
 	private final BackendConfig.StreamConfig config;
 	private final MetaDataRepository mdrepo;
 	private final ServiceProvider service;
+	private final String secret;
 
 	public DataStream(BackendConfig.StreamConfig config, Client http, String secret, Logger log)
 	{
@@ -68,8 +70,9 @@ public class DataStream
 		this.config = config;
 
 		final WebTarget endpoint = http.target(config.getSinkConfig().getBaseUrl());
+		this.secret = secret;
 		this.mdrepo = new MetaDataRepository(endpoint, secret);
-		this.service = new ServiceProvider(DataStream.newContext(config.getSourceConfig()));
+		this.service = new ServiceProvider(newContext(config.getSourceConfig()));
 	}
 
 	public HarvestingResult execute() throws HarvestException
@@ -168,10 +171,14 @@ public class DataStream
 		final String baseurl = config.getUrl();
 		final String format = HarvesterConfig.getMetaDataFormat();
 		final Transformer transformer = HarvesterConfig.getMetaDataTransformer();
+
+		String token = null;
+		if(config.getSecret() != null)
+			token = MachineTokenProvider.getJwt(config.getSecret());
 		return new Context()
 				.withBaseUrl(baseurl)
 				.withGranularity(Granularity.Second)
-				.withOAIClient(new HttpOAIClient(baseurl, config.getSecret()))
+				.withOAIClient(new HttpOAIClient(baseurl, token))
 				.withMetadataTransformer(format, transformer);
 	}
 

@@ -10,8 +10,11 @@ import com.auth0.jwt.algorithms.Algorithm;
 import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 
+
 import javax.ws.rs.container.ContainerRequestContext;
 import javax.ws.rs.container.ContainerRequestFilter;
+import javax.ws.rs.container.ResourceInfo;
+import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import java.net.MalformedURLException;
@@ -25,6 +28,9 @@ public abstract class AbstractAuthenticationFilter  implements ContainerRequestF
     protected static JwkProvider provider = null;
     protected static final Logger LOG = Logger.getLogger("Authentication");
 
+    @Context
+    ResourceInfo resourceInfo;
+
     protected void initWKProvider(String jwkUri) throws MalformedURLException {
         if (provider == null && jwkUri != null) {
             provider = new JwkProviderBuilder(new URL(jwkUri))
@@ -32,6 +38,16 @@ public abstract class AbstractAuthenticationFilter  implements ContainerRequestF
                     .rateLimited(10, 1, TimeUnit.MINUTES)
                     .build();
         }
+    }
+
+    protected void debug(ContainerRequestContext requestContext)
+    {
+        Class<?> resourceClass = resourceInfo.getResourceClass();
+        LOG.severe("Debug: class context:  " + resourceClass.getName());
+
+        String authorizationHeader =
+                requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
+        LOG.severe("auth header: " + authorizationHeader);
     }
 
     protected String extractToken(ContainerRequestContext requestContext)

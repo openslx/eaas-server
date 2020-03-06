@@ -56,7 +56,7 @@ public class MachineTokenProvider {
                     .withExpiresAt(new Date(System.currentTimeMillis() + (6 * 60 * 60 * 1000))) // 6h
                     .sign(algorithm);
             // System.out.println("Token:"  + token);
-            return token;
+            return "Bearer " + token;
         } catch (JWTCreationException | UnsupportedEncodingException exception){
             exception.printStackTrace();
             return null;

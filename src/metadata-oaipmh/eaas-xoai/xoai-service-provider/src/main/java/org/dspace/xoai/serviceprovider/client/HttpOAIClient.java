@@ -65,6 +65,7 @@ public class HttpOAIClient implements OAIClient {
 
 		// Allow multiple concurrent connections per server
 		httpclient = new DefaultHttpClient(new PoolingClientConnectionManager(), params);
+
 	}
 
 
