@@ -57,7 +57,6 @@ import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
@@ -72,9 +71,7 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
-import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
@@ -282,7 +279,7 @@ public class Components {
         sessionStatsWriter.append(session);
     }
 
-    private ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
+    ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
 
@@ -302,6 +299,10 @@ public class Components {
             result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(ContainerComponentRequest.class)) {
             result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(SwitchComponentRequest.class)) {
+            result = this.createSwitchComponent((SwitchComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(NodeTcpComponentRequest.class)) {
+            result = this.createNodeTcpComponent((NodeTcpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SlirpComponentRequest.class)) {
             result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SocksComponentRequest.class)) {
@@ -312,7 +313,7 @@ public class Components {
 
         final String cid = result.getId();
         final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
-        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
+        cleanups.push("unregister-component/" + cid, () -> this.unregister(session));
 
         this.register(session);
 
@@ -354,9 +355,35 @@ public class Components {
         return result;
     }
 
-    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+    protected ComponentResponse createSwitchComponent(SwitchComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {
+        try {
+            String switchId = eaasClient.getEaasWSPort(eaasGw).createSession(desc.getConfig().value(false));
+            cleanups.push("release-component/" + switchId, () -> eaas.releaseSession(switchId));
+            return new ComponentResponse(switchId);
+        }
+        catch (Exception error) {
+            cleanups.execute();
+            throw Components.newInternalError(error);
+        }
+    }
+
+    protected ComponentResponse createNodeTcpComponent(NodeTcpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+        throws WebApplicationException {
+        try {
+            String nodeTcpId = eaasClient.getEaasWSPort(eaasGw).createSession(desc.getConfig().value(false));
+            cleanups.push("release-component/" + nodeTcpId, () -> eaas.releaseSession(nodeTcpId));
+            return new ComponentResponse(nodeTcpId);
+        }
+        catch (Exception error) {
+            cleanups.execute();
+            throw Components.newInternalError(error);
+        }
+    }
+
+    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException {
         try {
             VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
             
@@ -375,7 +402,7 @@ public class Components {
             slirpConfig.setDhcpEnabled(desc.isDhcp());
 
             String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
-            cleanups.push("release-session/" + slirpId, () -> eaas.releaseSession(slirpId));
+            cleanups.push("release-component/" + slirpId, () -> eaas.releaseSession(slirpId));
             return new ComponentResponse(slirpId);
         }
         catch (Exception error) {
@@ -403,7 +430,7 @@ public class Components {
                 socksConfig.setNetmask(desc.getNetmask());
             }
             String socksId = eaasClient.getEaasWSPort(eaasGw).createSession(socksConfig.value(false));
-            cleanups.push("release-session/" + socksId, () -> eaas.releaseSession(socksId));
+            cleanups.push("release-component/" + socksId, () -> eaas.releaseSession(socksId));
             return new ComponentResponse(socksId);
         }
         catch (Exception error) {
@@ -513,7 +540,7 @@ public class Components {
                         .build());
             }
 
-            cleanups.push("release-session/" + sessionId, () -> eaas.releaseSession(sessionId));
+            cleanups.push("release-component/" + sessionId, () -> eaas.releaseSession(sessionId));
 
             Container container = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Container.class);
             container.startContainer(sessionId);
@@ -732,7 +759,7 @@ public class Components {
                         .build());
             }
 
-            cleanups.push("release-session/" + sessionId, () -> eaas.releaseSession(sessionId));
+            cleanups.push("release-component/" + sessionId, () -> eaas.releaseSession(sessionId));
 
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
@@ -875,18 +902,6 @@ public class Components {
         return true;
     }
 
-    public boolean keepalive(String componentId, boolean ignoreMissing) throws BWFLAException {
-        ComponentSession session = sessions.get(componentId);
-        if(session == null) {
-            if(!ignoreMissing)
-                LOG.info("Component Session null! Should throw instead. " + componentId);
-            return false;
-        }
-
-        session.keepalive();
-        return true;
-    }
-
     /**
      * Sends a keepalive request to the component. Keepalives have to be sent
      * in regular intervals or the component will automatically terminate.
@@ -903,9 +918,12 @@ public class Components {
     @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
+        final ComponentSession session = sessions.get(componentId);
+        if (session == null)
+            throw new NotFoundException();
 
         try {
-            keepalive(componentId, false);
+            session.keepalive();
         }
         catch (BWFLAException error) {
             throw new NotFoundException(Response
@@ -1572,10 +1590,10 @@ public class Components {
 //            }
 
             // Run all tasks in reverse order
-            LOG.info("Releasing session '" + id + "'...");
+            LOG.info("Releasing component '" + id + "'...");
             if (tasks.execute())
-                LOG.info("Session '" + id + "' released");
-            else LOG.log(Level.WARNING, "Releasing session '" + id + "' failed!");
+                LOG.info("Component '" + id + "' released");
+            else LOG.log(Level.WARNING, "Releasing component '" + id + "' failed!");
         }
 
         public String getId()

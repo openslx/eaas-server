@@ -19,40 +19,51 @@
 
 package de.bwl.bwfla.emil.session;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.eaas.client.ComponentGroupClient;
-import de.bwl.bwfla.emil.datatypes.SessionResource;
-import de.bwl.bwfla.emucomp.client.ComponentClient;
-import org.apache.tamaya.inject.api.Config;
+import de.bwl.bwfla.emil.Components;
 
-import javax.inject.Inject;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.List;
+import java.util.Collections;
+import java.util.Optional;
+import java.util.Set;
+import java.util.TreeSet;
+import java.util.UUID;
+import java.util.function.Function;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class Session extends JaxbType {
+public class Session extends JaxbType
+{
 	@XmlElement
 	private final String id;
-
-	private final String groupId;
-	private long expirationTimestamp = 0;
-	private boolean detached = false;
-	private boolean failed = false;
-	private long lastUpdate;
 
 	@XmlElement
 	private String name;
 
-	Session(String id, String groupId) {
-		this.groupId = groupId;
+	private long expirationTimestamp = -1L;
+	private boolean detached = false;
+	private boolean failed = false;
+	private long lastUpdate;
+
+	/** List of component IDs */
+	private final Set<SessionComponent> components;
+
+
+	public Session()
+	{
+		this(UUID.randomUUID().toString());
+	}
+
+	public Session(String id) {
 		this.id = id;
-		this.lastUpdate = System.currentTimeMillis();
+		this.lastUpdate = SessionManager.timems();
+		this.components = Collections.synchronizedSet(new TreeSet<>());
 	}
 
 	public String id()
@@ -60,19 +71,14 @@ public class Session extends JaxbType {
 		return id;
 	}
 
-	String groupId()
-	{
-		return groupId;
-	}
-
 	void setFailed()
 	{
 		failed = true;
 	}
 
-	void update()
+	public boolean hasExpirationTimestamp()
 	{
-		lastUpdate = System.currentTimeMillis();
+		return expirationTimestamp > 0L;
 	}
 
 	long getExpirationTimestamp()
@@ -105,5 +111,38 @@ public class Session extends JaxbType {
 	public String getName()
 	{
 		return name;
+	}
+
+	public Set<SessionComponent> components()
+	{
+		return components;
+	}
+
+	public void keepalive(Components endpoint, Logger log)
+	{
+		final Function<SessionComponent, Long> checker = (component) -> {
+			try {
+				endpoint.keepalive(component.id());
+				return 0L;
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Sending keepalive failed for component " + component.id() + "!");
+				return 1L;
+			}
+		};
+
+		final Optional<Long> numfailed = components.stream()
+				.map(checker)
+				.reduce(Long::sum);
+
+		if (numfailed.isPresent() && numfailed.get() > 0L)
+			log.info(numfailed + " out of " + components.size() + " component(s) failed in session " + id + "!");
+
+		this.update();
+	}
+
+	private void update()
+	{
+		this.lastUpdate = SessionManager.timems();
 	}
 }
