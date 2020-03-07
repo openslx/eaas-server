@@ -192,10 +192,9 @@ public class Networks {
             
             response.setStatus(Response.Status.CREATED.getStatusCode());
             return networkResponse;
-        } catch (BWFLAException e) {
-            throw new InternalServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation("Server has encountered an internal error.", e.getMessage()))
-                    .build(), e);
+        }
+        catch (Exception error) {
+            throw Components.newInternalError(error);
         }
     }
 

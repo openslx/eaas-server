@@ -30,7 +30,7 @@ import java.util.logging.Logger;
 public class FileSystemMakerEXT implements IFileSystemMaker
 {
 	private final FileSystemType fstype;
-	private String label;
+
 
 	public FileSystemMakerEXT(FileSystemType fstype)
 	{
@@ -46,7 +46,13 @@ public class FileSystemMakerEXT implements IFileSystemMaker
 		}
 	}
 
-	public void execute(Path device, Logger log) throws BWFLAException
+
+	@Override
+	public void execute(Path device, Logger log) throws BWFLAException {
+		execute(device, null, log);
+	}
+
+	public void execute(Path device, String label, Logger log) throws BWFLAException
 	{
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
@@ -59,10 +65,5 @@ public class FileSystemMakerEXT implements IFileSystemMaker
 		process.addArgument(device.toString());
 		if (!process.execute())
 			throw new BWFLAException("Creating " + fstype.toString() + "-filesystem failed!");
-	}
-
-	@Override
-	public void setLabel(String label) {
-		this.label = label;
 	}
 }
