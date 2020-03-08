@@ -219,12 +219,6 @@ public class ClusterManager implements IClusterManager
 		return Collections.unmodifiableCollection(providers.keySet());
 	}
 	
-	public boolean checkAccessToken(String token)
-	{
-		final String exptoken = config.getAdminApiAccessToken();
-		return exptoken.contentEquals(token);
-	}
-	
 	
 	/* ========== Admin REST-API ========== */
 	

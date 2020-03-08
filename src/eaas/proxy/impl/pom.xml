@@ -86,17 +86,6 @@
 							<address>http://localhost:8080/eaas/EaasWS</address>
 						</configuration>
 					</execution>
-					<execution>
-						<id>wsdl-componentgroup</id>
-						<phase>process-classes</phase>
-						<goals>
-							<goal>java2ws</goal>
-						</goals>
-						<configuration>
-							<className>de.bwl.bwfla.eaas.ComponentGroup</className>
-							<address>http://localhost:8080/eaas/ComponentGroup</address>
-						</configuration>
-					</execution>
 				</executions>
 			</plugin>
 		</plugins>

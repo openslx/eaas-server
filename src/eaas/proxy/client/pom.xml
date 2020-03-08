@@ -73,13 +73,6 @@
 										<bindingFile>eaasws.bindings</bindingFile>
 									</bindingFiles>
 								</wsdlOption>
-								<wsdlOption>
-									<wsdl>${project.build.directory}/dependency/WEB-INF/wsdl/ComponentGroup.wsdl</wsdl>
-									<wsdlLocation>http://localhost:8080/eaas/EaasWS?wsdl</wsdlLocation>
-									<bindingFiles>
-										<bindingFile>componentgroup.bindings</bindingFile>
-									</bindingFiles>
-								</wsdlOption>
 							</wsdlOptions>
 						</configuration>
 						<goals>

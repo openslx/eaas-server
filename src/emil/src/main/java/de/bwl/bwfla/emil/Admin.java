@@ -26,6 +26,7 @@ import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
+import org.apache.tamaya.ConfigurationProvider;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
@@ -90,19 +91,6 @@ public class Admin extends EmilRest
 		return resp;
 	}
 
-
-	@GET
-	@Secured(roles = {Role.RESTRCITED})
-	@Path("/server-log")
-	@Produces(MediaType.TEXT_PLAIN)
-	public Response getServerLog()
-	{
-		return Response.ok()
-				.entity(new File("/home/bwfla/log/eaas.log"))
-				.header("Content-Disposition", "attachment; filename=\"eaas.log\"")
-				.build();
-	}
-
 	@GET
 	@Secured(roles = {Role.RESTRCITED})
 	@Path("/usage-log")
@@ -132,6 +120,21 @@ public class Admin extends EmilRest
 
 		return Response.ok()
 				.build();
+	}
+
+	@GET
+	@Secured(roles = {Role.RESTRCITED})
+	@Path("/apikey")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response getApiKey()
+	{
+
+		final JsonObject json = Json.createObjectBuilder()
+				.add("status", "0")
+				.add("apikey", ConfigurationProvider.getConfiguration().get("rest.apiSecret"))
+				.build();
+
+		return Admin.createResponse(Status.OK, json.toString());
 	}
 
 	@POST

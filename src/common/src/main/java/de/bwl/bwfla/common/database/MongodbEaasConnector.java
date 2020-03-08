@@ -168,6 +168,8 @@ public class MongodbEaasConnector {
 				throw new NoSuchElementException();
 
 			String classname = (String) result.get(classNameKey);
+			if(classname.contains("EmilNetworkEnvironment"))
+				classname = "NetworkEnvironment";
 			Class<T> klass = null;
 			try {
 				klass = (Class<T>) Class.forName(classname);

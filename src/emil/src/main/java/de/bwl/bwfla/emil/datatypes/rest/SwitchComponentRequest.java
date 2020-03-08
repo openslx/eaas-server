@@ -17,30 +17,23 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil.session;
-
-import de.bwl.bwfla.emil.datatypes.NetworkRequest;
+package de.bwl.bwfla.emil.datatypes.rest;
 
 
-public class NetworkSession extends Session
+import de.bwl.bwfla.emucomp.api.NetworkSwitchConfiguration;
+
+
+public class SwitchComponentRequest extends ComponentRequest
 {
-    private final String switchId;
-    private final NetworkRequest networkRequest;
+	private NetworkSwitchConfiguration config;
 
+	public NetworkSwitchConfiguration getConfig()
+	{
+		return config;
+	}
 
-    public NetworkSession(String switchId, NetworkRequest request)
-    {
-        super();
-
-        this.switchId = switchId;
-        this.networkRequest = request;
-    }
-
-    public String getSwitchId() {
-        return switchId;
-    }
-
-    public NetworkRequest getNetworkRequest() {
-        return networkRequest;
-    }
+	public void setConfig(NetworkSwitchConfiguration config)
+	{
+		this.config = config;
+	}
 }

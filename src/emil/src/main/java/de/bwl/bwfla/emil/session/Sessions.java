@@ -19,10 +19,7 @@
 
 package de.bwl.bwfla.emil.session;
 
-import de.bwl.bwfla.api.eaas.ComponentGroupElement;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.JsonBuilder;
-import de.bwl.bwfla.eaas.client.ComponentGroupClient;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
@@ -43,8 +40,6 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
-import java.io.IOException;
 import java.net.URI;
 import java.time.Duration;
 import java.util.*;
@@ -69,15 +64,13 @@ public class Sessions
 	private ComponentClient componentClient;
 
 	@Inject
-	private ComponentGroupClient groupClient;
-
-	@Inject
 	@Config(value = "ws.eaasgw")
 	private String eaasGw;
 
 	@Inject
 	@Config("components.client_timeout")
 	private Duration resourceExpirationTimeout;
+
 
 	/* ========================= Public API ========================= */
 
@@ -98,7 +91,7 @@ public class Sessions
 	@Secured(roles = {Role.RESTRCITED})
 	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
 	{
-		sessions.unregister(id);
+		sessions.remove(id);
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
@@ -117,7 +110,6 @@ public class Sessions
 	@Path("/{id}/resources")
 	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
 	{
-		System.out.println("delete");
 		sessions.remove(id, resources);
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
@@ -158,13 +150,11 @@ public class Sessions
 	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/keepalive")
 	public void keepalive(@PathParam("id") String id) {
-		final Session session = sessions.get(id);
-		if (session == null) {
+		if (!sessions.keepalive(id)) {
 			throw new NotFoundException(Response.status(Response.Status.NOT_FOUND)
 					.entity(new ErrorInformation("Session not found!", "Session-ID: " + id))
 					.build());
 		}
-		sessions.keepAlive(session, null);
 	}
 
 	@GET
@@ -189,8 +179,6 @@ public class Sessions
 		return builder;
 	}
 
-	/* ========================= Internal Helpers ========================= */
-
 	@GET
 	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}")
@@ -201,31 +189,27 @@ public class Sessions
 				throw new BWFLAException("session not found " + id);
 
 			SessionResponse result = new SessionResponse(((NetworkSession) session).getNetworkRequest());
+			for (de.bwl.bwfla.emil.session.SessionComponent component : session.components()) {
 
-
-			List<ComponentGroupElement> components = sessions.getComponents(session);
-			for (ComponentGroupElement componentElement : components) {
-
-				String type = componentClient.getComponentPort(eaasGw).getComponentType(componentElement.getComponentId());
+				String type = componentClient.getComponentPort(eaasGw).getComponentType(component.id());
 				if(type.equals("nodetcp")) {
 					NetworkResponse networkResponse = new NetworkResponse(session.id());
 
-					Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
+					Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(component.id()));
 
 					URI uri = controlUrls.get("info");
 					if(uri == null)
 						continue;
 					String nodeInfoUrl = uri.toString();
 					networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
-					SessionComponent sc = new SessionComponent(componentElement.getComponentId(), type, null);
+					SessionComponent sc = new SessionComponent(component.id(), type, null);
 					sc.addNetworkData(networkResponse);
 
 				} else if (type.equals("machine")){
-                    String environmentId = componentClient.getComponentPort(eaasGw).getEnvironmentId(componentElement.getComponentId());
-                    result.add(new SessionComponent(componentElement.getComponentId(), type, environmentId));
+                    String environmentId = componentClient.getComponentPort(eaasGw).getEnvironmentId(component.id());
+                    result.add(new SessionComponent(component.id(), type, environmentId));
 				} else
-					result.add(new SessionComponent(componentElement.getComponentId(), type, null));
-
+					result.add(new SessionComponent(component.id(), type, null));
 			}
 			return result;
 		} catch (BWFLAException e) {
@@ -237,6 +221,9 @@ public class Sessions
 					.build());
 		}
 	}
+
+
+	/* ========================= Internal Helpers ========================= */
 
 	@PostConstruct
 	private void initialize()

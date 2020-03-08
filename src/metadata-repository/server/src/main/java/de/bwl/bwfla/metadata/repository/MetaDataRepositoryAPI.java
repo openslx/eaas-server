@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.repository;
 
+import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.metadata.repository.api.HttpDefs;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
 import de.bwl.bwfla.metadata.repository.api.ItemDescriptionStream;
@@ -114,6 +115,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@HEAD
+		@SecuredInternal
 		public Response supported()
 		{
 			return Response.ok()
@@ -122,6 +124,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 
 		@HEAD
 		@Path("/{setspec}")
+		@SecuredInternal
 		public CompletionStage<Response> exists(@PathParam("setspec") String setspec)
 		{
 			final Function<Boolean, Response> responder = (isfound) -> {
@@ -135,6 +138,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@GET
+		@SecuredInternal
 		public CompletionStage<Response> list(@Context HttpServletRequest request)
 		{
 			final int offset = MetaDataRepositoryAPI.getIntParam(request, HttpDefs.QueryParams.OFFSET, 0);
@@ -186,6 +190,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@GET
+		@SecuredInternal
 		public CompletionStage<Response> list(@Context HttpServletRequest request)
 		{
 			final QueryOptions options = MetaDataRepositoryAPI.getQueryOptions(request);
@@ -239,6 +244,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@GET
+		@SecuredInternal
 		public CompletionStage<Response> list(@Context HttpServletRequest request)
 		{
 			if(source == null)
@@ -278,6 +284,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 		}
 
 		@POST
+		@SecuredInternal
 		public Response insert(@Context HttpServletRequest request)
 		{
 			if(sink == null)
