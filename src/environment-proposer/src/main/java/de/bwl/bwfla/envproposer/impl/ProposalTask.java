@@ -21,6 +21,7 @@ package de.bwl.bwfla.envproposer.impl;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
@@ -49,6 +50,7 @@ import javax.activation.DataSource;
 import javax.activation.URLDataSource;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -232,27 +234,46 @@ public class ProposalTask extends AbstractTask<Object>
 
 	private BlobHandle build(Path data, long sizeInMb) throws BWFLAException
 	{
-		log.info("Wrapping content in an image...");
+		log.info("Uploading content to blobstore...");
 
-		final FileSystemType fileSystemType = FileSystemType.ISO9660;
-
-		final ImageDescription description = new ImageDescription()
-				.setMediumType(PREPARED_IMAGE_TYPE)
-				.setPartitionTableType(PartitionTableType.NONE)
-				.setFileSystemType(fileSystemType)
-				.setSizeInMb((int) sizeInMb);
-
-		final ImageContentDescription entry = new ImageContentDescription()
-				.setAction(ImageContentDescription.Action.EXTRACT)
-				.setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
+		final BlobDescription blobdesc = new BlobDescription()
+				.setDescription("Input content for environment proposal " + this.getTaskId())
+				.setNamespace("environment-proposer")
 				.setDataFromFile(data)
-				.setName("data");
+				.setType(".tar");
 
-		description.addContentEntry(entry);
+		final BlobHandle blob = blobstore.put(blobdesc);
 
-		// Build input image
-		return ImageBuilderClient.build(imagebuilder, description, Duration.ofHours(1L))
-				.getBlobHandle();
+		try {
+			log.info("Wrapping content in an image...");
+
+			final FileSystemType fileSystemType = FileSystemType.ISO9660;
+
+			final ImageDescription imgdesc = new ImageDescription()
+					.setMediumType(PREPARED_IMAGE_TYPE)
+					.setPartitionTableType(PartitionTableType.NONE)
+					.setFileSystemType(fileSystemType)
+					.setSizeInMb((int) sizeInMb);
+
+			final ImageContentDescription entry = new ImageContentDescription()
+					.setAction(ImageContentDescription.Action.EXTRACT)
+					.setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
+					.setDataFromUrl(new URL(blob.toRestUrl(blobStoreAddress)))
+					.setName("data");
+
+			imgdesc.addContentEntry(entry);
+
+			// Build input image
+			return ImageBuilderClient.build(imagebuilder, imgdesc, Duration.ofHours(1L))
+					.getBlobHandle();
+		}
+		catch (MalformedURLException error) {
+			throw new BWFLAException(error);
+		}
+		finally {
+			log.info("Deleting content from blobstore...");
+			blobstore.delete(blob);
+		}
 	}
 
 	private Path findBagItContentRoot(Path basedir) throws BWFLAException, IOException
