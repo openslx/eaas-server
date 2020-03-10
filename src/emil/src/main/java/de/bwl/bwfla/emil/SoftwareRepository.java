@@ -26,10 +26,10 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
@@ -142,7 +142,7 @@ public class SoftwareRepository extends EmilRest
 	{
 		@GET
 		@Path("/{softwareId}")
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response get(@PathParam("softwareId") String softwareId)
 		{
@@ -187,7 +187,7 @@ public class SoftwareRepository extends EmilRest
 		 * @return JSON response (error) message
 		 */
 		@POST
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response create(EmilSoftwareObject swo)
@@ -280,7 +280,7 @@ public class SoftwareRepository extends EmilRest
 		 *         for all software packages or an error message.
 		 */
 		@GET
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response list()
 		{
@@ -347,7 +347,7 @@ public class SoftwareRepository extends EmilRest
 		 */
 		@GET
 		@Path("/{softwareId}")
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response get(@PathParam("softwareId") String softwareId)
 		{
