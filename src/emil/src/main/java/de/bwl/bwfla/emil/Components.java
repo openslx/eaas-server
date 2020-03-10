@@ -71,6 +71,7 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
@@ -283,7 +284,7 @@ public class Components {
     {
         ComponentResponse result;
 
-        final TaskStack cleanups = new TaskStack();
+        final TaskStack cleanups = new TaskStack(LOG);
         final List<EventObserver> observer = new ArrayList<>();
 
         if (request.getClass().equals(UviComponentRequest.class)) {
@@ -1390,75 +1391,6 @@ public class Components {
     private static long timestamp()
     {
         return System.currentTimeMillis();
-    }
-
-    public static class TaskStack
-    {
-        private final Deque<Task> tasks = new ArrayDeque<>();
-
-        public void push(String name, Runnable task)
-        {
-            this.push(new Task(name, task));
-        }
-
-        public void push(Task task)
-        {
-            tasks.push(task);
-        }
-
-        public Task pop()
-        {
-            return tasks.pop();
-        }
-
-        public boolean isEmpty()
-        {
-            return tasks.isEmpty();
-        }
-
-        public boolean execute()
-        {
-            boolean result = true;
-            while (!this.isEmpty())
-                result = result && this.pop().run();
-
-            return result;
-        }
-
-        public static class Task
-        {
-            private final String name;
-            private final Runnable runnable;
-
-            private Task(String name, Runnable runnable)
-            {
-                this.name = name;
-                this.runnable = runnable;
-            }
-
-            public String name()
-            {
-                return name;
-            }
-
-            public Runnable runnable()
-            {
-                return runnable;
-            }
-
-            public boolean run()
-            {
-                LOG.log(Level.WARNING, "Running task '" + name + "'...");
-                try {
-                    runnable.run();
-                    return true;
-                }
-                catch (Exception error) {
-                    LOG.log(Level.WARNING, "Running task '" + name + "' failed!\n", error);
-                    return false;
-                }
-            }
-        }
     }
 
     private class ComponentSession
