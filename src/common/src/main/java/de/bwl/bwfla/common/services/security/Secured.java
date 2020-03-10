@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.datatypes.security;
+package de.bwl.bwfla.common.services.security;
 
 import javax.ws.rs.NameBinding;
 import java.lang.annotation.Target;
@@ -12,5 +12,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 @Target({TYPE, METHOD})
 public @interface Secured {
-    Role[] value() default {};
+    Role[] roles() default {};
+    String secret() default "";
 }

@@ -34,7 +34,7 @@ public class CORSResponseFilter implements ContainerResponseFilter {
     public void filter(ContainerRequestContext request, ContainerResponseContext response) throws IOException {
         final MultivaluedMap<String, Object> headers = response.getHeaders();
         headers.putSingle("Access-Control-Allow-Origin", "*");
-        headers.putSingle("Access-Control-Allow-Headers", "content-type");
+        headers.putSingle("Access-Control-Allow-Headers", "content-type, authorization");
         headers.putSingle("Access-Control-Allow-Methods", "POST, GET, DELETE, OPTIONS");
     }
 }

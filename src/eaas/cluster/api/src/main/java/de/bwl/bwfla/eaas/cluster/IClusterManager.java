@@ -65,5 +65,4 @@ public interface IClusterManager extends IDumpable
 	public Comparator<IResourceProvider> getResourceProviderComparator();
 	public String getName();
 	public Collection<String> getProviderNames();
-	public boolean checkAccessToken(String token);
 }

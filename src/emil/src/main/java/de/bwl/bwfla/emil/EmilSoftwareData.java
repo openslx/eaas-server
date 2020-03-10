@@ -14,8 +14,8 @@ import javax.ws.rs.core.Response;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 
 import de.bwl.bwfla.emil.datatypes.EmilSoftwareObject;
 
@@ -30,7 +30,7 @@ public class EmilSoftwareData extends EmilRest {
 	@Inject
 	private SoftwareRepository swrepo = null;
 
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@GET
 	@Path("/getSoftwareObject")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -64,7 +64,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @return A JSON response containing software package's description when found,
 	 *         else an error message.
 	 */
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@GET
 	@Path("/getSoftwarePackageDescription")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -99,7 +99,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @return A JSON response containing a list of descriptions
 	 *         for all software packages or an error message.
 	 */
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@GET
 	@Path("/getSoftwarePackageDescriptions")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -125,7 +125,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @param swo EmilSoftwareObject as JSON string
 	 * @return JSON response (error) message
 	 */
-	@Secured({Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRCITED})
 	@POST
 	@Path("/saveSoftwareObject")
 	@Consumes(MediaType.APPLICATION_JSON)

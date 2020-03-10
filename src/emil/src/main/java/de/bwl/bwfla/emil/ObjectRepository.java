@@ -29,10 +29,10 @@ import de.bwl.bwfla.emil.datatypes.rest.MediaDescriptionResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ObjectArchivesResponse;
 import de.bwl.bwfla.emil.datatypes.rest.SyncObjectRequest;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.tasks.ImportObjectTask;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -160,7 +160,7 @@ public class ObjectRepository extends EmilRest
 	{
 		@GET
 		@Path("/sync")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response sync()
 		{
@@ -180,7 +180,7 @@ public class ObjectRepository extends EmilRest
 	{
 		/** List all available object-archives. */
 		@GET
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public ObjectArchivesResponse list()
 		{
@@ -212,7 +212,7 @@ public class ObjectRepository extends EmilRest
 		}
 
 		@POST
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Path("/{archiveId}/actions/sync")
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
@@ -253,7 +253,7 @@ public class ObjectRepository extends EmilRest
 		 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListResponse
 		 */
 		@GET
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response list(@Context final HttpServletResponse response)
 		{
@@ -306,7 +306,7 @@ public class ObjectRepository extends EmilRest
 		}
 
 		@POST
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importObject(ImportObjectRequest req)
@@ -323,7 +323,7 @@ public class ObjectRepository extends EmilRest
 		 */
 		@GET
 		@Path("/{objectId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public MediaDescriptionResponse get(@PathParam("objectId") String objectId)
 		{
@@ -347,7 +347,7 @@ public class ObjectRepository extends EmilRest
 
 		@DELETE
 		@Path("/{objectId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response delete(@PathParam("objectId") String objectId)
 		{
@@ -385,7 +385,7 @@ public class ObjectRepository extends EmilRest
 	{
 		@GET
 		@Path("/{taskId}")
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse get(@PathParam("taskId") String taskId)
 		{

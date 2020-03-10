@@ -49,6 +49,8 @@ import javax.ws.rs.core.Response.Status;
 
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.eaas.cluster.dump.DumpConfig;
 import de.bwl.bwfla.eaas.cluster.dump.DumpFlags;
 import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
@@ -58,13 +60,6 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
 public class ClusterAPI
 {
 	private static final int NUM_BASE_SEGMENTS = 3;
-	
-	/* Supported Http-Headers **/
-	private static class Headers
-	{
-		private static final String ADMIN_ACCESS_TOKEN = "X-Admin-Access-Token";
-	}
-	
 	
 	private PrefixLogger log;
 
@@ -79,15 +74,15 @@ public class ClusterAPI
 
 	@GET
 	@Path("/")
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response listClusters(@HeaderParam(Headers.ADMIN_ACCESS_TOKEN) String token)
+	public Response listClusters()
 	{
 		// Currently max. 1 is supported!
 		
 		final Function<JsonGenerator, Status> handler = (json) -> {
 			json.writeStartArray();
 			if (clustermgr != null) {
-				ClusterAPI.authorize(clustermgr, token);
 				json.write(clustermgr.getName());
 			}
 
@@ -100,22 +95,22 @@ public class ClusterAPI
 	
 	@GET
 	@Path("/{cluster_name}")
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getClusterResource(
-			@PathParam("cluster_name") String name,
-			@HeaderParam(Headers.ADMIN_ACCESS_TOKEN) String token)
+			@PathParam("cluster_name") String name)
 	{
-		return this.execute(name, token, JSON_RESPONSE_CAPACITY);
+		return this.execute(name, JSON_RESPONSE_CAPACITY);
 	}
 	
 	@GET
 	@Path("/{cluster_name}/{subres:.*}")
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getClusterSubResource(
-			@PathParam("cluster_name") String name,
-			@HeaderParam(Headers.ADMIN_ACCESS_TOKEN) String token)
+			@PathParam("cluster_name") String name)
 	{
-		return this.execute(name, token, JSON_RESPONSE_CAPACITY);
+		return this.execute(name, JSON_RESPONSE_CAPACITY);
 	}
 	
 	
@@ -162,11 +157,10 @@ public class ClusterAPI
 		}
 	}
 	
-	private Response execute(String clusterName, String token, int capacity)
+	private Response execute(String clusterName, int capacity)
 	{
 		final Function<JsonGenerator, Status> handler = (json) -> {
 			final IClusterManager cluster = this.findClusterManager(clusterName);
-			ClusterAPI.authorize(clustermgr, token);
 			
 			DumpConfig dconf = new DumpConfig(this.skipPathSegments(1), uri.getQueryParameters());
 			cluster.dump(json, dconf, DumpFlags.TIMESTAMP | DumpFlags.RESOURCE_TYPE);
@@ -184,14 +178,6 @@ public class ClusterAPI
 		}
 		
 		return clustermgr;
-	}
-	
-	private static void authorize(IClusterManager cluster, String token) throws NotAuthorizedException
-	{
-		if (token != null && cluster.checkAccessToken(token))
-			return;
-		
-		throw new NotAuthorizedException(ClusterAPI.newUnauthorizedResponse(token));
 	}
 
 	private static JsonGenerator newJsonGenerator(Writer writer, boolean pretty)

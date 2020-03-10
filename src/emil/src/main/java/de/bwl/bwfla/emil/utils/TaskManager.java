@@ -5,8 +5,8 @@ import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -55,7 +55,7 @@ public class TaskManager {
         return taskManager.submitTask(task);
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @GET
     @Path("/{id}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -105,7 +105,7 @@ public class TaskManager {
 
     @DELETE
     @Path("/{id}")
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     public void remove(@PathParam("id") String taskId)
     {
         final TaskInfo<Object> task = taskManager.getTaskInfo(taskId);
