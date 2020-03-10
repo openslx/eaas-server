@@ -65,7 +65,7 @@ public class ImageArchiveBinding extends Binding
 	/** Replaces this with all non-null fields from other */
 	public void update(ImageArchiveBinding other)
 	{
-		this.id = other.imageId;
+		this.imageId = other.imageId;
 
 		if (other.backendName != null)
 			this.backendName = other.backendName;
