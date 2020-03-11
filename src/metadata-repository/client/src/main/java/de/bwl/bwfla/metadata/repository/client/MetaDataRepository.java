@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.repository.client;
 
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.metadata.repository.api.HttpDefs;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
 import de.bwl.bwfla.metadata.repository.api.ItemDescriptionStream;
@@ -27,7 +28,9 @@ import de.bwl.bwfla.metadata.repository.api.SetDescriptionStream;
 import de.bwl.bwfla.metadata.repository.source.QueryOptions;
 
 import javax.ws.rs.client.Entity;
+import javax.ws.rs.client.Invocation;
 import javax.ws.rs.client.WebTarget;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
 import java.nio.charset.Charset;
@@ -42,25 +45,34 @@ public class MetaDataRepository
 
 	private final WebTarget endpoint;
 
+	private final String secret;
+
 
 	public MetaDataRepository(WebTarget endpoint)
 	{
 		this.endpoint = endpoint;
+		this.secret = null;
+	}
+
+	public MetaDataRepository(WebTarget endpoint, String secret)
+	{
+		this.endpoint = endpoint;
+		this.secret = secret;
 	}
 
 	public Sets sets()
 	{
-		return new Sets(endpoint);
+		return new Sets(endpoint, secret);
 	}
 
 	public ItemIdentifiers identifiers()
 	{
-		return new ItemIdentifiers(endpoint);
+		return new ItemIdentifiers(endpoint, secret);
 	}
 
 	public Items items()
 	{
-		return new Items(endpoint);
+		return new Items(endpoint, secret);
 	}
 
 
@@ -75,10 +87,12 @@ public class MetaDataRepository
 	public static class Sets
 	{
 		private final WebTarget endpoint;
+		private final String secret;
 
-		private Sets(WebTarget endpoint)
+		private Sets(WebTarget endpoint, String secret)
 		{
 			this.endpoint = endpoint.path(HttpDefs.Paths.SETS);
+			this.secret = secret;
 		}
 
 		public Sets.List list(int offset, int count)
@@ -110,8 +124,11 @@ public class MetaDataRepository
 			public Response execute()
 			{
 				final WebTarget target = (setspec != null) ? endpoint.path(setspec) : endpoint;
-				return target.request()
-						.head();
+				Invocation.Builder builder =  target.request();
+				if(secret != null)
+					builder.header(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getJwt(secret));
+
+				return builder.head();
 			}
 		}
 
@@ -130,12 +147,15 @@ public class MetaDataRepository
 			@Override
 			public SetDescriptionStream execute()
 			{
-				final Response response = endpoint.queryParam(HttpDefs.QueryParams.OFFSET, offset)
+				final Invocation.Builder builder = endpoint.queryParam(HttpDefs.QueryParams.OFFSET, offset)
 						.queryParam(HttpDefs.QueryParams.COUNT, count)
 						.request(HttpDefs.MediaTypes.SETS)
-						.acceptEncoding(ENCODING.displayName())
-						.get();
+						.acceptEncoding(ENCODING.displayName());
 
+				if(secret != null)
+					builder.header(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getJwt(secret));
+
+				final Response response = builder.get();
 				return SetDescriptionStream.create(response);
 			}
 		}
@@ -145,10 +165,12 @@ public class MetaDataRepository
 	public static class ItemIdentifiers
 	{
 		private final WebTarget endpoint;
+		private final String secret;
 
-		private ItemIdentifiers(WebTarget endpoint)
+		private ItemIdentifiers(WebTarget endpoint, String secret)
 		{
 			this.endpoint = endpoint.path(HttpDefs.Paths.IDENTIFIERS);
+			this.secret = secret;
 		}
 
 		public ItemIdentifiers.List list(QueryOptions options)
@@ -170,10 +192,13 @@ public class MetaDataRepository
 			public ItemIdentifierDescriptionStream execute()
 			{
 				final WebTarget target = MetaDataRepository.addQueryParams(endpoint, options);
-				final Response response = target.request(HttpDefs.MediaTypes.IDENTIFIERS)
-						.acceptEncoding(ENCODING.displayName())
-						.get();
+				final Invocation.Builder builder = target.request(HttpDefs.MediaTypes.IDENTIFIERS)
+						.acceptEncoding(ENCODING.displayName());
 
+				if(secret != null)
+					builder.header(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getJwt(secret));
+
+				final Response response = builder.get();
 				return ItemIdentifierDescriptionStream.create(response);
 			}
 		}
@@ -183,10 +208,12 @@ public class MetaDataRepository
 	public static class Items
 	{
 		private final WebTarget endpoint;
+		private final String secret;
 
-		private Items(WebTarget endpoint)
+		private Items(WebTarget endpoint, String secret)
 		{
 			this.endpoint = endpoint.path(HttpDefs.Paths.ITEMS);
+			this.secret = secret;
 		}
 
 		public Items.Get get(String id)
@@ -217,9 +244,12 @@ public class MetaDataRepository
 			@Override
 			public Response execute()
 			{
-				return endpoint.path(id)
-						.request()
-						.get();
+				final Invocation.Builder builder = endpoint.path(id)
+						.request();
+				if(secret != null)
+					builder.header(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getJwt(secret));
+
+				return builder.get();
 			}
 		}
 
@@ -236,10 +266,13 @@ public class MetaDataRepository
 			public ItemDescriptionStream execute()
 			{
 				final WebTarget target = MetaDataRepository.addQueryParams(endpoint, options);
-				final Response response = target.request(HttpDefs.MediaTypes.ITEMS)
-						.acceptEncoding(ENCODING.displayName())
-						.get();
+				final Invocation.Builder builder = target.request(HttpDefs.MediaTypes.ITEMS)
+						.acceptEncoding(ENCODING.displayName());
 
+				if(secret != null)
+					builder.header(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getJwt(secret));
+
+				final Response response = builder.get();
 				return ItemDescriptionStream.create(response);
 			}
 		}
@@ -262,8 +295,11 @@ public class MetaDataRepository
 					}
 				};
 
-				return endpoint.request()
-						.post(Entity.entity(streamer, HttpDefs.MediaTypes.ITEMS));
+				final Invocation.Builder builder = endpoint.request();
+				if(secret != null)
+					builder.header(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getJwt(secret));
+
+				return builder.post(Entity.entity(streamer, HttpDefs.MediaTypes.ITEMS));
 			}
 		}
 	}

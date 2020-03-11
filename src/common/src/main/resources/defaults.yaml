@@ -19,6 +19,10 @@ http_export_servlet:
         gc_interval: 10m
         entry_eviction_timeout: 30m
 
+rest:
+    internalApiSecret: "please set an internal API Secret"
+    apiSecret: "please set an web API Secret"
+
 handle:
     prefix: 11270
     authentication:

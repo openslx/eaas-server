@@ -19,6 +19,9 @@
 
 package de.bwl.bwfla.metadata.oai.harvester;
 
+
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
 
 import javax.annotation.Resource;
@@ -59,6 +62,7 @@ public class HarvesterAPI
 	// ========== Admin API ==============================
 
 	@GET
+	@Secured(roles={Role.RESTRCITED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listHarvesters()
 	{
@@ -68,6 +72,7 @@ public class HarvesterAPI
 	}
 
 	@POST
+	@Secured(roles={Role.RESTRCITED})
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(BackendConfig config)
 	{
@@ -77,6 +82,7 @@ public class HarvesterAPI
 	}
 
 	@DELETE
+	@Secured(roles={Role.RESTRCITED})
 	@Path("/{name}")
 	public Response unregister(@PathParam("name") String name)
 	{
@@ -88,6 +94,7 @@ public class HarvesterAPI
 	}
 
 	@POST
+	@Secured(roles={Role.RESTRCITED})
 	@Path("/{name}")
 	public CompletionStage<Response> harvest(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
@@ -114,6 +121,7 @@ public class HarvesterAPI
 	}
 
 	@GET
+	@Secured
 	@Path("/{name}/status")
 	public Response status(@PathParam("name") String name)
 	{
