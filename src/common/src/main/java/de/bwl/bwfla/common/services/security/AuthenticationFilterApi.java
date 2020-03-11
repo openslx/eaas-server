@@ -7,9 +7,9 @@ import javax.annotation.Priority;
 import javax.inject.Inject;
 import javax.ws.rs.Priorities;
 import javax.ws.rs.container.ContainerRequestContext;
-import javax.ws.rs.core.Response;
 import javax.ws.rs.ext.Provider;
 import java.io.IOException;
+
 
 @SecuredAPI
 @Provider
@@ -23,20 +23,17 @@ public class AuthenticationFilterApi extends AbstractAuthenticationFilter {
     @Override
     public void filter(ContainerRequestContext requestContext) throws IOException {
 
-        String token = extractToken(requestContext);
-        // LOG.severe("SecuredAPI");
-        // debug(requestContext);
-        if(token == null) {
-            LOG.severe("internal security token not set");
-            requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
+        final String token = this.extractToken(requestContext);
+        if (token == null) {
+            AbstractAuthenticationFilter.abort(requestContext);
             return;
         }
 
         try {
-            validateToken(token, apiSecret);
-        } catch (Exception e) {
-            LOG.severe(e.getMessage());
-            requestContext.abortWith(Response.status(Response.Status.UNAUTHORIZED).build());
+            this.verify(token, apiSecret);
+        }
+        catch (Exception error) {
+            AbstractAuthenticationFilter.abort(requestContext, error);
         }
     }
 }
