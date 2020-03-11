@@ -37,6 +37,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.Status;
 
+import de.bwl.bwfla.common.services.security.SecuredAPI;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.envproposer.api.ProposalRequest;
 import de.bwl.bwfla.envproposer.api.ProposalResponse;
@@ -71,6 +72,7 @@ public class EnvironmentProposerAPI
 	 */
 	@POST
     @Path("/proposals")
+	@SecuredAPI
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
 	public Response postProposal(ProposalRequest request)
@@ -111,6 +113,7 @@ public class EnvironmentProposerAPI
 	 * @HTTP 303 If task completed. Location header will contain the URL for fetching result.
 	 */
 	@GET
+	@SecuredAPI
 	@Path("/waitqueue/{id}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response poll(@PathParam("id") String id)
@@ -150,6 +153,7 @@ public class EnvironmentProposerAPI
 	 * @returnWrapped de.bwl.bwfla.envproposer.api.Proposal
 	 */
 	@GET
+	@SecuredAPI
     @Path("/proposals/{id}")
     @Produces(MediaType.APPLICATION_JSON)
 	public Response getProposal(@PathParam("id") String id)
