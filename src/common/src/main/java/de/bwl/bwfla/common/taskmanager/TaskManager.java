@@ -32,7 +32,7 @@ import java.util.logging.Logger;
 public class TaskManager<R>
 {
 	/** Counter for task ID generation */
-	private static final AtomicInteger ID_COUNTER = new AtomicInteger(0);
+	private final AtomicInteger idCounter = new AtomicInteger(0);
 
 	/** Logger */
 	protected final Logger log = Logger.getLogger(this.getClass().getName());
@@ -79,7 +79,7 @@ public class TaskManager<R>
 
 	public String submitTaskGroup(List<AbstractTask<R>> tasks)
 	{
-		String groupid = TaskManager.nextTaskId();
+		String groupid = this.nextTaskId();
 		TaskGroup group = new TaskGroup();
 
 		for (AbstractTask<R> task : tasks)
@@ -122,15 +122,15 @@ public class TaskManager<R>
 
 	/* =============== Internal Helpers =============== */
 
-	private static String nextTaskId()
+	private String nextTaskId()
 	{
-		int id = ID_COUNTER.incrementAndGet();
+		int id = idCounter.incrementAndGet();
 		return Integer.toString(id);
 	}
 
 	private String submit(AbstractTask<R> task, Object userdata, TaskGroup group)
 	{
-		String id = TaskManager.nextTaskId();
+		String id = this.nextTaskId();
 		if (group != null)
 			group.addTask(id);
 

@@ -31,8 +31,6 @@ echo "${SSH_KNOWN_HOSTS}" > ~/.ssh/known_hosts
 chmod 644 ~/.ssh/known_hosts
 
 # Update repository with generated pages
-
-docsrc="$1"
 docdir="/tmp/eaas-api-docs"
 doctgt="${docdir}/public/${CI_COMMIT_REF_NAME}"
 
@@ -43,7 +41,14 @@ git clone "${EAAS_API_DOCS_REPO_URL}" .
 __info 'Updating api-docs pages...'
 mkdir -p "${doctgt}"
 rm -r ${doctgt}/* || true
-cp -r ${docsrc}/* "${doctgt}"
+for input in "$@" ; do
+	# input = '<name>:<some-path>'
+	name="${input%%:*}"
+	src="${input##*:}"
+	dst="${doctgt}/${name}"
+	mkdir -p "${dst}"
+	cp -r ${src}/* "${dst}"
+done
 
 __info 'Commiting changes...'
 git config --local user.email "nobody@openslx.com"
