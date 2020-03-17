@@ -377,9 +377,16 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 				throw new BWFLAException("invalid file entry type");
 
 			String url = Paths.get(localPath).relativize(targetDir).toString();
-			log.warning(" local path url " + url);
+
 			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQID(): null;
 			properties.deviceId = entry.getType() != null ? entry.getType().toQID() : null;
+
+			String fileName = entry.getLocalAlias();
+			if (fileName == null || fileName.isEmpty())
+				fileName = entry.getId();
+			url += "/" + fileName;
+
+			log.warning(" local path url " + url);
 
 			MetsUtil.addFile(m, url, properties);
 		}
