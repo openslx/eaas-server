@@ -89,7 +89,8 @@ public class EnvironmentProposerAPI
 
 			// Info message
 			final ProposalResponse response = new ProposalResponse()
-					.setMessage("Proposal task was submitted.");
+					.setMessage("Proposal task was submitted.")
+					.setId(taskid);
 
 			return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
 		}

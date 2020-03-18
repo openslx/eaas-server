@@ -29,21 +29,38 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlAccessorType(XmlAccessType.FIELD)
 public class ProposalResponse
 {
+	/** @documentationExample 25 */
+	@XmlElement(name="id")
+	private String id;
+
 	/** @documentationExample Task submitted successfully. */
     @XmlElement(name="message")
 	private String message;
 
-	
+
 	public ProposalResponse()
 	{
 		this.message = null;
+		this.id = null;
 	}
 	
-	public ProposalResponse(String message)
+	public ProposalResponse(String id, String message)
 	{
+		this.id = id;
 		this.message = message;
 	}
-	
+
+	public String getId()
+	{
+		return id;
+	}
+
+	public ProposalResponse setId(String id)
+	{
+		this.id = id;
+		return this;
+	}
+
 	public String getMessage()
 	{
 		return message;
