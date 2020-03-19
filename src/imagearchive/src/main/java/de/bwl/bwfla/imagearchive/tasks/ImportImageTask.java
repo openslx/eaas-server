@@ -112,11 +112,10 @@ public class ImportImageTask extends AbstractTask<String> {
             switch (fmt) {
                 case VMDK:
                 case VHD:
-                    File convertedImgFile = new File(target, "convertTmp");
-                    destImgFile.renameTo(convertedImgFile);
-                    File outFile = new File(target, importId);
-                    EmulatorUtils.convertImage(convertedImgFile.toPath(), outFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
-                    convertedImgFile.delete();
+                    final File origImgFile = new File(destImgFile.toString() + ".orig");
+                    destImgFile.renameTo(origImgFile);
+                    EmulatorUtils.convertImage(origImgFile.toPath(), destImgFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
+                    origImgFile.delete();
                 default:
                     String result = imageHandler.resolveLocalBackingFile(destImgFile);
                     imageHandler.createOrUpdateHandle(importId);
