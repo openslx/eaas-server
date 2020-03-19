@@ -107,6 +107,7 @@ public class ImportImageTask extends AbstractTask<String> {
             }
             ImageInformation.QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
             if (fmt == null) {
+                destImgFile.delete();
                 throw new BWFLAException("could not determine file fmt");
             }
             switch (fmt) {
@@ -114,8 +115,12 @@ public class ImportImageTask extends AbstractTask<String> {
                 case VHD:
                     final File origImgFile = new File(destImgFile.toString() + ".orig");
                     destImgFile.renameTo(origImgFile);
-                    EmulatorUtils.convertImage(origImgFile.toPath(), destImgFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
-                    origImgFile.delete();
+                    try {
+                        EmulatorUtils.convertImage(origImgFile.toPath(), destImgFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
+                    }
+                    finally {
+                        origImgFile.delete();
+                    }
                 default:
                     String result = imageHandler.resolveLocalBackingFile(destImgFile);
                     imageHandler.createOrUpdateHandle(importId);
@@ -125,9 +130,9 @@ public class ImportImageTask extends AbstractTask<String> {
 
                     return importId;
             }
-        } catch (Exception e1) {
-            log.log(Level.WARNING, e1.getMessage(), e1);
-            throw new BWFLAException("failed moving incoming image to " + destImgFile + " reason " + e1.getMessage());
+        } catch (Exception error) {
+            log.log(Level.WARNING, "Downloading image failed!", error);
+            throw new BWFLAException("Downloading image '" + destImgFile + "' failed!", error);
         }
     }
 
