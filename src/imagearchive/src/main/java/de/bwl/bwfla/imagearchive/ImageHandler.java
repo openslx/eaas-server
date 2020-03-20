@@ -836,7 +836,7 @@ public class ImageHandler
 			throw new BWFLAException("cannot commit environment " + id + ": invalid src/dst path");
 		}
 
-		String newImageId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
+		String newImageId = UUID.randomUUID().toString();
 		for(AbstractDataResource b : abstractDataResources)
 		{
 			if(b instanceof ImageArchiveBinding && (b.getId().equals("main_hdd") || b.getId().equals("rootfs")))
@@ -899,7 +899,7 @@ public class ImageHandler
 		if(backing == null)
 			return;
 
-		String newImageId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
+		String newImageId = UUID.randomUUID().toString();
 		String newBackingFile = getArchivePrefix() + newImageId;
 
 		File destImgFile = new File(target, newImageId);
