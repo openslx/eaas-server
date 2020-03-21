@@ -174,45 +174,54 @@ public class ImageHandler
 	public String resolveLocalBackingFile(File f)
 	{
 		try {
+			log.info("Resolving backing file for: " + f.getAbsolutePath());
 			ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
-			if (info.getBackingFile() == null)
+			if (!info.hasBackingFile()) {
+				log.info("No backing file defined!");
 				return null;
-
-			log.info(f.getAbsolutePath() + " got backing file: " + info.getBackingFile());
+			}
 
 			String id = ImageInformation.getBackingImageId(info.getBackingFile());
-			log.info(" got id: " + id);
+			log.info("Image info: " + f.getAbsolutePath() + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
 			File tmpTarget = getImageTargetPath(ImageType.tmp.name());
 			File tmpImageFile = new File(tmpTarget, id);
-			String newFileId = null;
 			if(tmpImageFile.exists())
 			{
+				log.info("Backing file is temporary, committing it first...");
+
 				MachineConfiguration mc = getEnvByImageId(ImageType.tmp, id);
 				id = commitTempEnvironment(mc.getId());
-				// log.info("commited mc: " + mc.getId() + " got new FileId: " + id);
+				log.info("Backing file committed as: " + id);
 			}
 
 			boolean hasLocalBackingfile = false;
 			for(ImageType _type : ImageType.values()) {
 				File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
-
 				if(backing.exists()) {
+					log.info("Local backing file found at: " + backing.getAbsolutePath());
 					hasLocalBackingfile = true;
 					break;
 				}
 			}
 
-			if(!hasLocalBackingfile)
+			if (!hasLocalBackingfile) {
+				log.info("No local backing file found!");
 				return info.getBackingFile();
+			}
 
 			String newBackingFile = getArchivePrefix() + id;
-			log.info("rebase " + f.getAbsolutePath() + " to: " + newBackingFile);
+			if (newBackingFile.equals(info.getBackingFile())) {
+				log.info("Local backing file reference is up-to-date!");
+				return null;
+			}
+
+			log.info("Rebasing image: " + f.getAbsolutePath() + " --> " + newBackingFile);
 			EmulatorUtils.changeBackingFile(f.toPath(), newBackingFile, log);
 			return null;
 
 		} catch (IOException|BWFLAException e) {
-			log.log(Level.SEVERE, e.getMessage(), e);
+			log.log(Level.SEVERE, "Resolving backing file failed!", e);
 			return null;
 		}
 	}
@@ -849,7 +858,7 @@ public class ImageHandler
 				}
 
 				File destImgFile = new File(dstImgDir, newImageId);
-				log.info("move " + srcImgFile + " " + destImgFile);
+				log.info("move " + srcImgFile + " to " + destImgFile);
 				if(!srcImgFile.renameTo(destImgFile))
 				{
 					throw new BWFLAException("cannot commit environment " + id + ": dest file not found " + destImgFile);
@@ -878,26 +887,30 @@ public class ImageHandler
 	}
 
 	private void updateTmpBackingFiles(String image, File target) throws IOException, BWFLAException {
+		log.info("Updating temporary backing file for: " + image);
 		ImageInformation info = new ImageInformation(image, log);
-
-		if(info.getBackingFile() == null)
+		if (info.getBackingFile() == null) {
+			log.info("No backing file defined!");
 			return;
+		}
 
 		String id = ImageInformation.getBackingImageId(info.getBackingFile());
+		log.info("Image info: " + image + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
-		log.info("update image: got id: " + id);
 		File backing = null;
-
 		for(ImageType _type : ImageType.values()) {
 			backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
 			if(backing.exists()) {
+				log.info("Local backing file found at: " + backing.getAbsolutePath());
 				break;
 			}
 			else backing = null;
 		}
 
-		if(backing == null)
+		if (backing == null) {
+			log.info("No local backing file found!");
 			return;
+		}
 
 		String newImageId = UUID.randomUUID().toString();
 		String newBackingFile = getArchivePrefix() + newImageId;
@@ -905,7 +918,7 @@ public class ImageHandler
 		File destImgFile = new File(target, newImageId);
 		backing.renameTo(destImgFile);
 
-		log.info("rebase " + image + " to: " + newBackingFile);
+		log.info("Rebasing image: " + image + " --> " + newBackingFile);
 		EmulatorUtils.changeBackingFile(new File(image).toPath(), newBackingFile, log);
 
 		updateTmpBackingFiles(destImgFile.getAbsolutePath(), target);
