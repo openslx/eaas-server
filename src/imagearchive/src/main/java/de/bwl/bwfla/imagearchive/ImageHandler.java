@@ -52,6 +52,9 @@ public class ImageHandler
 	private ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
 
+	/** Map containing lock-objects for images with in-progress operations */
+	private final ConcurrentHashMap<String, ImageLock> locks;
+
 	enum ExportType {
 		NBD, HTTP
 	}
@@ -60,6 +63,7 @@ public class ImageHandler
 		this.log = log;
 		this.iaConfig = config;
 		this.cache = cache;
+		this.locks = new ConcurrentHashMap<>();
 		pool = Executors.newFixedThreadPool(20);
 
 		// compatibility hack: keep old installations working
@@ -94,6 +98,20 @@ public class ImageHandler
 
 		cleanTmpFiles();
 		resolveLocalBackingFiles();
+	}
+
+	public void lock(String id)
+	{
+		locks.computeIfAbsent(id, (unused) -> new ImageLock())
+				.acquire();
+	}
+
+	public void unlock(String id)
+	{
+		locks.computeIfPresent(id, (unused, lock) -> {
+			// Remove lock object, when unused
+			return (lock.release() > 0) ? lock : null;
+		});
 	}
 
 	public ImageNameIndex getNameIndexes(){
@@ -169,6 +187,11 @@ public class ImageHandler
 //
 //		return new ImageExport.ImageFileInfo(getArchivePrefix(), id, type);
 //	}
+
+	public String resolveLocalBackingFile(Path path)
+	{
+		return this.resolveLocalBackingFile(path.toFile());
+	}
 
 	// return backing file if not resolved locally
 	public String resolveLocalBackingFile(File f)
@@ -1287,6 +1310,41 @@ public class ImageHandler
 					return fromStream();
 				default:
 					return new ImageLoaderResult(false, "");
+			}
+		}
+	}
+
+	private static class ImageLock
+	{
+		private int counter;
+
+
+		public ImageLock()
+		{
+			this.counter = 0;
+		}
+
+		public synchronized void acquire()
+		{
+			++counter;
+			while (counter > 1)
+				this.await();
+		}
+
+		public synchronized int release()
+		{
+			--counter;
+			this.notify();
+			return counter;
+		}
+
+		private void await()
+		{
+			try {
+				this.wait();
+			}
+			catch (Exception error) {
+				// Ignore it!
 			}
 		}
 	}
