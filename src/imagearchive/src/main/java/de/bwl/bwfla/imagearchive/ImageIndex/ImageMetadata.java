@@ -10,7 +10,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
-public class Entry extends JaxbType
+public class ImageMetadata extends JaxbType
 {
     @XmlElement
     private  String name = "";
@@ -27,21 +27,16 @@ public class Entry extends JaxbType
     @XmlElement
     private String digest;
 
-    Entry(String name, String version, ImageDescription image)
+    @XmlElement
+    private String label;
+
+    public ImageMetadata(String name, ImageDescription image)
     {
         this.name = name;
-        this.version = version;
         this.image = image;
     }
 
-    Entry(Configuration values, Configuration defaults)
-    {
-        this.name = ImageNameIndex.getOrDefault("name", values, defaults, true);
-        this.version = ImageNameIndex.getOrDefault("version", values, defaults);
-        this.image = new ImageDescription("image.", values, defaults);
-    }
-
-    private Entry()
+    private ImageMetadata()
     {
     }
 
@@ -65,19 +60,15 @@ public class Entry extends JaxbType
     }
 
     public Provenance getProvenance() {
+        if(provenance == null)
+            provenance = new Provenance();
         return provenance;
     }
 
-    public void setProvenance(Provenance provenance) {
-        this.provenance = provenance;
-    }
-
     public ImageDescription getImage() {
+        if(image == null)
+            return new ImageDescription();
         return image;
-    }
-
-    public void setImage(ImageDescription image) {
-        this.image = image;
     }
 
     public String getDigest() {
@@ -86,5 +77,13 @@ public class Entry extends JaxbType
 
     public void setDigest(String digest) {
         this.digest = digest;
+    }
+
+    public String getLabel() {
+        return label;
+    }
+
+    public void setLabel(String label) {
+        this.label = label;
     }
 }

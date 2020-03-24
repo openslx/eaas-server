@@ -41,6 +41,7 @@ import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.VolatileResource;
+import org.apache.tamaya.ConfigurationProvider;
 
 public class EmulationEnvironmentHelper {
 	protected final static Logger log = Logger.getLogger(EmulationEnvironmentHelper.class.getName());
@@ -84,6 +85,24 @@ public class EmulationEnvironmentHelper {
 		log.info("can't find empty drive for type " + type);
 
 		return null;
+	}
+
+	public static void setDrive(MachineConfiguration env, Drive d, int driveIndex) throws BWFLAException
+	{
+		try {
+			Drive old = env.getDrive().get(driveIndex);
+			old.setBoot(d.boot);
+			old.setIface(d.iface);
+			old.setBus(d.bus);
+			old.setData(d.data);
+			old.setFilesystem(d.filesystem);
+			old.setType(d.type);
+			old.setUnit(d.unit);
+			old.setPlugged(d.plugged);
+		}
+		catch (IndexOutOfBoundsException e) {
+			throw new BWFLAException(e);
+		}
 	}
 
 	public static MachineConfiguration clean(final MachineConfiguration original) {
@@ -279,27 +298,6 @@ public class EmulationEnvironmentHelper {
 		return null;
 	}
 
-	public static void setMainHdd(MachineConfiguration env, ImageArchiveBinding b)
-	{
-		ImageArchiveBinding mainHdd = null;
-		for (AbstractDataResource r : env.getAbstractDataResource()) {
-			if (r.getId().equals("main_hdd")) {
-
-				if(r instanceof ImageArchiveBinding) {
-					mainHdd = (ImageArchiveBinding)r;
-					mainHdd.copy(b);
-				}
-				//	else
-				//		emuEnv.getAbstractDataResource().remove(r);
-			}
-		}
-		if(mainHdd == null) // env did not contain a binding
-		{
-			b.setId("main_hdd");
-			env.getAbstractDataResource().add(b);
-		}
-	}
-
 	/** Replaces current binding in machine-config with specified binding */
 	public static void replace(MachineConfiguration env, ImageArchiveBinding replacement)
 			throws BWFLAException
@@ -315,12 +313,23 @@ public class EmulationEnvironmentHelper {
 			}
 
 			current = (ImageArchiveBinding) entry;
+			int driveId = getDriveId(env, replacement.getId());
+			Drive d = getDrive(env, driveId);
+			if(d != null){
+				d.setData("binding://" + replacement.getImageId());
+			}
+			else
+			{
+				log.severe("XXX: replace(): drive not found");
+			}
+			replacement.setId(replacement.getImageId());
 			current.update(replacement);
 			break;
 		}
 
 		if (current == null) {
 			// env did not contain a binding
+			replacement.setId(replacement.getImageId());
 			env.getAbstractDataResource()
 					.add(replacement);
 		}
@@ -385,6 +394,12 @@ public class EmulationEnvironmentHelper {
 		return false;
 	}
 
+	public static int addObjectArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc, int index) throws BWFLAException {
+		env.getAbstractDataResource().add(binding);
+		FileCollectionEntry fce = fc.getDefaultEntry();
+		return EmulationEnvironmentHelper.registerDrive(env, binding.getId(), fce.getId(), index);
+	}
+
 	public static int addArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc) throws BWFLAException {
 
 		// FIXME
@@ -414,10 +429,50 @@ public class EmulationEnvironmentHelper {
 		int driveId = -1;
 		for (Drive drive : env.getDrive()) {
 			++driveId; // hack: fix me
-			if(drive.getData().contains(objectId))
+			if(drive.getData() != null && drive.getData().contains(objectId))
 				return driveId;
 		}
 		return -1;
+	}
+
+	public static Drive getDrive(MachineConfiguration env, int driveIndex) {
+		if(driveIndex < 0 || env.getDrive().size() <= driveIndex)
+			return null;
+
+		return env.getDrive().get(driveIndex);
+	}
+
+	public static int registerEmptyDrive(MachineConfiguration env, int index) {
+		// construct URL
+		int driveId = -1;
+		try {
+			Drive d = env.getDrive().get(index);
+			d.setData(null);
+			return index;
+		}
+		catch(IndexOutOfBoundsException e)
+		{
+			return -1;
+		}
+	}
+
+	public static int registerDrive(MachineConfiguration env, String binding, String path, int index) {
+		// construct URL
+		String subres = "";
+		if (path != null)
+			subres += "/" + path.toString();
+
+		String dataUrl = "binding://" + binding + subres;
+		int driveId = -1;
+		try {
+			Drive d = env.getDrive().get(index);
+			d.setData(dataUrl);
+			return index;
+		}
+		catch(IndexOutOfBoundsException e)
+		{
+			return -1;
+		}
 	}
 
 	public static int registerDrive(MachineConfiguration env, String binding, String path, Drive.DriveType driveType) {

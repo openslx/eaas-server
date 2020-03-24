@@ -248,6 +248,18 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
 	}
 
+	public TaskState importImageAsync(URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
+		return this.importImageAsync(this.getDefaultBackendName(), ref, iaMd, deleteIfExists);
+	}
+
+	public TaskState importImageAsync(String backend, URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
+		connectArchive();
+		if (ref == null)
+			throw new BWFLAException("URL was null");
+
+		return archive.importImageFromUrlAsync(backend, ref.toString(), iaMd);
+	}
+
 	public ImageArchiveBinding generalizedImport(String imageId, ImageType type, String patchId) throws BWFLAException {
 		return this.generalizedImport(this.getDefaultBackendName(), imageId, type, patchId);
 	}
@@ -296,6 +308,12 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.importImage(this.getDefaultBackendName(), image, iaMd, deleteIfExists);
 	}
 
+	public TaskState createImageAsync(String backend, String size, ImageType type, ImageMetadata md) throws BWFLAException
+	{
+		connectArchive();
+		return archive.createImageAsync(backend, size, type, md);
+	}
+
 	public ImportImageHandle importImage(String backend, File image, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
 		connectArchive();
 
@@ -309,6 +327,18 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		DataHandler dataHandler = new DataHandler(new FileDataSource(image));
 		String sessionId = archive.importImageAsStream(backend, dataHandler, iaMd);
 		return new ImportImageHandle(archive, backend, iaMd.getType(), sessionId);
+	}
+
+	public TaskState getTaskState(String id) throws BWFLAException
+	{
+		return archive.getTaskState(id);
+	}
+
+	public ImageNameIndex getImagesIndex(String _archive) throws BWFLAException {
+		if(_archive == null)
+			_archive = getDefaultBackendName();
+
+		return archive.getNameIndexes(_archive);
 	}
 
 	public String importMachineEnvironment(MachineConfiguration env, List<BindingDataHandler> data, ImageArchiveMetadata iaMd) throws BWFLAException {
@@ -341,25 +371,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 
 		return this.importMetadata(backend, env.toString(), iaMd, false);
-	}
-
-	@Deprecated
-	public String createEnvironment(MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
-		return this.createEnvironment(this.getDefaultBackendName(), emuEnv, size, iaMd);
-	}
-
-	@Deprecated
-	public String createEnvironment(String backend, MachineConfiguration emuEnv, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
-		connectArchive();
-
-		String id = archive.createImage(backend, size, iaMd.getType().value());
-		if (id == null)
-			throw new BWFLAException("image creation failed");
-		ImageArchiveBinding b = new ImageArchiveBinding(backend, this.getExportPrefix(), id, iaMd.getType().value());
-		b.setId("main_hdd");
-		emuEnv.getAbstractDataResource().add(b);
-
-		return this.importMetadata(backend, emuEnv.toString(), iaMd, false);
 	}
 
 	public void updateMetadata(Environment conf) throws BWFLAException {
@@ -429,6 +440,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	public void cleanTempEnvironments(String backend) throws BWFLAException {
 		connectArchive();
 		archive.deleteTempEnvironments(backend);
+	}
+
+	public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
+		connectArchive();
+		archive.deleteNameIndexesEntry(backend, id, version);
 	}
 
 	public class ImportImageHandle {
@@ -518,12 +534,17 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return result;
 	}
 
+	public ImageNameIndex getNameIndexes() throws BWFLAException {
+		connectArchive();
+		return archive.getNameIndexes(getDefaultBackendName());
+	}
+
 	public ImageNameIndex getNameIndexes(String backend) throws BWFLAException {
 		 connectArchive();
 		 return archive.getNameIndexes(backend);
 	}
 
-	public void addNameIndexesEntry(String backend, Entry entry, Alias alias) throws BWFLAException {
+	public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
 		connectArchive();
 		archive.addNameIndexesEntry(backend, entry, alias);
 	}

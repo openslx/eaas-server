@@ -20,6 +20,7 @@
 package de.bwl.bwfla.imagearchive;
 
 import java.util.*;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -27,8 +28,12 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
-import javax.enterprise.context.ApplicationScoped;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 
+import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveConfig;
 
@@ -39,10 +44,17 @@ import static java.util.Map.Entry.comparingByValue;
 @Startup
 public class ImageArchiveRegistry
 {
-	private final Logger log = Logger.getLogger(this.getClass().getName());
+	private static final Logger log = Logger.getLogger("IMAGE-ARCHIVE-REGISTRY");
 	private final Map<String, ImageArchiveBackend> backends = new HashMap<>();
 	private final ImageArchiveConfig config = new ImageArchiveConfig();
 
+	private static AsyncIoTaskManager taskManager;
+
+	private static class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<String> {
+		public AsyncIoTaskManager() throws NamingException {
+			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+		}
+	}
 
 	public ImageArchiveBackend lookup(String name)
 	{
@@ -100,6 +112,46 @@ public class ImageArchiveRegistry
 			}
 		}
 
+		try {
+			taskManager = new AsyncIoTaskManager();
+		} catch (NamingException e) {
+			throw new IllegalStateException("failed to create AsyncIoTaskManager");
+		}
+
 		log.info("Initialized " + backendConfigs.size() + " image-archive(s)");
+	}
+
+	public static TaskState submitTask(AbstractTask<String> task)
+	{
+		String taskId = taskManager.submitTask(task);
+		TaskState state = new TaskState(taskId);
+		return state;
+	}
+
+	public static TaskState getState(String taskId)
+	{
+		if(taskId == null)
+			return null;
+
+		TaskState state = new TaskState(taskId);
+		try {
+			final TaskInfo<String> info = taskManager.getTaskInfo(taskId);
+			if (info == null)
+				return null;
+
+
+			if (info.result().isDone()) {
+				state.setResult((String) info.result().get());
+				state.setDone(true);
+			}
+		}
+		catch (InterruptedException | ExecutionException e)
+		{
+			log.log(Level.WARNING, "Task failed!", e);
+			state.setDone(true);
+			state.setFailed(true);
+		}
+
+		return state;
 	}
 }

@@ -20,7 +20,7 @@
 package de.bwl.bwfla.imagebuilder;
 
 
-import de.bwl.bwfla.api.imagearchive.Entry;
+import de.bwl.bwfla.api.imagearchive.ImageMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
@@ -111,6 +111,9 @@ public class MediumBuilderHDD extends MediumBuilder
 				options.setBackingFile(backingFile);
 			EmulatorUtils.createCowFile(qcow, options, log);
 
+			if(description.getFileSystemType() == FileSystemType.RAW)
+				return new ImageHandle(qcow, outname, outtype);
+
 			// Mount it as raw disk-image
 			final XmountOptions xmoptions = new XmountOptions();
 			final Path rawimg = EmulatorUtils.xmount(qcow.toString(), rawmnt, xmoptions, log);
@@ -193,7 +196,7 @@ public class MediumBuilderHDD extends MediumBuilder
 
 				for(ImageNameIndex.Entries.Entry _entry : index.getEntries().getEntry())
 				{
-					Entry indexEntry = _entry.getValue();
+					ImageMetadata indexEntry = _entry.getValue();
 					if(indexEntry.getProvenance() != null && indexEntry.getProvenance().getLayers() != null) {
 						List layerList = indexEntry.getProvenance().getLayers();
 						for(String l : ds.layers) {

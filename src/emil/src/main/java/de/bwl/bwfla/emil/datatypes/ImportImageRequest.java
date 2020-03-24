@@ -7,47 +7,31 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 @XmlRootElement
 public class ImportImageRequest extends JaxbType{
-	private String urlString;
-	private String templateId;
+	private String url;
 	private String label;
-	private String nativeConfig;
-	private String rom;
-	private String patchId;
+	private String imageType;
 
-	public String getUrlString() {
-		return urlString;
+	public String getUrl() {
+		return url;
 	}
-	public void setUrlString(String urlString) {
-		this.urlString = urlString;
+
+	public void setUrl(String url) {
+		this.url = url;
 	}
-	public String getTemplateId() {
-		return templateId;
-	}
-	public void setTemplateId(String templateId) {
-		this.templateId = templateId;
-	}
+
 	public String getLabel() {
 		return label;
 	}
+
 	public void setLabel(String label) {
 		this.label = label;
 	}
-	public String getNativeConfig() {
-		return nativeConfig;
-	}
-	public void setNativeConfig(String nativeConfig) {
-		this.nativeConfig = nativeConfig;
+
+	public String getImageType() {
+		return imageType;
 	}
 
-	public String getRom() {
-		return rom;
-	}
-
-	public void setRom(String rom) {
-		this.rom = rom;
-	}
-
-	public String getPatchId() {
-		return patchId;
+	public void setImageType(String imageType) {
+		this.imageType = imageType;
 	}
 }
