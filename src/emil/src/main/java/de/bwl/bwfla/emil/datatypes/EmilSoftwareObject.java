@@ -25,6 +25,10 @@ public class EmilSoftwareObject {
 	private ArrayList<String> importFMTs;
 	private ArrayList<String> exportFMTs;
 	private String archiveId;
+
+	@JsonProperty
+	private boolean isPublic;
+
 	@JsonProperty
 	private boolean isOperatingSystem;
 	
@@ -96,5 +100,13 @@ public class EmilSoftwareObject {
 
 	public void setQID(String QID) {
 		this.QID = QID;
+	}
+
+	public boolean getIsPublic() {
+		return isPublic;
+	}
+
+	public void setIsPublic(boolean aPublic) {
+		isPublic = aPublic;
 	}
 }
