@@ -15,7 +15,7 @@ public class FileCollectionEntry extends Binding implements Comparable<FileColle
 	private ResourceType resourceType;
 
 	@XmlElement(required = false, namespace="http://bwfla.bwl.de/common/datatypes")
-	protected BigInteger order;
+	protected String order;
 
 	@XmlElement(required = false, namespace="http://bwfla.bwl.de/common/datatypes")
 	protected String label;
@@ -57,11 +57,11 @@ public class FileCollectionEntry extends Binding implements Comparable<FileColle
 		return order.compareTo(o.order);
 	}
 
-	public BigInteger getOrder() {
+	public String getOrder() {
 		return order;
 	}
 
-	public void setOrder(BigInteger order) {
+	public void setOrder(String order) {
 		this.order = order;
 	}
 
