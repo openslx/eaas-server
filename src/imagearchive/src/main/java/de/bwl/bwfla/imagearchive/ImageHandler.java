@@ -188,24 +188,30 @@ public class ImageHandler
 //		return new ImageExport.ImageFileInfo(getArchivePrefix(), id, type);
 //	}
 
-	public String resolveLocalBackingFile(Path path)
+	public String updateBackingFileUrl(Path image, ImageInformation info)
 	{
-		return this.resolveLocalBackingFile(path.toFile());
+		return this.updateBackingFileUrl(image.toFile(), info);
 	}
 
-	// return backing file if not resolved locally
-	public String resolveLocalBackingFile(File f)
+	public String updateBackingFileUrl(File image)
+	{
+		return this.updateBackingFileUrl(image, null);
+	}
+
+	public String updateBackingFileUrl(File image, ImageInformation info)
 	{
 		try {
-			log.info("Resolving backing file for: " + f.getAbsolutePath());
-			ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
+			log.info("Updating backing file for: " + image.getAbsolutePath());
+			if (info == null)
+				info = new ImageInformation(image.getAbsolutePath(), log);
+
 			if (!info.hasBackingFile()) {
 				log.info("No backing file defined!");
 				return null;
 			}
 
 			String id = ImageInformation.getBackingImageId(info.getBackingFile());
-			log.info("Image info: " + f.getAbsolutePath() + " --> " + info.getBackingFile() + " (ID = " + id + ")");
+			log.info("Image info: " + image.getAbsolutePath() + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
 			File tmpTarget = getImageTargetPath(ImageType.tmp.name());
 			File tmpImageFile = new File(tmpTarget, id);
@@ -229,22 +235,23 @@ public class ImageHandler
 			}
 
 			if (!hasLocalBackingfile) {
-				log.info("No local backing file found!");
+				log.info("Backing file not found locally!");
 				return info.getBackingFile();
 			}
 
-			String newBackingFile = getArchivePrefix() + id;
+			final String newBackingFile = this.getArchivePrefix() + id;
 			if (newBackingFile.equals(info.getBackingFile())) {
 				log.info("Local backing file reference is up-to-date!");
-				return null;
+			}
+			else {
+				log.info("Rebasing image: " + image.getAbsolutePath() + " --> " + newBackingFile);
+				EmulatorUtils.changeBackingFile(image.toPath(), newBackingFile, log);
 			}
 
-			log.info("Rebasing image: " + f.getAbsolutePath() + " --> " + newBackingFile);
-			EmulatorUtils.changeBackingFile(f.toPath(), newBackingFile, log);
-			return null;
-
-		} catch (IOException|BWFLAException e) {
-			log.log(Level.SEVERE, "Resolving backing file failed!", e);
+			return newBackingFile;
+		}
+		catch (IOException|BWFLAException e) {
+			log.log(Level.SEVERE, "Updating backing file failed!", e);
 			return null;
 		}
 	}
@@ -267,7 +274,7 @@ public class ImageHandler
 				if (fileEntry.getName().startsWith(".fuse"))
 					continue;
 
-				resolveLocalBackingFile(fileEntry);
+				this.updateBackingFileUrl(fileEntry);
 				if (handleClient != null) {
 					final String imgname = fileEntry.getName();
 					try {
@@ -559,7 +566,7 @@ public class ImageHandler
 		{
 			InputStream inputStream = image.getInputStream();
 			DataUtil.writeData(inputStream, destImgFile);
-			this.resolveLocalBackingFile(destImgFile);
+			this.updateBackingFileUrl(destImgFile);
 
 			FutureTask<ImageLoaderResult> ft =  new FutureTask<ImageLoaderResult>(new ImageLoader(inputStream, target, importId, this));
 			importTasks.put(taskId, ft);
@@ -1249,7 +1256,7 @@ public class ImageHandler
 					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
 				}
 			}
-			String result = imageHandler.resolveLocalBackingFile(dst);
+			String result = imageHandler.updateBackingFileUrl(dst);
 			if (imageHandler.handleClient != null)
 				imageHandler.createOrUpdateHandle(imageid);
 
@@ -1286,7 +1293,7 @@ public class ImageHandler
 						EmulatorUtils.convertImage(convertedImgFile.toPath(), outFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
 						convertedImgFile.delete();
 					default:
-						String result = imageHandler.resolveLocalBackingFile(destImgFile);
+						String result = imageHandler.updateBackingFileUrl(destImgFile);
 						if (imageHandler.handleClient != null)
 							imageHandler.createOrUpdateHandle(importId);
 

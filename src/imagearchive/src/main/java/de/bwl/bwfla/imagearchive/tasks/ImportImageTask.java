@@ -9,6 +9,7 @@ import de.bwl.bwfla.imagearchive.DataUtil;
 import de.bwl.bwfla.imagearchive.ImageHandler;
 
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Files;
@@ -63,50 +64,67 @@ public class ImportImageTask extends AbstractTask<String> {
     {
         log.info("Importing image " + importId + " from local stream...");
         DataUtil.writeData(inputStream, destImgFile);
-        imageHandler.resolveLocalBackingFile(destImgFile);
+        imageHandler.updateBackingFileUrl(destImgFile);
         imageHandler.createOrUpdateHandle(importId);
         return importId;
     }
 
-    private void downloadDependencies(String depurl) throws BWFLAException
+    private void downloadBackingFiles(Path image, String curid) throws BWFLAException, IOException
     {
-        final String depid = depurl.substring(depurl.lastIndexOf("/") + 1);
-        final Path depImgFile = target.toPath().resolve(depid);
+        log.info("Looking up image-info for: " + image.toString());
 
-        imageHandler.lock(depid);
+        final ImageInformation imginfo = new ImageInformation(image.toString(), log);
+        if (!imginfo.hasBackingFile()) {
+            log.info("No backing files left, stopping...");
+            return;
+        }
+
+        final String nexturl = imginfo.getBackingFile();
+        final String nextid = nexturl.substring(nexturl.lastIndexOf("/") + 1);
+        final Path layer = target.toPath().resolve(nextid);
+
+        imageHandler.lock(nextid);
         try {
-            log.info("Downloading backing file " + depid + " from: " + depurl);
+            log.info("Downloading backing file " + nextid + " from: " + nexturl);
 
-            if (Files.exists(depImgFile)) {
-                log.info("Backing file exists locally, skipping...");
+            if (Files.exists(layer)) {
+                log.info("Backing file exists locally, skip downloading...");
             }
             else {
                 final Binding binding = new Binding();
                 try {
-                    binding.setUrl(depurl);
-                    EmulatorUtils.copyRemoteUrl(binding, depImgFile, null, log);
+                    binding.setUrl(nexturl);
+                    EmulatorUtils.copyRemoteUrl(binding, layer, null, log);
                 }
                 catch (BWFLAException error) {
                     log.log(Level.WARNING, "Downloading backing file failed!", error);
-                    final String handle = imageHandler.getHandleUrl(depid);
+                    final String handle = imageHandler.getHandleUrl(nextid);
                     if (handle == null)
                         throw error;  // re-throw!
 
                     log.warning("Backing file handle found, retrying: " + handle);
                     binding.setUrl(handle);
-                    EmulatorUtils.copyRemoteUrl(binding, depImgFile, null);
+                    EmulatorUtils.copyRemoteUrl(binding, layer, null);
                 }
             }
         }
         finally {
-            imageHandler.unlock(depid);
+            imageHandler.unlock(nextid);
         }
 
-        final String nexturl = imageHandler.resolveLocalBackingFile(depImgFile);
-        if (nexturl != null)
-            this.downloadDependencies(nexturl);
+        // Update backing file URL for current image
+        // to point to the newly downloaded layer...
+        imageHandler.lock(curid);
+        try {
+            imageHandler.updateBackingFileUrl(image, imginfo);
+        }
+        finally {
+            imageHandler.unlock(curid);
+        }
 
-        imageHandler.createOrUpdateHandle(depid);
+        // Continue with lower layers...
+        this.downloadBackingFiles(layer, nextid);
+        imageHandler.createOrUpdateHandle(nextid);
     }
 
     private String fromUrl() throws BWFLAException
@@ -129,6 +147,9 @@ public class ImportImageTask extends AbstractTask<String> {
                 destImgFile.delete();
                 throw new BWFLAException("could not determine file fmt");
             }
+
+            log.info("Image file format: " + fmt.toString());
+
             switch (fmt) {
                 case VMDK:
                 case VHD:
@@ -141,11 +162,10 @@ public class ImportImageTask extends AbstractTask<String> {
                         origImgFile.delete();
                     }
                 default:
-                    String result = imageHandler.resolveLocalBackingFile(destImgFile);
-                    if(result != null)
-                        downloadDependencies(result);
-
+                    log.info("Downloading image's backing files...");
+                    this.downloadBackingFiles(destImgFile.toPath(), importId);
                     imageHandler.createOrUpdateHandle(importId);
+                    log.info("Downloading image " + importId + " finished successfully");
                     return importId;
             }
         } catch (Exception error) {
