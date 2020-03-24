@@ -34,14 +34,12 @@ import javax.xml.bind.JAXBException;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.container.helpers.ContainerHelper;
 import de.bwl.bwfla.common.services.container.helpers.ContainerHelperFactory;
-import de.bwl.bwfla.common.services.container.helpers.ImageFileHelper;
 import de.bwl.bwfla.common.services.container.types.Container;
 import de.bwl.bwfla.common.services.container.types.Container.Filesystem;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
-import de.bwl.bwfla.emucomp.api.VolatileResource;
-import org.apache.tamaya.ConfigurationProvider;
+
 
 public class EmulationEnvironmentHelper {
 	protected final static Logger log = Logger.getLogger(EmulationEnvironmentHelper.class.getName());
@@ -105,7 +103,7 @@ public class EmulationEnvironmentHelper {
 		}
 	}
 
-	public static MachineConfiguration clean(final MachineConfiguration original) {
+	public static MachineConfiguration clean(final MachineConfiguration original, boolean cleanRemovableDrives) {
 		MachineConfiguration env = original.copy();
 
 		// remove all removable drives from the environment
@@ -124,8 +122,9 @@ public class EmulationEnvironmentHelper {
 			}
 
 			if (d.getType() == Drive.DriveType.CDROM || d.getType() == Drive.DriveType.FLOPPY) {
-				resourcesRemoveMap.put(resourceUrl, true);
-				d.setData("");
+				resourcesRemoveMap.put(resourceUrl, cleanRemovableDrives);
+				if(cleanRemovableDrives)
+					d.setData("");
 			} else {
 				resourcesRemoveMap.put(resourceUrl, false);
 			}
@@ -460,7 +459,7 @@ public class EmulationEnvironmentHelper {
 		// construct URL
 		String subres = "";
 		if (path != null)
-			subres += "/" + path.toString();
+			subres += "/" + path;
 
 		String dataUrl = "binding://" + binding + subres;
 		int driveId = -1;
