@@ -162,7 +162,7 @@ public class ImageBuilderBackend implements IImageBuilder
 	{
 		public TaskManager() throws NamingException
 		{
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/batch"));
 		}
 	}
 

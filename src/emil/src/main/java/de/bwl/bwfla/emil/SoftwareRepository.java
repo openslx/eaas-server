@@ -26,10 +26,10 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
@@ -142,7 +142,7 @@ public class SoftwareRepository extends EmilRest
 	{
 		@GET
 		@Path("/{softwareId}")
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response get(@PathParam("softwareId") String softwareId)
 		{
@@ -156,6 +156,7 @@ public class SoftwareRepository extends EmilRest
 					return SoftwareRepository.createResponse(Status.OK, swo);
 				}
 
+				swo.setIsPublic(software.isPublic());
 				swo.setObjectId(software.getObjectId());
 				swo.setArchiveId(software.getArchive());
 				swo.setAllowedInstances(software.getNumSeats());
@@ -187,7 +188,7 @@ public class SoftwareRepository extends EmilRest
 		 * @return JSON response (error) message
 		 */
 		@POST
-		@Secured({Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRCITED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response create(EmilSoftwareObject swo)
@@ -225,6 +226,9 @@ public class SoftwareRepository extends EmilRest
 					software.setArchive(archiveName);
 					software.setName(swo.getLabel());
 				}
+
+				software.setPublic(swo.getIsPublic());
+				LOG.info("Setting software-package's visibility to: " + ((software.isPublic()) ? "public" : "private"));
 
 				software.setNumSeats(swo.getAllowedInstances());
 				software.setLicence(swo.getLicenseInformation());
@@ -280,7 +284,7 @@ public class SoftwareRepository extends EmilRest
 		 *         for all software packages or an error message.
 		 */
 		@GET
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response list()
 		{
@@ -303,6 +307,7 @@ public class SoftwareRepository extends EmilRest
 					json.writeStartObject();
 					json.write("id", desc.getSoftwareId());
 					json.write("label", desc.getLabel());
+					json.write("isPublic", desc.isPublic());
 					json.write("archiveId", (desc.getArchiveId() != null) ? desc.getArchiveId() : "default");
 					json.write("isOperatingSystem", desc.getIsOperatingSystem());
 					json.writeEnd();
@@ -347,7 +352,7 @@ public class SoftwareRepository extends EmilRest
 		 */
 		@GET
 		@Path("/{softwareId}")
-		@Secured({Role.PUBLIC})
+		@Secured(roles = {Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response get(@PathParam("softwareId") String softwareId)
 		{
@@ -365,6 +370,7 @@ public class SoftwareRepository extends EmilRest
 						.add("status", "0")
 						.add("id", desc.getSoftwareId())
 						.add("label", desc.getLabel())
+						.add("isPublic", desc.isPublic())
 						.add("isOperatingSystem", desc.getIsOperatingSystem())
 						.build();
 

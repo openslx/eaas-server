@@ -144,7 +144,9 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		if (software == null)
 			return null;
 		
-		return new SoftwareDescription(id, software.getName(), software.getIsOperatingSystem(), software.getArchive());
+		SoftwareDescription result =  new SoftwareDescription(id, software.getName(), software.getIsOperatingSystem(), software.getArchive());
+		result.setPublic(software.isPublic());
+		return result;
 	}
 	
 	@Override

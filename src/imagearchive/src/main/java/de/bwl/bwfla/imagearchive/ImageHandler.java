@@ -52,6 +52,9 @@ public class ImageHandler
 	private ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
 
+	/** Map containing lock-objects for images with in-progress operations */
+	private final ConcurrentHashMap<String, ImageLock> locks;
+
 	enum ExportType {
 		NBD, HTTP
 	}
@@ -60,6 +63,7 @@ public class ImageHandler
 		this.log = log;
 		this.iaConfig = config;
 		this.cache = cache;
+		this.locks = new ConcurrentHashMap<>();
 		pool = Executors.newFixedThreadPool(20);
 
 		// compatibility hack: keep old installations working
@@ -94,6 +98,20 @@ public class ImageHandler
 
 		cleanTmpFiles();
 		resolveLocalBackingFiles();
+	}
+
+	public void lock(String id)
+	{
+		locks.computeIfAbsent(id, (unused) -> new ImageLock())
+				.acquire();
+	}
+
+	public void unlock(String id)
+	{
+		locks.computeIfPresent(id, (unused, lock) -> {
+			// Remove lock object, when unused
+			return (lock.release() > 0) ? lock : null;
+		});
 	}
 
 	public ImageNameIndex getNameIndexes(){
@@ -170,49 +188,70 @@ public class ImageHandler
 //		return new ImageExport.ImageFileInfo(getArchivePrefix(), id, type);
 //	}
 
-	// return backing file if not resolved locally
-	public String resolveLocalBackingFile(File f)
+	public String updateBackingFileUrl(Path image, ImageInformation info)
+	{
+		return this.updateBackingFileUrl(image.toFile(), info);
+	}
+
+	public String updateBackingFileUrl(File image)
+	{
+		return this.updateBackingFileUrl(image, null);
+	}
+
+	public String updateBackingFileUrl(File image, ImageInformation info)
 	{
 		try {
-			ImageInformation info = new ImageInformation(f.getAbsolutePath(), log);
-			if (info.getBackingFile() == null)
-				return null;
+			log.info("Updating backing file for: " + image.getAbsolutePath());
+			if (info == null)
+				info = new ImageInformation(image.getAbsolutePath(), log);
 
-			log.info(f.getAbsolutePath() + " got backing file: " + info.getBackingFile());
+			if (!info.hasBackingFile()) {
+				log.info("No backing file defined!");
+				return null;
+			}
 
 			String id = ImageInformation.getBackingImageId(info.getBackingFile());
-			log.info(" got id: " + id);
+			log.info("Image info: " + image.getAbsolutePath() + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
 			File tmpTarget = getImageTargetPath(ImageType.tmp.name());
 			File tmpImageFile = new File(tmpTarget, id);
-			String newFileId = null;
 			if(tmpImageFile.exists())
 			{
+				log.info("Backing file is temporary, committing it first...");
+
 				MachineConfiguration mc = getEnvByImageId(ImageType.tmp, id);
 				id = commitTempEnvironment(mc.getId());
-				// log.info("commited mc: " + mc.getId() + " got new FileId: " + id);
+				log.info("Backing file committed as: " + id);
 			}
 
 			boolean hasLocalBackingfile = false;
 			for(ImageType _type : ImageType.values()) {
 				File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
-
 				if(backing.exists()) {
+					log.info("Local backing file found at: " + backing.getAbsolutePath());
 					hasLocalBackingfile = true;
 					break;
 				}
 			}
 
-			if(!hasLocalBackingfile)
+			if (!hasLocalBackingfile) {
+				log.info("Backing file not found locally!");
 				return info.getBackingFile();
+			}
 
-			String newBackingFile = getArchivePrefix() + id;
-			log.info("rebase " + f.getAbsolutePath() + " to: " + newBackingFile);
-			EmulatorUtils.changeBackingFile(f.toPath(), newBackingFile, log);
-			return null;
+			final String newBackingFile = this.getArchivePrefix() + id;
+			if (newBackingFile.equals(info.getBackingFile())) {
+				log.info("Local backing file reference is up-to-date!");
+			}
+			else {
+				log.info("Rebasing image: " + image.getAbsolutePath() + " --> " + newBackingFile);
+				EmulatorUtils.changeBackingFile(image.toPath(), newBackingFile, log);
+			}
 
-		} catch (IOException|BWFLAException e) {
-			log.log(Level.SEVERE, e.getMessage(), e);
+			return newBackingFile;
+		}
+		catch (IOException|BWFLAException e) {
+			log.log(Level.SEVERE, "Updating backing file failed!", e);
 			return null;
 		}
 	}
@@ -235,7 +274,7 @@ public class ImageHandler
 				if (fileEntry.getName().startsWith(".fuse"))
 					continue;
 
-				resolveLocalBackingFile(fileEntry);
+				this.updateBackingFileUrl(fileEntry);
 				if (handleClient != null) {
 					final String imgname = fileEntry.getName();
 					try {
@@ -527,7 +566,7 @@ public class ImageHandler
 		{
 			InputStream inputStream = image.getInputStream();
 			DataUtil.writeData(inputStream, destImgFile);
-			this.resolveLocalBackingFile(destImgFile);
+			this.updateBackingFileUrl(destImgFile);
 
 			FutureTask<ImageLoaderResult> ft =  new FutureTask<ImageLoaderResult>(new ImageLoader(inputStream, target, importId, this));
 			importTasks.put(taskId, ft);
@@ -836,7 +875,7 @@ public class ImageHandler
 			throw new BWFLAException("cannot commit environment " + id + ": invalid src/dst path");
 		}
 
-		String newImageId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
+		String newImageId = UUID.randomUUID().toString();
 		for(AbstractDataResource b : abstractDataResources)
 		{
 			if(b instanceof ImageArchiveBinding && (b.getId().equals("main_hdd") || b.getId().equals("rootfs")))
@@ -849,7 +888,7 @@ public class ImageHandler
 				}
 
 				File destImgFile = new File(dstImgDir, newImageId);
-				log.info("move " + srcImgFile + " " + destImgFile);
+				log.info("move " + srcImgFile + " to " + destImgFile);
 				if(!srcImgFile.renameTo(destImgFile))
 				{
 					throw new BWFLAException("cannot commit environment " + id + ": dest file not found " + destImgFile);
@@ -878,34 +917,38 @@ public class ImageHandler
 	}
 
 	private void updateTmpBackingFiles(String image, File target) throws IOException, BWFLAException {
+		log.info("Updating temporary backing file for: " + image);
 		ImageInformation info = new ImageInformation(image, log);
-
-		if(info.getBackingFile() == null)
+		if (info.getBackingFile() == null) {
+			log.info("No backing file defined!");
 			return;
+		}
 
 		String id = ImageInformation.getBackingImageId(info.getBackingFile());
+		log.info("Image info: " + image + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
-		log.info("update image: got id: " + id);
 		File backing = null;
-
 		for(ImageType _type : ImageType.values()) {
 			backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
 			if(backing.exists()) {
+				log.info("Local backing file found at: " + backing.getAbsolutePath());
 				break;
 			}
 			else backing = null;
 		}
 
-		if(backing == null)
+		if (backing == null) {
+			log.info("No local backing file found!");
 			return;
+		}
 
-		String newImageId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
+		String newImageId = UUID.randomUUID().toString();
 		String newBackingFile = getArchivePrefix() + newImageId;
 
 		File destImgFile = new File(target, newImageId);
 		backing.renameTo(destImgFile);
 
-		log.info("rebase " + image + " to: " + newBackingFile);
+		log.info("Rebasing image: " + image + " --> " + newBackingFile);
 		EmulatorUtils.changeBackingFile(new File(image).toPath(), newBackingFile, log);
 
 		updateTmpBackingFiles(destImgFile.getAbsolutePath(), target);
@@ -1213,7 +1256,7 @@ public class ImageHandler
 					EmulatorUtils.copyRemoteUrl(b, dst.toPath(), null);
 				}
 			}
-			String result = imageHandler.resolveLocalBackingFile(dst);
+			String result = imageHandler.updateBackingFileUrl(dst);
 			if (imageHandler.handleClient != null)
 				imageHandler.createOrUpdateHandle(imageid);
 
@@ -1250,7 +1293,7 @@ public class ImageHandler
 						EmulatorUtils.convertImage(convertedImgFile.toPath(), outFile.toPath(), ImageInformation.QemuImageFormat.QCOW2, log);
 						convertedImgFile.delete();
 					default:
-						String result = imageHandler.resolveLocalBackingFile(destImgFile);
+						String result = imageHandler.updateBackingFileUrl(destImgFile);
 						if (imageHandler.handleClient != null)
 							imageHandler.createOrUpdateHandle(importId);
 
@@ -1274,6 +1317,41 @@ public class ImageHandler
 					return fromStream();
 				default:
 					return new ImageLoaderResult(false, "");
+			}
+		}
+	}
+
+	private static class ImageLock
+	{
+		private int counter;
+
+
+		public ImageLock()
+		{
+			this.counter = 0;
+		}
+
+		public synchronized void acquire()
+		{
+			++counter;
+			while (counter > 1)
+				this.await();
+		}
+
+		public synchronized int release()
+		{
+			--counter;
+			this.notify();
+			return counter;
+		}
+
+		private void await()
+		{
+			try {
+				this.wait();
+			}
+			catch (Exception error) {
+				// Ignore it!
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.datatypes.security;
+package de.bwl.bwfla.common.services.security;
 
 import javax.inject.Qualifier;
 import java.lang.annotation.Retention;

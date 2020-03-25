@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.blobstore;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.blobstore.api.Blob;
@@ -34,6 +35,7 @@ import java.nio.file.Path;
 
 
 @Entity
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class BlobStoreEntry
 {
 	@JsonProperty(value = "namespace", required = true)
@@ -48,7 +50,7 @@ public class BlobStoreEntry
 	@JsonProperty(value = "type", required = true)
 	private String type;
 
-	@JsonProperty("name")
+	@JsonProperty(value = "name")
 	private String name;
 
 	@JsonProperty(value = "description")
@@ -187,9 +189,13 @@ public class BlobStoreEntry
 		blob.setId(this.getId())
 				.setNamespace(this.getNamespace())
 				.setAccessToken(this.getAccessToken())
-				.setType(this.getType())
-				.setName(this.getName())
-				.setDescription(this.getDescription());
+				.setType(this.getType());
+
+		if (this.hasName())
+			blob.setName(this.getName());
+
+		if (this.hasDescription())
+			blob.setDescription(this.getDescription());
 
 		return blob;
 	}

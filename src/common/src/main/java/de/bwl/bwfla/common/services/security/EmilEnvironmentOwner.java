@@ -1,4 +1,4 @@
-package de.bwl.bwfla.emil.datatypes.security;
+package de.bwl.bwfla.common.services.security;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;

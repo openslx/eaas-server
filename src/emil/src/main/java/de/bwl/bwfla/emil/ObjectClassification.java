@@ -8,10 +8,10 @@ import de.bwl.bwfla.emil.datatypes.OverrideCharacterizationRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.rest.ClientClassificationRequest;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ClassificationTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -99,7 +99,7 @@ public class ObjectClassification {
     }
 
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @POST
     @Path("/overrideObjectCharacterization")
     @Produces(MediaType.APPLICATION_JSON)
@@ -116,7 +116,7 @@ public class ObjectClassification {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/")

@@ -60,10 +60,6 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.getTemplate(id);
     }
 
-    public String createEnvironment(String archive, MachineConfiguration env, String size, ImageArchiveMetadata iaMd) throws BWFLAException {
-        return environmentsAdapter.createEnvironment(archive, env, size, iaMd);
-    }
-
     public EnvironmentsAdapter.ImportImageHandle importImage(String archive, URL url, ImageArchiveMetadata iaMd, boolean b) throws BWFLAException {
         return environmentsAdapter.importImage(archive, url, iaMd, b);
     }

@@ -71,13 +71,14 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
 import de.bwl.bwfla.emil.utils.components.ContainerComponent;
@@ -283,7 +284,7 @@ public class Components {
     {
         ComponentResponse result;
 
-        final TaskStack cleanups = new TaskStack();
+        final TaskStack cleanups = new TaskStack(LOG);
         final List<EventObserver> observer = new ArrayList<>();
 
         if (request.getClass().equals(UviComponentRequest.class)) {
@@ -344,7 +345,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request, @Context final HttpServletResponse response)
@@ -873,7 +874,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}")
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
@@ -915,7 +916,7 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
         final ComponentSession session = sessions.get(componentId);
@@ -946,7 +947,7 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
@@ -986,7 +987,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/controlurls")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
@@ -1010,7 +1011,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/result")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getResult(@PathParam("componentId") String componentId)
@@ -1052,7 +1053,7 @@ public class Components {
      * @HTTP 408 if no screenshot could be retrieved from the emulator
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/screenshot")
     @Produces("image/png")
     public InputStream screenshot(@PathParam("componentId") String componentId,
@@ -1094,7 +1095,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
     public ProcessResultUrl stop(@PathParam("componentId") String componentId,
@@ -1122,7 +1123,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/downloadPrintJob")
     @Produces("application/pdf")
     public InputStream downloadPrintJob(@PathParam("componentId") String componentId,
@@ -1153,7 +1154,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/events")
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
@@ -1170,7 +1171,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/printJobs")
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> printJobs(@PathParam("componentId") String componentId) {
@@ -1197,7 +1198,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/snapshot")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1213,7 +1214,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/checkpoint")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1230,7 +1231,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/changeMedia")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1286,7 +1287,7 @@ public class Components {
      * @param componentId The component's ID to release.
      */
     @DELETE
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}")
     public void releaseComponent(@PathParam("componentId") String componentId) {
         ComponentSession session = sessions.get(componentId);
@@ -1457,75 +1458,6 @@ public class Components {
     private static long timestamp()
     {
         return System.currentTimeMillis();
-    }
-
-    public static class TaskStack
-    {
-        private final Deque<Task> tasks = new ArrayDeque<>();
-
-        public void push(String name, Runnable task)
-        {
-            this.push(new Task(name, task));
-        }
-
-        public void push(Task task)
-        {
-            tasks.push(task);
-        }
-
-        public Task pop()
-        {
-            return tasks.pop();
-        }
-
-        public boolean isEmpty()
-        {
-            return tasks.isEmpty();
-        }
-
-        public boolean execute()
-        {
-            boolean result = true;
-            while (!this.isEmpty())
-                result = result && this.pop().run();
-
-            return result;
-        }
-
-        public static class Task
-        {
-            private final String name;
-            private final Runnable runnable;
-
-            private Task(String name, Runnable runnable)
-            {
-                this.name = name;
-                this.runnable = runnable;
-            }
-
-            public String name()
-            {
-                return name;
-            }
-
-            public Runnable runnable()
-            {
-                return runnable;
-            }
-
-            public boolean run()
-            {
-                LOG.log(Level.WARNING, "Running task '" + name + "'...");
-                try {
-                    runnable.run();
-                    return true;
-                }
-                catch (Exception error) {
-                    LOG.log(Level.WARNING, "Running task '" + name + "' failed!\n", error);
-                    return false;
-                }
-            }
-        }
     }
 
     private class ComponentSession

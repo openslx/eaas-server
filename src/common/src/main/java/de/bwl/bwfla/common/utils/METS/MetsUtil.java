@@ -45,12 +45,12 @@ public class MetsUtil {
     public static void initStructMap(Mets mets)
     {
         StructMapType usageMap = new StructMapType();
-        usageMap.setTYPE(MetsEaasContext.USAGE.toString());
+       // usageMap.setTYPE(MetsEaasContext.USAGE.toString());
         mets.getStructMap().add(usageMap);
 
-        StructMapType installMap = new StructMapType();
-        usageMap.setTYPE(MetsEaasContext.INSTALLATION.toString());
-        mets.getStructMap().add(installMap);
+       // StructMapType installMap = new StructMapType();
+       // usageMap.setTYPE(MetsEaasContext.INSTALLATION.toString());
+       //  mets.getStructMap().add(installMap);
     }
 
     public static Mets createMets(String id, String label)

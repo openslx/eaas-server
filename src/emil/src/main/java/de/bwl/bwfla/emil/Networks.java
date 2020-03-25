@@ -41,13 +41,13 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.rest.NodeTcpComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.SlirpComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.SwitchComponentRequest;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
 import de.bwl.bwfla.emil.session.NetworkSession;
 import de.bwl.bwfla.emil.session.Session;
 import de.bwl.bwfla.emil.session.SessionComponent;
@@ -84,7 +84,7 @@ public class Networks {
     protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
     public NetworkResponse createNetwork(NetworkRequest networkRequest, @Context final HttpServletResponse response) {
@@ -199,7 +199,7 @@ public class Networks {
     }
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
     public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -221,7 +221,7 @@ public class Networks {
     }
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
     public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -243,7 +243,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured({Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
@@ -267,7 +267,7 @@ public class Networks {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Path("/{id}/wsConnection")
     @Produces(MediaType.APPLICATION_JSON)
     public Response wsConnection(@PathParam("id") String id)
