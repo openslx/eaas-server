@@ -258,7 +258,7 @@ public class ProposalTask extends AbstractTask<Object>
 			final ImageContentDescription entry = new ImageContentDescription()
 					.setAction(ImageContentDescription.Action.EXTRACT)
 					.setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-					.setDataFromUrl(new URL(blob.toRestUrl(blobStoreAddress)))
+					.setURL(new URL(blob.toRestUrl(blobStoreAddress)))
 					.setName("data");
 
 			imgdesc.addContentEntry(entry);
