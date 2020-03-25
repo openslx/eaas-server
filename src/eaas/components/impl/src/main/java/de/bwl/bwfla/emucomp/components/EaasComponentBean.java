@@ -20,6 +20,7 @@
 package de.bwl.bwfla.emucomp.components;
 
 import de.bwl.bwfla.common.logging.PrefixLogger;
+import de.bwl.bwfla.common.utils.TaskStack;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -38,11 +39,14 @@ import java.util.stream.Stream;
 public abstract class EaasComponentBean extends AbstractEaasComponent 
 {
 	protected final PrefixLogger LOG;
+	protected final TaskStack cleanups;
 	private final Path workdir;
-	
+
+
 	protected EaasComponentBean()
 	{
 		LOG = new PrefixLogger(this.getClass().getSimpleName());
+		this.cleanups = new TaskStack(LOG);
 
 		// Create component's working directory
 		try {
@@ -77,6 +81,11 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 	@Override
 	public void destroy()
 	{
+		// Run all tasks in reverse order
+		LOG.info("Running cleanup tasks...");
+		if (!cleanups.execute())
+			LOG.warning("Running cleanup tasks failed!");
+
 		// Delete component's working directory
 		try (final Stream<Path> stream = Files.walk(workdir)) {
 			final Consumer<Path> deleter = (path) -> {

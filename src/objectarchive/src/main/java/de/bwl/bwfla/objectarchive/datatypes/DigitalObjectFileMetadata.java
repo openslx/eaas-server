@@ -12,7 +12,7 @@ public class DigitalObjectFileMetadata implements Comparable<DigitalObjectFileMe
 
     String label = null;
     String id = null;
-    BigInteger order = null;
+    String order = null;
 
     enum PropKeys
     {
@@ -44,10 +44,10 @@ public class DigitalObjectFileMetadata implements Comparable<DigitalObjectFileMe
 
         String orderVal = props.getProperty(PropKeys.ORDER.name());
         if(orderVal != null)
-          this.order = new BigInteger(orderVal);
+          this.order = orderVal;
     }
 
-    public DigitalObjectFileMetadata(String id, String label, BigInteger order) {
+    public DigitalObjectFileMetadata(String id, String label, String order) {
         this.label = label;
         this.id = id;
         this.order = order;
@@ -57,7 +57,7 @@ public class DigitalObjectFileMetadata implements Comparable<DigitalObjectFileMe
         return label;
     }
 
-    public BigInteger getOrder() {
+    public String getOrder() {
         return order;
     }
 

@@ -25,6 +25,7 @@ import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ByteRange;
 import de.bwl.bwfla.common.utils.ByteRangeIterator;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.FileRangeIterator;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
@@ -129,6 +130,8 @@ public class FileSystemBackend implements IBlobStoreBackend
 			catch (Exception error) {
 				this.abort("Writing blob's data failed!", error);
 			}
+
+			this.sync(dbEntryDir);
 		}
 		catch (BWFLAException error) {
 			// Clean up created files!
@@ -387,6 +390,14 @@ public class FileSystemBackend implements IBlobStoreBackend
 		}
 
 		return true;
+	}
+
+	private void sync(Path path)
+	{
+		final DeprecatedProcessRunner process = new DeprecatedProcessRunner("sync");
+		process.setLogger(log);
+		if (!process.execute())
+			log.warning("Syncing filesystem for '" + path.toString() + "' failed!");
 	}
 
 	private enum CleanupCounterType

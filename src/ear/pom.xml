@@ -238,5 +238,19 @@
 				</dependency>
 			</dependencies>
 		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>environment-proposer</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>environment-proposer</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
 	</profiles>
 </project>

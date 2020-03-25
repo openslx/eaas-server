@@ -187,16 +187,15 @@ public class ImageNameIndex extends JaxbType
 
 	private void dump()
 	{
-		try {
-			Path outPath = Paths.get(configPath);
-			if(Files.isDirectory(outPath))
-				outPath = outPath.resolve("index.yaml");
+		Path outPath = Paths.get(configPath);
+		if (Files.isDirectory(outPath))
+			outPath = outPath.resolve("index.yaml");
 
-			BufferedWriter writer = new BufferedWriter(new FileWriter(outPath.toString()));
-			writer.write( this.yamlValue(false));
-			writer.close();
-		} catch (IOException e) {
-			throw new IllegalStateException("NameIndexes dump failed!");
+		try (final BufferedWriter writer = Files.newBufferedWriter(outPath)) {
+			writer.write(this.yamlValue(false));
+		}
+		catch (IOException error) {
+			throw new IllegalStateException("NameIndexes dump failed!", error);
 		}
 	}
 

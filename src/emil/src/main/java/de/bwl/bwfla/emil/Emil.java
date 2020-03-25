@@ -50,15 +50,6 @@ public class Emil extends EmilRest
 
 	@GET
 	@Secured(roles = {Role.RESTRCITED})
-	@Path("/serverLog")
-	@Produces(MediaType.TEXT_PLAIN)
-	public Response serverLog()
-	{
-		return admin.getServerLog();
-	}
-
-	@GET
-	@Secured(roles = {Role.RESTRCITED})
 	@Path("/resetUsageLog")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()

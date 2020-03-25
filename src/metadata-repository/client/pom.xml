@@ -17,6 +17,11 @@
 			<artifactId>metadata-repository-api</artifactId>
 			<scope>compile</scope>
 		</dependency>
-	</dependencies>
+        <dependency>
+            <groupId>de.bwl.bwfla</groupId>
+            <artifactId>common</artifactId>
+            <scope>compile</scope>
+        </dependency>
+    </dependencies>
 </project>
 
