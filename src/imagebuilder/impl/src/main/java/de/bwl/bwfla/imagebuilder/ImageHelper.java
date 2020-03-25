@@ -108,7 +108,8 @@ class ImageHelper {
 		process.addArguments("-xzf", "-");
 		process.setWorkingDirectory(dstdir);
 		process.setLogger(log);
-		process.start();
+		if (!process.start())
+			throw new BWFLAException("Starting untar failed!");
 
 		try (InputStream in = handler.getInputStream(); OutputStream out = process.getStdInStream()) {
 			IOUtils.copy(in, out);
@@ -125,6 +126,9 @@ class ImageHelper {
 			throw new BWFLAException("Extracting tar archive failed!", error);
 		}
 		finally {
+			if (process.isProcessRunning())
+				process.kill();
+
 			process.cleanup();
 		}
 	}
