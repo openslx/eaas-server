@@ -138,7 +138,7 @@ public class DatabaseEnvironmentsAdapter {
                 return environment;
 
         } catch (NoSuchElementException | BWFLAException e) {
-            Environment environment = environmentsAdapter.getEnvironmentById(environmentsAdapter.getDefaultBackendName(), id);
+            Environment environment = environmentsAdapter.getEnvironmentById(archive, id);
             db.saveDoc(archive, environment.getId(), metaDataIdKey, environment.jsonValueWithoutRoot(false));
             return environment;
         }
