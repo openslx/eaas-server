@@ -33,8 +33,6 @@ import javax.json.Json;
 import javax.json.JsonObjectBuilder;
 import javax.json.stream.JsonGenerator;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -51,12 +49,13 @@ import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.eaas.cluster.dump.DumpConfig;
 import de.bwl.bwfla.eaas.cluster.dump.DumpFlags;
 import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
 
 
-@Path("api/v1/clusters")
+@Path("api/v1")
 public class ClusterAPI
 {
 	private static final int NUM_BASE_SEGMENTS = 3;
@@ -70,11 +69,11 @@ public class ClusterAPI
 	private IClusterManager clustermgr;
 
 
-	/* ========== Public API ========== */
+	/* ========== Admin API ========== */
 
 	@GET
-	@Path("/")
-	@Secured(roles = {Role.PUBLIC})
+	@Path("/clusters")
+	@Secured(roles = {Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listClusters()
 	{
@@ -92,23 +91,24 @@ public class ClusterAPI
 
 		return this.execute(handler, JSON_RESPONSE_CAPACITY);
 	}
-	
+
+
+	/* ========== Internal API ========== */
+
 	@GET
-	@Path("/{cluster_name}")
-	@Secured(roles = {Role.PUBLIC})
+	@SecuredInternal
+	@Path("/internal/clusters/{cluster_name}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getClusterResource(
-			@PathParam("cluster_name") String name)
+	public Response dumpClusterResource(@PathParam("cluster_name") String name)
 	{
 		return this.execute(name, JSON_RESPONSE_CAPACITY);
 	}
 	
 	@GET
-	@Path("/{cluster_name}/{subres:.*}")
-	@Secured(roles = {Role.PUBLIC})
+	@SecuredInternal
+	@Path("/internal/clusters/{cluster_name}/{subres:.*}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getClusterSubResource(
-			@PathParam("cluster_name") String name)
+	public Response dumpClusterSubResource(@PathParam("cluster_name") String name)
 	{
 		return this.execute(name, JSON_RESPONSE_CAPACITY);
 	}
@@ -200,18 +200,6 @@ public class ClusterAPI
 			.add("error_message", error.getMessage());
 		
 		return ClusterAPI.newResponse(Status.INTERNAL_SERVER_ERROR, json.build().toString());
-	}
-	
-	private static Response newUnauthorizedResponse(String token)
-	{
-		final JsonObjectBuilder json = Json.createObjectBuilder();
-		DumpHelpers.addResourceTimestamp(json);
-		DumpHelpers.addResourceType(json, "UnauthorizedError");
-		
-		String errormsg = (token == null) ? "Access token is missing!" : "Access token is invalid!";
-		json.add("error_message", errormsg);
-		
-		return ClusterAPI.newResponse(Status.UNAUTHORIZED, json.build().toString());
 	}
 	
 	private static Response newResponse(Status status, StringWriter message)
