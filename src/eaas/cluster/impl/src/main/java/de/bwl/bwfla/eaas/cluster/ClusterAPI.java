@@ -47,9 +47,11 @@ import javax.ws.rs.core.Response.Status;
 
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.eaas.cluster.dump.DumpConfig;
 import de.bwl.bwfla.eaas.cluster.dump.DumpFlags;
 import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
@@ -69,12 +71,16 @@ public class ClusterAPI
 	@Inject
 	private IClusterManager clustermgr;
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext userctx = null;
+
 
 	/* ========== Admin API ========== */
 
 	@GET
 	@Path("/clusters")
-	@Secured(roles = {Role.ADMIN})
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listClusters()
 	{
@@ -95,12 +101,13 @@ public class ClusterAPI
 
 	@GET
 	@Path("/clusters/{cluster_name}/description")
-	@Secured(roles = {Role.ADMIN})
+	@Secured(roles = {Role.PUBLIC, Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
 	public ClusterDescription getClusterDescription(@PathParam("cluster_name") String name)
 	{
+		final Role role = (userctx != null) ? userctx.getRole() : Role.PUBLIC;
 		return this.findClusterManager(name)
-				.describe(true);
+				.describe(role == Role.ADMIN);
 	}
 
 
