@@ -53,6 +53,7 @@ import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.eaas.cluster.dump.DumpConfig;
 import de.bwl.bwfla.eaas.cluster.dump.DumpFlags;
 import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
+import de.bwl.bwfla.eaas.cluster.rest.ClusterDescription;
 
 
 @Path("api/v1")
@@ -90,6 +91,16 @@ public class ClusterAPI
 		};
 
 		return this.execute(handler, JSON_RESPONSE_CAPACITY);
+	}
+
+	@GET
+	@Path("/clusters/{cluster_name}/description")
+	@Secured(roles = {Role.ADMIN})
+	@Produces(MediaType.APPLICATION_JSON)
+	public ClusterDescription getClusterDescription(@PathParam("cluster_name") String name)
+	{
+		return this.findClusterManager(name)
+				.describe(true);
 	}
 
 
@@ -132,7 +143,7 @@ public class ClusterAPI
 
 		this.log = new PrefixLogger(this.getClass().getName(), logContext);
 	}
-	
+
 	private List<PathSegment> skipPathSegments(int num)
 	{
 		final List<PathSegment> segments = uri.getPathSegments();
@@ -145,38 +156,38 @@ public class ClusterAPI
 		try (JsonGenerator json = ClusterAPI.newJsonGenerator(buffer, true)) {
 			final Status status = handler.apply(json);
 			json.flush();
-			
+
 			return ClusterAPI.newResponse(status, buffer);
 		}
 		catch (Throwable error) {
 			final String url = uri.getAbsolutePath().toString();
 			log.log(Level.WARNING, "Executing handler for URL '" + url + "' failed!\n", error);
-			if (error instanceof WebApplicationException) 
+			if (error instanceof WebApplicationException)
 				return ((WebApplicationException) error).getResponse();
 			else return ClusterAPI.newErrorResponse(error);
 		}
 	}
-	
+
 	private Response execute(String clusterName, int capacity)
 	{
 		final Function<JsonGenerator, Status> handler = (json) -> {
 			final IClusterManager cluster = this.findClusterManager(clusterName);
-			
+
 			DumpConfig dconf = new DumpConfig(this.skipPathSegments(1), uri.getQueryParameters());
 			cluster.dump(json, dconf, DumpFlags.TIMESTAMP | DumpFlags.RESOURCE_TYPE);
 			return Status.OK;
 		};
-		
+
 		return this.execute(handler, capacity);
 	}
-	
+
 	private IClusterManager findClusterManager(String name)
 	{
 		if (clustermgr == null || !clustermgr.getName().contentEquals(name)) {
 			String message = "Cluster manager '" + name + "' was not found!";
 			throw new NotFoundException(message);
 		}
-		
+
 		return clustermgr;
 	}
 
@@ -190,7 +201,7 @@ public class ClusterAPI
 		return Json.createGeneratorFactory(config)
 				.createGenerator(writer);
 	}
-	
+
 	private static Response newErrorResponse(Throwable error)
 	{
 		final JsonObjectBuilder json = Json.createObjectBuilder();
@@ -198,15 +209,15 @@ public class ClusterAPI
 		DumpHelpers.addResourceType(json, "InternalServerError");
 		json.add("error_type", error.getClass().getName())
 			.add("error_message", error.getMessage());
-		
+
 		return ClusterAPI.newResponse(Status.INTERNAL_SERVER_ERROR, json.build().toString());
 	}
-	
+
 	private static Response newResponse(Status status, StringWriter message)
 	{
 		return ClusterAPI.newResponse(status, message.toString());
 	}
-	
+
 	private static Response newResponse(Status status, String message)
 	{
 		return Response.status(status)
