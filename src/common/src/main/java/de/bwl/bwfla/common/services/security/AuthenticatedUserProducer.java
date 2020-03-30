@@ -1,11 +1,7 @@
-package de.bwl.bwfla.emil.utils;
+package de.bwl.bwfla.common.services.security;
 
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
-import de.bwl.bwfla.common.services.security.AuthenticatedUser;
-import de.bwl.bwfla.common.services.security.Role;
-import de.bwl.bwfla.common.services.security.UserContext;
-import de.bwl.bwfla.common.services.security.AuthenticationFilter;
 
 import javax.enterprise.context.RequestScoped;
 import javax.enterprise.event.Observes;
