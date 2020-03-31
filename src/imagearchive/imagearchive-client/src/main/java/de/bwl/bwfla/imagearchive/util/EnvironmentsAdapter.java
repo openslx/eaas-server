@@ -366,7 +366,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 					binding = handle.getBinding(60 * 60 * 60); // wait an hour
 				}
 				binding.setId(bdh.getId());
-				EmulationEnvironmentHelper.replace(env, binding);
+				EmulationEnvironmentHelper.replace(env, binding, iaMd.getType().equals(ImageType.CHECKPOINTS));
 			}
 		}
 
