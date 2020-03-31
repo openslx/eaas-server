@@ -59,13 +59,12 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	private HashMap<String, MetsObject> objects;
 
-	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive)
-	{
+	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive) throws BWFLAException {
 		this.name = name;
 		this.metaDataDir = new File(metaDataPath);
 		if(!metaDataDir.exists() && !metaDataDir.isDirectory())
 		{
-			throw new IllegalStateException("METS metadataPath " + metaDataPath + " does not exist");
+			throw new BWFLAException("METS metadataPath " + metaDataPath + " does not exist");
 		}
 		this.dataPath = dataPath;
 		this.defaultArchive = defaultArchive;
