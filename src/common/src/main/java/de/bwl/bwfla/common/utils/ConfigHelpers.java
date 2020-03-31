@@ -34,13 +34,54 @@ public class ConfigHelpers
 	/** Replace all chars from value with a replacement char */
 	public static String anonymize(String value, char replacement)
 	{
+		return ConfigHelpers.anonymize(value, replacement, 0, 0, -1);
+	}
+
+	/**
+	 * Replace all chars from <i>value</i>, skipping <i>prelen</i> chars from start and <i>suflen</i> from end,
+	 * with a <i>replacement</i> char. Optionally limit replacement string to <i>maxrlen</i> chars.
+	 */
+	public static String anonymize(String value, char replacement, int prelen, int suflen, int maxrlen)
+	{
+		if (prelen < 0)
+			throw new IllegalArgumentException("Invalid prefix length: " + prelen);
+
+		if (suflen < 0)
+			throw new IllegalArgumentException("Invalid suffix length: " + suflen);
+
+		if (maxrlen < 0)
+			maxrlen = Integer.MAX_VALUE;
+
+		boolean shorten = false;
+
 		int length = value.length();
 		final StringBuilder sb = new StringBuilder(length);
+		if (prelen > 0) {
+			prelen = Math.min(prelen, length);
+			sb.append(value, 0, prelen);
+			length -= prelen;
+		}
+
+		if (suflen > length)
+			suflen = length;
+
+		length -= suflen;
+		if (length > maxrlen) {
+			length = maxrlen;
+			shorten = true;
+		}
+
 		while (length > 0) {
 			sb.append(replacement);
 			--length;
 		}
-		
+
+		if (shorten)
+			sb.append("...");
+
+		if (suflen > 0)
+			sb.append(value, value.length() - suflen, value.length());
+
 		return sb.toString();
 	}
 	

@@ -21,6 +21,7 @@ package de.bwl.bwfla.metadata.oai.harvester;
 
 import de.bwl.bwfla.common.services.guacplay.util.StopWatch;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
+import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
 import de.bwl.bwfla.metadata.oai.harvester.config.HarvesterConfig;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -62,17 +63,15 @@ public class DataStream
 	private final BackendConfig.StreamConfig config;
 	private final MetaDataRepository mdrepo;
 	private final ServiceProvider service;
-	private final String secret;
 
-	public DataStream(BackendConfig.StreamConfig config, Client http, String secret, Logger log)
+	public DataStream(BackendConfig.StreamConfig config, Client http, Logger log)
 	{
 		this.log = log;
 		this.config = config;
 
 		final WebTarget endpoint = http.target(config.getSinkConfig().getBaseUrl());
-		this.secret = secret;
-		this.mdrepo = new MetaDataRepository(endpoint, secret);
-		this.service = new ServiceProvider(newContext(config.getSourceConfig()));
+		this.mdrepo = new MetaDataRepository(endpoint, config.getSinkConfig().getSecret());
+		this.service = new ServiceProvider(DataStream.newContext(config.getSourceConfig()));
 	}
 
 	public HarvestingResult execute() throws HarvestException
@@ -96,6 +95,12 @@ public class DataStream
 
 		log.info("Starting matadata-harvesting from remote repository: " + source.getUrl());
 		log.info("Using timestamp-range: " + fromts.toString() + " -- " + untilts.toString());
+
+		if (source.hasSecret())
+			this.logAnonymizedSecret(source.getSecret(), "source");
+
+		if (sink.hasSecret())
+			this.logAnonymizedSecret(sink.getSecret(), "sink");
 
 		log.info("Checking supported metadata-formats...");
 		if (!this.checkMetaDataFormat(mdprefix))
@@ -173,8 +178,9 @@ public class DataStream
 		final Transformer transformer = HarvesterConfig.getMetaDataTransformer();
 
 		String token = null;
-		if(config.getSecret() != null)
+		if (config.hasSecret())
 			token = MachineTokenProvider.getJwt(config.getSecret());
+
 		return new Context()
 				.withBaseUrl(baseurl)
 				.withGranularity(Granularity.Second)
@@ -219,5 +225,11 @@ public class DataStream
 		final Spliterator<Record> spliterator = Spliterators.spliteratorUnknownSize(records, 0);
 		return StreamSupport.stream(spliterator, false)
 				.map(mapper);
+	}
+
+	private void logAnonymizedSecret(String secret, String msgsuffix)
+	{
+		secret = ConfigHelpers.anonymize(secret, 'X', 6, 2, 32).toUpperCase();
+		log.info("Using API secret for " + msgsuffix + ": " + secret);
 	}
 }

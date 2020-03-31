@@ -92,6 +92,12 @@ public class BackendConfig extends BaseConfig
 			this.url = BackendConfig.sanitize(url);
 		}
 
+		@JsonIgnore
+		public boolean hasSecret()
+		{
+			return secret != null;
+		}
+
 		@JsonProperty(Fields.SECRET)
 		public String getSecret()
 		{
@@ -122,6 +128,12 @@ public class BackendConfig extends BaseConfig
 		{
 			ConfigHelpers.check(url, "Base URL is invalid!");
 			this.baseurl = BackendConfig.sanitize(url);
+		}
+
+		@JsonIgnore
+		public boolean hasSecret()
+		{
+			return secret != null;
 		}
 
 		@JsonProperty(Fields.SECRET)
