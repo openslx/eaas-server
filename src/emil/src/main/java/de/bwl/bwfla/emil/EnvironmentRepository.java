@@ -1103,7 +1103,7 @@ public class EnvironmentRepository extends EmilRest
 				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
 					throw new BadRequestException(Response
 							.status(Response.Status.BAD_REQUEST)
-							.entity(new ErrorInformation("could not insert iamge"))
+							.entity(new ErrorInformation("could not insert image"))
 							.build());
 			} else {
 				EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
@@ -1120,6 +1120,9 @@ public class EnvironmentRepository extends EmilRest
 			}
 
 			if(bindingId.startsWith("rom-"))
+				continue;
+
+			if(bindingId.equalsIgnoreCase("checkpoint") || bindingId.equalsIgnoreCase("emucon-rootfs"))
 				continue;
 
 			if(EmulationEnvironmentHelper.getDriveId(env, bindingId) >= 0)
