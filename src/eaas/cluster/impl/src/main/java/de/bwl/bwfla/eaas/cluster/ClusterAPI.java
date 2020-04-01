@@ -33,8 +33,6 @@ import javax.json.Json;
 import javax.json.JsonObjectBuilder;
 import javax.json.stream.JsonGenerator;
 import javax.ws.rs.GET;
-import javax.ws.rs.HeaderParam;
-import javax.ws.rs.NotAuthorizedException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -49,14 +47,18 @@ import javax.ws.rs.core.Response.Status;
 
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.SecuredInternal;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.eaas.cluster.dump.DumpConfig;
 import de.bwl.bwfla.eaas.cluster.dump.DumpFlags;
 import de.bwl.bwfla.eaas.cluster.dump.DumpHelpers;
+import de.bwl.bwfla.eaas.cluster.rest.ClusterDescription;
 
 
-@Path("api/v1/clusters")
+@Path("api/v1")
 public class ClusterAPI
 {
 	private static final int NUM_BASE_SEGMENTS = 3;
@@ -69,11 +71,15 @@ public class ClusterAPI
 	@Inject
 	private IClusterManager clustermgr;
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext userctx = null;
 
-	/* ========== Public API ========== */
+
+	/* ========== Admin API ========== */
 
 	@GET
-	@Path("/")
+	@Path("/clusters")
 	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listClusters()
@@ -92,23 +98,35 @@ public class ClusterAPI
 
 		return this.execute(handler, JSON_RESPONSE_CAPACITY);
 	}
-	
+
 	@GET
-	@Path("/{cluster_name}")
-	@Secured(roles = {Role.PUBLIC})
+	@Path("/clusters/{cluster_name}/description")
+	@Secured(roles = {Role.PUBLIC, Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getClusterResource(
-			@PathParam("cluster_name") String name)
+	public ClusterDescription getClusterDescription(@PathParam("cluster_name") String name)
+	{
+		final Role role = (userctx != null) ? userctx.getRole() : Role.PUBLIC;
+		return this.findClusterManager(name)
+				.describe(role == Role.ADMIN);
+	}
+
+
+	/* ========== Internal API ========== */
+
+	@GET
+	@SecuredInternal
+	@Path("/internal/clusters/{cluster_name}")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response dumpClusterResource(@PathParam("cluster_name") String name)
 	{
 		return this.execute(name, JSON_RESPONSE_CAPACITY);
 	}
 	
 	@GET
-	@Path("/{cluster_name}/{subres:.*}")
-	@Secured(roles = {Role.PUBLIC})
+	@SecuredInternal
+	@Path("/internal/clusters/{cluster_name}/{subres:.*}")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response getClusterSubResource(
-			@PathParam("cluster_name") String name)
+	public Response dumpClusterSubResource(@PathParam("cluster_name") String name)
 	{
 		return this.execute(name, JSON_RESPONSE_CAPACITY);
 	}
@@ -132,7 +150,7 @@ public class ClusterAPI
 
 		this.log = new PrefixLogger(this.getClass().getName(), logContext);
 	}
-	
+
 	private List<PathSegment> skipPathSegments(int num)
 	{
 		final List<PathSegment> segments = uri.getPathSegments();
@@ -145,38 +163,38 @@ public class ClusterAPI
 		try (JsonGenerator json = ClusterAPI.newJsonGenerator(buffer, true)) {
 			final Status status = handler.apply(json);
 			json.flush();
-			
+
 			return ClusterAPI.newResponse(status, buffer);
 		}
 		catch (Throwable error) {
 			final String url = uri.getAbsolutePath().toString();
 			log.log(Level.WARNING, "Executing handler for URL '" + url + "' failed!\n", error);
-			if (error instanceof WebApplicationException) 
+			if (error instanceof WebApplicationException)
 				return ((WebApplicationException) error).getResponse();
 			else return ClusterAPI.newErrorResponse(error);
 		}
 	}
-	
+
 	private Response execute(String clusterName, int capacity)
 	{
 		final Function<JsonGenerator, Status> handler = (json) -> {
 			final IClusterManager cluster = this.findClusterManager(clusterName);
-			
+
 			DumpConfig dconf = new DumpConfig(this.skipPathSegments(1), uri.getQueryParameters());
 			cluster.dump(json, dconf, DumpFlags.TIMESTAMP | DumpFlags.RESOURCE_TYPE);
 			return Status.OK;
 		};
-		
+
 		return this.execute(handler, capacity);
 	}
-	
+
 	private IClusterManager findClusterManager(String name)
 	{
 		if (clustermgr == null || !clustermgr.getName().contentEquals(name)) {
 			String message = "Cluster manager '" + name + "' was not found!";
 			throw new NotFoundException(message);
 		}
-		
+
 		return clustermgr;
 	}
 
@@ -190,7 +208,7 @@ public class ClusterAPI
 		return Json.createGeneratorFactory(config)
 				.createGenerator(writer);
 	}
-	
+
 	private static Response newErrorResponse(Throwable error)
 	{
 		final JsonObjectBuilder json = Json.createObjectBuilder();
@@ -198,27 +216,15 @@ public class ClusterAPI
 		DumpHelpers.addResourceType(json, "InternalServerError");
 		json.add("error_type", error.getClass().getName())
 			.add("error_message", error.getMessage());
-		
+
 		return ClusterAPI.newResponse(Status.INTERNAL_SERVER_ERROR, json.build().toString());
 	}
-	
-	private static Response newUnauthorizedResponse(String token)
-	{
-		final JsonObjectBuilder json = Json.createObjectBuilder();
-		DumpHelpers.addResourceTimestamp(json);
-		DumpHelpers.addResourceType(json, "UnauthorizedError");
-		
-		String errormsg = (token == null) ? "Access token is missing!" : "Access token is invalid!";
-		json.add("error_message", errormsg);
-		
-		return ClusterAPI.newResponse(Status.UNAUTHORIZED, json.build().toString());
-	}
-	
+
 	private static Response newResponse(Status status, StringWriter message)
 	{
 		return ClusterAPI.newResponse(status, message.toString());
 	}
-	
+
 	private static Response newResponse(Status status, String message)
 	{
 		return Response.status(status)

@@ -32,9 +32,10 @@ import de.bwl.bwfla.eaas.cluster.exception.AllocationFailureException;
 import de.bwl.bwfla.eaas.cluster.exception.OutOfResourcesException;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.provider.IResourceProvider;
+import de.bwl.bwfla.eaas.cluster.rest.ClusterDescription;
 
 
-public interface IClusterManager extends IDumpable
+public interface IClusterManager extends IDumpable, IDescribable<ClusterDescription>
 {
     public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, Duration duration)
             throws TimeoutException, AllocationFailureException, OutOfResourcesException;

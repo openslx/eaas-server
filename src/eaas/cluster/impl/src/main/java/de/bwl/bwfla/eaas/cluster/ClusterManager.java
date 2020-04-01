@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.UUID;
@@ -39,6 +40,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
@@ -65,6 +67,8 @@ import de.bwl.bwfla.eaas.cluster.metadata.Labels;
 import de.bwl.bwfla.eaas.cluster.provider.IResourceProvider;
 import de.bwl.bwfla.eaas.cluster.provider.ResourceProvider;
 import de.bwl.bwfla.eaas.cluster.provider.ResourceProviderComparators;
+import de.bwl.bwfla.eaas.cluster.rest.ClusterDescription;
+import de.bwl.bwfla.eaas.cluster.rest.ResourceProviderDescription;
 import de.bwl.bwfla.eaas.cluster.tenant.TenantManager;
 
 
@@ -218,9 +222,22 @@ public class ClusterManager implements IClusterManager
 	{
 		return Collections.unmodifiableCollection(providers.keySet());
 	}
+
+	@Override
+	public ClusterDescription describe(boolean detailed)
+	{
+		final Collection<ResourceProviderDescription> rpdescs = providers.values()
+				.stream()
+				.map((provider) -> provider.describe(detailed))
+				.filter(Objects::nonNull)
+				.collect(Collectors.toList());
+
+		return new ClusterDescription(this.getName())
+				.setResourceProviders(rpdescs);
+	}
+
 	
-	
-	/* ========== Admin REST-API ========== */
+	/* ========== Debug REST-API ========== */
 	
 	@Override
 	public void dump(JsonGenerator json, DumpConfig dconf, int flags)

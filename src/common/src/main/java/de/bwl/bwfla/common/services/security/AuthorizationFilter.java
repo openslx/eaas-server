@@ -91,8 +91,14 @@ public class AuthorizationFilter implements ContainerRequestFilter {
 
        //  System.out.println("authentication user " + authenticatedUser.getRole() + " " + authenticatedUser.getRole().ordinal());
 
-        Role minRole = allowedRoles.get(0);
-        if(minRole.ordinal() > authenticatedUser.getRole().ordinal())
-            throw new BWFLAException("min role " + minRole + " user role " + authenticatedUser.getRole());
+        // Try to find at least one whitelisted role,
+        // that permits access for the current user...
+        final Role urole = authenticatedUser.getRole();
+        for (Role arole : allowedRoles) {
+            if (urole.ordinal() >= arole.ordinal())
+                return;  // User's role has enough permissions!
+        }
+
+        throw new BWFLAException("Permission denied! User's role is not allowed: " + urole);
     }
 }
