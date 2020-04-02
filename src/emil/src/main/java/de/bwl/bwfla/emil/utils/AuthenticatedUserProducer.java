@@ -10,6 +10,7 @@ import de.bwl.bwfla.common.services.security.AuthenticationFilter;
 import javax.enterprise.context.RequestScoped;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
+import java.util.logging.Logger;
 
 @RequestScoped
 public class AuthenticatedUserProducer {
@@ -17,6 +18,8 @@ public class AuthenticatedUserProducer {
     @RequestScoped
     @AuthenticatedUser
     private UserContext authenticatedUser = new UserContext();
+
+    protected static final Logger LOG = Logger.getLogger("Authentication");
 
     // todo: allow override label
     private final String adminRoleLabel = "eaas-admin";
@@ -49,8 +52,7 @@ public class AuthenticatedUserProducer {
         {
             String[] roleList = roles.asArray(String.class);
             for(String r : roleList) {
-                System.out.println("ROLE: " + r);
-                if(r.equals("adminRoleLabel"))
+                if(r.equals(adminRoleLabel))
                     authenticatedUser.setRole(Role.ADMIN);
             }
         }
