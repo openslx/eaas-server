@@ -85,7 +85,14 @@ public class DigitalObjectArchiveFactory {
 				DigitalObjectMETSFileArchiveDescriptor m = 	gson.create().fromJson(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);
 				if(m == null)
 					return null;
-				return new DigitalObjectMETSFileArchive(m.getName(), m.getMetadataPath(), m.getDataPath(), m.isDefaultArchive());
+				try {
+					return new DigitalObjectMETSFileArchive(m.getName(), m.getMetadataPath(), m.getDataPath(), m.isDefaultArchive());
+				}
+				catch (BWFLAException e)
+				{
+					log.severe("failed to create DigitalObjectMETSFileArchive " + e.getMessage());
+					return null;
+				}
 				
 			default:
 				return null;

@@ -19,12 +19,15 @@
 
 package de.bwl.bwfla.eaas.cluster.provider.allocation;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.json.stream.JsonGenerator;
 
+import de.bwl.bwfla.eaas.cluster.IDescribable;
 import de.bwl.bwfla.eaas.cluster.MutableResourceSpec;
 import de.bwl.bwfla.eaas.cluster.NodeID;
 import de.bwl.bwfla.eaas.cluster.ResourceHandle;
@@ -35,10 +38,12 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpTrigger;
 import de.bwl.bwfla.eaas.cluster.dump.IDumpable;
 import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 import de.bwl.bwfla.eaas.cluster.provider.Node;
+import de.bwl.bwfla.eaas.cluster.rest.AllocationDescription;
+import de.bwl.bwfla.eaas.cluster.rest.NodeDescription;
 
 // package-private
 
-class NodeInfo implements IDumpable
+class NodeInfo implements IDumpable, IDescribable<NodeDescription>
 {
 	private final Node node;
 	private final MutableResourceSpec freeResources;
@@ -103,6 +108,26 @@ class NodeInfo implements IDumpable
 			node.setUsed(false);
 		
 		return allocation;
+	}
+
+	@Override
+	public NodeDescription describe(boolean detailed)
+	{
+		final Collection<AllocationDescription> adcol = allocations.values()
+				.stream()
+				.map((allocation) -> {
+					final UUID aid = allocation.getHandle().getAllocationID();
+					return new AllocationDescription(aid.toString())
+							.setResourceSpec(allocation.getResourceSpec());
+				})
+				.collect(Collectors.toList());
+
+		return new NodeDescription(node.getId().toString())
+				.setCapacity(this.getCapacity())
+				.setUtilization(this.getUsedResources())
+				.setHealthyFlag(node.isHealthy())
+				.setUsedFlag(node.isUsed())
+				.setAllocations(adcol);
 	}
 	
 	@Override

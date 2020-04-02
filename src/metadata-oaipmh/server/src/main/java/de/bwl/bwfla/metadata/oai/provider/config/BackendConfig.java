@@ -116,6 +116,7 @@ public class BackendConfig extends BaseConfig
 	public static class SourceConfig
 	{
 		private String baseurl;
+		private String secret;
 
 
 		public String getBaseUrl()
@@ -128,6 +129,22 @@ public class BackendConfig extends BaseConfig
 		{
 			ConfigHelpers.check(url, "Base URL is invalid!");
 			this.baseurl = url;
+		}
+
+		public boolean hasSecret()
+		{
+			return secret != null;
+		}
+
+		public String getSecret()
+		{
+			return secret;
+		}
+
+		public void setSecret(String secret)
+		{
+			if (secret != null && !secret.isEmpty())
+				this.secret = secret;
 		}
 	}
 

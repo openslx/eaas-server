@@ -17,29 +17,39 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.eaas.cluster.provider.allocation;
+package de.bwl.bwfla.eaas.cluster.rest;
 
-import java.util.Collection;
-import java.util.UUID;
-
-import de.bwl.bwfla.eaas.cluster.IDescribable;
-import de.bwl.bwfla.eaas.cluster.NodeID;
-import de.bwl.bwfla.eaas.cluster.ResourceHandle;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
-import de.bwl.bwfla.eaas.cluster.dump.IDumpable;
-import de.bwl.bwfla.eaas.cluster.provider.Node;
-import de.bwl.bwfla.eaas.cluster.rest.NodeDescription;
 
 
-public interface IResourceAllocator extends IDumpable, IDescribable<Collection<NodeDescription>>
+@JsonInclude(JsonInclude.Include.NON_NULL)
+public class AllocationDescription
 {
-	public boolean registerNode(Node node);
-	public void unregisterNode(NodeID id);
-	
-	public ResourceSpec getFreeResources();
-	public ResourceSpec getUsedResources();
-	public int getNumAllocations();
-	
-	public ResourceHandle allocate(UUID allocationId, ResourceSpec spec);
-	public ResourceSpec release(ResourceHandle id);
+	private final String id;
+	private ResourceSpec spec = null;
+
+	public AllocationDescription(String id)
+	{
+		this.id = id;
+	}
+
+	public AllocationDescription setResourceSpec(ResourceSpec spec)
+	{
+		this.spec = spec;
+		return this;
+	}
+
+	@JsonProperty("id")
+	public String getId()
+	{
+		return id;
+	}
+
+	@JsonProperty("spec")
+	public ResourceSpec getResourceSpec()
+	{
+		return spec;
+	}
 }
