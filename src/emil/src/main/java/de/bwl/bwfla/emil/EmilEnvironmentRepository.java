@@ -107,17 +107,17 @@ public class EmilEnvironmentRepository {
 	}
 
 	private String getCollectionCtx() {
-		if (authenticatedUser == null || authenticatedUser.getUsername() == null)
+		if (authenticatedUser == null || authenticatedUser.getUserId() == null)
 			return emilDbCollectionName;
 
-		return authenticatedUser.getUsername();
+		return authenticatedUser.getUserId();
 	}
 
 	private String getUserCtx() {
 		if (authenticatedUser == null)
 			return null;
 
-		return authenticatedUser.getUsername();
+		return authenticatedUser.getUserId();
 	}
 
 	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted) {
@@ -168,7 +168,7 @@ public class EmilEnvironmentRepository {
 
 		String username = null;
 		if (authenticatedUser != null) {
-			username = authenticatedUser.getUsername();
+			username = authenticatedUser.getUserId();
 		}
 
 		EmilEnvironmentOwner owner = env.getOwner();
@@ -215,9 +215,9 @@ public class EmilEnvironmentRepository {
 	}
 
 	private void setPermissions(EmilEnvironment ee) {
-		if (authenticatedUser != null && authenticatedUser.getUsername() != null) {
+		if (authenticatedUser != null && authenticatedUser.getUserId() != null) {
 			EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
-			owner.setUsername(authenticatedUser.getUsername());
+			owner.setUsername(authenticatedUser.getUserId());
 			ee.setOwner(owner);
 
 			EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
@@ -579,10 +579,10 @@ public class EmilEnvironmentRepository {
 					ee.setOs("n.a.");
 					ee.setDescription("imported base environment");
 
-					if(authenticatedUser != null && authenticatedUser.getUsername() != null)
+					if(authenticatedUser != null && authenticatedUser.getUserId() != null)
 					{
 						EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
-						owner.setUsername(authenticatedUser.getUsername());
+						owner.setUsername(authenticatedUser.getUserId());
 
 						EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
 						permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
@@ -749,10 +749,10 @@ public class EmilEnvironmentRepository {
 
 		String archiveName = request.getObjectArchiveId();
 		if (archiveName == null) {
-			if(authenticatedUser == null || authenticatedUser.getUsername() == null)
+			if(authenticatedUser == null || authenticatedUser.getUserId() == null)
 				request.setObjectArchiveId("default");
 			else
-				request.setObjectArchiveId(authenticatedUser.getUsername());
+				request.setObjectArchiveId(authenticatedUser.getUserId());
 		}
 
 		if(request.getObjectArchiveId() == null)

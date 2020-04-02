@@ -202,9 +202,9 @@ public class SoftwareRepository extends EmilRest
 				if (software == null) {
 					String archiveName = swo.getArchiveId();
 					if (archiveName == null) {
-						if (userctx != null && userctx.getUsername() != null) {
-							LOG.info("Using user context: " + userctx.getUsername());
-							archiveName = userctx.getUsername();
+						if (userctx != null && userctx.getUserId() != null) {
+							LOG.info("Using user context: " + userctx.getUserId());
+							archiveName = userctx.getUserId();
 						}
 					}
 

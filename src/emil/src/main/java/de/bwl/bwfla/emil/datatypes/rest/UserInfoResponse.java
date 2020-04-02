@@ -18,6 +18,12 @@ public class UserInfoResponse extends EmilResponseType {
     @XmlElement
     private String fullName;
 
+    @XmlElement
+    private String role;
+
+    @XmlElement
+    private String username;
+
     public UserInfoResponse(BWFLAException e)
     {
         super(e);
@@ -40,5 +46,21 @@ public class UserInfoResponse extends EmilResponseType {
 
     public void setFullName(String fullName) {
         this.fullName = fullName;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }
