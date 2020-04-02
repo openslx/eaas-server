@@ -56,7 +56,7 @@ import de.bwl.bwfla.emucomp.api.NodeTcpConfiguration;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.NetworkRequest;
 import de.bwl.bwfla.emil.datatypes.NetworkResponse;
 import de.bwl.bwfla.emucomp.api.NetworkSwitchConfiguration;

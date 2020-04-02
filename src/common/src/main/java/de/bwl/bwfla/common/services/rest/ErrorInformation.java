@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil.datatypes;
+package de.bwl.bwfla.common.services.rest;
 
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;

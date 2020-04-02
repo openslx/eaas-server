@@ -69,6 +69,7 @@ import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.TaskStack;

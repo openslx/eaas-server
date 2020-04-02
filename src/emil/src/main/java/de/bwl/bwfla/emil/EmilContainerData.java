@@ -17,6 +17,7 @@ import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.common.services.security.Role;
