@@ -41,11 +41,11 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
-import de.bwl.bwfla.common.utils.JsonBuilder;
-import de.bwl.bwfla.common.utils.NetworkUtils;
+
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
-
+import de.bwl.bwfla.common.utils.JsonBuilder;
+import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.rest.NodeTcpComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.SlirpComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.SwitchComponentRequest;

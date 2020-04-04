@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emucomp.components.emulators;
 
+import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -1232,39 +1233,47 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		// TODO: filter out all unchanged images with qemu-img compare!
 
+		final BlobStore blobstore = BlobStoreClient.get()
+				.getBlobStorePort(blobStoreAddressSoap);
+
 		// Create one DataHandler per image
 		final List<BindingDataHandler> handlers = new ArrayList<BindingDataHandler>();
-		images.forEach((id, path) -> {
+		try {
+			for (Map.Entry<String, String> entry : images.entrySet()) {
+				final String id = entry.getKey();
+				final String path = entry.getValue();
 
-			final BlobDescription blob = new BlobDescription()
-					.setDescription("Snapshot for session " + this.getComponentId())
-					.setNamespace("emulator-snapshots")
-					.setName(id);
+				final BlobDescription blob = new BlobDescription()
+						.setDescription("Snapshot for session " + this.getComponentId())
+						.setNamespace("emulator-snapshots")
+						.setDataFromFile(Paths.get(path))
+						.setType(".qcow")
+						.setName(id);
 
-			blob.setDataFromFile(Paths.get(path));
-			blob.setType(".qcow");
+				// Upload image to blobstore and register cleanup handler
+				final BlobHandle handle = blobstore.put(blob);
+				cleanups.push("delete-blob/" + handle.getId(), () -> {
+					try {
+						blobstore.delete(handle);
+					}
+					catch (Exception exception) {
+						LOG.log(Level.WARNING, "Removing snapshot-image from blobstore failed!", exception);
+					}
+				});
 
-			// Upload archive to the BlobStore
-			try {
-				BlobHandle handle = BlobStoreClient.get()
-						.getBlobStorePort(blobStoreAddressSoap)
-						.put(blob);
-				String location = handle.toRestUrl(blobStoreRestAddress);
-
+				final String location = handle.toRestUrl(blobStoreRestAddress);
 				final BindingDataHandler handler = new BindingDataHandler()
 						.setUrl(location)
 						.setId(id);
 
 				handlers.add(handler);
-
-				if (handle == null) {
-					throw new BWFLAException("could not create blob")
-							.setId(this.getComponentId());
-				}
-			} catch (BWFLAException e) {
-				e.printStackTrace();
 			}
-		});
+		}
+		catch (BWFLAException error) {
+			LOG.log(Level.WARNING, "Uploading images failed!", error);
+			error.setId(this.getComponentId());
+			throw error;
+		}
 
 		return handlers;
 	}

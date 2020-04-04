@@ -9,7 +9,6 @@ import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironment;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironmentElement;
 import de.bwl.bwfla.emil.datatypes.ErrorInformation;
@@ -19,8 +18,6 @@ import org.apache.tamaya.inject.api.Config;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -65,7 +62,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @PUT
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -90,7 +87,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured(roles={Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @GET
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -107,7 +104,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured(roles={Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @GET
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
@@ -211,5 +208,4 @@ public class NetworkEnvironments extends EmilRest {
                     .build());
         }
     }
-
 }

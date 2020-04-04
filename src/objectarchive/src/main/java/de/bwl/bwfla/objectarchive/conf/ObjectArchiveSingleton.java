@@ -33,6 +33,7 @@ import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -139,7 +140,13 @@ public class ObjectArchiveSingleton
 
 		// add mets remote
 		File remoteMetsMd = new File(serverdatadir, remoteMetsObjects);
-		archives.add(new DigitalObjectMETSFileArchive(remoteArchiveName, remoteMetsMd.getAbsolutePath(), null, false));
+		try {
+			archives.add(new DigitalObjectMETSFileArchive(remoteArchiveName, remoteMetsMd.getAbsolutePath(), null, false));
+		}
+		catch (BWFLAException e)
+		{
+			LOG.severe("failed to initialize mets remote archive " + e.getMessage());
+		}
 		
 		ObjectArchiveSingleton.archiveMap = new ConcurrentHashMap<>();
 		for(DigitalObjectArchive a : archives)

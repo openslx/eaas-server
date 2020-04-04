@@ -228,7 +228,8 @@ public class SoftwareRepository extends EmilRest
 				}
 
 				software.setPublic(swo.getIsPublic());
-				LOG.severe("setting public to: " + swo.getIsPublic());
+				LOG.info("Setting software-package's visibility to: " + ((software.isPublic()) ? "public" : "private"));
+
 				software.setNumSeats(swo.getAllowedInstances());
 				software.setLicence(swo.getLicenseInformation());
 				software.setIsOperatingSystem(swo.getIsOperatingSystem());

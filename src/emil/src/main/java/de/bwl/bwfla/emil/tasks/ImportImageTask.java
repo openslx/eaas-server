@@ -52,6 +52,14 @@ public class ImportImageTask extends AbstractTask<Object> {
             TaskState importState = request.environmentHelper.importImage(request.url, iaMd, true);
             while(!importState.isDone())
             {
+                try {
+                    // Wait and retry...
+                    Thread.sleep(2000L);
+                }
+                catch (InterruptedException error) {
+                    // Ignore it!
+                }
+
                 importState = request.environmentHelper.getState(importState.getTaskId());
             }
             if(importState.isFailed())

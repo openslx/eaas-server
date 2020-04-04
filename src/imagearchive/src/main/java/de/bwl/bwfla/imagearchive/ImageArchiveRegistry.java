@@ -28,7 +28,6 @@ import java.util.stream.Collectors;
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
-import javax.enterprise.context.ApplicationScoped;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
@@ -45,13 +44,13 @@ import static java.util.Map.Entry.comparingByValue;
 @Startup
 public class ImageArchiveRegistry
 {
-	private final Logger log = Logger.getLogger(this.getClass().getName());
+	private static final Logger log = Logger.getLogger("IMAGE-ARCHIVE-REGISTRY");
 	private final Map<String, ImageArchiveBackend> backends = new HashMap<>();
 	private final ImageArchiveConfig config = new ImageArchiveConfig();
 
 	private static AsyncIoTaskManager taskManager;
 
-	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<String> {
+	private static class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<String> {
 		public AsyncIoTaskManager() throws NamingException {
 			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
@@ -148,7 +147,7 @@ public class ImageArchiveRegistry
 		}
 		catch (InterruptedException | ExecutionException e)
 		{
-			e.printStackTrace();
+			log.log(Level.WARNING, "Task failed!", e);
 			state.setDone(true);
 			state.setFailed(true);
 		}

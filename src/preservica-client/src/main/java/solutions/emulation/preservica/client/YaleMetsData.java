@@ -73,7 +73,7 @@ public class YaleMetsData {
             for (DivType _div : divlist) {
                 String id = null;
                 String label = _div.getLabel3();
-                BigInteger order = _div.getORDER();
+                String order = _div.getORDER().toString();
 
                 //  System.out.println("div: " + _div.getLabel3() + " " + _div.getORDER());
                 List<DivType.Fptr> fptrList = _div.getFptr();
@@ -218,9 +218,9 @@ public class YaleMetsData {
     {
         String label;
         String id;
-        BigInteger order;
+        String order;
 
-        YaleMetsFileInformation(String id, String label, BigInteger order) {
+        YaleMetsFileInformation(String id, String label, String order) {
             this.label = label;
             this.id = id;
             this.order = order;
@@ -243,7 +243,7 @@ public class YaleMetsData {
             return id;
         }
 
-        public BigInteger getOrder() {
+        public String getOrder() {
             return order;
         }
     }

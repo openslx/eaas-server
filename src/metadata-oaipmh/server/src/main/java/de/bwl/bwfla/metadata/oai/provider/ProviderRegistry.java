@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.oai.provider;
 
+import de.bwl.bwfla.common.utils.ConfigHelpers;
 import org.dspace.xoai.dataprovider.DataProvider;
 import org.dspace.xoai.dataprovider.model.Context;
 import org.dspace.xoai.dataprovider.repository.Repository;
@@ -79,8 +80,8 @@ public class ProviderRegistry
 		this.http = ClientBuilder.newClient();
 		this.providers = new LinkedHashMap<>();
 
-		String apiSecret = ConfigurationProvider.getConfiguration().get("rest.internalApiSecret");
-		System.out.print("ProviderRegistry API " + apiSecret);
+		final String secret = ConfigurationProvider.getConfiguration()
+				.get("rest.internalApiSecret");
 
 		try {
 			config.load(ConfigurationProvider.getConfiguration());
@@ -88,8 +89,12 @@ public class ProviderRegistry
 				final String name = backend.getName();
 				final String baseurl = config.getBaseUrl();
 				log.info("Preparing provider backend '" + name + "'...");
+				log.info("Using API secret for source: " + ConfigHelpers.anonymize(secret, 'X', 6, 2, 32).toUpperCase());
 
-				final Repository repository = ProviderRegistry.newRepository(backend, baseurl, http, apiSecret, log);
+				backend.getSourceConfig()
+						.setSecret(secret);
+
+				final Repository repository = ProviderRegistry.newRepository(backend, baseurl, http, log);
 				providers.put(name, new DataProvider(context, repository));
 			}
 		}
@@ -122,7 +127,7 @@ public class ProviderRegistry
 		return context;
 	}
 
-	private static Repository newRepository(BackendConfig config, String baseurl, Client http, String secret, Logger log)
+	private static Repository newRepository(BackendConfig config, String baseurl, Client http, Logger log)
 	{
 		final Repository repository = new Repository();
 
@@ -147,8 +152,9 @@ public class ProviderRegistry
 
 		// Setup set and item repository sources
 		{
-			final WebTarget endpoint = http.target(config.getSourceConfig().getBaseUrl());
-			final MetaDataRepository mdrepo = new MetaDataRepository(endpoint, secret);
+			final BackendConfig.SourceConfig source = config.getSourceConfig();
+			final WebTarget endpoint = http.target(source.getBaseUrl());
+			final MetaDataRepository mdrepo = new MetaDataRepository(endpoint, source.getSecret());
 
 			repository.withSetRepository(new SetRepository(mdrepo));
 			repository.withItemRepository(new ItemRepository(mdrepo));

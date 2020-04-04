@@ -35,10 +35,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 import static de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ArchiveFormat.DOCKER;
 
@@ -53,26 +51,13 @@ public abstract class MediumBuilder
 	public static void delete(Path start, Logger log)
 	{
 		// Delete file or a directory recursively
-		try (final Stream<Path> stream = Files.walk(start)) {
-			final Consumer<Path> deleter = (path) -> {
-				try {
-					Files.delete(path);
-				}
-				catch (Exception error) {
-					final String message = "Deleting '" + path.toString() + "' failed! ("
-							+ error.getClass().getName() + ": " + error.getMessage() + ")";
-
-					log.warning(message);
-				}
-			};
-
-			stream.sorted(Comparator.reverseOrder())
-					.forEach(deleter);
-		}
-		catch (Exception error) {
-			String message = "Deleting '" + start.toString() + "' failed!\n";
-			log.log(Level.WARNING, message, error);
-		}
+		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+		process.setCommand("sudo");
+		process.addArgument("--non-interactive");
+		process.addArguments("rm", "-r", "-f");
+		process.addArgument(start.toString());
+		process.setLogger(log);
+		process.execute();
 	}
 
 	public static void unmount(Path path, Logger log)

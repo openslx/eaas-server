@@ -34,14 +34,13 @@ import javax.xml.bind.JAXBException;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.container.helpers.ContainerHelper;
 import de.bwl.bwfla.common.services.container.helpers.ContainerHelperFactory;
-import de.bwl.bwfla.common.services.container.helpers.ImageFileHelper;
 import de.bwl.bwfla.common.services.container.types.Container;
 import de.bwl.bwfla.common.services.container.types.Container.Filesystem;
+import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
-import de.bwl.bwfla.emucomp.api.VolatileResource;
-import org.apache.tamaya.ConfigurationProvider;
+
 
 public class EmulationEnvironmentHelper {
 	protected final static Logger log = Logger.getLogger(EmulationEnvironmentHelper.class.getName());
@@ -302,7 +301,7 @@ public class EmulationEnvironmentHelper {
 	}
 
 	/** Replaces current binding in machine-config with specified binding */
-	public static void replace(MachineConfiguration env, ImageArchiveBinding replacement)
+	public static void replace(MachineConfiguration env, ImageArchiveBinding replacement, boolean keepBindingId)
 			throws BWFLAException
 	{
 		ImageArchiveBinding current = null;
@@ -316,20 +315,17 @@ public class EmulationEnvironmentHelper {
 			}
 
 			current = (ImageArchiveBinding) entry;
-			int driveId = getDriveId(env, replacement.getId());
-			Drive d = getDrive(env, driveId);
-			if(d != null){
-				d.setData("binding://" + replacement.getImageId());
+			if (!keepBindingId) {
+				int driveId = getDriveId(env, replacement.getId());
+				Drive d = getDrive(env, driveId);
+				if (d != null) {
+					d.setData("binding://" + replacement.getImageId());
+				} else {
+					log.severe("XXX: replace(): drive not found");
+				}
+				current.setId(replacement.getImageId());
 			}
-			else
-			{
-				log.severe("XXX: replace(): drive not found");
-			}
-
-			replacement.setId(replacement.getImageId());
 			current.update(replacement);
-
-
 			break;
 		}
 
@@ -338,6 +334,8 @@ public class EmulationEnvironmentHelper {
 			replacement.setId(replacement.getImageId());
 			env.getAbstractDataResource()
 					.add(replacement);
+
+			return;
 		}
 	}
 

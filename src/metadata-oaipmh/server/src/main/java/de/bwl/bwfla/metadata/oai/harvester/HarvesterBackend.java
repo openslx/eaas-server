@@ -50,15 +50,17 @@ public class HarvesterBackend
 		final PrefixLoggerContext logctx = new PrefixLoggerContext()
 				.add(config.getName());
 
-		String secret = ConfigurationProvider.getConfiguration().get("rest.internalApiSecret");
+		final String secret = ConfigurationProvider.getConfiguration()
+				.get("rest.internalApiSecret");
 
 		this.log = new PrefixLogger(this.getClass().getName(), logctx);
 		this.state = state;
 		this.streams = new ArrayList<>(config.getStreamConfigs().size());
 
-		System.out.println("ProviderRegistry API " + secret);
-		for (BackendConfig.StreamConfig sc : config.getStreamConfigs())
-			streams.add(new DataStream(sc, http, secret, log));
+		for (BackendConfig.StreamConfig sc : config.getStreamConfigs()) {
+			sc.getSinkConfig().setSecret(secret);
+			streams.add(new DataStream(sc, http, log));
+		}
 	}
 
 	public HarvesterBackend(BackendConfig config, Client http)

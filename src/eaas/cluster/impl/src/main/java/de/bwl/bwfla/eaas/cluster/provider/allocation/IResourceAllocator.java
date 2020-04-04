@@ -19,16 +19,19 @@
 
 package de.bwl.bwfla.eaas.cluster.provider.allocation;
 
+import java.util.Collection;
 import java.util.UUID;
 
+import de.bwl.bwfla.eaas.cluster.IDescribable;
 import de.bwl.bwfla.eaas.cluster.NodeID;
 import de.bwl.bwfla.eaas.cluster.ResourceHandle;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.eaas.cluster.dump.IDumpable;
 import de.bwl.bwfla.eaas.cluster.provider.Node;
+import de.bwl.bwfla.eaas.cluster.rest.NodeDescription;
 
 
-public interface IResourceAllocator extends IDumpable
+public interface IResourceAllocator extends IDumpable, IDescribable<Collection<NodeDescription>>
 {
 	public boolean registerNode(Node node);
 	public void unregisterNode(NodeID id);

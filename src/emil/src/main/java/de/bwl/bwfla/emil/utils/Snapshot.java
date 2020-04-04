@@ -100,7 +100,7 @@ public class Snapshot
             machineConfiguration = EmulationEnvironmentHelper.clean(configuration, req.isCleanRemovableDrives());
         else
             machineConfiguration = configuration.copy();
-
+        
         ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
         if (parentEnv instanceof EmilSessionEnvironment) {
             iaMd.setType(ImageType.SESSIONS);
@@ -114,6 +114,10 @@ public class Snapshot
             iaMd.setType(ImageType.DERIVATE);
             newEnv = new EmilEnvironment(parentEnv);
         }
+
+        if(checkpoint)
+            iaMd.setType(ImageType.CHECKPOINTS);
+
 
         if (req.getSoftwareId() != null)
             addSoftwareId(machineConfiguration, req.getSoftwareId());

@@ -12,8 +12,9 @@ standalone-server-build:
   <<: *caching
   script:
     - mvn -f src/pom.xml clean install
-    - ./ci/scripts/upload-api-docs.sh "${PWD}/src/emil/target/apidocs"
-
+    - ./ci/scripts/upload-api-docs.sh
+          "emil:${PWD}/src/emil/target/apidocs"
+          "environment-proposer:${PWD}/src/environment-proposer/target/apidocs"
   artifacts:
     paths:
     - eaas-server.ear

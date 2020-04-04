@@ -29,8 +29,10 @@ public class ImageInformation {
             else if(tokens[0].equals("file format"))
             {
                 for (QemuImageFormat fmt : QemuImageFormat.values()) {
-                    if (tokens[1].contains(fmt.toString()))
+                    if (tokens[1].startsWith(fmt.toString())) {
                         fileFormat = fmt;
+                        break;
+                    }
                 }
             }
         }
@@ -68,6 +70,10 @@ public class ImageInformation {
         }
     }
 
+    public boolean hasBackingFile() {
+        return backingFile != null;
+    }
+
     public String getBackingFile() {
         return backingFile;
     }
@@ -77,13 +83,15 @@ public class ImageInformation {
     }
 
     public enum QemuImageFormat{
+        // OPTIMIZATION: formats should be declared in frequency-descending order
+        //               (e.g. most common first, followed by less common ones)
+        QCOW2("qcow2"),
         RAW("raw"),
         VDI("vdi"),
         VHD("vpc"),
         VMDK("vmdk"),
         EWF("ewf"),
-        VHDX("vhdx"),
-        QCOW2("qcow2");
+        VHDX("vhdx");
 
         private final String format;
 

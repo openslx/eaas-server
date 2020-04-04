@@ -22,13 +22,10 @@ package de.bwl.bwfla.emil;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.api.imagearchive.*;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
-import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
@@ -38,14 +35,13 @@ import de.bwl.bwfla.emil.datatypes.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
-import de.bwl.bwfla.emil.tasks.CreateEmptyImageTask;
-
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
 import de.bwl.bwfla.emil.datatypes.rest.UpdateEnvironmentDescriptionRequest;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
+import de.bwl.bwfla.emil.tasks.CreateEmptyImageTask;
 import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
@@ -58,7 +54,6 @@ import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
-import org.eclipse.persistence.annotations.DeleteAll;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -79,7 +74,6 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
-import java.time.Duration;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
@@ -233,7 +227,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/images-index")
-	@Secured(roles = {Role.PUBLIC})
+	@Secured(roles={Role.PUBLIC})
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
 	public ImageNameIndex getImagesIndex() throws BWFLAException
@@ -1070,7 +1064,7 @@ public class EnvironmentRepository extends EmilRest
 
 		@POST
 		@Path("/delete-image")
-		@Secured(roles = {Role.PUBLIC})
+		@Secured(roles={Role.PUBLIC})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response deleteImage(DeleteImageRequest request) throws BWFLAException
@@ -1108,7 +1102,7 @@ public class EnvironmentRepository extends EmilRest
 				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
 					throw new BadRequestException(Response
 							.status(Response.Status.BAD_REQUEST)
-							.entity(new ErrorInformation("could not insert iamge"))
+							.entity(new ErrorInformation("could not insert image"))
 							.build());
 			} else {
 				EmulationEnvironmentHelper.registerEmptyDrive(env, ds.getDriveIndex());
@@ -1125,6 +1119,9 @@ public class EnvironmentRepository extends EmilRest
 			}
 
 			if(bindingId.startsWith("rom-"))
+				continue;
+
+			if(bindingId.equalsIgnoreCase("checkpoint") || bindingId.equalsIgnoreCase("emucon-rootfs"))
 				continue;
 
 			if(EmulationEnvironmentHelper.getDriveId(env, bindingId) >= 0)
