@@ -40,6 +40,7 @@ import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
+import org.apache.tamaya.ConfigurationProvider;
 
 
 public class EmulationEnvironmentHelper {
