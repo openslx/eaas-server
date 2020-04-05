@@ -11,7 +11,7 @@ import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironment;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironmentElement;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emucomp.api.NetworkConfiguration;
 import org.apache.tamaya.inject.api.Config;
 
