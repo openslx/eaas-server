@@ -22,6 +22,7 @@ package de.bwl.bwfla.metadata.oai.harvester;
 
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.rest.ResponseUtils;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
 
 import javax.annotation.Resource;
@@ -31,7 +32,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
-import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -46,12 +46,16 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CompletionStage;
 import java.util.concurrent.Executor;
 import java.util.function.Supplier;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 @ApplicationScoped
 @Path("/harvesters")
 public class HarvesterAPI
 {
+	private final Logger log = Logger.getLogger(HarvesterAPI.class.getSimpleName());
+
 	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
 	private Executor executor = null;
 
@@ -113,7 +117,8 @@ public class HarvesterAPI
 			}
 			catch (Exception error) {
 				final String message = "Harvesting failed!";
-				throw new InternalServerErrorException(message, error);
+				log.log(Level.WARNING, message, error);
+				return ResponseUtils.newInternalError(message, error);
 			}
 		};
 
