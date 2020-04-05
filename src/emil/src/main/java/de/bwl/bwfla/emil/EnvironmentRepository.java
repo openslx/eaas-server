@@ -638,7 +638,7 @@ public class EnvironmentRepository extends EmilRest
 			request.envHelper = envdb;
 			request.archive = exportRequest.getArchive();
 			request.environmentRepository  = emilEnvRepo;
-			request.userCtx = (authenticatedUser != null) ? authenticatedUser.getUsername() : null;
+			request.userCtx = (authenticatedUser != null) ? authenticatedUser.getUserId() : null;
 			return new TaskStateResponse(taskManager.submitTask(new ExportEnvironmentTask(request)));
 		}
 
@@ -1045,7 +1045,7 @@ public class EnvironmentRepository extends EmilRest
 				importRequest.imageProposer = imageProposer;
 				importRequest.containerUtil = containerUtil;
 				if (authenticatedUser != null)
-					importRequest.username = authenticatedUser.getUsername();
+					importRequest.username = authenticatedUser.getUserId();
 
 				try {
 					importRequest.validate();
