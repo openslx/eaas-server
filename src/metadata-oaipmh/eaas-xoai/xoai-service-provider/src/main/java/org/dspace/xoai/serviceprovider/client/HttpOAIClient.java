@@ -40,6 +40,7 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -51,8 +52,9 @@ public class HttpOAIClient implements OAIClient {
 	private String userAgent;
 	private List<String> baseUrlsHttpsExclusion;
 	
-	public HttpOAIClient(String baseUrl, String accessToken) {
+	public HttpOAIClient(String baseUrl, String accessToken, Duration timeout) {
 		this.baseUrl = baseUrl;
+		this.timeout = (int) timeout.toMillis();
 
 		// Add auth-header to all requests
 		final Collection<Header> headers = new ArrayList<>();
