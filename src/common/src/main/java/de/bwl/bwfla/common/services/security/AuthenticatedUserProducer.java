@@ -47,9 +47,11 @@ public class AuthenticatedUserProducer {
         if(roles != null)
         {
             String[] roleList = roles.asArray(String.class);
-            for(String r : roleList) {
-                if(r.equals(adminRoleLabel))
-                    authenticatedUser.setRole(Role.ADMIN);
+            if(roleList != null) {
+                for (String r : roleList) {
+                    if (r.equals(adminRoleLabel))
+                        authenticatedUser.setRole(Role.ADMIN);
+                }
             }
         }
 
