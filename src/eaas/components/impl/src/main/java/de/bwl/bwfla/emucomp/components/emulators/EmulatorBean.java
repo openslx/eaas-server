@@ -428,9 +428,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.createWorkingSubDirs();
 		}
 		catch (IOException error) {
-			LOG.log(Level.WARNING, "Creating working subdirs failed!\n", error);
-			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			return;
+			throw this.newInitFailureException("Creating working subdirs failed!", error);
 		}
 
 		if (this.isSdlBackendEnabled()) {
@@ -442,10 +440,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				emuCtlSocketName = this.newCtlSocketName("emu");
 			}
 			catch (Throwable exception) {
-				LOG.warning("Constructing control sockets failed!");
-				LOG.log(Level.SEVERE, exception.getMessage(), exception);
-				emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-				return;
+				throw this.newInitFailureException("Constructing control sockets failed!", exception);
 			}
 
 			// Prepare configuration for tunnels
@@ -490,19 +485,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			this.setRuntimeConfiguration(env);
 		}
-		catch(IllegalArgumentException e)
-		{
-			emuBeanState.update(EmuCompState.EMULATOR_CLIENT_FAULT);
-			return;
-		}
-		catch(Throwable e)
-		{
-			LOG.log(Level.SEVERE, "Initializing runtime configuration failed!", e);
-			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			return;
+		catch (Throwable error) {
+			throw this.newInitFailureException("Initializing runtime configuration failed!", error);
 		}
 
-		final String compid = this.getComponentId();
 		LOG.info("Emulation session initialized in " + emuBeanMode.name() + " mode.");
 		LOG.info("Working directory created at: " + this.getWorkingDir());
 		emuBeanState.update(EmuCompState.EMULATOR_READY);
@@ -572,8 +558,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		// Cleanup emulator's runner here
-		emuRunner.printStdOut();
-		emuRunner.printStdErr();
+		if (emuRunner.isProcessValid()) {
+			emuRunner.printStdOut();
+			emuRunner.printStdErr();
+		}
+
 		emuRunner.cleanup();
 
 		LOG.info("EmulatorBean destroyed.");
@@ -1517,12 +1506,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			this.finishRuntimeConfiguration();
 
-		} catch (IllegalArgumentException | IOException e) {
+		} catch (IllegalArgumentException | IOException | JAXBException e) {
 			throw new BWFLAException("Could not set runtime information.", e)
 					.setId(this.getComponentId());
-		} catch (JAXBException e) {
-
-			LOG.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
@@ -2258,6 +2244,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	protected BWFLAException newNotImplementedException()
 	{
 		return new BWFLAException("Operation is not implemented!")
+				.setId(this.getComponentId());
+	}
+
+	private BWFLAException newInitFailureException(String message, Throwable error)
+	{
+		emuBeanState.update(EmuCompState.EMULATOR_FAILED);
+		LOG.log(Level.SEVERE, message, error);
+		return new BWFLAException(message, error)
 				.setId(this.getComponentId());
 	}
 

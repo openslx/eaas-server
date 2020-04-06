@@ -106,7 +106,7 @@ public class NodeManager {
             final AbstractEaasComponent component = components.computeIfAbsent(componentId, id -> {
                 try {
                     return createComponentInstance(configuration, id);
-                } catch (BWFLAException e) {
+                } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             });
@@ -116,16 +116,17 @@ public class NodeManager {
             component.initialize(configuration);
             
             return componentId;
-            
-        } catch (JAXBException e) {
-            throw new BWFLAException("Cannot unmarshall configuration metadata.", e);
-        } catch (RuntimeException e) {
-            // from the computeIfAbsent functor
-            if (e.getCause() instanceof BWFLAException) {
-                throw (BWFLAException)e.getCause();
-            } else {
-                throw new BWFLAException("A runtime error occurred while allocating the component: " + e.getMessage(), e);
-            }
+        }
+        catch (JAXBException error) {
+            throw new BWFLAException("Unmarshalling configuration metadata failed!", error);
+        }
+        catch (RuntimeException | BWFLAException error) {
+            this.releaseComponent(componentId);
+            if (error instanceof BWFLAException)
+                throw (BWFLAException) error;
+            else if (error.getCause() instanceof BWFLAException)
+                throw (BWFLAException) error.getCause();
+            else throw new BWFLAException("Allocating component failed!", error);
         }
     }
     
