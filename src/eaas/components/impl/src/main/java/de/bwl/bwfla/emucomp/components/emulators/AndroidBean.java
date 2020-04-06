@@ -44,22 +44,17 @@ public class AndroidBean extends EmulatorBean
 	}
 
 	@Override
-	protected boolean addDrive(Drive drive) {
-		// TODO Auto-generated method stub
-		return false;
+	protected boolean addDrive(Drive drive) throws BWFLAException {
+		throw this.newNotImplementedException();
 	}
 
 	@Override
-	protected boolean connectDrive(Drive drive, boolean attach) {
-		// TODO Auto-generated method stub
-		return false;
+	protected boolean connectDrive(Drive drive, boolean attach) throws BWFLAException {
+		throw this.newNotImplementedException();
 	}
 
 	@Override
-	protected boolean addNic(Nic nic) {
-		// TODO Auto-generated method stub
-		return false;
+	protected boolean addNic(Nic nic) throws BWFLAException {
+		throw this.newNotImplementedException();
 	}
-
-	
 }

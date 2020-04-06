@@ -497,7 +497,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 		catch(Throwable e)
 		{
-			LOG.log(Level.SEVERE, e.getMessage(), e);
+			LOG.log(Level.SEVERE, "Initializing runtime configuration failed!", e);
 			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
 			return;
 		}
@@ -2249,6 +2249,18 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				.toString();
 	}
 
+	protected BWFLAException newNotSupportedException()
+	{
+		return new BWFLAException("Operation is not supported!")
+				.setId(this.getComponentId());
+	}
+
+	protected BWFLAException newNotImplementedException()
+	{
+		return new BWFLAException("Operation is not implemented!")
+				.setId(this.getComponentId());
+	}
+
 
 	/**************************************************************************
 	 *
@@ -2328,7 +2340,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	/**
 	 * @param drive
 	 */
-	protected void prepareDrive(Drive drive)
+	protected void prepareDrive(Drive drive) throws BWFLAException
 	{
 		// All drives *directly* work on a resource (binding) that has been
 		// set up earlier, so no mounting, cow-ing or other tricks
@@ -2360,9 +2372,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	}
 
-	protected abstract boolean addDrive(Drive drive);
+	protected abstract boolean addDrive(Drive drive) throws BWFLAException;
 
-	protected abstract boolean connectDrive(Drive drive, boolean attach);
+	protected abstract boolean connectDrive(Drive drive, boolean attach) throws BWFLAException;
 
 	/**************************************************************************
 	 *
@@ -2373,7 +2385,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	/**
 	 * @param nic
 	 */
-	protected void prepareNic(Nic nic) throws IOException
+	protected void prepareNic(Nic nic) throws BWFLAException, IOException
 	{
 		// create a vde_switch in hub mode
 		// the switch can later be identified using the NIC's MAC address
@@ -2404,7 +2416,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		this.addNic(nic);
 	}
 
-	protected abstract boolean addNic(Nic nic);
+	protected abstract boolean addNic(Nic nic) throws BWFLAException;
 
 	/**************************************************************************
 	 *

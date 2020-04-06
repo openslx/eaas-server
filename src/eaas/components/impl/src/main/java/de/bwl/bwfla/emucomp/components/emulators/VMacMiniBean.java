@@ -5,7 +5,6 @@ import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.emucomp.api.Nic;
 
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
@@ -62,13 +61,12 @@ public class VMacMiniBean extends EmulatorBean {
     }
 
     @Override
-    protected boolean connectDrive(Drive drive, boolean attach) {
-        return false;
+    protected boolean connectDrive(Drive drive, boolean attach) throws BWFLAException {
+        throw this.newNotSupportedException();
     }
 
     @Override
-    protected boolean addNic(Nic nic) {
-        return false;
+    protected boolean addNic(Nic nic) throws BWFLAException {
+        throw this.newNotSupportedException();
     }
 }
-

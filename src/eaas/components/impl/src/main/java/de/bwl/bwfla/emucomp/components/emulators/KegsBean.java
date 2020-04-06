@@ -223,10 +223,9 @@ public class KegsBean extends EmulatorBean
 	}
 
 
-	protected boolean addNic(Nic nic)
+	protected boolean addNic(Nic nic) throws BWFLAException
 	{
-		LOG.severe("operation unsupported yet: " + this.getClass().getEnclosingMethod().getName());
-		return false;
+		throw this.newNotSupportedException();
 	}
 
 	private String getImagePath(Drive drive)

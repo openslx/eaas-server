@@ -56,12 +56,12 @@ public class LinAppleBean extends EmulatorBean {
     }
 
     @Override
-    protected boolean connectDrive(Drive drive, boolean attach) {
-        return false;
+    protected boolean connectDrive(Drive drive, boolean attach) throws BWFLAException {
+        throw this.newNotSupportedException();
     }
 
     @Override
-    protected boolean addNic(Nic nic) {
-        return false;
+    protected boolean addNic(Nic nic) throws BWFLAException {
+        throw this.newNotSupportedException();
     }
 }
