@@ -12,8 +12,6 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
-import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
@@ -104,17 +102,12 @@ public class QemuBean extends EmulatorBean
 
 				if(token.contains("-enable-kvm"))
 				{
-					try{
-						if(!kvmCheck())
-							continue;
-
-						super.isKvmDeviceEnabled = true;
-					}
-					catch(Exception e)
-					{
-						LOG.info(e.getMessage());
+					if (!this.runKvmCheck()) {
+						LOG.warning("KVM device is required, but not available!");
 						continue;
 					}
+
+					super.isKvmDeviceEnabled = true;
 				}
 
 				if(token.contains("nic,model="))
@@ -423,21 +416,27 @@ public class QemuBean extends EmulatorBean
 			}
 	}
 
-	private boolean kvmCheck() throws IOException, BWFLAException
+	private boolean runKvmCheck() throws BWFLAException
 	{
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner("kvm-ok");
+		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner("kvm-ok");
 		runner.redirectStdErrToStdOut(false);
-		if(!runner.execute(false, false))
-			throw new BWFLAException(runner.getStdErrString());
+		runner.setLogger(LOG);
+		try {
+			if (!runner.execute(false, false)) {
+				runner.printStdOut();
+				runner.printStdErr();
+				return false;
+			}
 
-		boolean isKvmAvailable = false;
-
-		if (runner.getStdOutString().contains("KVM acceleration can be used")) {
-		isKvmAvailable = true;
+			return runner.getStdOutString()
+					.contains("KVM acceleration can be used");
 		}
-
-		runner.cleanup();
-		return isKvmAvailable;
+		catch (IOException error) {
+			throw new BWFLAException("Reading kvm-ok output failed!", error);
+		}
+		finally {
+			runner.cleanup();
+		}
 	}
 
 	private String fmtDate(long epoch)
