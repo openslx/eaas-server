@@ -730,29 +730,25 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if(((MachineConfiguration) chosenEnv).getNic().size() > 0)
-            {
-                Nic n = ((MachineConfiguration) chosenEnv).getNic().get(0);
-                n.setHwaddress(NetworkUtils.getRandomHWAddress());
+            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId()) {
+                String hwAddress;
+                if (machineDescription.getNic() == null) {
+                    LOG.warning("HWAddress is null! Using random..." );
+                    hwAddress = NetworkUtils.getRandomHWAddress();
+                } else {
+                    hwAddress = machineDescription.getNic();
+                }
+
+                List<Nic> nics = ((MachineConfiguration) chosenEnv).getNic();
+                Nic nic = new Nic();
+                nic.setHwaddress(hwAddress);
+                nics.clear();
+                nics.add(nic);
             }
 
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
             }
-            String hwAddress;
-            if (machineDescription.getNic() == null) {
-                LOG.warning("HWAddress is null! Using random..." );
-                hwAddress = NetworkUtils.getRandomHWAddress();
-            } else {
-                hwAddress = machineDescription.getNic();
-            }
-//          set MacAddress from the request
-
-            List<Nic> nics = ((MachineConfiguration) chosenEnv).getNic();
-            Nic nic = new Nic();
-            nic.setHwaddress(hwAddress);
-            nics.clear();
-            nics.add(nic);
 
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
