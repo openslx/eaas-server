@@ -1701,6 +1701,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		this.closeAllConnectors();
+		if (this.isSdlBackendEnabled()) {
+			LOG.info("Waiting for emulator's detach-notification...");
+			try {
+				this.waitForClientDetachAck(10, TimeUnit.SECONDS);
+			} catch (Exception e) {
+				throw new BWFLAException(e).setId(this.getComponentId());
+			}
+		}
 
 		final Path imgdir = this.getStateDir();
 		try {
