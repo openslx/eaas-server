@@ -29,7 +29,7 @@ public class AuthenticatedUserProducer {
         {
             authenticatedUser.setRole(Role.PUBLIC);
             authenticatedUser.setUsername("anonymous");
-            authenticatedUser.setUsername("anonymous");
+            authenticatedUser.setUserId("anonymous");
             return;
         }
 
