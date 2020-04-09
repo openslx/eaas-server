@@ -403,9 +403,9 @@ public class ObjectRepository extends EmilRest
 
 	private String manageUserCtx(String archiveId) throws BWFLAException
 	{
-		if (userctx != null && userctx.getUsername() != null) {
-			LOG.info("Using user context: " + userctx.getUsername());
-			archiveId = USER_ARCHIVE_PREFIX + userctx.getUsername();
+		if (userctx != null && userctx.getUserId() != null) {
+			LOG.info("Using user context: " + userctx.getUserId());
+			archiveId = USER_ARCHIVE_PREFIX + userctx.getUserId();
 			if (!objArchives.contains(archiveId)) {
 				objHelper.registerUserArchive(archiveId);
 				objArchives = new HashSet<>(objHelper.getArchives());

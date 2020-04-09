@@ -831,10 +831,10 @@ public class Components {
 
         if(archiveId == null || archiveId.equals("default"))
         {
-            if(authenticatedUser == null || authenticatedUser.getUsername() == null)
+            if(authenticatedUser == null || authenticatedUser.getUserId() == null)
                 archiveId = "default";
             else
-                archiveId = authenticatedUser.getUsername();
+                archiveId = authenticatedUser.getUserId();
         }
 
         FileCollection fc = objects.getFileCollection(archiveId, objectId);

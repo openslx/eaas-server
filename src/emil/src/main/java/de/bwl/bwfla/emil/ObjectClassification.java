@@ -160,7 +160,7 @@ public class ObjectClassification {
         request.userCtx = null;
 
         if(authenticatedUser != null)
-            request.userCtx = authenticatedUser.getUsername();
+            request.userCtx = authenticatedUser.getUserId();
 
         return taskManager.submitTask(new ClassificationTask(request));
     }
@@ -181,7 +181,7 @@ public class ObjectClassification {
         request.userCtx = null;
 
         if(authenticatedUser != null)
-            request.userCtx = authenticatedUser.getUsername();
+            request.userCtx = authenticatedUser.getUserId();
 
         if(!forceCharacterization || noUpdate)
             try {

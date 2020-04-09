@@ -2,18 +2,19 @@ package de.bwl.bwfla.common.services.security;
 
 public class UserContext {
 
+    private String userId;
     private String username;
     private String name;
     private Role role;
 
     public UserContext() {}
 
-    public String getUsername() {
-        return username;
+    public String getUserId() {
+        return userId;
     }
 
-    public void setUsername(String username) {
-        this.username = username;
+    public void setUserId(String userId) {
+        this.userId = userId;
     }
 
     public String getName() {
@@ -30,5 +31,13 @@ public class UserContext {
 
     public void setRole(Role role) {
         this.role = role;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public void setUsername(String username) {
+        this.username = username;
     }
 }
