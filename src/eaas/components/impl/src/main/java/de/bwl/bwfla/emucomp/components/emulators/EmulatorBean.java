@@ -317,7 +317,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	public Function<String, String> getContainerHostPathReplacer()
 	{
 		final String hostDataDir = this.getDataDir().toString();
-		return (cmdarg) -> cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+		return (cmdarg) ->
+		{
+			if(cmdarg.contains(this.getBindingsDir().toString()))
+				return cmdarg.replaceAll(this.getBindingsDir().toString(), EMUCON_DATA_DIR + "/bindings");
+
+			return cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+		};
 	}
 
 	public Path getDataDir()
@@ -327,11 +333,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return workdir.resolve("data");
 
 		return workdir;
-	}
-
-	public Path getBindingsDir()
-	{
-		return this.getDataDir().resolve("bindings");
 	}
 
 	public Path getNetworksDir()
@@ -374,7 +375,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// If container-mode is disabled:  <workdir>/ == data/
 
 		Files.createDirectories(this.getDataDir());
-		Files.createDirectories(this.getBindingsDir());
+		// Files.createDirectories(this.getBindingsDir());
 		Files.createDirectories(this.getNetworksDir());
 		Files.createDirectories(this.getSocketsDir());
 		Files.createDirectories(this.getUploadsDir());
@@ -656,6 +657,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
 
 				// Safety check. Should never fail!
+				/*
 				if (!this.getBindingsDir().startsWith(this.getDataDir())) {
 					final String message = "Assumption failed: '" + this.getBindingsDir()
 							+ "' must be a subdir of '" + this.getDataDir() + "'!";
@@ -664,6 +666,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					emuBeanState.update(EmuCompState.EMULATOR_FAILED);
 					return;
 				}
+				 */
 
 				// Mount emulator's data dir entries, skipping bindings
 				try (Stream<Path> entries = Files.list(this.getDataDir())) {

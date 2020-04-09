@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermission;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
@@ -41,7 +42,9 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 	protected final PrefixLogger LOG;
 	protected final TaskStack cleanups;
 	private final Path workdir;
+	private final Path bindingDir;
 
+	private final static String tmpBindingsDir = "/tmp-storage";
 
 	protected EaasComponentBean()
 	{
@@ -58,7 +61,10 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 			permissions.add(PosixFilePermission.GROUP_WRITE);
 			permissions.add(PosixFilePermission.GROUP_EXECUTE);
 
+			Path tmpBindingsPath = Paths.get(tmpBindingsDir);
 			this.workdir = Files.createTempDirectory("eaas-", PosixFilePermissions.asFileAttribute(permissions));
+			this.bindingDir = Files.createTempDirectory(tmpBindingsPath,
+					"bindings-" + this.getComponentId() + "-", PosixFilePermissions.asFileAttribute(permissions));
 		}
 		catch (IOException error) {
 			throw new UncheckedIOException("Creating working directory failed!", error);
@@ -76,6 +82,11 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 	public Path getWorkingDir()
 	{
 		return workdir;
+	}
+
+	public Path getBindingsDir()
+	{
+		return bindingDir;
 	}
 
 	@Override
