@@ -64,7 +64,7 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 			Path tmpBindingsPath = Paths.get(tmpBindingsDir);
 			this.workdir = Files.createTempDirectory("eaas-", PosixFilePermissions.asFileAttribute(permissions));
 			this.bindingDir = Files.createTempDirectory(tmpBindingsPath,
-					"bindings-" + this.getComponentId() + "-", PosixFilePermissions.asFileAttribute(permissions));
+					"bindings-", PosixFilePermissions.asFileAttribute(permissions));
 		}
 		catch (IOException error) {
 			throw new UncheckedIOException("Creating working directory failed!", error);
@@ -89,16 +89,10 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 		return bindingDir;
 	}
 
-	@Override
-	public void destroy()
-	{
-		// Run all tasks in reverse order
-		LOG.info("Running cleanup tasks...");
-		if (!cleanups.execute())
-			LOG.warning("Running cleanup tasks failed!");
 
-		// Delete component's working directory
-		try (final Stream<Path> stream = Files.walk(workdir)) {
+	private void deleteTmpDirs(Path tmpDir)
+	{
+		try (final Stream<Path> stream = Files.walk(tmpDir)) {
 			final Consumer<Path> deleter = (path) -> {
 				try {
 					Files.delete(path);
@@ -114,12 +108,24 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 			stream.sorted(Comparator.reverseOrder())
 					.forEach(deleter);
 
-			LOG.info("Working directory removed: " + workdir.toString());
-
+			LOG.info("Working directory removed: " + tmpDir.toString());
 		}
 		catch (Exception error) {
 			String message = "Deleting working directory failed!\n";
 			LOG.log(Level.WARNING, message, error);
 		}
+	}
+
+	@Override
+	public void destroy()
+	{
+		// Run all tasks in reverse order
+		LOG.info("Running cleanup tasks...");
+		if (!cleanups.execute())
+			LOG.warning("Running cleanup tasks failed!");
+
+		// Delete temp dirs
+		deleteTmpDirs(bindingDir);
+		deleteTmpDirs(workdir);
 	}
 }
