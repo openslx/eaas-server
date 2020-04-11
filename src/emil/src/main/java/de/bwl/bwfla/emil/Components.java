@@ -705,7 +705,10 @@ public class Components {
             }
             else {
                 // Wrap external input files into images
-                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
+                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia())
+                {
+                    if(medium == null) // handle old landing-page/UI bug
+                        continue;
 
                     BlobStoreBinding binding = buildExternalFilesMedia(medium, cleanups, numInputImages++);
                     this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
@@ -779,7 +782,7 @@ public class Components {
         catch (Exception error) {
             // Trigger cleanup tasks
             cleanups.execute();
-
+            LOG.log(Level.SEVERE, "Components create machine failed", error);
             // Return error to the client...
             throw Components.newInternalError(error);
         }
