@@ -365,7 +365,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// <workdir>/
 		//     state/          -> Container's memory dump
 		//     data/           -> Session/emulator specific data
-		//         bindings/   -> Object/image bindings
 		//         networks/   -> Networking files
 		//         sockets/    -> IO + CTRL sockets
 		//         uploads/    -> Uploaded files
@@ -373,7 +372,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// If container-mode is disabled:  <workdir>/ == data/
 
 		Files.createDirectories(this.getDataDir());
-		// Files.createDirectories(this.getBindingsDir());
 		Files.createDirectories(this.getNetworksDir());
 		Files.createDirectories(this.getSocketsDir());
 		Files.createDirectories(this.getUploadsDir());
@@ -653,18 +651,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				final String hostDataDir = this.getDataDir().toString();
 
 				final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
-
-				// Safety check. Should never fail!
-				/*
-				if (!this.getBindingsDir().startsWith(this.getDataDir())) {
-					final String message = "Assumption failed: '" + this.getBindingsDir()
-							+ "' must be a subdir of '" + this.getDataDir() + "'!";
-
-					LOG.warning(message);
-					emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-					return;
-				}
-				 */
 
 				// Mount emulator's data dir entries
 				try (Stream<Path> entries = Files.list(this.getDataDir())) {
@@ -1705,7 +1691,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			try {
 				this.waitForClientDetachAck(10, TimeUnit.SECONDS);
 			} catch (Exception e) {
-				throw new BWFLAException(e).setId(this.getComponentId());
+				throw new BWFLAException("Waiting for emulator's detach-notification failed!", e)
+						.setId(this.getComponentId());
 			}
 		}
 
@@ -1728,11 +1715,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 
 		LOG.info("Checkpointing emulator-container " + this.getContainerId() + "...");
-//		try {
-//			Thread.sleep(1000);
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
-//		}
+
 		// Try to checkpoint the container...
 		process.setCommand("emucon-checkpoint");
 		process.addArgument("--non-interactive");
