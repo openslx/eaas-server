@@ -317,12 +317,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	public Function<String, String> getContainerHostPathReplacer()
 	{
 		final String hostDataDir = this.getDataDir().toString();
-		return (cmdarg) ->
-		{
-			if(cmdarg.contains(this.getBindingsDir().toString()))
-				return cmdarg.replaceAll(this.getBindingsDir().toString(), EMUCON_DATA_DIR + "/bindings");
-
-			return cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+		final String hostBindingsDir = this.getBindingsDir().toString();
+		return (cmdarg) -> {
+			return cmdarg.replaceAll(hostBindingsDir, EMUCON_DATA_DIR + "/bindings")
+					.replaceAll(hostDataDir, EMUCON_DATA_DIR);
 		};
 	}
 
@@ -668,11 +666,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				}
 				 */
 
-				// Mount emulator's data dir entries, skipping bindings
+				// Mount emulator's data dir entries
 				try (Stream<Path> entries = Files.list(this.getDataDir())) {
-					final Path bindingsDirName = this.getBindingsDir().getFileName();
-					entries.filter((entry) -> !entry.getFileName().equals(bindingsDirName))
-							.forEach((entry) -> {
+					entries.forEach((entry) -> {
 								final String path = entry.toString();
 								cgen.addArgument("--mount");
 								cgen.addArgument(path, ":", hostPathReplacer.apply(path), ":bind:rw");
