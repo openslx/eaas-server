@@ -595,8 +595,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 		catch(Throwable error) {
 			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			LOG.log(Level.SEVERE, "Starting emulator failed!", error);
-			throw new BWFLAException("Starting emulator failed!", error)
+			String message = "Starting emulator failed!";
+			LOG.log(Level.SEVERE, message, error);
+			if (error.getMessage() != null)
+				message += " " + error.getMessage();
+
+			throw new BWFLAException(message, error)
 					.setId(this.getComponentId());
 		}
 	}
