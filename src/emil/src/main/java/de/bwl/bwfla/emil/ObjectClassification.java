@@ -3,7 +3,7 @@ package de.bwl.bwfla.emil;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.OverrideCharacterizationRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.rest.ClientClassificationRequest;

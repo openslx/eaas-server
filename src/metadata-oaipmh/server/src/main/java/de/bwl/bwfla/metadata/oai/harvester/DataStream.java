@@ -45,6 +45,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import javax.xml.transform.Transformer;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Iterator;
@@ -184,7 +185,7 @@ public class DataStream
 		return new Context()
 				.withBaseUrl(baseurl)
 				.withGranularity(Granularity.Second)
-				.withOAIClient(new HttpOAIClient(baseurl, token))
+				.withOAIClient(new HttpOAIClient(baseurl, token, Duration.ofMinutes(5)))
 				.withMetadataTransformer(format, transformer);
 	}
 

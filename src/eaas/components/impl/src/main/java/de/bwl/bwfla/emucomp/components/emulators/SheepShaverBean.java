@@ -113,17 +113,13 @@ public class SheepShaverBean extends EmulatorBean
 	}
 
     @Override
-    public int changeMedium(int containerId, String objReference)
-            throws BWFLAException {
-        throw new BWFLAException("Hotplug is not supported by this emulator");
+    public int changeMedium(int containerId, String objReference) throws BWFLAException {
+		throw this.newNotSupportedException();
     }
 
     @Override
-    public boolean connectDrive(Drive drive, boolean attach) {
-        // This method should never be called.
-        LOG.severe("Hotplug is not supported by this emulator");
-        LOG.info("The previous message cannot appear. Please verify that changeMedium is correctly overridden in BasiliskIIBean.");
-        return false;
+    public boolean connectDrive(Drive drive, boolean attach) throws BWFLAException {
+		throw this.newNotSupportedException();
 
         // This code WOULD implement hotswapping media IF BasiliskII would allow
         // it

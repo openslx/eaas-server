@@ -22,7 +22,7 @@ package de.bwl.bwfla.emil;
 import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ObjectListItem;
 import de.bwl.bwfla.emil.datatypes.rest.ImportObjectRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MediaDescriptionResponse;

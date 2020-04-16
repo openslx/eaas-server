@@ -70,6 +70,7 @@ import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.TaskStack;
@@ -705,7 +706,10 @@ public class Components {
             }
             else {
                 // Wrap external input files into images
-                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
+                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia())
+                {
+                    if(medium == null) // handle old landing-page/UI bug
+                        continue;
 
                     BlobStoreBinding binding = buildExternalFilesMedia(medium, cleanups, numInputImages++);
                     this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
@@ -730,29 +734,25 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if(((MachineConfiguration) chosenEnv).getNic().size() > 0)
-            {
-                Nic n = ((MachineConfiguration) chosenEnv).getNic().get(0);
-                n.setHwaddress(NetworkUtils.getRandomHWAddress());
+            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId()) {
+                String hwAddress;
+                if (machineDescription.getNic() == null) {
+                    LOG.warning("HWAddress is null! Using random..." );
+                    hwAddress = NetworkUtils.getRandomHWAddress();
+                } else {
+                    hwAddress = machineDescription.getNic();
+                }
+
+                List<Nic> nics = ((MachineConfiguration) chosenEnv).getNic();
+                Nic nic = new Nic();
+                nic.setHwaddress(hwAddress);
+                nics.clear();
+                nics.add(nic);
             }
 
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
             }
-            String hwAddress;
-            if (machineDescription.getNic() == null) {
-                LOG.warning("HWAddress is null! Using random..." );
-                hwAddress = NetworkUtils.getRandomHWAddress();
-            } else {
-                hwAddress = machineDescription.getNic();
-            }
-//          set MacAddress from the request
-
-            List<Nic> nics = ((MachineConfiguration) chosenEnv).getNic();
-            Nic nic = new Nic();
-            nic.setHwaddress(hwAddress);
-            nics.clear();
-            nics.add(nic);
 
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
@@ -779,7 +779,7 @@ public class Components {
         catch (Exception error) {
             // Trigger cleanup tasks
             cleanups.execute();
-
+            LOG.log(Level.SEVERE, "Components create machine failed", error);
             // Return error to the client...
             throw Components.newInternalError(error);
         }

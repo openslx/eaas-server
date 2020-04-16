@@ -125,10 +125,9 @@ public class HatariBean extends EmulatorBean
 	}
 
 	@Override
-	public boolean connectDrive(Drive drive, boolean connect)
+	public boolean connectDrive(Drive drive, boolean connect) throws BWFLAException
 	{
-		LOG.severe("operation unsupported yet: " + this.getClass().getEnclosingMethod().getName());
-		return false;
+		throw this.newNotSupportedException();
 	}
 
 //	@Override
@@ -154,9 +153,8 @@ public class HatariBean extends EmulatorBean
 //        return null;
 //	}
 
-	protected boolean addNic(Nic nic)
+	protected boolean addNic(Nic nic) throws BWFLAException
 	{
-		LOG.severe("operation unsupported yet: " + this.getClass().getEnclosingMethod().getName());
-		return false;
+		throw this.newNotSupportedException();
 	}
 }

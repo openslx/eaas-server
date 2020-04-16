@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil.filters;
+package de.bwl.bwfla.common.services.rest.filters;
 
 import java.io.IOException;
 
@@ -28,7 +28,7 @@ import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.ext.Provider;
 
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 
 @Provider
 public class ErrorResponseJsonFilter implements ContainerResponseFilter {

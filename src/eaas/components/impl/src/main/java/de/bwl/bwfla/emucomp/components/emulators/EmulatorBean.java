@@ -317,7 +317,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	public Function<String, String> getContainerHostPathReplacer()
 	{
 		final String hostDataDir = this.getDataDir().toString();
-		return (cmdarg) -> cmdarg.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+		final String hostBindingsDir = this.getBindingsDir().toString();
+		return (cmdarg) -> {
+			return cmdarg.replaceAll(hostBindingsDir, EMUCON_DATA_DIR + "/bindings")
+					.replaceAll(hostDataDir, EMUCON_DATA_DIR);
+		};
 	}
 
 	public Path getDataDir()
@@ -327,11 +331,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return workdir.resolve("data");
 
 		return workdir;
-	}
-
-	public Path getBindingsDir()
-	{
-		return this.getDataDir().resolve("bindings");
 	}
 
 	public Path getNetworksDir()
@@ -366,7 +365,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// <workdir>/
 		//     state/          -> Container's memory dump
 		//     data/           -> Session/emulator specific data
-		//         bindings/   -> Object/image bindings
 		//         networks/   -> Networking files
 		//         sockets/    -> IO + CTRL sockets
 		//         uploads/    -> Uploaded files
@@ -374,7 +372,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		// If container-mode is disabled:  <workdir>/ == data/
 
 		Files.createDirectories(this.getDataDir());
-		Files.createDirectories(this.getBindingsDir());
 		Files.createDirectories(this.getNetworksDir());
 		Files.createDirectories(this.getSocketsDir());
 		Files.createDirectories(this.getUploadsDir());
@@ -428,9 +425,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.createWorkingSubDirs();
 		}
 		catch (IOException error) {
-			LOG.log(Level.WARNING, "Creating working subdirs failed!\n", error);
-			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			return;
+			throw this.newInitFailureException("Creating working subdirs failed!", error);
 		}
 
 		if (this.isSdlBackendEnabled()) {
@@ -442,10 +437,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				emuCtlSocketName = this.newCtlSocketName("emu");
 			}
 			catch (Throwable exception) {
-				LOG.warning("Constructing control sockets failed!");
-				LOG.log(Level.SEVERE, exception.getMessage(), exception);
-				emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-				return;
+				throw this.newInitFailureException("Constructing control sockets failed!", exception);
 			}
 
 			// Prepare configuration for tunnels
@@ -490,19 +482,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			this.setRuntimeConfiguration(env);
 		}
-		catch(IllegalArgumentException e)
-		{
-			emuBeanState.update(EmuCompState.EMULATOR_CLIENT_FAULT);
-			return;
-		}
-		catch(Throwable e)
-		{
-			LOG.log(Level.SEVERE, e.getMessage(), e);
-			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			return;
+		catch (Throwable error) {
+			throw this.newInitFailureException("Initializing runtime configuration failed!", error);
 		}
 
-		final String compid = this.getComponentId();
 		LOG.info("Emulation session initialized in " + emuBeanMode.name() + " mode.");
 		LOG.info("Working directory created at: " + this.getWorkingDir());
 		emuBeanState.update(EmuCompState.EMULATOR_READY);
@@ -572,8 +555,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		// Cleanup emulator's runner here
-		emuRunner.printStdOut();
-		emuRunner.printStdErr();
+		if (emuRunner.isProcessValid()) {
+			emuRunner.printStdOut();
+			emuRunner.printStdErr();
+		}
+
 		emuRunner.cleanup();
 
 		LOG.info("EmulatorBean destroyed.");
@@ -609,8 +595,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 		catch(Throwable error) {
 			emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-			LOG.log(Level.SEVERE, "Starting emulator failed!", error);
-			throw new BWFLAException("Starting emulator failed!", error)
+			String message = "Starting emulator failed!";
+			LOG.log(Level.SEVERE, message, error);
+			if (error.getMessage() != null)
+				message += " " + error.getMessage();
+
+			throw new BWFLAException(message, error)
 					.setId(this.getComponentId());
 		}
 	}
@@ -666,21 +656,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				final Function<String, String> hostPathReplacer = this.getContainerHostPathReplacer();
 
-				// Safety check. Should never fail!
-				if (!this.getBindingsDir().startsWith(this.getDataDir())) {
-					final String message = "Assumption failed: '" + this.getBindingsDir()
-							+ "' must be a subdir of '" + this.getDataDir() + "'!";
-
-					LOG.warning(message);
-					emuBeanState.update(EmuCompState.EMULATOR_FAILED);
-					return;
-				}
-
-				// Mount emulator's data dir entries, skipping bindings
+				// Mount emulator's data dir entries
 				try (Stream<Path> entries = Files.list(this.getDataDir())) {
-					final Path bindingsDirName = this.getBindingsDir().getFileName();
-					entries.filter((entry) -> !entry.getFileName().equals(bindingsDirName))
-							.forEach((entry) -> {
+					entries.forEach((entry) -> {
 								final String path = entry.toString();
 								cgen.addArgument("--mount");
 								cgen.addArgument(path, ":", hostPathReplacer.apply(path), ":bind:rw");
@@ -1517,12 +1495,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			this.finishRuntimeConfiguration();
 
-		} catch (IllegalArgumentException | IOException e) {
+		} catch (IllegalArgumentException | IOException | JAXBException e) {
 			throw new BWFLAException("Could not set runtime information.", e)
 					.setId(this.getComponentId());
-		} catch (JAXBException e) {
-
-			LOG.log(Level.SEVERE, e.getMessage(), e);
 		}
 	}
 
@@ -1715,6 +1690,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		this.closeAllConnectors();
+		if (this.isSdlBackendEnabled()) {
+			LOG.info("Waiting for emulator's detach-notification...");
+			try {
+				this.waitForClientDetachAck(10, TimeUnit.SECONDS);
+			} catch (Exception e) {
+				throw new BWFLAException("Waiting for emulator's detach-notification failed!", e)
+						.setId(this.getComponentId());
+			}
+		}
 
 		final Path imgdir = this.getStateDir();
 		try {
@@ -1735,11 +1719,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 
 		LOG.info("Checkpointing emulator-container " + this.getContainerId() + "...");
-//		try {
-//			Thread.sleep(1000);
-//		} catch (InterruptedException e) {
-//			e.printStackTrace();
-//		}
+
 		// Try to checkpoint the container...
 		process.setCommand("emucon-checkpoint");
 		process.addArgument("--non-interactive");
@@ -2249,6 +2229,26 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				.toString();
 	}
 
+	protected BWFLAException newNotSupportedException()
+	{
+		return new BWFLAException("Operation is not supported!")
+				.setId(this.getComponentId());
+	}
+
+	protected BWFLAException newNotImplementedException()
+	{
+		return new BWFLAException("Operation is not implemented!")
+				.setId(this.getComponentId());
+	}
+
+	private BWFLAException newInitFailureException(String message, Throwable error)
+	{
+		emuBeanState.update(EmuCompState.EMULATOR_FAILED);
+		LOG.log(Level.SEVERE, message, error);
+		return new BWFLAException(message, error)
+				.setId(this.getComponentId());
+	}
+
 
 	/**************************************************************************
 	 *
@@ -2328,7 +2328,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	/**
 	 * @param drive
 	 */
-	protected void prepareDrive(Drive drive)
+	protected void prepareDrive(Drive drive) throws BWFLAException
 	{
 		// All drives *directly* work on a resource (binding) that has been
 		// set up earlier, so no mounting, cow-ing or other tricks
@@ -2360,9 +2360,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	}
 
-	protected abstract boolean addDrive(Drive drive);
+	protected abstract boolean addDrive(Drive drive) throws BWFLAException;
 
-	protected abstract boolean connectDrive(Drive drive, boolean attach);
+	protected abstract boolean connectDrive(Drive drive, boolean attach) throws BWFLAException;
 
 	/**************************************************************************
 	 *
@@ -2373,7 +2373,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	/**
 	 * @param nic
 	 */
-	protected void prepareNic(Nic nic) throws IOException
+	protected void prepareNic(Nic nic) throws BWFLAException, IOException
 	{
 		// create a vde_switch in hub mode
 		// the switch can later be identified using the NIC's MAC address
@@ -2404,7 +2404,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		this.addNic(nic);
 	}
 
-	protected abstract boolean addNic(Nic nic);
+	protected abstract boolean addNic(Nic nic) throws BWFLAException;
 
 	/**************************************************************************
 	 *
