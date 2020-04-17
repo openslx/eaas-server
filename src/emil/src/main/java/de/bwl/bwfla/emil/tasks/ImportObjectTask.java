@@ -6,6 +6,9 @@ import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.emil.datatypes.rest.ImportObjectRequest;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import gov.loc.mets.Mets;
+
+import java.util.Map;
+import java.util.TreeMap;
 import java.util.UUID;
 
 public class ImportObjectTask extends AbstractTask<Object> {
@@ -45,7 +48,9 @@ public class ImportObjectTask extends AbstractTask<Object> {
             e.printStackTrace();
             return new BWFLAException(e);
         }
-        // System.out.println(m.toString());
-        return null;
+
+        final Map<String, String> userdata = new TreeMap<>();
+        userdata.put("objectId", m.getID());
+        return userdata;
     }
 }
