@@ -2,10 +2,12 @@ package de.bwl.bwfla.common.services.security;
 
 import com.auth0.jwt.interfaces.Claim;
 import com.auth0.jwt.interfaces.DecodedJWT;
+import org.apache.tamaya.inject.api.Config;
 
 import javax.enterprise.context.RequestScoped;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.Produces;
+import javax.inject.Inject;
 import java.util.logging.Logger;
 
 @RequestScoped
@@ -14,6 +16,10 @@ public class AuthenticatedUserProducer {
     @RequestScoped
     @AuthenticatedUser
     private UserContext authenticatedUser = new UserContext();
+
+    @Inject
+    @Config(value = "emil.singleUserMode", defaultValue = "false")
+    private boolean singleUserMode;
 
     protected static final Logger LOG = Logger.getLogger("Authentication");
 
@@ -34,7 +40,10 @@ public class AuthenticatedUserProducer {
         }
 
         Claim userIdC = jwt.getClaim("sub");
-        authenticatedUser.setUserId(userIdC.asString());
+        if(singleUserMode)
+            authenticatedUser.setUserId(null);
+        else
+            authenticatedUser.setUserId(userIdC.asString());
         authenticatedUser.setRole(Role.RESTRCITED);
 
         Claim usernameC = jwt.getClaim("preferred_username");
@@ -54,7 +63,6 @@ public class AuthenticatedUserProducer {
                 }
             }
         }
-
 
         Claim nameC = jwt.getClaim("name");
         if(nameC != null)
