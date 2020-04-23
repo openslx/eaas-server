@@ -3,4 +3,4 @@ blobstore:
     max_entry_age: 1 hour
     backend:
         type: fs
-        base_dir: /tmp/blobstore
+        base_dir: /tmp-storage/blobstore
