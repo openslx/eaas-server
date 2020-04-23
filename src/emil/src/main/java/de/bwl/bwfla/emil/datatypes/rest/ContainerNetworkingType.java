@@ -11,11 +11,22 @@ public class ContainerNetworkingType extends NetworkingType {
     @XmlElement
     private boolean isDHCPenabled;
 
+    @XmlElement(defaultValue = "false")
+    private boolean isTelnetEnabled;
+
     public boolean isDHCPenabled() {
         return isDHCPenabled;
     }
 
     public void setDHCPenabled(boolean DHCPenabled) {
         isDHCPenabled = DHCPenabled;
+    }
+
+    public boolean isTelnetEnabled() {
+        return isTelnetEnabled;
+    }
+
+    public void setTelnetEnabled(boolean telnetEnabled) {
+        isTelnetEnabled = telnetEnabled;
     }
 }
