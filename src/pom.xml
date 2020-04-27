@@ -14,8 +14,8 @@
 		<skipTests>true</skipTests>
 
 		<!-- version definitions for dependencies/modules -->
-		<wildfly.version>14.0.1.Final</wildfly.version>
-		<wildfly.bom.version>14.0.1.Final</wildfly.bom.version>
+		<wildfly.version>19.0.0.Final</wildfly.version>
+		<wildfly.bom.version>19.0.0.Final</wildfly.bom.version>
 
 		<jna.version>4.2.2</jna.version>
 		<commons.io.version>2.5</commons.io.version>
@@ -262,7 +262,7 @@
 		<dependencies>
 			<dependency>
 				<groupId>org.wildfly.bom</groupId>
-				<artifactId>wildfly-javaee8</artifactId>
+				<artifactId>wildfly-jakartaee8</artifactId>
 				<scope>import</scope>
 				<type>pom</type>
 				<version>${wildfly.bom.version}</version>
