@@ -3,7 +3,6 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-proxy-api</artifactId>
 	<packaging>jar</packaging>
-	<name>EaaS API module</name>
 	<description>The EaaS proxy components.</description>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>

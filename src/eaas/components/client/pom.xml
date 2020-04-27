@@ -2,7 +2,6 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-components-client</artifactId>
-	<name>EaaS component SOAP client</name>
 	<description>A SOAP client module for the emucomp web-service API.</description>
 	<packaging>jar</packaging>
 	<parent>
@@ -138,26 +137,26 @@
   		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
-			<scope>compile</scope>
 		</dependency>
   		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-components-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-cluster-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.jws</groupId>
+			<artifactId>jakarta.jws-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

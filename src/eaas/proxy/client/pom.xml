@@ -2,8 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-proxy-client</artifactId>
-	<name>EaaS proxy client library.</name>
-	<description>A SOAP client module for the eaas web-service API.</description>
+	<description>EaaS proxy client library</description>
 	<packaging>jar</packaging>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>
@@ -136,21 +135,18 @@
   		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
-			<scope>compile</scope>
 		</dependency>
   		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-components-client</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
 		</dependency>
 	</dependencies>
 </project>

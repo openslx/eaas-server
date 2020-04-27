@@ -130,16 +130,14 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>jakarta.jws</groupId>
+			<artifactId>jakarta.jws-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

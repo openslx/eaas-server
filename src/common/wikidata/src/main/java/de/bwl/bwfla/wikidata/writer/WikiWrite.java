@@ -3,14 +3,13 @@ package de.bwl.bwfla.wikidata.writer;
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
+import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.Collections;
 import org.jboss.resteasy.client.ClientRequest;
 import org.jboss.resteasy.client.ClientResponse;
-import org.json.JSONException;
-import org.json.JSONObject;
 import org.wikidata.wdtk.wikibaseapi.apierrors.EditConflictErrorException;
 import org.wikidata.wdtk.wikibaseapi.apierrors.MediaWikiApiErrorException;
 import org.wikidata.wdtk.wikibaseapi.apierrors.NoSuchEntityErrorException;
@@ -22,6 +21,9 @@ import com.hp.hpl.jena.query.QueryFactory;
 import com.hp.hpl.jena.query.QuerySolution;
 import com.hp.hpl.jena.query.ResultSet;
 import com.hp.hpl.jena.rdf.model.RDFNode;
+
+import javax.json.Json;
+import javax.json.JsonReader;
 
 
 public class WikiWrite {
@@ -247,9 +249,6 @@ public class WikiWrite {
 				}
 
 			}
-		} catch (JSONException e) {
-
-			return "Could not parse JSON string";
 		} catch (UnsupportedEncodingException e) {
 			System.out.println("Your JRE does not support UTF-8 encoding");
 		} catch (UnknownHostException e) {
@@ -264,13 +263,13 @@ public class WikiWrite {
 	}
 
 	// This function parses the Json string
-	static String outputItemDetails(String output) throws JSONException {
+	static String outputItemDetails(String output) {
 
-		JSONObject jObj = new JSONObject(output.trim());
-		JSONObject results = jObj.getJSONObject("entity");
-		String qID = results.get("id").toString();
-
-		return qID;
+		// TODO: use a more efficient streaming-parser here
+		final JsonReader reader = Json.createReader(new StringReader(output));
+		return reader.readObject()
+				.getJsonObject("entity")
+				.getString("id");
 	}
 
 	// This function removes null values from lists

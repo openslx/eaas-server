@@ -16,18 +16,22 @@
 		<!-- version definitions for dependencies/modules -->
 		<wildfly.version>19.0.0.Final</wildfly.version>
 		<wildfly.bom.version>19.0.0.Final</wildfly.bom.version>
-
+		<jakarta.activation.version>1.2.1</jakarta.activation.version>
+		<jakarta.xml.bind.version>2.3.3</jakarta.xml.bind.version>
+		<jakarta.xml.ws.version>2.3.3</jakarta.xml.ws.version>
+		<jakarta.jws.version>2.1.0</jakarta.jws.version>
 		<jna.version>4.2.2</jna.version>
 		<commons.io.version>2.5</commons.io.version>
-		<commons.collection.version/>
+		<commons.collections.version>3.2.2</commons.collections.version>
 		<commons.vfs2.version>2.1</commons.vfs2.version>
-		<commons.codec.version>1.10</commons.codec.version>
+		<commons.codec.version>1.13</commons.codec.version>
+		<commons.lang3.version>3.9</commons.lang3.version>
 		<commons.fileupload.version>1.2.2</commons.fileupload.version>
+		<commons.httpclient.version>4.5.11</commons.httpclient.version>
 		<gson.version>2.5</gson.version>
 		<fits.version>1.0.1</fits.version>
 		<guacamole.version>0.9.4</guacamole.version>
 		<snakeyaml.version>1.16</snakeyaml.version>
-		<jackson.version>1.9.13</jackson.version>
 		<jackson2.version>2.10.1</jackson2.version>
 		<junit.version>4.12</junit.version>
 		<javaee-api.version>8.0</javaee-api.version>
@@ -35,8 +39,9 @@
 		<xoai.version>4.2.0</xoai.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
-		<version.org.jboss.resteasy>3.6.1.Final</version.org.jboss.resteasy>
-		<cxf.version>3.1.4</cxf.version>
+		<resteasy.version>3.11.0.Final</resteasy.version>
+		<ejb3.version>2.3.0.Final</ejb3.version>
+		<cxf.version>3.3.6</cxf.version>
 		<opencsv.version>3.9</opencsv.version>
 
 		<!-- version definitions for maven plugins -->
@@ -52,7 +57,7 @@
 		<maven.plugin.cxf.java2ws.version>${cxf.version}</maven.plugin.cxf.java2ws.version>
 		<maven.plugin.cxf.codegen.version>${cxf.version}</maven.plugin.cxf.codegen.version>
 		<wildfly.mavenplugin.version>1.1.0.Alpha10</wildfly.mavenplugin.version>
-		<enunciate.version>2.8.1</enunciate.version>
+		<enunciate.version>2.12.1</enunciate.version>
 	</properties>
 
 	<profiles>
@@ -122,8 +127,8 @@
 					<artifactId>maven-compiler-plugin</artifactId>
 					<version>${maven.plugin.compiler.version}</version>
 					<configuration>
-						<source>1.8</source>
-						<target>1.8</target>
+						<source>11</source>
+						<target>11</target>
 					</configuration>
 				</plugin>
 				<plugin>
@@ -267,7 +272,33 @@
 				<type>pom</type>
 				<version>${wildfly.bom.version}</version>
 			</dependency>
-
+			<dependency>
+				<groupId>com.sun.activation</groupId>
+				<artifactId>jakarta.activation</artifactId>
+				<version>${jakarta.activation.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>jakarta.xml.bind</groupId>
+				<artifactId>jakarta.xml.bind-api</artifactId>
+				<version>${jakarta.xml.bind.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>jakarta.xml.ws</groupId>
+				<artifactId>jakarta.xml.ws-api</artifactId>
+				<version>${jakarta.xml.ws.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>jakarta.jws</groupId>
+				<artifactId>jakarta.jws-api</artifactId>
+				<version>${jakarta.jws.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.jboss.ejb3</groupId>
+				<artifactId>jboss-ejb3-ext-api</artifactId>
+				<version>${ejb3.version}</version>
+				<scope>provided</scope>
+			</dependency>
 			<dependency>
 				<groupId>org.apache.commons</groupId>
 				<artifactId>commons-vfs2</artifactId>
@@ -282,6 +313,21 @@
 				<groupId>commons-codec</groupId>
 				<artifactId>commons-codec</artifactId>
 				<version>${commons.codec.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>commons-collections</groupId>
+				<artifactId>commons-collections</artifactId>
+				<version>${commons.collections.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.commons</groupId>
+				<artifactId>commons-lang3</artifactId>
+				<version>${commons.lang3.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.apache.httpcomponents</groupId>
+				<artifactId>httpclient</artifactId>
+				<version>${commons.httpclient.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>edu.harvard.hul.ois</groupId>
@@ -299,30 +345,26 @@
 				<version>${guacamole.version}</version>
 			</dependency>
 			<dependency>
+				<groupId>org.slf4j</groupId>
+				<artifactId>slf4j-api</artifactId>
+				<version>1.7.22</version>
+			</dependency>
+			<dependency>
 				<groupId>org.yaml</groupId>
 				<artifactId>snakeyaml</artifactId>
 				<version>${snakeyaml.version}</version>
 			</dependency>
-
 			<dependency>
 				<groupId>net.java.dev.jna</groupId>
 				<artifactId>jna</artifactId>
 				<version>${jna.version}</version>
 			</dependency>
-
 			<dependency>
 				<groupId>junit</groupId>
 				<artifactId>junit</artifactId>
 				<version>${junit.version}</version>
 				<scope>test</scope>
 			</dependency>
-
-			<dependency>
-				<groupId>org.codehaus.jackson</groupId>
-				<artifactId>jackson-core-asl</artifactId>
-				<version>${jackson.version}</version>
-			</dependency>
-
 			<dependency>
 				<groupId>com.fasterxml.jackson.module</groupId>
 				<artifactId>jackson-module-jaxb-annotations</artifactId>
@@ -335,7 +377,47 @@
 				<version>${jackson2.version}</version>
 				<scope>provided</scope>
 			</dependency>
-
+			<dependency>
+				<groupId>com.fasterxml.jackson.core</groupId>
+				<artifactId>jackson-core</artifactId>
+				<version>${jackson2.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>com.fasterxml.jackson.dataformat</groupId>
+				<artifactId>jackson-dataformat-yaml</artifactId>
+				<version>${jackson2.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-core</artifactId>
+				<version>${resteasy.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-client</artifactId>
+				<version>${resteasy.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-jackson2-provider</artifactId>
+				<version>${resteasy.version}</version>
+				<scope>provided</scope>
+			</dependency>
+            <dependency>
+                <groupId>org.jboss.resteasy</groupId>
+                <artifactId>resteasy-multipart-provider</artifactId>
+                <version>${resteasy.version}</version>
+                <scope>provided</scope>
+            </dependency>
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-jaxrs</artifactId>
+				<version>${resteasy.version}</version>
+				<scope>provided</scope>
+			</dependency>
 			<dependency>
 				<groupId>org.apache.tamaya</groupId>
 				<artifactId>tamaya-api</artifactId>
@@ -390,6 +472,16 @@
 				<groupId>com.opencsv</groupId>
 				<artifactId>opencsv</artifactId>
 				<version>${opencsv.version}</version>
+			</dependency>
+			<dependency>
+				<groupId>com.auth0</groupId>
+				<artifactId>java-jwt</artifactId>
+				<version>3.3.0</version>
+			</dependency>
+			<dependency>
+				<groupId>com.auth0</groupId>
+				<artifactId>jwks-rsa</artifactId>
+				<version>0.11.0</version>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
@@ -468,7 +560,6 @@
 				<artifactId>common</artifactId>
 				<version>${project.version}</version>
 				<type>jar</type>
-				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
@@ -534,13 +625,6 @@
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla.eaas</groupId>
-				<artifactId>preservica-client</artifactId>
-				<version>${project.version}</version>
-				<type>jar</type>
-			</dependency>
-
-			<dependency>
-				<groupId>de.bwl.bwfla.eaas</groupId>
 				<artifactId>eaas-components-api</artifactId>
 				<version>${project.version}</version>
 				<type>jar</type>
@@ -581,12 +665,6 @@
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>ReadWikidata</artifactId>
-				<version>${project.version}</version>
-				<type>jar</type>
-			</dependency>
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>WriteToWikidata</artifactId>
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>
@@ -673,16 +751,6 @@
 				<artifactId>metadata-oaipmh</artifactId>
 				<version>${project.version}</version>
 				<type>war</type>
-			</dependency>
-			<dependency>
-				<groupId>com.fasterxml.jackson.core</groupId>
-				<artifactId>jackson-core</artifactId>
-				<version>2.9.7</version>
-			</dependency>
-			<dependency>
-				<groupId>com.fasterxml.jackson.dataformat</groupId>
-				<artifactId>jackson-dataformat-yaml</artifactId>
-				<version>2.9.2</version>
 			</dependency>
 		</dependencies>
 	</dependencyManagement>

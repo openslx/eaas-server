@@ -134,8 +134,12 @@
 			<artifactId>common</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.jws</groupId>
+			<artifactId>jakarta.jws-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>

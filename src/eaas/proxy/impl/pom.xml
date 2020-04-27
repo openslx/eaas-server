@@ -2,7 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-proxy-impl</artifactId>
-        <name>EaaS proxy and orchestration server implementation</name>
+	<description>EaaS proxy and orchestration server implementation</description>
 	<packaging>war</packaging>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>
@@ -99,6 +99,7 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
@@ -119,11 +120,11 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>

@@ -1,6 +1,5 @@
 package solutions.emulation.preservica.client;
 
-import com.tessella.xip.v4.ObjectFactory;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.MARC21Xml;
 import org.apache.http.conn.scheme.PlainSocketFactory;
@@ -11,7 +10,7 @@ import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.engines.ApacheHttpClient4Engine;
+import org.jboss.resteasy.client.jaxrs.engines.ApacheHttpClient43Engine;
 
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.WebTarget;
@@ -89,8 +88,11 @@ public class ObjectMetadata {
 
     public static HashMap<String, String> getMarcMap(String bibId) throws BWFLAException {
 
-        ApacheHttpClient4Engine engine = new ApacheHttpClient4Engine(createAllTrustingClient());
-        Client client = new ResteasyClientBuilder().httpEngine(engine).connectionPoolSize(1).build();
+        ApacheHttpClient43Engine engine = new ApacheHttpClient43Engine(createAllTrustingClient());
+        Client client = ((ResteasyClientBuilder) ResteasyClientBuilder.newBuilder())
+                .httpEngine(engine)
+                .connectionPoolSize(1)
+                .build();
 
         HashMap<String, String> result = new HashMap<>();
 

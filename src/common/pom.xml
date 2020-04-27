@@ -22,7 +22,6 @@
 				</includes>
 			</resource>
 		</resources>
-
 		<plugins>
 			<plugin>
 				<groupId>pl.project13.maven</groupId>
@@ -35,7 +34,6 @@
 						</goals>
 					</execution>
 				</executions>
-
 				<configuration>
 					<failOnNoGitDirectory>false</failOnNoGitDirectory>
 					<commitIdGenerationMode>flat</commitIdGenerationMode>
@@ -45,11 +43,6 @@
 					</gitDescribe>
 				</configuration>
 			</plugin>
-
-
-			<!-- END OF GIT COMMIT ID PLUGIN CONFIGURATION -->
-
-			<!-- other plugins -->
 		</plugins>
 	</build>
 
@@ -63,16 +56,24 @@
 			<artifactId>commons-codec</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.apache.commons</groupId>
-			<artifactId>commons-vfs2</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.glyptodon.guacamole</groupId>
 			<artifactId>guacamole-common</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>org.slf4j</groupId>
+			<artifactId>slf4j-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.ws</groupId>
+			<artifactId>jakarta.xml.ws-api</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>com.opencsv</groupId>
@@ -82,10 +83,10 @@
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>eaas-configuration</artifactId>
 		</dependency>
-
 		<dependency>
 			<groupId>junit</groupId>
 			<artifactId>junit</artifactId>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.eclipse.persistence</groupId>
@@ -95,53 +96,34 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-yaml</artifactId>
-			<version>2.3.0</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.10.1</version>
-		</dependency>
-		<dependency>
-			<groupId>javax.xml.bind</groupId>
-			<artifactId>jaxb-api</artifactId>
-			<version>2.2.11</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mongodb</groupId>
 			<artifactId>mongodb-driver-sync</artifactId>
 			<version>3.8.2</version>
 		</dependency>
-		<!-- These dependencies should be removed from the sourcecode if you find
-                the time. -->
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.core</groupId>
-			<artifactId>jackson-databind</artifactId>
-			<scope>compile</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.fasterxml.jackson.dataformat</groupId>
-			<artifactId>jackson-dataformat-yaml</artifactId>
-			<scope>compile</scope>
-		</dependency>
 		<dependency>
 			<groupId>com.auth0</groupId>
 			<artifactId>java-jwt</artifactId>
-			<version>3.3.0</version>
 		</dependency>
 		<dependency>
-    			<groupId>com.auth0</groupId>
-    			<artifactId>jwks-rsa</artifactId>
-    			<version>0.11.0</version>
+			<groupId>com.auth0</groupId>
+			<artifactId>jwks-rsa</artifactId>
 		</dependency>
 		<dependency>
 			<groupId>net.handle</groupId>
 			<artifactId>handle-client</artifactId>
-			<version>LATEST</version>
+			<version>9.2.0</version>
+		</dependency>
+
+		<!-- These dependencies should be removed from the sourcecode if you find the time. -->
+		<dependency>
+			<groupId>com.google.code.gson</groupId>
+			<artifactId>gson</artifactId>
 		</dependency>
 	</dependencies>
 </project>
