@@ -141,6 +141,12 @@ public class ContainerComponent {
             }
         }
 
+        if(config.getProcess().getWorkingDir() != null)
+        {
+            args.add("--workdir");
+            args.add(config.getProcess().getWorkingDir());
+        }
+
         // Add emulator's command
         args.add("--");
         for (String arg : config.getProcess().getArguments())

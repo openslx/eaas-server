@@ -108,10 +108,7 @@ public class OciContainerConfiguration extends ContainerConfiguration
 
 
 	@XmlAccessorType(XmlAccessType.FIELD)
-	@XmlType(name = "process", propOrder = {
-			"envs",
-			"args"
-	})
+	@XmlType(name = "process")
 	public static class Process
 	{
 		@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "env")
@@ -119,6 +116,9 @@ public class OciContainerConfiguration extends ContainerConfiguration
 
 		@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "arg")
 		protected List<String> args;
+
+		@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "workingDir")
+		private String workingDir;
 
 		public void setEnvironmentVariables(List<String> vars)
 		{
@@ -138,6 +138,14 @@ public class OciContainerConfiguration extends ContainerConfiguration
 		public List<String> getArguments()
 		{
 			return args;
+		}
+
+		public String getWorkingDir() {
+			return workingDir;
+		}
+
+		public void setWorkingDir(String workingDir) {
+			this.workingDir = workingDir;
 		}
 	}
 

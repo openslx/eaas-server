@@ -291,6 +291,7 @@ public class ContainerUtil {
         if (containerRequest.getImageType() == ImportContainerRequest.ContainerImageType.DOCKERHUB) {
             process.setEnvironmentVariables(((DockerImport) result.getMetadata()).getEnvVariables());
             process.setArguments(((DockerImport) result.getMetadata()).getEntryProcesses());
+            process.setWorkingDir(((DockerImport) result.getMetadata()).getWorkingDir());
         } else {
             process.setArguments(containerRequest.getProcessArgs());
 
