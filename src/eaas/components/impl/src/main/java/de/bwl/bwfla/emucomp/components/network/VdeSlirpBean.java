@@ -103,11 +103,6 @@ public class VdeSlirpBean extends EaasComponentBean {
             }
 
 
-
-
-
-
-
             if (!runner.start())
                 throw new BWFLAException("Cannot start vdeslirp process");
             vdeProcesses.add(runner);

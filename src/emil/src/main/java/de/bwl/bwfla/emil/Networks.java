@@ -115,8 +115,9 @@ public class Networks {
                 slirpConfig.setHwAddress(slirpMac);
                 slirpConfig.setDhcp(false);
 
+                slirpConfig.setGateway(networkRequest.getGateway());
+
                 if (networkRequest.getGateway() != null){
-                    slirpConfig.setDhcp(true);
                     slirpConfig.setGateway(networkRequest.getGateway());
                 }
                 if (networkRequest.getNetwork() != null)
