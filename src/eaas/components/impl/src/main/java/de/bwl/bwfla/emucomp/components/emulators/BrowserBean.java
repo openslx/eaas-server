@@ -53,7 +53,7 @@ public class BrowserBean extends EmulatorBean {
     @Override
     protected String getEmuContainerName(MachineConfiguration env)
     {
-        return "browser-bean";
+        return "browser";
     }
 
     @Override
