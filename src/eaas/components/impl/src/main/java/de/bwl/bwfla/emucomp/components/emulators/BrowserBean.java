@@ -4,20 +4,22 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emucomp.api.Drive;
+import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.emucomp.api.Nic;
 
 public class BrowserBean extends EmulatorBean {
 
     private DeprecatedProcessRunner proxyRunner;
-    private String networkAddress;
+    private String nic;
 
     @Override
     protected void prepareEmulatorRunner() throws BWFLAException {
         emuRunner.setCommand("/usr/local/bin/eaas-browser");
+        emuRunner.addEnvVariable("NIC", nic);
+        emuRunner.addEnvVariable("MAC", NetworkUtils.getRandomHWAddress());
 
         String config = this.getNativeConfig();
-
         if (config != null && !config.isEmpty()) {
             String[] tokens = config.trim().split("\\s+");
             for (String token : tokens)
@@ -30,25 +32,6 @@ public class BrowserBean extends EmulatorBean {
         }
     }
 
-    @Override
-    public void start() throws BWFLAException
-    {
-        super.start();
-
-        proxyRunner = new DeprecatedProcessRunner();
-        proxyRunner.setCommand("sudo");
-        proxyRunner.addArgument("runc");
-        proxyRunner.addArguments("exec", "--user", getContainerUserId() + ":" + getContainerGroupId());
-        proxyRunner.addArgument(getContainerId());
-        proxyRunner.addArgument("/libexec/eaas-proxy");
-        proxyRunner.addArgument("8090");
-        proxyRunner.addArgument(getContainerHostPathReplacer().apply(this.networkAddress));
-        proxyRunner.addArgument(NetworkUtils.getRandomHWAddress());
-        proxyRunner.addArgument("dhcp");
-        proxyRunner.addArgument("socks5");
-
-        proxyRunner.start();
-    }
 
     @Override
     protected String getEmuContainerName(MachineConfiguration env)
@@ -73,7 +56,8 @@ public class BrowserBean extends EmulatorBean {
             return false;
         }
 
-        this.networkAddress = this.getNetworksDir().resolve("nic_" + nic.getHwaddress()).toString();
+        this.nic = nic.getHwaddress();
+        emuRunner.addEnvVariable("NIC",  nic.getHwaddress());
         return true;
     }
 
