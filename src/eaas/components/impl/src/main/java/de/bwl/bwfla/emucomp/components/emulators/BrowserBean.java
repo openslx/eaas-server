@@ -16,7 +16,6 @@ public class BrowserBean extends EmulatorBean {
     @Override
     protected void prepareEmulatorRunner() throws BWFLAException {
         emuRunner.setCommand("/usr/local/bin/eaas-browser");
-        emuRunner.addEnvVariable("NIC", nic);
         emuRunner.addEnvVariable("MAC", NetworkUtils.getRandomHWAddress());
 
         String config = this.getNativeConfig();
@@ -31,7 +30,6 @@ public class BrowserBean extends EmulatorBean {
             }
         }
     }
-
 
     @Override
     protected String getEmuContainerName(MachineConfiguration env)
