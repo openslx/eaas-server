@@ -22,6 +22,7 @@ package de.bwl.bwfla.imagearchive.conf;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.handle.HandleUtils;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
+import de.bwl.bwfla.imagearchive.ImageArchiveRegistry;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
@@ -45,6 +46,8 @@ public class ImageArchiveBackendConfig extends BaseConfig
 	private File recordingsPath;
 	private File defaultEnvironmentsPath;
 	private int order;
+
+	private ImageArchiveRegistry registry;
 
 
 	/* ========== Getters and Setters ========== */
@@ -163,6 +166,18 @@ public class ImageArchiveBackendConfig extends BaseConfig
 	{
 		return order;
 	}
+
+	public void setRegistry(ImageArchiveRegistry registry)
+	{
+		this.registry = registry;
+	}
+
+	public ImageArchiveRegistry getRegistry()
+	{
+		return this.registry;
+	}
+
+
 
 
 	/* ========== Initialization ========== */
