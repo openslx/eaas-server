@@ -12,8 +12,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
 import javax.xml.bind.JAXBException;
@@ -1008,28 +1010,42 @@ public class ImageHandler
 
 	private void copyEnvironments(Path metadata, ImageMounter image, ImageType t) throws BWFLAException {
 		Path environments = metadata.resolve("environments");
-		if(Files.exists(environments))
-		{
+		if(Files.exists(environments)) {
+			Path dst = null;
+			List<Path> envPaths = new ArrayList<>();
 			try {
-				Files.list(environments)
-					.forEach(path -> {
-						try {
-							ImageArchiveMetadata idMd = new ImageArchiveMetadata(t);
-							log.severe("reading " + path.toString());
-							if(path.getFileName().endsWith("xml")) {
-								byte[] encoded = Files.readAllBytes(path);
-								String conf = new String(encoded, StandardCharsets.UTF_8);
-								log.severe(conf);
-								iaConfig.getRegistry().getDefaultBackend().importConfiguration(conf, idMd, true);
-							}
-						} catch (IOException | BWFLAException e) {
-							log.log(Level.SEVERE, "Failed to copy environment " + path.toString(), e);
-						}
-					});
+				dst = Files.createTempDirectory("environment-templates");
+				FileUtils.copyDirectory(environments.toFile(), dst.toFile());
+
+				Files.list(dst).forEach(path -> envPaths.add(path));
+				for (Path p : envPaths) {
+					ImageArchiveMetadata idMd = new ImageArchiveMetadata(t);
+					if (p.getFileName().endsWith("xml")) {
+						byte[] encoded = Files.readAllBytes(p);
+						String conf = new String(encoded, StandardCharsets.UTF_8);
+						iaConfig.getRegistry().getDefaultBackend().importConfiguration(conf, idMd, true);
+					}
+				}
 			} catch (IOException e) {
 				log.log(Level.SEVERE, "Failed to copy environments", e);
 				image.completeUnmount();
 				throw new BWFLAException(e);
+			} finally {
+				if (dst != null) {
+					try (final Stream<Path> stream = Files.walk(dst)) {
+						final Consumer<Path> deleter = (path) -> {
+							try {
+								Files.delete(path);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						};
+						stream.sorted(Comparator.reverseOrder())
+								.forEach(deleter);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
 			}
 		}
 	}
