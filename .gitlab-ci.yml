@@ -25,7 +25,7 @@ standalone-server-build:
 emucomp-build:
   <<: *caching
   script:
-    - ln -fs deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - cp -f src/ear/src/main/application/META-INF/{deployment-emucomp.xml,jboss-deployment-structure.xml}
     - mvn -f src/pom.xml clean install -P emucomp,imagearchive -pl ear -am
   artifacts:
    paths:
@@ -37,7 +37,7 @@ emucomp-build:
 gateway-build:
   <<: *caching
   script: 
-    - ln -fs deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
+    - cp -f src/ear/src/main/application/META-INF/{deployment-gateway.xml,jboss-deployment-structure.xml}
     - mvn -f src/pom.xml clean install -P '!emucomp' -pl ear -am
   artifacts:
    paths:
