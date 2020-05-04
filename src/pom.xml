@@ -240,7 +240,7 @@
 		<module>ear</module>
 		<module>common</module>
 		<module>common/eaas-configuration</module>
-		<module>common/wikidata</module>
+		<module>common/eaas-wikidata</module>
 		<module>blobstore</module>
 		<module>environment-proposer</module>
 		<module>imagearchive</module>
@@ -675,7 +675,7 @@
 			-->
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>ReadWikidata</artifactId>
+				<artifactId>eaas-wikidata</artifactId>
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>

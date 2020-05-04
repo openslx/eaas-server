@@ -31,7 +31,7 @@
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
-			<artifactId>ReadWikidata</artifactId>
+			<artifactId>eaas-wikidata</artifactId>
 		</dependency>
 		<!-- These dependencies should be removed from the sourcecode if
 		     you find the time. -->

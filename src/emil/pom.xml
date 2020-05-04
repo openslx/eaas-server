@@ -101,7 +101,7 @@
         </dependency>
         <dependency>
             <groupId>de.bwl.bwfla</groupId>
-            <artifactId>ReadWikidata</artifactId>
+            <artifactId>eaas-wikidata</artifactId>
         </dependency>
 		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
