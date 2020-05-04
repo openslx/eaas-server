@@ -36,7 +36,6 @@
 		<junit.version>4.12</junit.version>
 		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
-		<xoai.version>4.2.0</xoai.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
 		<resteasy.version>3.11.0.Final</resteasy.version>
@@ -727,24 +726,6 @@
 				<artifactId>environment-proposer</artifactId>
 				<version>${project.version}</version>
 				<type>war</type>
-			</dependency>
-			<dependency>
-				<groupId>org.dspace</groupId>
-				<artifactId>xoai-common</artifactId>
-				<version>${xoai.version}</version>
-				<type>jar</type>
-			</dependency>
-			<dependency>
-				<groupId>org.dspace</groupId>
-				<artifactId>xoai-data-provider</artifactId>
-				<version>${xoai.version}</version>
-				<type>jar</type>
-			</dependency>
-			<dependency>
-				<groupId>org.dspace</groupId>
-				<artifactId>xoai-service-provider</artifactId>
-				<version>${xoai.version}</version>
-				<type>jar</type>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
