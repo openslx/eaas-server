@@ -15,7 +15,7 @@
 		<plugins>
 			<plugin>
 				<groupId>com.webcohesion.enunciate</groupId>
-				<artifactId>enunciate-maven-plugin</artifactId>
+				<artifactId>enunciate-slim-maven-plugin</artifactId>
 				<executions>
 					<execution>
 						<goals>

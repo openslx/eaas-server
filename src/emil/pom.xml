@@ -5,19 +5,17 @@
 	<artifactId>emil</artifactId>
 	<description>EMIL - Emulation of Multimedia Objects in Libraries</description>
 	<packaging>war</packaging>
-
 	<parent>
 		<groupId>de.bwl.bwfla</groupId>
 		<artifactId>root</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
-
 	<build>
 		<plugins>
 			<plugin>
 				<groupId>com.webcohesion.enunciate</groupId>
-				<artifactId>enunciate-maven-plugin</artifactId>
+				<artifactId>enunciate-slim-maven-plugin</artifactId>
 				<executions>
 					<execution>
 						<goals>
@@ -28,7 +26,6 @@
 			</plugin>
 		</plugins>
 	</build>
-
 	<dependencies>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>

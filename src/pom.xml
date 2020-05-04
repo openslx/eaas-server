@@ -10,8 +10,11 @@
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<!-- don't run tests by default, enable with -DskipTests=false -->
+
+		<!-- skip running tests by default (enable with -DskipTests=false) -->
 		<skipTests>true</skipTests>
+		<!-- skip generating docs by default (enable with -Dskip-docs=false) -->
+		<skip-docs>true</skip-docs>
 
 		<!-- version definitions for dependencies/modules -->
 		<wildfly.version>19.0.0.Final</wildfly.version>
@@ -56,7 +59,7 @@
 		<maven.plugin.cxf.java2ws.version>${cxf.version}</maven.plugin.cxf.java2ws.version>
 		<maven.plugin.cxf.codegen.version>${cxf.version}</maven.plugin.cxf.codegen.version>
 		<wildfly.mavenplugin.version>1.1.0.Alpha10</wildfly.mavenplugin.version>
-		<enunciate.version>2.12.1</enunciate.version>
+		<enunciate.version>2.13.0</enunciate.version>
 	</properties>
 
 	<profiles>
@@ -64,7 +67,7 @@
 			<id>debug</id>
 			<activation>
 				<property>
-					<name>ebug</name>
+					<name>debug</name>
 				</property>
 			</activation>
 			<build>
@@ -86,26 +89,6 @@
 						</configuration>
 					</plugin>
 				</plugins>
-			</build>
-		</profile>
-		<profile>
-			<id>docs</id>
-			<activation>
-				<activeByDefault>true</activeByDefault>
-			</activation>
-			<build>
-				<pluginManagement>
-					<plugins>
-						<plugin>
-							<groupId>com.webcohesion.enunciate</groupId>
-							<artifactId>enunciate-maven-plugin</artifactId>
-							<configuration>
-								<skipEnunciate>false</skipEnunciate>
-								<docsDir>${project.build.directory}/</docsDir>
-							</configuration>
-						</plugin>
-					</plugins>
-				</pluginManagement>
 			</build>
 		</profile>
 	</profiles>
@@ -214,12 +197,41 @@
 					<version>${maven.plugin.cxf.codegen.version}</version>
 				</plugin>
 				<plugin>
+					<!-- use minimal package with explicitly enabled modules -->
 					<groupId>com.webcohesion.enunciate</groupId>
-					<artifactId>enunciate-maven-plugin</artifactId>
+					<artifactId>enunciate-slim-maven-plugin</artifactId>
 					<version>${enunciate.version}</version>
 					<configuration>
-						<skipEnunciate>true</skipEnunciate>
+						<docsDir>${project.build.directory}</docsDir>
+						<skipEnunciate>${skip-docs}</skipEnunciate>
 					</configuration>
+					<dependencies>
+						<dependency>
+							<groupId>com.webcohesion.enunciate</groupId>
+							<artifactId>enunciate-jaxb</artifactId>
+							<version>${enunciate.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>com.webcohesion.enunciate</groupId>
+							<artifactId>enunciate-jackson</artifactId>
+							<version>${enunciate.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>com.webcohesion.enunciate</groupId>
+							<artifactId>enunciate-jaxrs</artifactId>
+							<version>${enunciate.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>com.webcohesion.enunciate</groupId>
+							<artifactId>enunciate-docs</artifactId>
+							<version>${enunciate.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>com.webcohesion.enunciate</groupId>
+							<artifactId>enunciate-swagger</artifactId>
+							<version>${enunciate.version}</version>
+						</dependency>
+					</dependencies>
 				</plugin>
 			</plugins>
 		</pluginManagement>
