@@ -12,8 +12,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
 import javax.xml.bind.JAXBException;
@@ -51,6 +53,8 @@ public class ImageHandler
 	private final HandleClient handleClient;
 	private ImageNameIndex imageNameIndex;
 	private final ExecutorService pool;
+
+
 
 	/** Map containing lock-objects for images with in-progress operations */
 	private final ConcurrentHashMap<String, ImageLock> locks;
@@ -997,14 +1001,57 @@ public class ImageHandler
 			return;
 		}
 
-
-		copyMetaData(metadata, image, "templates",ImageType.template.name() );
-		copyMetaData(metadata, image, "environments",ImageType.base.name() );
-		copyMetaData(metadata, image, ImageType.patches.name(),ImageType.patches.name() );
+		copyTemplates(metadata, image, "templates", ImageType.template.name());
+		copyEnvironments(metadata, image, ImageType.base );
+		copyTemplates(metadata, image, ImageType.patches.name(), ImageType.patches.name());
+		log.severe("completing unmount");
 		image.completeUnmount();
+
 	}
 
-	private void copyMetaData(Path metadata, ImageMounter image,  String metadataType, String metadataTarget) throws BWFLAException {
+	private void copyEnvironments(Path metadata, ImageMounter image, ImageType t) throws BWFLAException {
+		Path environments = metadata.resolve("environments");
+		if(Files.exists(environments)) {
+			Path dst = null;
+			List<Path> envPaths = new ArrayList<>();
+			try {
+				dst = Files.createTempDirectory("environment-templates");
+				FileUtils.copyDirectory(environments.toFile(), dst.toFile());
+
+				Files.list(dst).forEach(path -> envPaths.add(path));
+				for (Path p : envPaths) {
+					ImageArchiveMetadata idMd = new ImageArchiveMetadata(t);
+					if (p.getFileName().endsWith("xml")) {
+						byte[] encoded = Files.readAllBytes(p);
+						String conf = new String(encoded, StandardCharsets.UTF_8);
+						iaConfig.getRegistry().getDefaultBackend().importConfiguration(conf, idMd, true);
+					}
+				}
+			} catch (IOException e) {
+				log.log(Level.SEVERE, "Failed to copy environments", e);
+				image.completeUnmount();
+				throw new BWFLAException(e);
+			} finally {
+				if (dst != null) {
+					try (final Stream<Path> stream = Files.walk(dst)) {
+						final Consumer<Path> deleter = (path) -> {
+							try {
+								Files.delete(path);
+							} catch (IOException e) {
+								e.printStackTrace();
+							}
+						};
+						stream.sorted(Comparator.reverseOrder())
+								.forEach(deleter);
+					} catch (IOException e) {
+						e.printStackTrace();
+					}
+				}
+			}
+		}
+	}
+
+	private void copyTemplates(Path metadata, ImageMounter image,  String metadataType, String metadataTarget) throws BWFLAException {
 		Path environments = metadata.resolve(metadataType);
 		if(Files.exists(environments))
 		{
@@ -1012,7 +1059,7 @@ public class ImageHandler
 			try {
 				FileUtils.copyDirectory(environments.toFile(), dst);
 			} catch (IOException e) {
-				e.printStackTrace();
+				log.log(Level.SEVERE, "Failed to copy templates", e);
 				image.completeUnmount();
 				throw new BWFLAException(e);
 			}

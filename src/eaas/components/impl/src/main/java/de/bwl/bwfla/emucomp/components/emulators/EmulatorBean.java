@@ -1035,7 +1035,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 	}
 
-	private void stopInternal()
+	void stopInternal()
 	{
 		if (player != null)
 			player.stop();
@@ -1091,7 +1091,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 	}
 
-	private void stopProcessRunner(DeprecatedProcessRunner runner)
+	void stopProcessRunner(DeprecatedProcessRunner runner)
 	{
 		final int emuProcessId = runner.getProcessId();
 		LOG.info("Stopping emulator " + emuProcessId + "...");

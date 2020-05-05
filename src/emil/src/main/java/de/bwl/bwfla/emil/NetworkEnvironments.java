@@ -120,7 +120,9 @@ public class NetworkEnvironments extends EmilRest {
                 config.setNetwork(env.getNetwork());
                 config.setUpstream_dns(env.getUpstream_dns());
                 config.setGateway(env.getGateway());
-                config.setArchived_internet_date(env.getNetworking().getArchiveInternetDate());
+                if (env.getNetworking().isArchivedInternetEnabled()) {
+                    config.setArchived_internet_date(env.getNetworking().getArchiveInternetDate());
+                }
                 NetworkConfiguration.DHCPConfiguration dhcp = new NetworkConfiguration.DHCPConfiguration();
                 dhcp.setIp(env.getNetworking().getDhcpNetworkAddress());
                 config.setDhcp(dhcp);

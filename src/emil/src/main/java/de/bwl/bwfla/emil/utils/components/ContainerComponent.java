@@ -80,8 +80,8 @@ public class ContainerComponent {
         }
     }
 
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
         File tmpfile = File.createTempFile("metadata.json", null, null);
         Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
 
@@ -103,7 +103,7 @@ public class ContainerComponent {
         }
     }
 
-    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
+    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws BWFLAException {
         ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
         final String inputDir = "container-input";
@@ -141,6 +141,12 @@ public class ContainerComponent {
             }
         }
 
+        if(config.getProcess().getWorkingDir() != null)
+        {
+            args.add("--workdir");
+            args.add(config.getProcess().getWorkingDir());
+        }
+
         // Add emulator's command
         args.add("--");
         for (String arg : config.getProcess().getArguments())
@@ -170,7 +176,7 @@ public class ContainerComponent {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0, linuxRuntime.isTelnetEnabled());
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))

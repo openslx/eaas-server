@@ -142,6 +142,7 @@ public class ImageMounter {
 	private void unmount(Path path)
 	{
 		try {
+
 			EmulatorUtils.unmount(path, log);
 		}
 		catch (Exception error) {

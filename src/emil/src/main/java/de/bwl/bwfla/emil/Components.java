@@ -399,6 +399,10 @@ public class Components {
             if (desc.getNetmask() != null) {
                 slirpConfig.setNetmask(desc.getNetmask());
             }
+
+            if(desc.getGateway() != null)
+                slirpConfig.setGateway(desc.getGateway());
+
             if (desc.getDnsServer() != null && !desc.getDnsServer().isEmpty()) {
                 slirpConfig.setDnsServer(desc.getDnsServer());
             }
