@@ -39,6 +39,7 @@
 		<junit.version>4.12</junit.version>
 		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
+		<slf4j.version>1.7.22</slf4j.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
 		<resteasy.version>3.11.0.Final</resteasy.version>
@@ -195,6 +196,13 @@
 					<groupId>org.apache.cxf</groupId>
 					<artifactId>cxf-codegen-plugin</artifactId>
 					<version>${maven.plugin.cxf.codegen.version}</version>
+					<dependencies>
+						<dependency>
+							<groupId>org.slf4j</groupId>
+							<artifactId>slf4j-simple</artifactId>
+							<version>${slf4j.version}</version>
+						</dependency>
+					</dependencies>
 				</plugin>
 				<plugin>
 					<!-- use minimal package with explicitly enabled modules -->
@@ -358,7 +366,7 @@
 			<dependency>
 				<groupId>org.slf4j</groupId>
 				<artifactId>slf4j-api</artifactId>
-				<version>1.7.22</version>
+				<version>${slf4j.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>org.yaml</groupId>
