@@ -54,6 +54,10 @@
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>org.apache.httpcomponents</groupId>
+			<artifactId>httpclient</artifactId>
+		</dependency>
 	</dependencies>
 
 	<!-- The individual project modules are all in their separate projects
@@ -68,6 +72,14 @@
 			<dependencies>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>blobstore-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>blobstore-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>blobstore-impl</artifactId>
 					<type>war</type>
 				</dependency>
@@ -80,6 +92,14 @@
 			</activation>
 			<id>imagebuilder</id>
 			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imagebuilder-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imagebuilder-client</artifactId>
+				</dependency>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>imagebuilder-impl</artifactId>
@@ -115,6 +135,10 @@
 			<dependencies>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imageclassifier-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>imageclassifier</artifactId>
 					<type>war</type>
 				</dependency>
@@ -129,6 +153,14 @@
 			<dependencies>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>rest-utils</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imageproposer-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>imageproposer</artifactId>
 					<type>war</type>
 				</dependency>
@@ -141,6 +173,10 @@
 			</activation>
 			<id>imagearchive</id>
 			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>imagearchive-client</artifactId>
+				</dependency>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>imagearchive</artifactId>
@@ -176,6 +212,10 @@
 			<dependencies>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>objectarchive-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>objectarchive</artifactId>
 					<type>war</type>
 				</dependency>
@@ -188,6 +228,10 @@
 			</activation>
 			<id>softwarearchive</id>
 			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>softwarearchive-client</artifactId>
+				</dependency>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>softwarearchive</artifactId>
@@ -204,6 +248,22 @@
 			<dependencies>
 				<dependency>
 					<groupId>de.bwl.bwfla.eaas</groupId>
+					<artifactId>eaas-components-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla.eaas</groupId>
+					<artifactId>eaas-components-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla.eaas</groupId>
+					<artifactId>eaas-proxy-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla.eaas</groupId>
+					<artifactId>eaas-proxy-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla.eaas</groupId>
 					<artifactId>eaas-proxy-impl</artifactId>
 					<type>war</type>
 				</dependency>
@@ -218,6 +278,18 @@
 			<dependencies>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>eaas-wikidata</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>preservica-client</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>com.webcohesion.enunciate</groupId>
+					<artifactId>enunciate-core-annotations</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>emil</artifactId>
 					<type>war</type>
 				</dependency>
@@ -230,6 +302,14 @@
 			</activation>
 			<id>metadata-oaipmh</id>
 			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>metadata-repository-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>metadata-repository-client</artifactId>
+				</dependency>
 				<dependency>
 					<groupId>de.bwl.bwfla</groupId>
 					<artifactId>metadata-oaipmh</artifactId>

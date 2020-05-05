@@ -147,6 +147,7 @@
 						<version>7</version>
 						<defaultLibBundleDir>lib</defaultLibBundleDir>
 						<generateApplicationXml>false</generateApplicationXml>
+						<skinnyWars>true</skinnyWars>
 					</configuration>
 				</plugin>
 				<plugin>
@@ -311,6 +312,7 @@
 				<groupId>jakarta.jws</groupId>
 				<artifactId>jakarta.jws-api</artifactId>
 				<version>${jakarta.jws.version}</version>
+				<scope>provided</scope>
 			</dependency>
 			<dependency>
 				<groupId>org.jboss.ejb3</groupId>
