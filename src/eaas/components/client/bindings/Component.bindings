@@ -5,12 +5,18 @@
 	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
 	xmlns:tns="http://bwfla.bwl.de/api/emucomp"
 	version="2.1"
-	wsdlLocation="target/dependency/WEB-INF/wsdl/Combine.wsdl">
+	wsdlLocation="${wsdl.directory}/Component.wsdl">
 
-<!--	<jaxws:bindings node="wsdl:definitions//wsdl:fault[@name='BWFLAException']">
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/emucomp']">
+		<jaxb:bindings node="//xsd:complexType[@name='blobHandle']">
+			<jaxb:class ref="de.bwl.bwfla.blobstore.api.BlobHandle" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+
+	<jaxws:bindings node="wsdl:definitions//wsdl:fault[@name='BWFLAException']">
 		<jaxws:class name="de.bwl.bwfla.common.exceptions.BWFLAException" />
 	</jaxws:bindings>
--->
+	
 	<jaxb:bindings scd="x-schema::tns" xmlns:tns="http://bwfla.bwl.de/api/emucomp">
 		<jaxb:bindings scd="//type::tns:BWFLAException">
 			<jaxb:class ref="de.bwl.bwfla.common.exceptions.BWFLAException" />

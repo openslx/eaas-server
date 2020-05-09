@@ -5,7 +5,7 @@
 	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
 	xmlns:tns="http://bwfla.bwl.de/api/emucomp"
 	version="2.1"
-	wsdlLocation="target/dependency/WEB-INF/wsdl/NetworkSwitch.wsdl">
+	wsdlLocation="${wsdl.directory}/NetworkSwitch.wsdl">
 
 	<jaxws:bindings node="wsdl:definitions//wsdl:fault[@name='BWFLAException']">
 		<jaxws:class name="de.bwl.bwfla.common.exceptions.BWFLAException" />
