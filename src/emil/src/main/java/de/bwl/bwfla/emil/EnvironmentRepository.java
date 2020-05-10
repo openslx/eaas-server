@@ -187,6 +187,24 @@ public class EnvironmentRepository extends EmilRest
 	}
 
 	@GET
+	@Path("/db-migration")
+	@Secured(roles={Role.RESTRCITED})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response migrateDb()
+	{
+		LOG.info("Try to migrate DB content ...");
+		try {
+			emilEnvRepo.importOldDb();
+			return Response.status(Status.OK)
+					.build();
+		}
+		catch ( BWFLAException error) {
+			LOG.log(Level.WARNING,"database migration failed!\n", error);
+			return EnvironmentRepository.internalErrorResponse(error);
+		}
+	}
+
+	@GET
 	@Path("/os-metadata")
 	@Secured(roles={Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)

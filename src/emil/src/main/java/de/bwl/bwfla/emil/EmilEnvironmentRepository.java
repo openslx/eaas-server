@@ -505,35 +505,36 @@ public class EmilEnvironmentRepository {
 		return db.getRootlessJaxbObjects(getCollectionCtx(), type, "type");
 	}
 
+	public void importOldDb() throws BWFLAException {
+		List<EmilEnvironment> oldEnvs = null;
+		try {
+			 oldEnvs = importHelper.importExistentEnv(dbConnector.getInstance("eaas"), "emilEnv");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		for(EmilEnvironment env : oldEnvs)
+		{
+			Environment e = environmentsAdapter.getEnvironmentById("default", env.getEnvId());
+			if(e == null)
+			{
+				LOG.warning("old env import failed. env not found: " + env.getEnvId());
+				continue;
+			}
+
+			LOG.warning("importing " + env.getEnvId());
+			LOG.warning(env.toString());
+
+			env.setArchive(MetadataCollection.DEFAULT);
+			save(env, false);
+
+			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
+			LOG.warning(__env.isVisible() + "yyy");
+		}
+	}
+
 	public int initialize() throws JAXBException, BWFLAException {
 		int counter = 0;
-
-//		List<EmilEnvironment> oldEnvs = null;
-//		try {
-//			 oldEnvs = importHelper.importExistentEnv(dbConnector.getInstance("eaas"), "emilEnv");
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//
-//		for(EmilEnvironment env : oldEnvs)
-//		{
-//			Environment e = environmentsAdapter.getEnvironmentById("default", env.getEnvId());
-//			if(e == null)
-//			{
-//				LOG.warning("old env import failed. env not found: " + env.getEnvId());
-//				continue;
-//			}
-//
-//			LOG.warning("importing " + env.getEnvId());
-//			LOG.warning(env.toString());
-//			LOG.warning(env.isVisible() + " xxx \n");
-//
-//			env.setArchive(MetadataCollection.PUBLIC);
-//			save(env, false);
-//
-//			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
-//			LOG.warning(__env.isVisible() + "yyy");
-//		}
 
 		importFromFolder("import");
 
