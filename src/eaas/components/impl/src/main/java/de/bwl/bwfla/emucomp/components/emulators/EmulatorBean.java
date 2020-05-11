@@ -662,6 +662,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 								final String path = entry.toString();
 								cgen.addArgument("--mount");
 								cgen.addArgument(path, ":", hostPathReplacer.apply(path), ":bind:rw");
+
+								if(path.contains("printer")) // compatibility for old snapshots
+								{
+									String target = hostPathReplacer.apply(path).replace("printer", "print");
+									cgen.addArgument("--mount");
+									cgen.addArgument(path, ":", target, ":bind:rw");
+								}
 							});
 				}
 				catch (Exception error) {
