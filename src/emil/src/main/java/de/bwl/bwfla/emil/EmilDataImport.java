@@ -155,7 +155,7 @@ public class EmilDataImport {
         try {
             envs.addAll(db.getJaxbObjects(emilDbCollectionName, "emilEnvironment", EmilEnvironment.class));
             envs.addAll(db.getJaxbObjects(emilDbCollectionName, "emilContainerEnvironment", EmilContainerEnvironment.class));
-            envs.addAll(db.getJaxbObjects(emilDbCollectionName, "emilObjectEnvironment", EmilSessionEnvironment.class));
+            envs.addAll(db.getJaxbObjects(emilDbCollectionName, "emilObjectEnvironment", EmilObjectEnvironment.class));
             envs.addAll(db.getJaxbObjects(emilDbCollectionName, "emilSessionEnvironment", EmilSessionEnvironment.class));
         } catch (JAXBException e) {
             throw new BWFLAException(e);

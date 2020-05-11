@@ -529,7 +529,7 @@ public class EmilEnvironmentRepository {
 			save(env, false);
 
 			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
-			LOG.warning(__env.isVisible() + "yyy");
+			LOG.warning(__env.isVisible() + " y");
 		}
 	}
 
