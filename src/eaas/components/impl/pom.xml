@@ -30,7 +30,7 @@
 				<artifactId>cxf-java2ws-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>wsdl-eaascomponent</id>
+						<id>wsdl-component</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>java2ws</goal>
@@ -80,6 +80,7 @@
 				<artifactId>maven-antrun-plugin</artifactId>
 				<executions>
 					<execution>
+						<id>postprocess-wsdls</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>run</goal>

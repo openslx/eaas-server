@@ -148,8 +148,14 @@
 						</goals>
 						<configuration>
 							<target>
-								<replaceregexp match="([\w\.]+\.)?ObjectFactory.class" replace="" flags="g">
-									<fileset dir="${project.build.directory}/generated-sources"	includes="**/*.java" />
+								<replaceregexp match="^.*ObjectFactory.*" replace="" byline="true">
+									<fileset dir="${project.build.directory}/generated-sources">
+										<include name="**/Component.java"/>
+										<include name="**/Container.java"/>
+										<include name="**/Machine.java"/>
+										<include name="**/NetworkSwitch.java"/>
+										<include name="**/DontUseDummy.java"/>
+									</fileset>
 								</replaceregexp>
 							</target>
 						</configuration>

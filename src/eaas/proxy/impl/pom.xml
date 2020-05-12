@@ -50,7 +50,7 @@
 				</dependencies>
 				<executions>
 					<execution>
-						<id>unpack</id>
+						<id>unpack-wsdls</id>
 						<phase>initialize</phase>
 						<goals>
 							<goal>unpack</goal>
@@ -62,7 +62,6 @@
 									<artifactId>eaas-components-impl</artifactId>
 									<version>${project.version}</version>
 									<type>war</type>
-									<overWrite>true</overWrite>
 									<outputDirectory>${project.build.directory}/dependency</outputDirectory>
 									<includes>WEB-INF/wsdl/*.wsdl</includes>
 								</artifactItem>
@@ -76,7 +75,7 @@
 				<artifactId>cxf-java2ws-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>wsdl-eaascomponent</id>
+						<id>wsdl-eaasws</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>java2ws</goal>

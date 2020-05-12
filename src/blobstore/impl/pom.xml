@@ -31,7 +31,7 @@
 				<artifactId>cxf-java2ws-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>wsdl-eaascomponent</id>
+						<id>generate-wsdl</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>java2ws</goal>

@@ -26,7 +26,7 @@
 				</dependencies>
 				<executions>
 					<execution>
-						<id>unpack</id>
+						<id>unpack-wsdls</id>
 						<phase>initialize</phase>
 						<goals>
 							<goal>unpack</goal>
@@ -38,7 +38,6 @@
 									<artifactId>eaas-proxy-impl</artifactId>
 									<version>${project.version}</version>
 									<type>war</type>
-									<overWrite>true</overWrite>
 									<outputDirectory>${project.build.directory}/dependency</outputDirectory>
 									<includes>WEB-INF/wsdl/*.wsdl</includes>
 								</artifactItem>
@@ -110,15 +109,18 @@
 				<artifactId>maven-antrun-plugin</artifactId>
 				<executions>
 					<execution>
+						<id>postprocess-client</id>
 						<phase>generate-sources</phase>
 						<goals>
 							<goal>run</goal>
 						</goals>
 						<configuration>
 							<target>
-								<replace token="ObjectFactory.class" value="" dir="${project.build.directory}/generated-sources">
-									<include name="**/*.java" />
-								</replace>
+								<replaceregexp match="^.*ObjectFactory.*" replace="" byline="true">
+									<fileset dir="${project.build.directory}/generated-sources">
+										<include name="**/EaasWS.java"/>
+									</fileset>
+								</replaceregexp>
 							</target>
 						</configuration>
 					</execution>
