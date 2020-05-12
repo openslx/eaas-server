@@ -22,7 +22,6 @@
         <dependency>
             <groupId>de.bwl.bwfla</groupId>
             <artifactId>common</artifactId>
-            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>de.bwl.bwfla.eaas</groupId>

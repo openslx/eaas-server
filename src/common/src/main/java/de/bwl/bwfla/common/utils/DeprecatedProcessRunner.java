@@ -28,7 +28,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Reader;
 import java.io.Writer;
-import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -714,22 +713,7 @@ public class DeprecatedProcessRunner
 
 	private static int lookupUnixPid(Process process)
 	{
-		// HACK: Use reflection to lookup the native process ID.
-
-		final String expClassName = "java.lang.UNIXProcess";
-		if (!process.getClass().getName().equals(expClassName))
-			throw new IllegalArgumentException("Process is not a " + expClassName + "!");
-
-		try {
-			final Class<? extends Process> clazz = process.getClass();
-			final Field field = clazz.getDeclaredField("pid");
-			field.setAccessible(true);
-			return (Integer) field.get(process);
-		}
-		catch (NoSuchFieldException | IllegalAccessException error) {
-			final String message = "Looking up PID of " + expClassName + " failed!";
-			throw new RuntimeException(message, error);
-		}
+		return (int) process.pid();
 	}
 
 	private void reset(boolean keepenv)

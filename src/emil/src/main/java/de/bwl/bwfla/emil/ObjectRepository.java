@@ -250,7 +250,7 @@ public class ObjectRepository extends EmilRest
 		 *
 		 * @HTTP 500 if archive is not found
 		 *
-		 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListResponse
+		 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListItem
 		 */
 		@GET
 		@Secured(roles = {Role.RESTRCITED})
