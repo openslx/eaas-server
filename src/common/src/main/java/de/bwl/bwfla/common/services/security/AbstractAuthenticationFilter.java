@@ -51,7 +51,7 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
 
     protected String extractToken(ContainerRequestContext requestContext)
     {
-        debug(requestContext);
+        // debug(requestContext);
         String authorizationHeader =
                 requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
 

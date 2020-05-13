@@ -13,7 +13,6 @@ emil:
       timeout: 15 mins
       delay: 3 secs
   authEnabled: false
-  authSecret: ''
   authAudience: ''
   authJwksUri: ''
   imagesDatabase: images
