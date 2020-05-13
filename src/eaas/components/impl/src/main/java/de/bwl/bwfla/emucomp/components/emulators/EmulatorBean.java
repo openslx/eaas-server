@@ -662,6 +662,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 								final String path = entry.toString();
 								cgen.addArgument("--mount");
 								cgen.addArgument(path, ":", hostPathReplacer.apply(path), ":bind:rw");
+
+								if(path.contains("printer")) // compatibility for old snapshots
+								{
+									String target = hostPathReplacer.apply(path).replace("printer", "print");
+									cgen.addArgument("--mount");
+									cgen.addArgument(path, ":", target, ":bind:rw");
+								}
 							});
 				}
 				catch (Exception error) {
@@ -1035,7 +1042,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 	}
 
-	private void stopInternal()
+	void stopInternal()
 	{
 		if (player != null)
 			player.stop();
@@ -1091,7 +1098,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 	}
 
-	private void stopProcessRunner(DeprecatedProcessRunner runner)
+	void stopProcessRunner(DeprecatedProcessRunner runner)
 	{
 		final int emuProcessId = runner.getProcessId();
 		LOG.info("Stopping emulator " + emuProcessId + "...");

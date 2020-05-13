@@ -101,6 +101,7 @@ public class ImageArchiveRegistry
 		for (ImageArchiveBackendConfig iac : backendConfigs) {
 			try {
 				final String name = iac.getName();
+				iac.setRegistry(this);
 				log.info("Initializing image-archive '" + name + "'...");
 				final ImageArchiveBackend backend = new ImageArchiveBackend(iac);
 				backend.reload();
