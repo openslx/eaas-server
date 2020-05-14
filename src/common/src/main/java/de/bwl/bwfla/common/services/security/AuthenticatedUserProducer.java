@@ -25,6 +25,7 @@ public class AuthenticatedUserProducer {
 
     // todo: allow override label
     private final String adminRoleLabel = "eaas-admin";
+    private final String userRoleLabel = "eaas-user";
 
     public AuthenticatedUserProducer() {}
 
@@ -44,8 +45,8 @@ public class AuthenticatedUserProducer {
             authenticatedUser.setUserId(null);
         else
             authenticatedUser.setUserId(userIdC.asString());
-        authenticatedUser.setRole(Role.RESTRCITED);
 
+        authenticatedUser.setRole(Role.RESTRCITED);
         Claim usernameC = jwt.getClaim("preferred_username");
         if(usernameC != null)
         {

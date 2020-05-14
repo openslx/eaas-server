@@ -82,7 +82,8 @@ public class Admin extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
 	public UserInfoResponse getUserInfo()
 	{
-		if (authenticatedUser == null || authenticatedUser.getUserId() == null)
+		
+		if (authenticatedUser == null)
 			return new UserInfoResponse(new BWFLAException("no user context"));
 
 		UserInfoResponse resp = new UserInfoResponse();
