@@ -91,10 +91,6 @@
 			<artifactId>commons-io</artifactId>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-		</dependency>
         <dependency>
             <groupId>de.bwl.bwfla</groupId>
             <artifactId>imagebuilder-client</artifactId>
