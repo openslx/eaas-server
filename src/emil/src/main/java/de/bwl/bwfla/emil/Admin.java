@@ -90,7 +90,8 @@ public class Admin extends EmilRest
 		resp.setUserId(authenticatedUser.getUserId());
 		resp.setUsername(authenticatedUser.getUsername());
 		resp.setFullName(authenticatedUser.getName());
-		resp.setRole(authenticatedUser.getRole().name());
+		if(authenticatedUser.getRole() != null)
+			resp.setRole(authenticatedUser.getRole().name());
 		return resp;
 	}
 
