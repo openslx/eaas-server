@@ -6,13 +6,12 @@ import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.bsb.BsbFileCollectionEntry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import org.apache.commons.io.IOUtils;
-
-import com.google.gson.GsonBuilder;
 
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
@@ -42,9 +41,8 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 			
 			String json = IOUtils.toString( in );
 			System.out.println("got json: " + json );
-			GsonBuilder gson = new GsonBuilder();
-		
-			BsbFileCollection bsbFiles = gson.create().fromJson(json , BsbFileCollection.class);
+			final ObjectMapper mapper = new ObjectMapper();
+			BsbFileCollection bsbFiles = mapper.readValue(json , BsbFileCollection.class);
 			if(bsbFiles == null)
 			{
 				System.out.println("failed json");
