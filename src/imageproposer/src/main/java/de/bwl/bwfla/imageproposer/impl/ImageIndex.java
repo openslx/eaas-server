@@ -31,13 +31,13 @@ import java.util.Set;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystemInformation;
+
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
+import javax.json.JsonValue;
 
 
 public class ImageIndex
@@ -181,39 +181,32 @@ public class ImageIndex
 		return index;
 	}
 	
-	private static ImageIndex parseJson(Path input) throws JsonIOException, JsonSyntaxException, IOException
+	private static ImageIndex parseJson(Path input) throws IOException
 	{
 		final Logger log = Logger.getLogger(ImageIndex.class.getName());
 		JsonObject object = null;
 		
-		try (Reader reader = Files.newBufferedReader(input, StandardCharsets.UTF_8)) {
-			JsonParser parser = new JsonParser();
-			JsonElement root = parser.parse(reader);
-			if (!root.isJsonObject()) {
-				log.warning("Parsed image index's description is not a JSON object!");
-				return null;
-			}
-			
-			object = root.getAsJsonObject();
+		try (Reader reader = Files.newBufferedReader(input, StandardCharsets.UTF_8);
+			 JsonReader json = Json.createReader(reader)) {
+			object = json.readObject();
 		}
 
-		final JsonElement entries = object.get("entriesByPUID");
-		if (entries == null || !entries.isJsonArray()) {
+		final JsonValue entries = object.get("entriesByPUID");
+		if (entries == null || (entries.getValueType() != JsonValue.ValueType.ARRAY)) {
 			log.warning("Image index description is invalid: " + input.toString());
 			return null;
 		}
 
 		final ImageIndex index = new ImageIndex(null);
-		for (JsonElement element : entries.getAsJsonArray()) {
-			final JsonObject entry = element.getAsJsonObject();
-			final JsonElement format = entry.get("format");
-			final JsonArray images = entry.getAsJsonArray("images");
+		for (JsonValue element : entries.asJsonArray()) {
+			final JsonObject entry = element.asJsonObject();
+			final String format = entry.getString("format");
+			final JsonArray images = entry.getJsonArray("images");
 			if (format == null || images == null)
 				continue;
-			
-			final String formatstr = format.getAsString();
-			for (JsonElement image : images)
-				index.addEnvironmentWithPUID(formatstr, image.getAsString());
+
+			for (int i = 0; i < images.size(); ++i)
+				index.addEnvironmentWithPUID(format, images.getString(i));
 		}
 		
 		return index;
