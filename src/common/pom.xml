@@ -119,12 +119,6 @@
 			<artifactId>handle-client</artifactId>
 			<version>9.2.0</version>
 		</dependency>
-
-		<!-- These dependencies should be removed from the sourcecode if you find the time. -->
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
-		</dependency>
 	</dependencies>
 </project>
 
