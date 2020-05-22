@@ -1,6 +1,6 @@
 package de.bwl.bwfla.wikidata.reader;
 
-import com.hp.hpl.jena.rdf.model.RDFNode;
+import org.apache.jena.rdf.model.RDFNode;
 import de.bwl.bwfla.wikidata.reader.config.Config;
 import de.bwl.bwfla.wikidata.reader.entities.FileFormats;
 import de.bwl.bwfla.wikidata.reader.entities.RelatedQIDS;

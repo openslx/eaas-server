@@ -5,8 +5,8 @@
 
 package de.bwl.bwfla.wikidata.reader;
 
-import com.hp.hpl.jena.query.*;
-import com.hp.hpl.jena.rdf.model.RDFNode;
+import org.apache.jena.query.*;
+import org.apache.jena.rdf.model.RDFNode;
 import java.util.ArrayList;
 import java.util.Iterator;
 
