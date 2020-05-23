@@ -50,7 +50,7 @@ public class QemuBean extends EmulatorBean
 	}
 
 	public enum QEMU_ARCH {
-		x86_64, ppc, i386
+		x86_64, ppc, i386, sparc,
 	}
 
 	private boolean isValidQemuArch(String qemuArch) {
@@ -202,7 +202,7 @@ public class QemuBean extends EmulatorBean
 
 			case CDROM:
 
-				if (!qemu_bin.contains("ppc")) {
+				if (!qemu_bin.contains("ppc") && !qemu_bin.contains("sparc")) {
 					emuRunner.addArgument("-drive");
 					emuRunner.addArgument("file=", imagePath.toString(), ",if=", drive.getIface(),
 							",bus=", drive.getBus(),
