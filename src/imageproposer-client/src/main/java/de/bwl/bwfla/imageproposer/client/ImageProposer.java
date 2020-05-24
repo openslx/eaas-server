@@ -19,8 +19,6 @@
 
 package de.bwl.bwfla.imageproposer.client;
 
-import java.util.List;
-
 import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.ServiceUnavailableException;
@@ -32,7 +30,6 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
-import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 
 public class ImageProposer {
@@ -49,8 +46,10 @@ public class ImageProposer {
         if(serviceUrl == null)
             throw new IllegalArgumentException("ImageProposer URL not configured");
 
-        this.client = new ResteasyClientBuilder().connectionPoolSize(10)
+        this.client = ((ResteasyClientBuilder) ResteasyClientBuilder.newBuilder())
+                .connectionPoolSize(10)
                 .build();
+
         this.serviceUrl = serviceUrl;
     }
 

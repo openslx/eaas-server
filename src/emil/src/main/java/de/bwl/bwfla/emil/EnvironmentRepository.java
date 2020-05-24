@@ -19,8 +19,6 @@
 
 package de.bwl.bwfla.emil;
 
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -824,7 +822,7 @@ public class EnvironmentRepository extends EmilRest
 
 				return EnvironmentRepository.successMessageResponse("Environment reverted to revision '" + revId + "'");
 			}
-			catch (BWFLAException | JsonSyntaxException | JsonIOException error) {
+			catch (BWFLAException error) {
 				return EnvironmentRepository.errorMessageResponse("No emil environment found with ID: " + currentEnv.getParentEnvId());
 			}
 		}

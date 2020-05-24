@@ -3,7 +3,6 @@
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-components-all</artifactId>
 	<packaging>pom</packaging>
-	<name>EaaS components</name>
 	<description>The EaaS components.</description>
 
 	<parent>

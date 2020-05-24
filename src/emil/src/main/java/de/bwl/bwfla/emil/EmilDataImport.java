@@ -1,8 +1,5 @@
 package de.bwl.bwfla.emil;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -28,8 +25,6 @@ import java.util.logging.Logger;
 
 @ApplicationScoped
 public class EmilDataImport {
-
-    private static final Gson GSON = new GsonBuilder().create();
 
     protected final static Logger LOG = Logger.getLogger(EmilDataImport.class.getName());
 
@@ -74,15 +69,11 @@ public class EmilDataImport {
         }
     }
 
-    private <T extends JaxbType> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JsonSyntaxException, JAXBException, BWFLAException {
+    private <T extends JaxbType> T getEmilEnvironmentByPath(Path envpath, final Class<T> klass) throws IOException, JAXBException, BWFLAException {
         if (!Files.exists(envpath))
             throw new IOException("file not found");
 
         return JaxbType.fromJsonValueWithoutRoot(FileUtils.readFileToString(envpath.toFile(), StandardCharsets.UTF_8), klass);
-
-        // try (Reader reader = Files.newBufferedReader(envpath, StandardCharsets.UTF_8)) {
-        //    return GSON.fromJson(reader, klass);
-        // }
     }
 
     public HashMap<String, List<EmilEnvironment>> importFromFolder(String directory)

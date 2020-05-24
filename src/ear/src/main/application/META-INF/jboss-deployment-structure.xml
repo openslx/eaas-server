@@ -1,1 +1,19 @@
-deployment-all.xml
+<jboss-deployment-structure>
+  <ear-subdeployments-isolated>false</ear-subdeployments-isolated>
+  <deployment>
+    <dependencies>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-blobstore-impl-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-emil-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-imagearchive-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-imagebuilder-impl-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-imageclassifier-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-objectarchive-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-imageproposer-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla.eaas-eaas-components-impl-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla.eaas-eaas-proxy-impl-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-softwarearchive-0.0.1-SNAPSHOT.war" services="import"/>
+      <!-- <module name="deployment.eaas-server.ear.de.bwl.bwfla-nbd-server-impl-0.0.1-SNAPSHOT.war" services="import"/> -->
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-metadata-oaipmh-0.0.1-SNAPSHOT.war" services="import"/>
+    </dependencies>
+  </deployment>
+</jboss-deployment-structure>

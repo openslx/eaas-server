@@ -2,8 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-components-api</artifactId>
-	<name>EaaS component API and datastructures</name>
-	<description>A SOAP client module for the emucomp web-service API.</description>
+	<description>EaaS component API and datastructures</description>
 	<packaging>jar</packaging>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>
@@ -16,12 +15,14 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
-			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.10.1</version>
+		</dependency>
+		<dependency>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
 		</dependency>
 	</dependencies>
 </project>
