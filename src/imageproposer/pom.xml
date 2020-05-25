@@ -15,6 +15,7 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
@@ -35,10 +36,6 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>imageproposer-client</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
 		</dependency>
 	</dependencies>
 </project>

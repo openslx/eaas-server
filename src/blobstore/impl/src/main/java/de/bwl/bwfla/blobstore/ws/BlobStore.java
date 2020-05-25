@@ -25,6 +25,7 @@ import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.blobstore.api.IBlobStore;
 import de.bwl.bwfla.blobstore.api.Blob;
+import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
@@ -32,6 +33,7 @@ import javax.ejb.Singleton;
 import javax.inject.Inject;
 import javax.jws.WebService;
 import javax.xml.ws.soap.MTOM;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
@@ -50,6 +52,7 @@ public class BlobStore implements IBlobStore
 	/* =============== IBlobStore Implementation =============== */
 
 	@Override
+	@TransactionTimeout(value = 1, unit = TimeUnit.DAYS)
 	public BlobHandle put(BlobDescription blob) throws BWFLAException
 	{
 		return backend.put(blob);

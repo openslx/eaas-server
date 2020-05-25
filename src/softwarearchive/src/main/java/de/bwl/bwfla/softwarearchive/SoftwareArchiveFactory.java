@@ -31,43 +31,35 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.google.gson.JsonSyntaxException;
-
 import de.bwl.bwfla.softwarearchive.impl.SoftwareFileArchive;
+
+import javax.json.Json;
+import javax.json.JsonObject;
+import javax.json.JsonReader;
 
 
 public class SoftwareArchiveFactory
 {
 	protected final static Logger LOG = Logger.getLogger(SoftwareArchiveFactory.class.getName());
 
-	private static ISoftwareArchive parseJson(Path input) throws JsonIOException, JsonSyntaxException, IOException
+	private static ISoftwareArchive parseJson(Path input) throws IOException
 	{
 		JsonObject object = null;
-		
-		try (Reader reader = Files.newBufferedReader(input, StandardCharsets.UTF_8)) {
-			JsonParser parser = new JsonParser();
-			JsonElement root = parser.parse(reader);
-			if (!root.isJsonObject()) {
-				LOG.warning("Parsed software archive's description is not a JSON object!");
-				return null;
-			}
-			
-			object = root.getAsJsonObject();
+
+		try (Reader reader = Files.newBufferedReader(input, StandardCharsets.UTF_8);
+			 JsonReader json = Json.createReader(reader)) {
+			object = json.readObject();
 		}
 
-		final JsonElement type = object.get("type");
-		if (type == null || !type.getAsString().equalsIgnoreCase("FILE")) {
+		final String type = object.getString("type");
+		if (type == null || !type.equalsIgnoreCase("FILE")) {
 			LOG.warning("Not supported software archive type: " + type);
 			return null;
 		}
 
-		final JsonElement name = object.get("name");
-		final JsonElement path = object.get("localPath");
-		return new SoftwareFileArchive(name.getAsString(), path.getAsString());
+		final String name = object.getString("name");
+		final String path = object.getString("localPath");
+		return new SoftwareFileArchive(name, path);
 	}
 	
 	public static ISoftwareArchive createFromJson(Path path)

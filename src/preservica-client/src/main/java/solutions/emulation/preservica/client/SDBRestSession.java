@@ -26,9 +26,9 @@ import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
-import org.jboss.resteasy.client.jaxrs.BasicAuthentication;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
-import org.jboss.resteasy.client.jaxrs.engines.ApacheHttpClient4Engine;
+import org.jboss.resteasy.client.jaxrs.engines.ApacheHttpClient43Engine;
+import org.jboss.resteasy.client.jaxrs.BasicAuthentication;
 import org.w3c.dom.Element;
 
 import com.tessella.xip.v4.GenericMetadata;
@@ -56,8 +56,11 @@ public class SDBRestSession {
 	
 	private void setupInsecureClient()
 	{
-		ApacheHttpClient4Engine engine = new ApacheHttpClient4Engine(createAllTrustingClient());
-		this.client = new ResteasyClientBuilder().httpEngine(engine).connectionPoolSize(50).build();
+		ApacheHttpClient43Engine engine = new ApacheHttpClient43Engine(createAllTrustingClient());
+		this.client = ((ResteasyClientBuilder) ResteasyClientBuilder.newBuilder())
+				.httpEngine(engine)
+				.connectionPoolSize(50)
+				.build();
 	}
 	
 	public SDBRestSession(SDBConfiguration config)

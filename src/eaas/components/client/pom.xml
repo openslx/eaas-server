@@ -2,7 +2,6 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-components-client</artifactId>
-	<name>EaaS component SOAP client</name>
 	<description>A SOAP client module for the emucomp web-service API.</description>
 	<packaging>jar</packaging>
 	<parent>
@@ -11,7 +10,11 @@
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
-
+	<properties>
+		<binding.srcdir>${project.basedir}/bindings</binding.srcdir>
+		<binding.outdir>${project.build.directory}/bindings</binding.outdir>
+		<wsdl.directory>${project.build.directory}/dependency/WEB-INF/wsdl</wsdl.directory>
+	</properties>
 	<build>
 		<plugins>
 			<plugin>
@@ -27,7 +30,7 @@
 				</dependencies>
 				<executions>
 					<execution>
-						<id>unpack</id>
+						<id>unpack-wsdls</id>
 						<phase>initialize</phase>
 						<goals>
 							<goal>unpack</goal>
@@ -39,7 +42,6 @@
 									<artifactId>eaas-components-impl</artifactId>
 									<version>${project.version}</version>
 									<type>war</type>
-									<overWrite>true</overWrite>
 									<outputDirectory>${project.build.directory}/dependency</outputDirectory>
 									<includes>WEB-INF/wsdl/*.wsdl</includes>
 								</artifactItem>
@@ -48,7 +50,28 @@
 					</execution>
 				</executions>
 			</plugin>
-		
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-resources-plugin</artifactId>
+				<executions>
+					<execution>
+						<id>copy-bindings</id>
+						<phase>initialize</phase>
+						<goals>
+							<goal>copy-resources</goal>
+						</goals>
+						<configuration>
+							<outputDirectory>${binding.outdir}</outputDirectory>
+							<resources>
+								<resource>
+									<directory>${binding.srcdir}</directory>
+									<filtering>true</filtering>
+								</resource>
+							</resources>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-codegen-plugin</artifactId>
@@ -69,13 +92,13 @@
 							</defaultOptions>
 							<wsdlOptions>
 								<wsdlOption>
-									<wsdl>${project.build.directory}/dependency/WEB-INF/wsdl/Combine.wsdl</wsdl>
+									<wsdl>${wsdl.directory}/Combine.wsdl</wsdl>
 									<wsdlLocation>http://localhost:8080/emucomp/ComponentService?wsdl</wsdlLocation>
 									<bindingFiles>
-										<bindingFile>Machine.jaxws.bindings</bindingFile>
-										<bindingFile>Container.jaxws.bindings</bindingFile>
-										<bindingFile>Component.jaxws.bindings</bindingFile>
-										<bindingFile>NetworkSwitch.jaxws.bindings</bindingFile>
+										<bindingFile>${binding.outdir}/Machine.bindings</bindingFile>
+										<bindingFile>${binding.outdir}/Container.bindings</bindingFile>
+										<bindingFile>${binding.outdir}/Component.bindings</bindingFile>
+										<bindingFile>${binding.outdir}/NetworkSwitch.bindings</bindingFile>
 									</bindingFiles>
 								</wsdlOption>
 							</wsdlOptions>
@@ -91,6 +114,7 @@
 				<artifactId>maven-clean-plugin</artifactId>
 				<executions>
 					<execution>
+						<id>remove-unneeded-files</id>
 			            <phase>generate-sources</phase>
 			            <goals>
 			              <goal>clean</goal>
@@ -117,14 +141,21 @@
 				<artifactId>maven-antrun-plugin</artifactId>
 				<executions>
 					<execution>
+						<id>postprocess-client</id>
 						<phase>generate-sources</phase>
 						<goals>
 							<goal>run</goal>
 						</goals>
 						<configuration>
 							<target>
-								<replaceregexp match="([\w\.]+\.)?ObjectFactory.class" replace="" flags="g">
-									<fileset dir="${project.build.directory}/generated-sources"	includes="**/*.java" />
+								<replaceregexp match="^.*ObjectFactory.*" replace="" byline="true">
+									<fileset dir="${project.build.directory}/generated-sources">
+										<include name="**/Component.java"/>
+										<include name="**/Container.java"/>
+										<include name="**/Machine.java"/>
+										<include name="**/NetworkSwitch.java"/>
+										<include name="**/DontUseDummy.java"/>
+									</fileset>
 								</replaceregexp>
 							</target>
 						</configuration>
@@ -138,26 +169,26 @@
   		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
-			<scope>compile</scope>
 		</dependency>
   		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-components-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-cluster-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>jakarta.jws</groupId>
+			<artifactId>jakarta.jws-api</artifactId>
 		</dependency>
 	</dependencies>
 </project>

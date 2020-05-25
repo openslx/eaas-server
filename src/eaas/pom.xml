@@ -4,7 +4,6 @@
 	<groupId>de.bwl.bwfla.eaas</groupId>
 	<artifactId>eaas-all</artifactId>
 	<packaging>pom</packaging>
-	<name>EaaS</name>
 	<description>The EaaS components.</description>
 
 	<parent>

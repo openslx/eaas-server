@@ -26,6 +26,8 @@ import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
@@ -44,7 +46,6 @@ import javax.ws.rs.core.Response;
 
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
-import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.rest.NodeTcpComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.SlirpComponentRequest;
@@ -64,7 +65,6 @@ import de.bwl.bwfla.emucomp.api.NetworkSwitchConfiguration;
 import de.bwl.bwfla.emucomp.api.VdeSlirpConfiguration;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 
-import static de.bwl.bwfla.emil.EmilRest.DEFAULT_RESPONSE_CAPACITY;
 
 @Path("/networks")
 @ApplicationScoped
@@ -114,7 +114,7 @@ public class Networks {
                 final String slirpMac = new VdeSlirpConfiguration().getHwAddress();
                 SlirpComponentRequest slirpConfig = new SlirpComponentRequest();
                 slirpConfig.setHwAddress(slirpMac);
-                slirpConfig.setDhcp(false);
+                slirpConfig.setDhcp(networkRequest.isDhcp());
 
                 slirpConfig.setGateway(networkRequest.getGateway());
 
@@ -282,14 +282,13 @@ public class Networks {
 
             final String switchId = ((NetworkSession) session).getSwitchId();
             String link = componentClient.getNetworkSwitchPort(eaasGw).wsConnect(switchId);
-            JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-            json.beginObject();
-            json.add("wsConnection", link);
-            json.add("ok", true);
-            json.endObject();
-            json.finish();
+            final JsonObject json = Json.createObjectBuilder()
+                    .add("wsConnection", link)
+                    .add("ok", true)
+                    .build();
+
             return Emil.createResponse(Response.Status.OK, json.toString());
-        } catch (IOException | BWFLAException e) {
+        } catch (BWFLAException e) {
             e.printStackTrace();
             throw new ServerErrorException(Response
                     .status(Response.Status.INTERNAL_SERVER_ERROR)

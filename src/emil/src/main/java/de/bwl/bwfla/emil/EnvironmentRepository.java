@@ -19,8 +19,6 @@
 
 package de.bwl.bwfla.emil;
 
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -181,6 +179,24 @@ public class EnvironmentRepository extends EmilRest
 		}
 		catch (ClassNotFoundException | BWFLAException error) {
 			LOG.log(Level.WARNING,"Loading database content failed!\n", error);
+			return EnvironmentRepository.internalErrorResponse(error);
+		}
+	}
+
+	@GET
+	@Path("/db-migration")
+	@Secured(roles={Role.RESTRCITED})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response migrateDb()
+	{
+		LOG.info("Try to migrate DB content ...");
+		try {
+			emilEnvRepo.importOldDb();
+			return Response.status(Status.OK)
+					.build();
+		}
+		catch ( BWFLAException error) {
+			LOG.log(Level.WARNING,"database migration failed!\n", error);
 			return EnvironmentRepository.internalErrorResponse(error);
 		}
 	}
@@ -805,7 +821,7 @@ public class EnvironmentRepository extends EmilRest
 
 				return EnvironmentRepository.successMessageResponse("Environment reverted to revision '" + revId + "'");
 			}
-			catch (BWFLAException | JsonSyntaxException | JsonIOException error) {
+			catch (BWFLAException error) {
 				return EnvironmentRepository.errorMessageResponse("No emil environment found with ID: " + currentEnv.getParentEnvId());
 			}
 		}

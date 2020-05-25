@@ -19,8 +19,6 @@
 
 package de.bwl.bwfla.imageclassifier.client;
 
-import java.net.URL;
-
 import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.ServiceUnavailableException;
@@ -47,7 +45,10 @@ public class ImageClassifier {
     }
 
     public ImageClassifier(String serviceUrl) {
-        this.client = new ResteasyClientBuilder().connectionPoolSize(10).build();
+        this.client = ((ResteasyClientBuilder) ResteasyClientBuilder.newBuilder())
+                .connectionPoolSize(10)
+                .build();
+
         this.serviceUrl = serviceUrl;
     }
 

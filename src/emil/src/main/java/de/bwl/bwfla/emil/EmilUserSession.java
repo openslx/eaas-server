@@ -2,7 +2,6 @@ package de.bwl.bwfla.emil;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment;
 import de.bwl.bwfla.emil.datatypes.UserSessionResponse;
 import de.bwl.bwfla.emil.datatypes.UserSessions;
@@ -13,6 +12,10 @@ import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -67,33 +70,30 @@ public class EmilUserSession extends EmilRest {
 
         sessions = userSessions.toList();
         try {
-            JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-            json.beginObject();
-            json.add("status", "0");
-            json.name("environments");
-            json.beginArray();
-
+            final JsonArrayBuilder environments = Json.createArrayBuilder();
             for (EmilSessionEnvironment emilenv : sessions) {
                 if(!emilEnvRepo.isEnvironmentVisible(emilenv))
                     continue;
 
-                json.beginObject();
-                json.add("title", emilenv.getTitle());
-                json.add("envId", emilenv.getEnvId());
-                json.add("objectId", emilenv.getObjectId());
-                json.add("archiveId", emilenv.getObjectArchiveId());
-                json.add("userId", emilenv.getUserId());
-                json.add("creationDate", emilenv.getCreationDate() + "");
-                json.endObject();
+                final JsonObjectBuilder environment = Json.createObjectBuilder()
+                        .add("title", emilenv.getTitle())
+                        .add("envId", emilenv.getEnvId())
+                        .add("objectId", emilenv.getObjectId())
+                        .add("archiveId", emilenv.getObjectArchiveId())
+                        .add("userId", emilenv.getUserId())
+                        .add("creationDate", emilenv.getCreationDate() + "");
+
+                environments.add(environment);
             }
 
-            json.endArray();
-            json.endObject();
-            json.finish();
+            final JsonObject json = Json.createObjectBuilder()
+                    .add("status", "0")
+                    .add("environments", environments)
+                    .build();
 
             return Emil.createResponse(Response.Status.OK, json.toString());
         }
-        catch(IOException e)
+        catch(Exception e)
         {
             return Emil.internalErrorResponse(e);
         }
