@@ -113,7 +113,7 @@ public class Networks {
                 final String slirpMac = new VdeSlirpConfiguration().getHwAddress();
                 SlirpComponentRequest slirpConfig = new SlirpComponentRequest();
                 slirpConfig.setHwAddress(slirpMac);
-                slirpConfig.setDhcp(false);
+                slirpConfig.setDhcp(networkRequest.isDhcp());
 
                 slirpConfig.setGateway(networkRequest.getGateway());
 

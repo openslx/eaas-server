@@ -101,8 +101,12 @@ public class VdeSlirpBean extends EaasComponentBean {
             if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
                 runner.addArguments("--dns", config.getDnsServer());
             }
-
-
+            else
+            {
+                // we have to make sure to set a DNS, as the user might choose a network outside of 10.0.2.x (default)
+                runner.addArguments("--dns", "1.0.0.1");
+            }
+            
             if (!runner.start())
                 throw new BWFLAException("Cannot start vdeslirp process");
             vdeProcesses.add(runner);
