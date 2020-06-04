@@ -91,7 +91,7 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
         final DecodedJWT jwt = JWT.decode(token);
         final String keyId = jwt.getKeyId();
         final Jwk jwk = provider.get(keyId);
-        LOG.severe(jwk.getPublicKey().getAlgorithm() + " " + jwk.getPublicKey().toString());
+        // LOG.severe(jwk.getPublicKey().getAlgorithm() + " " + jwk.getPublicKey().toString());
         return this.verify(token, Algorithm.RSA256((RSAPublicKey) jwk.getPublicKey()));
     }
 
