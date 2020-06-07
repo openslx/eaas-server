@@ -31,19 +31,18 @@ public class AuthenticatedUserProducer {
     public void handleAuthenticationEvent(@Observes @AuthenticatedUser AuthenticationFilter.JwtLoginEvent event) {
 
         DecodedJWT jwt = event.getJwt();
+        authenticatedUser.setUserId(null);
         if(jwt == null || jwt.getClaim("sub") == null)
         {
             authenticatedUser.setRole(Role.PUBLIC);
             authenticatedUser.setUsername("anonymous");
-            if(singleUserMode)
+            if(!singleUserMode)
                 authenticatedUser.setUserId("anonymous");
             return;
         }
 
         Claim userIdC = jwt.getClaim("sub");
-        if(singleUserMode)
-            authenticatedUser.setUserId(null);
-        else
+        if(!singleUserMode)
             authenticatedUser.setUserId(userIdC.asString());
         authenticatedUser.setRole(Role.RESTRCITED);
 

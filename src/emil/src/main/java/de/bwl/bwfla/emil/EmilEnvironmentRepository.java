@@ -331,6 +331,7 @@ public class EmilEnvironmentRepository {
 			return null;
 
 		try {
+			LOG.severe("collection: " +getCollectionCtx(userCtx));
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(userCtx), "type", envid, "envId");
 
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
@@ -338,6 +339,7 @@ public class EmilEnvironmentRepository {
 
 			return env;
 		} catch (BWFLAException | NoSuchElementException e) {
+			LOG.severe("not found " + e.getMessage());
 			return getSharedEmilEnvironmentById(envid);
 		}
 	}
