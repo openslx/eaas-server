@@ -88,7 +88,7 @@ public class VdeSlirpBean extends EaasComponentBean {
                  mask = config.getNetmask();
             }
 
-            if(network.endsWith(".0"))
+            if(!network.endsWith(".0"))
                 throw new BWFLAException("invalid network: " + network);
 
             LOG.severe("using " +  network + " " + mask);
