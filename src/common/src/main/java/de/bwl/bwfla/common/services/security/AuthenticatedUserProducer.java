@@ -35,7 +35,8 @@ public class AuthenticatedUserProducer {
         {
             authenticatedUser.setRole(Role.PUBLIC);
             authenticatedUser.setUsername("anonymous");
-            authenticatedUser.setUserId("anonymous");
+            if(singleUserMode)
+                authenticatedUser.setUserId("anonymous");
             return;
         }
 
