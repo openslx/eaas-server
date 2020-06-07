@@ -98,7 +98,7 @@ public class VdeSlirpBean extends EaasComponentBean {
                 runner.addArguments("--dhcp-start", "0.0.0.0");
             }
             else
-                runner.addArguments("--dhcp-start", "1.0.1.10");
+                runner.addArguments("--dhcp-start", "10.0.1.10");
 
             if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
                 runner.addArguments("--dns", config.getDnsServer());
