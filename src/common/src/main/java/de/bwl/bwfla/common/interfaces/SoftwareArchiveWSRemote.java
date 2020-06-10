@@ -1,9 +1,10 @@
 package de.bwl.bwfla.common.interfaces;
 
-import java.util.List;
-
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
+
+import javax.activation.DataHandler;
+
 
 public interface SoftwareArchiveWSRemote
 {
@@ -12,12 +13,14 @@ public interface SoftwareArchiveWSRemote
 	public int getNumSoftwareSeatsById(String id);
 	
 	public SoftwarePackage getSoftwarePackageById(String id);
-	
-	public List<String> getSoftwarePackages();
-	
+
+	public DataHandler getSoftwarePackages();
+
+	public DataHandler getSoftwarePackageIds();
+
 	public SoftwareDescription getSoftwareDescriptionById(String id);
 	
-	public List<SoftwareDescription> getSoftwareDescriptions();
+	public DataHandler getSoftwareDescriptions();
 	
 	public String getName();
 }

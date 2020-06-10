@@ -54,6 +54,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -290,8 +291,9 @@ public class SoftwareRepository extends EmilRest
 		{
 			LOG.info("Listing all software-package descriptions...");
 
+			Stream<SoftwareDescription> descriptions = null;
 			try {
-				List<SoftwareDescription> descriptions = swHelper.getSoftwareDescriptions();
+				descriptions = swHelper.getSoftwareDescriptions();
 				if (descriptions == null) {
 					// TODO: throw NotFoundException here!
 					return SoftwareRepository.errorMessageResponse("Software archive could not be read!");
@@ -303,7 +305,7 @@ public class SoftwareRepository extends EmilRest
 				json.writeStartObject();
 				json.write("status", "0");
 				json.writeStartArray("descriptions");
-				for (SoftwareDescription desc : descriptions) {
+				descriptions.forEach((desc) -> {
 					json.writeStartObject();
 					json.write("id", desc.getSoftwareId());
 					json.write("label", desc.getLabel());
@@ -311,7 +313,7 @@ public class SoftwareRepository extends EmilRest
 					json.write("archiveId", (desc.getArchiveId() != null) ? desc.getArchiveId() : "default");
 					json.write("isOperatingSystem", desc.getIsOperatingSystem());
 					json.writeEnd();
-				}
+				});
 
 				json.writeEnd();
 				json.writeEnd();
@@ -323,6 +325,10 @@ public class SoftwareRepository extends EmilRest
 			catch (Throwable error) {
 				LOG.log(Level.WARNING, "Listing software-package descriptions failed!", error);
 				return Emil.internalErrorResponse(error);
+			}
+			finally {
+				if (descriptions != null)
+					descriptions.close();
 			}
 		}
 

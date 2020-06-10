@@ -19,26 +19,39 @@
 
 package de.bwl.bwfla.softwarearchive;
 
-import java.util.List;
+import java.util.concurrent.Executor;
+import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
+import javax.activation.DataHandler;
+import javax.annotation.Resource;
 import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Singleton;
 import javax.jws.WebService;
+import javax.xml.bind.annotation.XmlMimeType;
+import javax.xml.ws.soap.MTOM;
 
+import de.bwl.bwfla.common.datatypes.GenericId;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.interfaces.SoftwareArchiveWSRemote;
+import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionWriter;
+import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.softwarearchive.conf.SoftwareArchiveSingleton;
 
 
 @Singleton
+@MTOM(enabled = true)
 @ConcurrencyManagement(ConcurrencyManagementType.BEAN)
 @WebService(targetNamespace = "http://bwfla.bwl.de/api/softwarearchive")
 public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 {
 	protected static final Logger LOG = Logger.getLogger(SoftwareArchiveWS.class.getName());
+
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private Executor executor = null;
 	
 	@Override
 	public boolean addSoftwarePackage(SoftwarePackage software)
@@ -69,10 +82,18 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 	}
 	
 	@Override
-	public List<String> getSoftwarePackages()
+	public @XmlMimeType("application/xml") DataHandler getSoftwarePackageIds()
 	{
-		ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
-		return archive.getSoftwarePackages();
+		final ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
+		final Stream<String> ids = archive.getSoftwarePackageIds();
+		return this.toDataHandler(ids.map(GenericId::new), GenericId.class, JaxbNames.SOFTWARE_PACKAGE_IDS);
+	}
+
+	public @XmlMimeType("application/xml") DataHandler getSoftwarePackages()
+	{
+		final ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
+		final Stream<SoftwarePackage> packages = archive.getSoftwarePackages();
+		return this.toDataHandler(packages, SoftwarePackage.class, JaxbNames.SOFTWARE_PACKAGES);
 	}
 	
 	@Override
@@ -83,9 +104,25 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 	}
 	
 	@Override
-	public List<SoftwareDescription> getSoftwareDescriptions()
+	public @XmlMimeType("application/xml") DataHandler getSoftwareDescriptions()
 	{
-		ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
-		return archive.getSoftwareDescriptions();
+		final ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
+		final Stream<SoftwareDescription> descriptions = archive.getSoftwareDescriptions();
+		return this.toDataHandler(descriptions, SoftwareDescription.class, JaxbNames.SOFTWARE_DESCRIPTIONS);
+	}
+
+	private <T> DataHandler toDataHandler(Stream<T> source, Class<T> klass, String name)
+	{
+		try {
+			final String mimetype = "application/xml";
+			final JaxbCollectionWriter<T> pipe = new JaxbCollectionWriter<>(source, klass, name, mimetype, LOG);
+			executor.execute(pipe);
+			return pipe.getDataHandler();
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Returning data-handler for '" + name + "' failed!", error);
+			source.close();
+			return null;
+		}
 	}
 }

@@ -3,15 +3,13 @@ package de.bwl.bwfla.emil.datatypes;
 import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.EmilSoftwareData;
-import de.bwl.bwfla.metadata.repository.api.ItemDescription;
-import de.bwl.bwfla.metadata.repository.api.ItemIdentifierDescription;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 
-import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.function.Function;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Spliterator;
+import java.util.Spliterators;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -27,34 +25,33 @@ public class SoftwareCollection implements Iterable<EaasiSoftwareObject> {
         this.objectArchivHelper = objectArchiveHelper;
         this.softwarePackages = new HashMap<>();
 
-        List<String> softwareIds = null;
+        Stream<String> softwareIds = null;
 
         try {
-            softwareIds = swArchiveHelper.getSoftwarePackages();
+            softwareIds = swArchiveHelper.getSoftwarePackageIds();
         } catch (BWFLAException e) {
             e.printStackTrace();
-            softwareIds = new ArrayList<>();
+            softwareIds = Stream.empty();
         }
 
-        for(String swid : softwareIds)
-        {
+        softwareIds.forEach((swid) -> {
             SoftwarePackage p = null;
             try {
                 p = swArchiveHelper.getSoftwarePackageById(swid);
                 if(!p.isPublic())
-                    continue;
+                    return;
 
                 DigitalObjectMetadata md = objectArchivHelper.getObjectMetadata(p.getArchive(), p.getObjectId());
                 if(md.getMetsData() == null)
                 {
                     System.out.println("metsdata null ... skipping");
-                    continue;
+                    return;
                 }
                 softwarePackages.put(p.getId(), new EaasiSoftwareObject(p, md.getMetsData()));
             } catch (BWFLAException e) {
                 e.printStackTrace();
             }
-        }
+        });
     }
 
     @Override
@@ -77,8 +74,8 @@ public class SoftwareCollection implements Iterable<EaasiSoftwareObject> {
         return softwarePackages.size();
     }
 
-    public class SoftwareObjectsIterator implements Iterator {
-
+    public class SoftwareObjectsIterator implements Iterator<EaasiSoftwareObject>
+    {
         private final Iterator<String> idIter;
 
         SoftwareObjectsIterator() {
@@ -91,7 +88,7 @@ public class SoftwareCollection implements Iterable<EaasiSoftwareObject> {
         }
 
         @Override
-        public Object next() {
+        public EaasiSoftwareObject next() {
             String id = idIter.next();
             return softwarePackages.get(id);
         }
