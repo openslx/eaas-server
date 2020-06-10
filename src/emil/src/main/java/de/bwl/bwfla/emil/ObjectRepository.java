@@ -96,6 +96,13 @@ public class ObjectRepository extends EmilRest
 	private String USER_ARCHIVE_PREFIX;
 
 
+	private static boolean initialized = false;
+
+	public boolean isInitialized()
+	{
+		return initialized;
+	}
+
 	@PostConstruct
     private void initialize()
 	{
@@ -103,6 +110,8 @@ public class ObjectRepository extends EmilRest
 			objHelper = new ObjectArchiveHelper(objectArchive);
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 			objArchives = new HashSet<>(objHelper.getArchives());
+
+			initialized = true;
 		}
 		catch (BWFLAException error) {
 			LOG.log(Level.SEVERE, "Initializing object-repository failed!", error);

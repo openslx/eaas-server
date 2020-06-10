@@ -56,11 +56,32 @@ public class Admin extends EmilRest
 	@Inject
 	private EmilEnvironmentRepository environmentRepository = null;
 
+	@Inject
+	private ObjectRepository objectRepository = null;
 
 	private static final String USAGE_LOG_PATH = "/home/bwfla/server-data/sessions.csv";
 
 
 	// ========== Admin API =========================
+
+
+	/*
+		call this function to ensure the server's business logic
+		has bootstrapped when loading further UI workflows.
+
+		If not called, bootstrapping will happen implicitly, causing
+		waits on first REST calls.
+	 */
+	@GET
+	@Path("/init")
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response init()
+	{
+		LOG.warning("Environments initialized " + environmentRepository.isInitialized());
+		LOG.warning("Objects initialized " + objectRepository.isInitialized());
+		return Response.ok()
+				.build();
+	}
 
 	@GET
 	@Secured(roles = {Role.PUBLIC})

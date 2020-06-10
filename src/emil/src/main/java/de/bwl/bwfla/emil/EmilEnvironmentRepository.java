@@ -89,6 +89,11 @@ public class EmilEnvironmentRepository {
 
 	private static boolean initialized = false;
 
+	public boolean isInitialized()
+	{
+		return initialized;
+	}
+
 	public final class MetadataCollection {
 		public static final String PUBLIC = "public";
 		public static final String REMOTE = "remote";
@@ -286,6 +291,8 @@ public class EmilEnvironmentRepository {
 		{
 			e.printStackTrace();
 		}
+
+		initialized = true;
 
 //		try {
 //			try {
