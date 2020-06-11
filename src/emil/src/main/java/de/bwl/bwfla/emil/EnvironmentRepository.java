@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.emil;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -65,6 +67,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.StreamingOutput;
 import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.StringWriter;
@@ -74,7 +77,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -293,13 +296,33 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Listing all available environments...");
 			try {
-				final List<EnvironmentListItem> environments = emilEnvRepo.getEmilEnvironments()
-						.stream()
-						.map(EnvironmentListItem::new)
-						.collect(Collectors.toList());
+				final Stream<EnvironmentListItem> environments = emilEnvRepo.getEmilEnvironments()
+						.map(EnvironmentListItem::new);
+
+				// Construct response (in streaming-mode)
+				final StreamingOutput output = (ostream) -> {
+					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
+						final ObjectMapper mapper = new ObjectMapper();
+						json.writeStartArray();
+						environments.forEach((env) -> {
+							try {
+								mapper.writeValue(json, env);
+							}
+							catch (Exception error) {
+								LOG.log(Level.WARNING, "Serializing environment failed!", error);
+								throw new RuntimeException(error);
+							}
+						});
+						json.writeEndArray();
+						json.flush();
+					}
+					finally {
+						environments.close();
+					}
+				};
 
 				return Response.status(Status.OK)
-						.entity(environments)
+						.entity(output)
 						.build();
 			}
 			catch (Throwable error) {

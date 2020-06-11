@@ -661,18 +661,18 @@ public class EmilEnvironmentRepository {
 	}
 
 
-	public List<EmilEnvironment> getEmilEnvironments(String userCtx)
+	public Stream<EmilEnvironment> getEmilEnvironments(String userCtx)
 	{
 		final Stream<EmilEnvironment> all = loadEmilEnvironments(userCtx);
 		final HashSet<String> known = new HashSet<>();
 
-		return all.filter(e -> {
-			if(known.contains(e.getEnvId()))
-				return false;
-			return known.add(e.getEnvId());
-		}).filter(this::isEnvironmentVisible)
-				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
-				.collect(Collectors.toList());
+		return all.filter(this::isEnvironmentVisible)
+				.filter(e -> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
+				.filter(e -> {
+					if (known.contains(e.getEnvId()))
+						return false;
+					return known.add(e.getEnvId());
+				});
 	}
 
 	public List<NetworkEnvironment> getNetworkEnvironments() {
@@ -680,7 +680,7 @@ public class EmilEnvironmentRepository {
 		return emilNetworkEnvironments.collect(Collectors.toList());
 	}
 
-	public List<EmilEnvironment> getEmilEnvironments() {
+	public Stream<EmilEnvironment> getEmilEnvironments() {
 
 		String userCtx = getUserCtx();
 		return getEmilEnvironments(userCtx);
