@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.objectarchive.impl;
 
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -42,6 +43,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+
 
 public class DigitalObjectMETSFileArchive implements Serializable, DigitalObjectArchive
 {
@@ -108,10 +111,10 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	}
 
 	@Override
-	public List<String> getObjectList()
-	{	
-		log.severe("getObjectList: " + objects.size());
-		return new ArrayList<>(objects.keySet());
+	public Stream<String> getObjectIds()
+	{
+		return objects.keySet()
+				.stream();
 	}
 
 	@Override
@@ -155,6 +158,14 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 		DigitalObjectMetadata md = new DigitalObjectMetadata(id, label, label);
 		return md;
+	}
+
+	@Override
+	public Stream<DigitalObjectMetadata> getObjectMetadata() {
+
+		return this.getObjectIds()
+				.map(this::getMetadata)
+				.filter(Objects::nonNull);
 	}
 
 	@Override

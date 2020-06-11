@@ -1,6 +1,6 @@
 package de.bwl.bwfla.emil.datatypes;
 
-import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.rest.EmilResponseType;
 
@@ -9,7 +9,6 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.util.HashMap;
-import java.util.List;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
@@ -47,14 +46,7 @@ public class DigitalObjectMetadataResponse extends EmilResponseType {
         this.title = md.getTitle();
         this.wikiDataId = md.getWikiDataId();
         if(md.getCustomData() != null)
-        {
-            List<DigitalObjectMetadata.CustomData.Entry> entries = md.getCustomData().getEntry();
-            this.customData = new HashMap<>();
-            for(DigitalObjectMetadata.CustomData.Entry entry : entries)
-            {
-                customData.put(entry.getKey(), entry.getValue());
-            }
-        }
+            this.customData = new HashMap<>(md.getCustomData());
     }
 
     public String getDescription() {

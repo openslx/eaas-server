@@ -21,7 +21,7 @@ package de.bwl.bwfla.emil;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;

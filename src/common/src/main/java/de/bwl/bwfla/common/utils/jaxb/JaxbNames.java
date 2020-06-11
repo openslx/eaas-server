@@ -22,6 +22,9 @@ package de.bwl.bwfla.common.utils.jaxb;
 
 public class JaxbNames
 {
+	public static final String DIGITAL_OBJECTS = "DigitalObjects";
+	public static final String DIGITAL_OBJECT_IDS = "DigitalObjectIds";
+
 	public static final String SOFTWARE_PACKAGES = "SoftwarePackages";
 	public static final String SOFTWARE_PACKAGE_IDS = "SoftwarePackageIds";
 	public static final String SOFTWARE_DESCRIPTIONS = "SoftwareDescriptions";

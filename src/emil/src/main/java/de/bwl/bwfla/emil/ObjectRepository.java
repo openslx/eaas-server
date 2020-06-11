@@ -19,8 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
-import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
-import de.bwl.bwfla.common.datatypes.SoftwarePackage;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.ObjectListItem;
@@ -61,6 +60,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -260,14 +260,8 @@ public class ObjectRepository extends EmilRest
 			LOG.info("Listing all digital objects in archive '" + archiveId + "'...");
 
 			try {
-				final List<String> objects = objHelper.getObjectList(archiveId);
-				if (objects == null) {
-					final String message = "No objects found in archive '" + archiveId + "'!";
-					LOG.warning(message);
-					return Response.status(Response.Status.BAD_REQUEST)
-							.entity(message)
-							.build();
-				}
+				final List<String> objects = objHelper.getObjectIds(archiveId)
+						.collect(Collectors.toList());
 
 				final ArrayList<ObjectListItem> objList = new ArrayList<>();
 				for (String id : objects) {

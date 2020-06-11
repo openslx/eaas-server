@@ -1,6 +1,6 @@
 package de.bwl.bwfla.emil.datatypes;
 
-import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
