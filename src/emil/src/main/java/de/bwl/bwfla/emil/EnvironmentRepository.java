@@ -403,6 +403,7 @@ public class EnvironmentRepository extends EmilRest
 				{
 					ImageArchiveBinding romBinding = new ImageArchiveBinding("default", null, envReq.getRomId(), ImageType.ROMS.value());
 					romBinding.setId("rom-" + envReq.getRomLabel());
+					romBinding.setAccess(Binding.AccessType.COPY);
 					env.getAbstractDataResource().add(romBinding);
 					env.getNativeConfig().setValue("rom rom://" + envReq.getRomLabel());
 				}

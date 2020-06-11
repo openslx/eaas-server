@@ -1201,6 +1201,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				continue;
 
 			final Binding binding = (Binding) resource;
+			if(((Binding) resource).getAccess() == Binding.AccessType.COPY)
+				continue;
+			
 			final String id = binding.getId();
 
 			final String path = bindings.lookup(BindingsManager.toBindingId(id, BindingsManager.EntryType.IMAGE));
