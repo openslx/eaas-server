@@ -20,20 +20,19 @@
 package de.bwl.bwfla.softwarearchive.impl;
 
 import java.io.IOException;
-import java.io.Reader;
 import java.io.Serializable;
-import java.io.Writer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.softwarearchive.ISoftwareArchive;
-import de.bwl.bwfla.wikidata.reader.QIDsFinder;
 
 import javax.xml.bind.JAXBException;
 
@@ -57,7 +56,14 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		this.name = name;
 		this.archivePath = Paths.get(path);
 	}
-	
+
+	@Override
+	public boolean hasSoftwarePackage(String id)
+	{
+		final Path path = archivePath.resolve(id);
+		return Files.exists(path);
+	}
+
 	@Override
 	public synchronized boolean addSoftwarePackage(SoftwarePackage software)
 	{
@@ -122,19 +128,32 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 	}
 
 	@Override
-	public List<String> getSoftwarePackages()
+	public Stream<String> getSoftwarePackageIds()
 	{
-		List<String> packages = new ArrayList<String>();
-		try (DirectoryStream<Path> files = Files.newDirectoryStream(archivePath)) {
-			for (Path file: files)
-				packages.add(file.getFileName().toString());
+		try {
+			final DirectoryStream<Path> files = Files.newDirectoryStream(archivePath);
+			return StreamSupport.stream(files.spliterator(), false)
+					.map((path) -> path.getFileName().toString())
+					.onClose(() -> {
+						try {
+							files.close();
+						}
+						catch (Exception error) {
+							log.log(Level.WARNING, "Closing directory-stream failed!", error);
+						}
+					});
 		}
 		catch (Exception exception) {
-			log.warning("Reading software package directory failed!");
-			log.log(Level.SEVERE, exception.getMessage(), exception);
+			log.log(Level.SEVERE, "Reading software package directory failed!", exception);
+			return Stream.empty();
 		}
-		
-		return packages;
+	}
+
+	@Override
+	public Stream<SoftwarePackage> getSoftwarePackages()
+	{
+		return this.getSoftwarePackageIds()
+				.map(this::getSoftwarePackageById);
 	}
 	
 	@Override
@@ -150,19 +169,10 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 	}
 	
 	@Override
-	public List<SoftwareDescription> getSoftwareDescriptions()
+	public Stream<SoftwareDescription> getSoftwareDescriptions()
 	{
-		List<SoftwareDescription> descriptions = new ArrayList<SoftwareDescription>();
-		try {
-			for (String id: this.getSoftwarePackages())
-				descriptions.add(this.getSoftwareDescriptionById(id));
-		}
-		catch (Exception exception) {
-			log.warning("Reading software package descriptions failed!");
-			log.log(Level.SEVERE, exception.getMessage(), exception);
-		}
-		
-		return descriptions;
+		return this.getSoftwarePackageIds()
+				.map(this::getSoftwareDescriptionById);
 	}
 	
 

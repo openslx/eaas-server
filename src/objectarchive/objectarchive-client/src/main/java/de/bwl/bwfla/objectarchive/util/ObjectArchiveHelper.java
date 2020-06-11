@@ -1,25 +1,31 @@
 package de.bwl.bwfla.objectarchive.util;
 
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import javax.xml.bind.JAXBException;
+import javax.xml.transform.Source;
 import javax.xml.ws.BindingProvider;
 import javax.xml.ws.soap.SOAPBinding;
 
-import de.bwl.bwfla.api.objectarchive.*;
+import de.bwl.bwfla.api.objectarchive.ObjectArchiveFacadeWS;
+import de.bwl.bwfla.api.objectarchive.ObjectArchiveFacadeWSService;
+import de.bwl.bwfla.api.objectarchive.TaskState;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.datatypes.GenericId;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionReader;
+import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 
 public class ObjectArchiveHelper {
 
 	protected final Logger	log	= Logger.getLogger(this.getClass().getName());
 	
-	private ObjectArchiveFacadeWS archive = null; 
+	private ObjectArchiveFacadeWS archive = null;
 	private final String wsHost;
 	
 	public ObjectArchiveHelper(String wsHost)
@@ -75,29 +81,41 @@ public class ObjectArchiveHelper {
 		return archive.getObjectMetadata(_archive, id);
 	}
 
+	public Stream<DigitalObjectMetadata> getObjectMetadata(String _archive) throws BWFLAException
+	{
+		connectArchive();
+
+		final Source source = archive.getObjectMetadataCollection(_archive);
+		try {
+			final String name = JaxbNames.DIGITAL_OBJECTS;
+			return new JaxbCollectionReader<>(source, DigitalObjectMetadata.class, name, log)
+					.stream();
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Parsing objects failed!", error);
+		}
+	}
+
 	public void importFromMetadata(String _archive, String metadata) throws BWFLAException
 	{
 		connectArchive();
 		archive.importObjectFromMetadata(_archive, metadata);
 	}
 	
-	public List<String> getObjectList(String _archive) throws BWFLAException
+	public Stream<String> getObjectIds(String _archive) throws BWFLAException
 	{
 		connectArchive();
 
-		List<String> objs = archive.getObjectList(_archive);
-
-		if(objs == null)
-		{
-			log.warning("archive  " + _archive + " is empty");
-			return new ArrayList<>();
+		final Source source = archive.getObjectIds(_archive);
+		try {
+			final String name = JaxbNames.DIGITAL_OBJECT_IDS;
+			return new JaxbCollectionReader<>(source, GenericId.class, name, log)
+					.stream()
+					.map(GenericId::get);
 		}
-		
-		log.info(_archive + ": found " + objs.size() + " objects");
-		List<String> uniqueList = new ArrayList<String>(
-				new HashSet<String>(objs));
-		java.util.Collections.sort(uniqueList);
-		return uniqueList;
+		catch (Exception error) {
+			throw new BWFLAException("Parsing object IDs failed!", error);
+		}
 	}
 
 	public FileCollection getObjectReference(String _archive, String id) throws BWFLAException

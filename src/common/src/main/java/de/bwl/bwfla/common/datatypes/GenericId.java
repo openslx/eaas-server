@@ -17,24 +17,40 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.softwarearchive;
+package de.bwl.bwfla.common.datatypes;
 
-import java.util.stream.Stream;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
-import de.bwl.bwfla.common.datatypes.SoftwarePackage;
-import de.bwl.bwfla.common.datatypes.SoftwareDescription;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlValue;
 
 
-/** The internal view on software archive implementation. */
-public interface ISoftwareArchive
+@XmlRootElement(name = "id")
+@XmlAccessorType(XmlAccessType.FIELD)
+public class GenericId extends JaxbType
 {
-	public boolean hasSoftwarePackage(String id);
-	public boolean addSoftwarePackage(SoftwarePackage software);
-	public int getNumSoftwareSeatsById(String id);
-	public SoftwarePackage getSoftwarePackageById(String id);
-	public Stream<String> getSoftwarePackageIds();
-	public Stream<SoftwarePackage> getSoftwarePackages();
-	public SoftwareDescription getSoftwareDescriptionById(String id);
-	public Stream<SoftwareDescription> getSoftwareDescriptions();
-	public String getName();
+	@XmlValue
+	private String value;
+
+	public GenericId()
+	{
+		this(null);
+	}
+
+	public GenericId(String value)
+	{
+		this.value = value;
+	}
+
+	public String get()
+	{
+		return value;
+	}
+
+	public void set(String value)
+	{
+		this.value = value;
+	}
 }

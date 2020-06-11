@@ -46,7 +46,7 @@ public class EmilEnvironmentData
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getEnvironments(@Context final HttpServletResponse response) {
 		return envrepo.environments()
-				.list(response);
+				.list(false);
 	}
 
 	@Secured(roles={Role.PUBLIC})
@@ -55,7 +55,7 @@ public class EmilEnvironmentData
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getEnvironment(@PathParam("envId") String envId, @Context final HttpServletResponse response) {
 		return envrepo.environments()
-				.get(envId, response);
+				.get(envId);
 	}
 
 	/**

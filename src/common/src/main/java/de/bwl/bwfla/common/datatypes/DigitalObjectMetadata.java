@@ -1,23 +1,43 @@
-package de.bwl.bwfla.objectarchive.datatypes;
+package de.bwl.bwfla.common.datatypes;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import gov.loc.mets.Mets;
 
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlType;
 import java.util.HashMap;
 
+@XmlAccessorType(XmlAccessType.FIELD)
+@XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
+@XmlType(name = "digitalObjectMetadata", namespace="http://bwfla.bwl.de/common/datatypes")
 public class DigitalObjectMetadata extends JaxbType{
 
 	@XmlElement
 	private String id;
 
+	@XmlElement
 	private String title;
+
+	@XmlElement
 	private String description;
+
+	@XmlElement
 	private String thumbnail;
+
+	@XmlElement
 	private String summary;
+
+	@XmlElement
 	private String wikiDataId;
+
+	@XmlElement
 	private HashMap<String, String> customData;
+
+	@XmlElement
 	private String metsData;
 
 	DigitalObjectMetadata() {}

@@ -1,17 +1,21 @@
 package de.bwl.bwfla.softwarearchive.util;
 
 import java.net.URL;
-import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
+import javax.xml.transform.Source;
 import javax.xml.ws.BindingProvider;
 
 import de.bwl.bwfla.api.softwarearchive.SoftwareArchiveWS;
 import de.bwl.bwfla.api.softwarearchive.SoftwareArchiveWSService;
+import de.bwl.bwfla.common.datatypes.GenericId;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionReader;
+import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 
 
 public class SoftwareArchiveHelper
@@ -25,7 +29,14 @@ public class SoftwareArchiveHelper
 	{
 		this.wsHost = wsHost;
 	}
-	
+
+	public boolean hasSoftwarePackage(String id) throws BWFLAException
+	{
+		this.connectArchive();
+
+		return archive.hasSoftwarePackage(id);
+	}
+
 	public boolean addSoftwarePackage(SoftwarePackage software) throws BWFLAException
 	{
 		this.connectArchive();
@@ -47,11 +58,35 @@ public class SoftwareArchiveHelper
 		return archive.getSoftwarePackageById(id);
 	}
 	
-	public List<String> getSoftwarePackages() throws BWFLAException
+	public Stream<SoftwarePackage> getSoftwarePackages() throws BWFLAException
 	{
 		this.connectArchive();
 		
-		return archive.getSoftwarePackages();
+		final Source source = archive.getSoftwarePackages();
+		try {
+			final String name = JaxbNames.SOFTWARE_PACKAGES;
+			return new JaxbCollectionReader<>(source, SoftwarePackage.class, name, log)
+					.stream();
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Parsing software-packages failed!", error);
+		}
+	}
+
+	public Stream<String> getSoftwarePackageIds() throws BWFLAException
+	{
+		this.connectArchive();
+
+		final Source source = archive.getSoftwarePackageIds();
+		try {
+			final String name = JaxbNames.SOFTWARE_PACKAGE_IDS;
+			return new JaxbCollectionReader<>(source, GenericId.class, name, log)
+					.stream()
+					.map(GenericId::get);
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Parsing software-package IDs failed!", error);
+		}
 	}
 	
 	public SoftwareDescription getSoftwareDescriptionById(String id) throws BWFLAException
@@ -61,11 +96,19 @@ public class SoftwareArchiveHelper
 		return archive.getSoftwareDescriptionById(id);
 	}
 	
-	public List<SoftwareDescription> getSoftwareDescriptions() throws BWFLAException
+	public Stream<SoftwareDescription> getSoftwareDescriptions() throws BWFLAException
 	{
 		this.connectArchive();
-		
-		return archive.getSoftwareDescriptions();
+
+		final Source source = archive.getSoftwareDescriptions();
+		try {
+			final String name = JaxbNames.SOFTWARE_DESCRIPTIONS;
+			return new JaxbCollectionReader<>(source, SoftwareDescription.class, name, log)
+					.stream();
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Parsing software-descriptions failed!", error);
+		}
 	}
 	
 	public String getName() throws BWFLAException
@@ -82,8 +125,7 @@ public class SoftwareArchiveHelper
 	
 
 	/* =============== Internal Methods =============== */
-	
-	
+
 	private void connectArchive() throws BWFLAException
 	{
 		if (archive != null)
