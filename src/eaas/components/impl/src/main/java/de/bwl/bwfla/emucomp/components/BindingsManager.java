@@ -210,6 +210,12 @@ public class BindingsManager
 
 		log.info("Mounting binding '" + binding + "'...");
 
+		if(binding.startsWith("rom-")) // old rom bindings do not have COPY access by default
+		{
+			log.info("guessing resource is a ROM. force COPY access");
+			resource.setAccess(Binding.AccessType.COPY);
+		}
+
 		final XmountOptions xmountOpts = new XmountOptions(outformat);
 		if (resource instanceof VolatileResource) {
 			VolatileResource vResource = (VolatileResource) resource;
