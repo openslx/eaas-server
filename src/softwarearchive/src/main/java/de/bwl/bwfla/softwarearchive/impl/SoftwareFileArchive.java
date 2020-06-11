@@ -56,7 +56,14 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		this.name = name;
 		this.archivePath = Paths.get(path);
 	}
-	
+
+	@Override
+	public boolean hasSoftwarePackage(String id)
+	{
+		final Path path = archivePath.resolve(id);
+		return Files.exists(path);
+	}
+
 	@Override
 	public synchronized boolean addSoftwarePackage(SoftwarePackage software)
 	{

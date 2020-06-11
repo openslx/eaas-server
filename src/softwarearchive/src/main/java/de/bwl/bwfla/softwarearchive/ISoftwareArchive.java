@@ -28,6 +28,7 @@ import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 /** The internal view on software archive implementation. */
 public interface ISoftwareArchive
 {
+	public boolean hasSoftwarePackage(String id);
 	public boolean addSoftwarePackage(SoftwarePackage software);
 	public int getNumSoftwareSeatsById(String id);
 	public SoftwarePackage getSoftwarePackageById(String id);

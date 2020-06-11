@@ -8,6 +8,8 @@ import javax.activation.DataHandler;
 
 public interface SoftwareArchiveWSRemote
 {
+	public boolean hasSoftwarePackage(String id);
+
 	public boolean addSoftwarePackage(SoftwarePackage software);
 	
 	public int getNumSoftwareSeatsById(String id);

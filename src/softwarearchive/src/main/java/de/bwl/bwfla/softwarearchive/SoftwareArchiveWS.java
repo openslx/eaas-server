@@ -52,7 +52,14 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 
 	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
 	private Executor executor = null;
-	
+
+	@Override
+	public boolean hasSoftwarePackage(String id)
+	{
+		ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
+		return archive.hasSoftwarePackage(id);
+	}
+
 	@Override
 	public boolean addSoftwarePackage(SoftwarePackage software)
 	{

@@ -29,7 +29,14 @@ public class SoftwareArchiveHelper
 	{
 		this.wsHost = wsHost;
 	}
-	
+
+	public boolean hasSoftwarePackage(String id) throws BWFLAException
+	{
+		this.connectArchive();
+
+		return archive.hasSoftwarePackage(id);
+	}
+
 	public boolean addSoftwarePackage(SoftwarePackage software) throws BWFLAException
 	{
 		this.connectArchive();
