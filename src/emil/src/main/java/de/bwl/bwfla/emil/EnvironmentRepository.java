@@ -292,21 +292,23 @@ public class EnvironmentRepository extends EmilRest
 		@GET
 		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response list(@Context final HttpServletResponse response)
+		public Response list(@QueryParam("detailed") @DefaultValue("false") boolean detailed)
 		{
 			LOG.info("Listing all available environments...");
 			try {
-				final Stream<EnvironmentListItem> environments = emilEnvRepo.getEmilEnvironments()
-						.map(EnvironmentListItem::new);
+				final Stream<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
+				final Stream<Object> entries = (!detailed) ? environments.map(EnvironmentListItem::new)
+						: environments.map((env) -> (Object) this.addEnvironmentDetailsNoThrow(env))
+								.filter(Objects::nonNull);
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
 					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
 						final ObjectMapper mapper = new ObjectMapper();
 						json.writeStartArray();
-						environments.forEach((env) -> {
+						entries.forEach((entry) -> {
 							try {
-								mapper.writeValue(json, env);
+								mapper.writeValue(json, entry);
 							}
 							catch (Exception error) {
 								LOG.log(Level.WARNING, "Serializing environment failed!", error);
@@ -318,6 +320,7 @@ public class EnvironmentRepository extends EmilRest
 					}
 					finally {
 						environments.close();
+						entries.close();
 					}
 				};
 
@@ -338,7 +341,7 @@ public class EnvironmentRepository extends EmilRest
 		@Path("/{envId}")
 		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response get(@PathParam("envId") String envId, @Context final HttpServletResponse response)
+		public Response get(@PathParam("envId") String envId)
 		{
 			LOG.info("Looking up environment '" + envId + "'...");
 
@@ -352,10 +355,7 @@ public class EnvironmentRepository extends EmilRest
 			}
 
 			try {
-				Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
-				MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;
-				List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
-				EnvironmentDetails result = new EnvironmentDetails(emilenv, machine, parents, swHelper);
+				EnvironmentDetails result = this.addEnvironmentDetails(emilenv);
 				return Response.ok()
 						.entity(result)
 						.build();
@@ -702,6 +702,25 @@ public class EnvironmentRepository extends EmilRest
 		public Revisions revisions(@PathParam("envId") String envId)
 		{
 			return new Revisions(envId);
+		}
+
+		private EnvironmentDetails addEnvironmentDetails(EmilEnvironment emilenv) throws BWFLAException
+		{
+			Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+			MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;
+			List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
+			return new EnvironmentDetails(emilenv, machine, parents, swHelper);
+		}
+
+		private EnvironmentDetails addEnvironmentDetailsNoThrow(EmilEnvironment emilenv)
+		{
+			try {
+				return this.addEnvironmentDetails(emilenv);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Collecting environment's details failed!", error);
+				return null;
+			}
 		}
 	}
 
