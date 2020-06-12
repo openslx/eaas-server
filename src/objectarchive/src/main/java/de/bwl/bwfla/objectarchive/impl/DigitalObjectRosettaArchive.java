@@ -5,6 +5,8 @@ import java.io.Serializable;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.List;
+import java.util.Objects;
+import java.util.stream.Stream;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -16,7 +18,7 @@ import org.apache.commons.io.IOUtils;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 
 public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectArchive
 {
@@ -29,8 +31,8 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 	}
 
 	@Override
-	public List<String> getObjectList() {
-		return null;
+	public Stream<String> getObjectIds() {
+		return Stream.empty();
 	}
 
 	@Override
@@ -87,6 +89,14 @@ public class DigitalObjectRosettaArchive implements Serializable, DigitalObjectA
 	public DigitalObjectMetadata getMetadata(String objectId) {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public Stream<DigitalObjectMetadata> getObjectMetadata() {
+
+		return this.getObjectIds()
+				.map(this::getMetadata)
+				.filter(Objects::nonNull);
 	}
 
 	@Override

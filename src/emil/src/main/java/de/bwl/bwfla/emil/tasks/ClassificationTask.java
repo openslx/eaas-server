@@ -65,7 +65,8 @@ public class ClassificationTask extends AbstractTask<Object> {
     private List<EnvironmentInfo> resolveEmilEnvironments(String objectId, Collection<String> proposedEnvironments) throws IOException, BWFLAException {
 
         HashMap<String, List<EmilEnvironment>> envMap = new HashMap<>();
-        List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments(request.userCtx);
+        List<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments(request.userCtx)
+                .collect(Collectors.toList());
 //        if (environments != null && environments.size() == 0) {
 //             FIXME
 //             we need to call EmilEnvironmentData.init() here

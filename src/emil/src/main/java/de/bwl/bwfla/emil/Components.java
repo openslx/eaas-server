@@ -206,6 +206,9 @@ public class Components {
     @AuthenticatedUser
     private UserContext authenticatedUser;
 
+    @Inject
+    private ObjectRepository objectRepository;
+
     /** EaasWS web-service */
     private EaasWS eaas;
 
@@ -724,6 +727,8 @@ public class Components {
             }
 
             Integer driveId = null;
+            // hack: we need to initialize the user archive:
+            objectRepository.archives().list();
             if (machineDescription.getObject() != null) {
                 driveId = addObjectToEnvironment(chosenEnv, machineDescription.getObjectArchive(), machineDescription.getObject());
             } else if (machineDescription.getSoftware() != null) {
