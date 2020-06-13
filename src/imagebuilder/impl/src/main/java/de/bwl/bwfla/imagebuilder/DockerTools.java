@@ -134,7 +134,7 @@ class DockerTools {
 
         DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
         runner.setCommand("/bin/bash");
-        runner.addArguments("-c", "skopeo inspect \"$1\":\"$2\" | jq -r .Digest", ds.imageRef, ds.tag);
+        runner.addArguments("-c", "skopeo inspect \"$1\":\"$2\" | jq -r .Digest", "", ds.imageRef, ds.tag);
         runner.setLogger(log);
         if (!runner.execute(false, false))
             throw new BWFLAException("getting docker digest failed");

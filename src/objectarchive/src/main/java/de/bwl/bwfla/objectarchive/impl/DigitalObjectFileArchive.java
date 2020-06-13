@@ -291,7 +291,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	public Stream<String> getObjectIds()
 	{
 		final Path basepath = this.getLocalPath();
-		if (Files.exists(basepath)) {
+		if (!Files.exists(basepath)) {
 			log.warning("No object-archive exists at " + basepath.toString() + "!");
 			return Stream.empty();
 		}
@@ -311,7 +311,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 			final DirectoryStream<Path> files = Files.newDirectoryStream(basepath);
 			return StreamSupport.stream(files.spliterator(), false)
-					.filter((path) -> !Files.isDirectory(path))
+					.filter((path) -> Files.isDirectory(path))
 					.map(mapper)
 					.filter(Objects::nonNull)
 					.onClose(() -> {
@@ -584,7 +584,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	@Override
 	public DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException {
-
 		MetsObject o = loadMetsData(objectId);
 		Mets m = MetsUtil.export(o.getMets(), getExportPrefix());
 		DigitalObjectMetadata md = new DigitalObjectMetadata(m);

@@ -425,10 +425,9 @@ public class EnvironmentRepository extends EmilRest
 				if(envReq.getRomId() != null && envReq.getRomLabel() != null)
 				{
 					ImageArchiveBinding romBinding = new ImageArchiveBinding("default", null, envReq.getRomId(), ImageType.ROMS.value());
-					romBinding.setId("rom-" + envReq.getRomLabel());
+					romBinding.setId("rom-" + envReq.getRomId());
 					romBinding.setAccess(Binding.AccessType.COPY);
 					env.getAbstractDataResource().add(romBinding);
-					env.getNativeConfig().setValue("rom rom://" + envReq.getRomLabel());
 				}
 
 				String id = envdb.importMetadata("default", env, iaMd, false);

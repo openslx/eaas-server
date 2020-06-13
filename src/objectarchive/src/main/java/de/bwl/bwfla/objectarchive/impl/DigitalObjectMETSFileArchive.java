@@ -154,6 +154,9 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 			return null;
 
 		String id = obj.getId();
+		if(id == null)
+			return null;
+
 		String label = obj.getLabel();
 
 		DigitalObjectMetadata md = new DigitalObjectMetadata(id, label, label);

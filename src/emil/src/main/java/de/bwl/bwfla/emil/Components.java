@@ -1172,11 +1172,15 @@ public class Components {
         if (session == null)
             throw new NotFoundException("Session not found: " + componentId);
 
-        if (session.hasEventSink())
-            throw new BadRequestException("An event-sink is already registered!");
-
-        LOG.warning("Start forwarding server-sent-events for session " + componentId);
-        session.setEventSink(sink, sse);
+        if (session.hasEventSink()) {
+            LOG.info("An event-sink is already registered! Updating...");
+            session.getEventSink()
+                    .reset(sink, sse);
+        }
+        else {
+            LOG.warning("Start forwarding server-sent-events for session " + componentId);
+            session.setEventSink(sink, sse);
+        }
     }
 
     @GET
