@@ -742,7 +742,7 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId()) {
+            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs()) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {
                     LOG.warning("HWAddress is null! Using random..." );
@@ -925,7 +925,6 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
-    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
         final ComponentSession session = sessions.get(componentId);
@@ -956,7 +955,6 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
-    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
