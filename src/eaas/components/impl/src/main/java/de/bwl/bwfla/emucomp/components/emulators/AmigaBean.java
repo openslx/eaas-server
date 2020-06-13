@@ -95,6 +95,7 @@ public class AmigaBean extends EmulatorBean {
     @Override
     protected boolean addNic(Nic nic) throws BWFLAException
     {
-        throw this.newNotImplementedException();
+        return false;
+        // throw this.newNotImplementedException();
     }
 }
