@@ -4,7 +4,6 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import gov.loc.mets.Mets;
 
 import javax.xml.bind.JAXBException;
-
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;

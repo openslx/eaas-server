@@ -267,7 +267,6 @@ public class ImageContentDescription
 	public static void checkName(String name, boolean strict)
 	{
 		ImageContentDescription.check(name, "Image's name");
-
 		if (strict && !name.matches(NAME_PATTERN))
 			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
 	}

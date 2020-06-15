@@ -52,7 +52,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.imageclassifier.client.Identification;
 import de.bwl.bwfla.imageclassifier.datatypes.*;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import org.apache.commons.io.FileUtils;
@@ -117,7 +116,7 @@ public abstract class BaseTask extends AbstractTask<Object>
 			log.info("Begin identification...");
 			String tool = cfg.get("imageclassifier.identification_tool");
 			Classifier classifier = null;
-			classifier = new SiegfriedClassifier();
+				classifier = new SiegfriedClassifier();
 
 			boolean verbosemode = Boolean.parseBoolean(cfg.get("imageclassifier.verbosemode"));
 			classifier.addDirectory(basePath);

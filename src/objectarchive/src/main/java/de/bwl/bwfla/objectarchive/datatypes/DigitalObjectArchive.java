@@ -28,6 +28,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 
+
 /**
  * 
  * @author klaus
@@ -38,7 +39,6 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
  */
 public interface DigitalObjectArchive
 {
-
 	Stream<String> getObjectIds();
 	FileCollection getObjectReference(String objectId);
 	void importObject(String metsdata) throws BWFLAException;

@@ -173,6 +173,7 @@ public class ClassificationTask extends AbstractTask<Object> {
             LOG.log(Level.SEVERE, t.getMessage(), t);
             return new ClassificationResult();
         }
+
     }
 
     private ClassificationResult classifyObject(FileCollection fc) throws BWFLAException {

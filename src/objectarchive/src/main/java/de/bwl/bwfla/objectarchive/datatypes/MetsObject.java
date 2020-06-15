@@ -3,7 +3,6 @@ package de.bwl.bwfla.objectarchive.datatypes;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
-
 import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -418,7 +417,6 @@ public class MetsObject {
             log.warning("adding fc: " + url + " of.id" + of.id );
             FileCollectionEntry fce = new FileCollectionEntry(url, t, of.id);
             fce.setResourceType(rt);
-
             if(of.label != null)
                 fce.setLabel(of.label);
 
@@ -475,7 +473,6 @@ public class MetsObject {
         long size;
         String id;
         String filename;
-
         String label;
         String order;
 

@@ -24,7 +24,7 @@ import java.util.Map;
 
 import de.bwl.bwfla.emucomp.api.FileCollection;
 
-public class IdentificationResult
+public class IdentificationResult<T>
 {
 	private final FileCollection fileCollection;
 
