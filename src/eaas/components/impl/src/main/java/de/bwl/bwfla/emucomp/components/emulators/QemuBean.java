@@ -73,8 +73,7 @@ public class QemuBean extends EmulatorBean
 			qemu_bin += emuEnvironment.getArch();
 
 		File exec = new File(qemu_bin);
-		// if (exec == null || !exec.exists())
-
+		//if (exec == null || !exec.exists())
 		//	throw new BWFLAException("EmulatorContainer's executable not found! Make sure you have specified " + "a valid path to your executable in the corresponding 'properties' file");
 
 		String config = this.getNativeConfig();

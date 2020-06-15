@@ -7,6 +7,7 @@ import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+
 import de.bwl.bwfla.emil.datatypes.rest.UserInfoResponse;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
@@ -19,7 +20,8 @@ import de.bwl.bwfla.common.services.security.UserContext;
 @Deprecated
 @Path("Emil")
 @ApplicationScoped
-public class Emil extends EmilRest {
+public class Emil extends EmilRest
+{
 	/* ### ADMIN Interfaces ### */
 
 	@Inject

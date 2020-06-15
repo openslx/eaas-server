@@ -37,6 +37,9 @@ public class EmilContainerData extends EmilRest {
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
 
+    @Inject
+    private ContainerUtil containerUtil;
+
     private List<DataSource> handlers = new ArrayList<>();
 
     @Inject
@@ -61,9 +64,6 @@ public class EmilContainerData extends EmilRest {
 
     @Inject
     private TaskManager taskManager;
-
-    @Inject
-    private ContainerUtil containerUtil;
 
     @Inject
     private EmilEnvironmentRepository emilEnvRepo;

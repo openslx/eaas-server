@@ -355,7 +355,6 @@ public class Binding extends AbstractDataResource {
                     return TAR;
                 default:
                     System.out.println("unknow qid " + qid);
-
                 return null;
             }
         }

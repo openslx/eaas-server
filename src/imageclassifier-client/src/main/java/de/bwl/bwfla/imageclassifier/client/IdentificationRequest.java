@@ -60,7 +60,6 @@ public class IdentificationRequest {
 		this.fileUrl = fileUrl;
 		this.fileName = fileName;
 	}
-	
 
 	public String getPolicyUrl()
 	{

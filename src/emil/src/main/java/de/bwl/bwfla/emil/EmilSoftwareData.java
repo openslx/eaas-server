@@ -16,6 +16,7 @@ import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.SoftwareCollection;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+
 import de.bwl.bwfla.emil.datatypes.EmilSoftwareObject;
 
 
@@ -131,7 +132,6 @@ public class EmilSoftwareData extends EmilRest {
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response saveSoftwareObject(EmilSoftwareObject swo)
 	{
-
 		return swrepo.packages()
 				.create(swo);
 	}

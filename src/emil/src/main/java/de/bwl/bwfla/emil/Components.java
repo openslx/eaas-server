@@ -57,7 +57,6 @@ import javax.ws.rs.sse.Sse;
 import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
@@ -72,8 +71,6 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.common.services.sse.EventSink;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
@@ -1096,21 +1093,6 @@ public class Components {
         }
     }
 
-    @XmlRootElement
-    public class ResultUrl extends JaxbType {
-
-        @XmlElement
-        private String url;
-
-        public String getUrl() {
-            return url;
-        }
-
-        public void setUrl(String url) {
-            this.url = url;
-        }
-    }
-
     /**
      * Stops a machine component.
      *
@@ -1133,10 +1115,8 @@ public class Components {
             if (request instanceof MachineComponentRequest) {
                 final Machine machine = componentClient.getMachinePort(eaasGw);
                 String url = machine.stop(componentId);
-
                 ProcessResultUrl result = new ProcessResultUrl();
                 result.setUrl(url);
-
                 return result;
             }
             else if (request instanceof ContainerComponentRequest) {
