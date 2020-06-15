@@ -32,9 +32,11 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 
+import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.components.containers.ContainerBean;
 import de.bwl.bwfla.emucomp.components.network.NodeTcpBean;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -104,7 +106,7 @@ public class NodeManager {
             final AbstractEaasComponent component = components.computeIfAbsent(componentId, id -> {
                 try {
                     return createComponentInstance(configuration, id);
-                } catch (BWFLAException e) {
+                } catch (Exception e) {
                     throw new RuntimeException(e);
                 }
             });
@@ -114,16 +116,17 @@ public class NodeManager {
             component.initialize(configuration);
             
             return componentId;
-            
-        } catch (JAXBException e) {
-            throw new BWFLAException("Cannot unmarshall configuration metadata.", e);
-        } catch (RuntimeException e) {
-            // from the computeIfAbsent functor
-            if (e.getCause() instanceof BWFLAException) {
-                throw (BWFLAException)e.getCause();
-            } else {
-                throw new BWFLAException("A runtime error occurred while allocating the component: " + e.getMessage(), e);
-            }
+        }
+        catch (JAXBException error) {
+            throw new BWFLAException("Unmarshalling configuration metadata failed!", error);
+        }
+        catch (RuntimeException | BWFLAException error) {
+            this.releaseComponent(componentId);
+            if (error instanceof BWFLAException)
+                throw (BWFLAException) error;
+            else if (error.getCause() instanceof BWFLAException)
+                throw (BWFLAException) error.getCause();
+            else throw new BWFLAException("Allocating component failed!", error);
         }
     }
     
@@ -206,6 +209,9 @@ public class NodeManager {
             } else {
                 throw new BWFLAException("(Valid) Configuration does not correspond to a component type. This is almost certainly a programming error!");
             }
+
+            // Explicitly run Tamaya's configuration injection
+            ConfigHelpers.configure(component, ConfigurationProvider.getConfiguration());
 
             component.setComponentId(componentId);
             component.setKeepaliveTimestamp(NodeManager.timestamp());

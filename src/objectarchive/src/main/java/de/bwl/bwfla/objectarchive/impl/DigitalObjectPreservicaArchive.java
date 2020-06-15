@@ -2,14 +2,15 @@ package de.bwl.bwfla.objectarchive.impl;
 
 import java.io.Serializable;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
@@ -20,9 +21,8 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
-import de.bwl.bwfla.objectarchive.datatypes.TaskState;
-import gov.loc.mets.Mets;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import solutions.emulation.preservica.client.*;
 import solutions.emulation.preservica.client.Manifestation.DigitalFileContent;
 import solutions.emulation.preservica.client.SDBRestSession.SDBRestSessionException;
@@ -34,7 +34,6 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 
 	SDBConfiguration config;
 	private final String archiveLabel;
-	private ObjectMetadata objectMetadata = new ObjectMetadata();
 
 	public enum PUID
 	{
@@ -149,13 +148,14 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	}
 
 	@Override
-	public List<String> getObjectList() 
+	public Stream<String> getObjectIds()
 	{
 		updateTaskCheck();
 		if (collection == null)
-			return new ArrayList<>();
+			return Stream.empty();
 
-		return collection.getDeliverableUnits();
+		return collection.getDeliverableUnits()
+				.stream();
 	}
 
 	private FileCollectionEntry createFileCollectionEntry(String objectId, DigitalFileContent dfc, DriveType t)
@@ -317,6 +317,14 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 		if (thumb != null)
 			md.setThumbnail(thumb);
 		return md;
+	}
+
+	@Override
+	public Stream<DigitalObjectMetadata> getObjectMetadata() {
+
+		return this.getObjectIds()
+				.map(this::getMetadata)
+				.filter(Objects::nonNull);
 	}
 
 	@Override

@@ -6,8 +6,6 @@ import de.bwl.bwfla.imageclassifier.datatypes.IdentificationOutputIndex;
 import de.bwl.bwfla.imageclassifier.datatypes.Siegfried;
 import de.bwl.bwfla.wikidata.reader.QIDsFinder;
 import de.bwl.bwfla.wikidata.reader.entities.SoftwareQIDs;
-import edu.harvard.hul.ois.fits.FitsMetadataElement;
-import edu.harvard.hul.ois.fits.FitsOutput;
 
 import java.io.IOException;
 import java.text.ParseException;

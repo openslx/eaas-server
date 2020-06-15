@@ -6,9 +6,11 @@ import java.util.List;
 import javax.persistence.Entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 @Entity
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EmilSoftwareObject {
 	
@@ -25,6 +27,10 @@ public class EmilSoftwareObject {
 	private ArrayList<String> importFMTs;
 	private ArrayList<String> exportFMTs;
 	private String archiveId;
+
+	@JsonProperty
+	private boolean isPublic;
+
 	@JsonProperty
 	private boolean isOperatingSystem;
 	
@@ -96,5 +102,13 @@ public class EmilSoftwareObject {
 
 	public void setQID(String QID) {
 		this.QID = QID;
+	}
+
+	public boolean getIsPublic() {
+		return isPublic;
+	}
+
+	public void setIsPublic(boolean aPublic) {
+		isPublic = aPublic;
 	}
 }

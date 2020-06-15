@@ -1,65 +1,60 @@
-image: maven:3-jdk-8
+image: maven:3-jdk-11
 
-.caching: &caching
-  before_script:
-   - cp -r .m2 /root/ || true
+stages:
+- build
+- customize
 
+variables:
+  MAVEN_OPTS: "-XX:+TieredCompilation -XX:TieredStopAtLevel=1 -Dmaven.repo.local=.m2/repository"
+  GIT_STRATEGY: fetch
+  GIT_DEPTH: 50
+
+.ear-upload: &ear-upload
   after_script:
-   - cp -r /root/.m2 .
-   - cp src/ear/target/eaas-server.ear .
-  
-standalone-server-build:
-  <<: *caching
-  script:
-   - mvn -f src/pom.xml clean install
+  - mv src/ear/target/eaas-server.ear .
   artifacts:
     paths:
     - eaas-server.ear
-  cache:
-    paths:
-    - .m2 
-    
-emucomp-build:
-  <<: *caching
-  script:
-    - ln -fs deployment-emucomp.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
-    - mvn -f src/pom.xml clean install -P emucomp,imagearchive -pl ear -am
-  artifacts:
-   paths:
-    - eaas-server.ear
-  cache:
-   paths:
-    - .m2
-    
-gateway-build:
-  <<: *caching
-  script: 
-    - ln -fs deployment-gateway.xml src/ear/src/main/application/META-INF/jboss-deployment-structure.xml
-    - mvn -f src/pom.xml clean install -P '!emucomp' -pl ear -am
-  artifacts:
-   paths:
-    - eaas-server.ear
-  cache:
-   paths:
-    - .m2
-    
-trigger:
-  stage: deploy
-  script:
-   - curl --request POST --form "token=$CI_JOB_TOKEN" --form ref=master https://gitlab.com/api/v4/projects/11165186/trigger/pipeline
-  only:
-   refs:
-     - master
-   variables:
-     - $CI_PROJECT_NAMESPACE == "openslx"
 
-deploy-citar:
- stage: deploy
- before_script:
-  - apt-get update -qq && apt-get install -y rsync sshpass
- script:
-  - sshpass -p $gitlab rsync -e "ssh -o StrictHostKeyChecking=no" -rltvz -O src/ear/target/eaas-server.ear gitlab@192.52.32.102:/mnt/data/citar-demo/deployments/eaas-server.ear
-  - sshpass -p $gitlab ssh gitlab@192.52.32.102 'sudo systemctl restart eaas'
- only:
-  refs:
-   - citar-release
+.maven-cache: &maven-cache
+  needs:
+  - job: standalone-server-build
+    artifacts: false
+  cache:
+    key: maven-repo
+    policy: pull
+    paths:
+    - .m2/repository
+
+# build standalone configuration and update maven's cache
+standalone-server-build:
+  stage: build
+  script:
+  - mvn -f src/pom.xml clean package -Dskip-docs=false -T1C
+  - ./ci/scripts/upload-api-docs.sh
+        "emil:${PWD}/src/emil/target/apidocs"
+        "environment-proposer:${PWD}/src/environment-proposer/target/apidocs"
+  <<: *ear-upload
+  cache:
+    key: maven-repo
+    policy: pull-push
+    paths:
+    - .m2/repository
+
+# build gateway configuration
+gateway-build:
+  stage: customize
+  script:
+    - cp -f src/ear/src/main/application/META-INF/{deployment-gateway.xml,jboss-deployment-structure.xml}
+    - mvn -f src/pom.xml clean package -P '!emucomp' -pl ear -am -T1C
+  <<: *ear-upload
+  <<: *maven-cache
+
+# build emucomp configuration
+emucomp-build:
+  stage: customize
+  script:
+    - cp -f src/ear/src/main/application/META-INF/{deployment-emucomp.xml,jboss-deployment-structure.xml}
+    - mvn -f src/pom.xml clean package -P emucomp,imagearchive -pl ear -am -T1C
+  <<: *ear-upload
+  <<: *maven-cache

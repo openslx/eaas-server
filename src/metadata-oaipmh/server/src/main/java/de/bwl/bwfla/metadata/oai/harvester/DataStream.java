@@ -20,6 +20,8 @@
 package de.bwl.bwfla.metadata.oai.harvester;
 
 import de.bwl.bwfla.common.services.guacplay.util.StopWatch;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
+import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.metadata.oai.harvester.config.BackendConfig;
 import de.bwl.bwfla.metadata.oai.harvester.config.HarvesterConfig;
 import de.bwl.bwfla.metadata.repository.api.ItemDescription;
@@ -43,6 +45,7 @@ import javax.ws.rs.client.Client;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.Response;
 import javax.xml.transform.Transformer;
+import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
 import java.util.Iterator;
@@ -62,17 +65,14 @@ public class DataStream
 	private final MetaDataRepository mdrepo;
 	private final ServiceProvider service;
 
-
 	public DataStream(BackendConfig.StreamConfig config, Client http, Logger log)
 	{
 		this.log = log;
 		this.config = config;
 
 		final WebTarget endpoint = http.target(config.getSinkConfig().getBaseUrl());
-		this.mdrepo = new MetaDataRepository(endpoint);
-
-		final String srcurl = config.getSourceConfig().getUrl();
-		this.service = new ServiceProvider(DataStream.newContext(srcurl));
+		this.mdrepo = new MetaDataRepository(endpoint, config.getSinkConfig().getSecret());
+		this.service = new ServiceProvider(DataStream.newContext(config.getSourceConfig()));
 	}
 
 	public HarvestingResult execute() throws HarvestException
@@ -96,6 +96,12 @@ public class DataStream
 
 		log.info("Starting matadata-harvesting from remote repository: " + source.getUrl());
 		log.info("Using timestamp-range: " + fromts.toString() + " -- " + untilts.toString());
+
+		if (source.hasSecret())
+			this.logAnonymizedSecret(source.getSecret(), "source");
+
+		if (sink.hasSecret())
+			this.logAnonymizedSecret(sink.getSecret(), "sink");
 
 		log.info("Checking supported metadata-formats...");
 		if (!this.checkMetaDataFormat(mdprefix))
@@ -166,14 +172,20 @@ public class DataStream
 
 	// ========== Internal Helpers ==============================
 
-	private static Context newContext(String baseurl)
+	private static Context newContext(BackendConfig.SourceConfig config)
 	{
+		final String baseurl = config.getUrl();
 		final String format = HarvesterConfig.getMetaDataFormat();
 		final Transformer transformer = HarvesterConfig.getMetaDataTransformer();
+
+		String token = null;
+		if (config.hasSecret())
+			token = MachineTokenProvider.getJwt(config.getSecret());
+
 		return new Context()
 				.withBaseUrl(baseurl)
 				.withGranularity(Granularity.Second)
-				.withOAIClient(new HttpOAIClient(baseurl))
+				.withOAIClient(new HttpOAIClient(baseurl, token, Duration.ofMinutes(5)))
 				.withMetadataTransformer(format, transformer);
 	}
 
@@ -214,5 +226,11 @@ public class DataStream
 		final Spliterator<Record> spliterator = Spliterators.spliteratorUnknownSize(records, 0);
 		return StreamSupport.stream(spliterator, false)
 				.map(mapper);
+	}
+
+	private void logAnonymizedSecret(String secret, String msgsuffix)
+	{
+		secret = ConfigHelpers.anonymize(secret, 'X', 6, 2, 32).toUpperCase();
+		log.info("Using API secret for " + msgsuffix + ": " + secret);
 	}
 }

@@ -19,9 +19,11 @@
 
 package de.bwl.bwfla.eaas.cluster.provider.allocation;
 
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import javax.json.stream.JsonGenerator;
 import javax.ws.rs.NotFoundException;
@@ -37,6 +39,7 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpTrigger;
 import de.bwl.bwfla.eaas.cluster.dump.IDumpable;
 import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 import de.bwl.bwfla.eaas.cluster.provider.Node;
+import de.bwl.bwfla.eaas.cluster.rest.NodeDescription;
 
 
 public class ResourceAllocator implements IResourceAllocator, IDumpable
@@ -145,24 +148,38 @@ public class ResourceAllocator implements IResourceAllocator, IDumpable
 	}
 
 	@Override
-	public void release(ResourceHandle handle)
+	public ResourceSpec release(ResourceHandle handle)
 	{
 		NodeInfo node = nodes.get(handle.getNodeID());
 		if (node == null)
-			return;
+			return null;
 
 		// Update index
 		index.remove(node);
-		
+
+		ResourceSpec spec = null;
+
 		// Update node
 		ResourceAllocation allocation = node.removeAllocation(handle);
 		if (allocation != null) {
-			available.free(allocation.getResourceSpec());
+			spec = allocation.getResourceSpec();
+			available.free(spec);
 			--numAllocations;
 		}
 		
 		// Re-add the modified node to the index
 		index.add(node);
+
+		return spec;
+	}
+
+	@Override
+	public Collection<NodeDescription> describe(boolean detailed)
+	{
+		return nodes.values()
+				.stream()
+				.map((node) -> node.describe(detailed))
+				.collect(Collectors.toList());
 	}
 	
 	@Override

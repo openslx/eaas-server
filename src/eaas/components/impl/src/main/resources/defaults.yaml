@@ -56,13 +56,14 @@ components:
 
 emucomp:
     blobstore_soap: http://eaas:8080
-    blobstore_rest: http://eaas:8080/blobstore/api/v1/blobs
     inactivitytimeout:  0
     enable_pulseaudio: false
     enable_screenshooter: false
     debug_bean_enabled: false
     libfaketime: /usr/lib/x86_64-linux-gnu/faketime/libfaketime.so.1
+    curl_proxy: /usr/local/lib/LD_PRELOAD_libcurl.so
     rompath: /eaas/roms
     alsa_card: PCH
+    image_proxy: nginx:81
 
 ws.imagearchive: http://eaas:8080

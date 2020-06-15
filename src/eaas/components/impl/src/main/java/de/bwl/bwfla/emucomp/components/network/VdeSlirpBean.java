@@ -23,9 +23,9 @@ import java.util.ArrayList;
 
 import javax.enterprise.inject.spi.CDI;
 import javax.inject.Inject;
-import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
+import org.apache.commons.net.util.SubnetUtils;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -49,18 +49,7 @@ public class VdeSlirpBean extends EaasComponentBean {
     public void initialize(ComponentConfiguration compConfig) throws BWFLAException {
         try {
             config = (VdeSlirpConfiguration) compConfig;
-            runner.setCommand(vdeslirp_bin);
-            
-            if (config.getIp4Address() != null && !config.getIp4Address().isEmpty()) {
-                runner.addArguments("--host", config.getIp4Address() + "/" + config.getNetmask());
-            }
-            if (config.isDhcpEnabled()) {
-                runner.addArgument("--dhcp");
-            }
-            if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
-                runner.addArguments("--dns", config.getDnsServer());
-            }
-            
+
             // create a vde_switch in hub mode
             // the switch can later be identified using the NIC's MAC address
             String switchName = "nic_" + config.getHwAddress();
@@ -72,8 +61,63 @@ public class VdeSlirpBean extends EaasComponentBean {
             if(!process.start())
                 throw new BWFLAException("Cannot create vde_switch hub for VdeSlirpBean");
             vdeProcesses.add(process);
-            
+
+            runner.setCommand("/libexec/vde/vde_plug");
+            runner.addEnvVariable("LD_LIBRARY_PATH", "/libexec/vde");
             runner.addArguments("-s", this.getWorkingDir().resolve(switchName).toString());
+            runner.addArgument("--");
+
+            runner.addArguments("/libexec/vde/slirp-helper", "--fd", "3");
+
+            String network;
+            String mask;
+            if (config.getNetwork() == null || config.getNetwork().isEmpty()) {
+                throw new BWFLAException("network attribute is mandatory");
+            }
+
+            if(config.getNetwork().contains("/")) {
+                try {
+                    SubnetUtils net = new SubnetUtils(config.getNetwork());
+                    network = net.getInfo().getAddress();
+                    mask = net.getInfo().getNetmask();
+                } catch (IllegalArgumentException e) {
+                    throw new BWFLAException("failed to extract network info from " + config.getNetwork());
+                }
+            } else {
+                 network = config.getNetwork();
+                 mask = config.getNetmask();
+            }
+
+            if(!network.endsWith(".0"))
+                throw new BWFLAException("invalid network: " + network);
+
+            LOG.severe("using " +  network + " " + mask);
+
+            runner.addArguments("--net", network);
+            runner.addArguments("--mask",  mask);
+
+
+            if (config.getGateway() != null)
+                runner.addArguments("--host", config.getGateway());
+
+            if (!config.isDhcpEnabled()) {
+//              0.0.0.0 means disable dhcp
+                runner.addArguments("--dhcp-start", "0.0.0.0");
+            }
+            else {
+                // we assume the full range from 15.
+                String dhcpStart = network.substring(0, network.length() - 2) + "15";
+                runner.addArguments("--dhcp-start", dhcpStart);
+            }
+
+            if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
+                runner.addArguments("--dns", config.getDnsServer());
+            }
+            else
+            {
+                // we have to make sure to set a DNS, as the user might choose a network outside of 10.0.2.x (default)
+                runner.addArguments("--dns", "1.0.0.1");
+            }
             
             if (!runner.start())
                 throw new BWFLAException("Cannot start vdeslirp process");

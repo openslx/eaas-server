@@ -35,7 +35,9 @@ import de.bwl.bwfla.emucomp.api.VolatileResource;
 import de.bwl.bwfla.emucomp.api.XmountOptions;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
+import org.apache.tamaya.inject.api.Config;
 
+import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -61,6 +63,7 @@ public class BindingsManager
 
 	private final Map<String, Binding> bindings;
 	private final Map<String, String> paths;
+	private final String obejctArchiveAddress;
 
 	public enum EntryType
 	{
@@ -89,6 +92,7 @@ public class BindingsManager
 		this.bindings = new HashMap<String, Binding>();
 		this.paths = new LinkedHashMap<String, String>();
 		this.log = log;
+		this.obejctArchiveAddress = ConfigurationProvider.getConfiguration().get("ws.objectarchive");
 	}
 
 	/** Returns all registered bindings: binding's ID -> binding object */
@@ -130,7 +134,7 @@ public class BindingsManager
 			// If the resource is an ArchiveBinding, query the archive
 			// and add all entries from the file collection
 			final ObjectArchiveBinding object = (ObjectArchiveBinding) resource;
-			final ObjectArchiveHelper helper = new ObjectArchiveHelper(object.getArchiveHost());
+			final ObjectArchiveHelper helper = new ObjectArchiveHelper(this.obejctArchiveAddress);
 			final FileCollection fc = helper.getObjectReference(object.getArchive(), object.getId());
 			if (fc == null || fc.id == null || fc.id.isEmpty())
 				throw new BWFLAException("Retrieving object meta data failed!");
@@ -205,6 +209,12 @@ public class BindingsManager
 			throw new BWFLAException("Could not find binding for resource " + binding);
 
 		log.info("Mounting binding '" + binding + "'...");
+
+		if(binding.startsWith("rom-")) // old rom bindings do not have COPY access by default
+		{
+			log.info("guessing resource is a ROM. force COPY access");
+			resource.setAccess(Binding.AccessType.COPY);
+		}
 
 		final XmountOptions xmountOpts = new XmountOptions(outformat);
 		if (resource instanceof VolatileResource) {

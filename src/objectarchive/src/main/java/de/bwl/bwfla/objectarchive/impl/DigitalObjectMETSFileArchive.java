@@ -19,7 +19,9 @@
 
 package de.bwl.bwfla.objectarchive.impl;
 
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 import gov.loc.mets.FileType;
@@ -41,6 +43,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+
 
 public class DigitalObjectMETSFileArchive implements Serializable, DigitalObjectArchive
 {
@@ -58,13 +62,12 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	private HashMap<String, MetsObject> objects;
 
-	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive)
-	{
+	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive) throws BWFLAException {
 		this.name = name;
 		this.metaDataDir = new File(metaDataPath);
 		if(!metaDataDir.exists() && !metaDataDir.isDirectory())
 		{
-			throw new IllegalStateException("METS metadataPath " + metaDataPath + " does not exist");
+			throw new BWFLAException("METS metadataPath " + metaDataPath + " does not exist");
 		}
 		this.dataPath = dataPath;
 		this.defaultArchive = defaultArchive;
@@ -108,10 +111,10 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	}
 
 	@Override
-	public List<String> getObjectList()
-	{	
-		log.severe("getObjectList: " + objects.size());
-		return new ArrayList<>(objects.keySet());
+	public Stream<String> getObjectIds()
+	{
+		return objects.keySet()
+				.stream();
 	}
 
 	@Override
@@ -151,10 +154,21 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 			return null;
 
 		String id = obj.getId();
+		if(id == null)
+			return null;
+
 		String label = obj.getLabel();
 
 		DigitalObjectMetadata md = new DigitalObjectMetadata(id, label, label);
 		return md;
+	}
+
+	@Override
+	public Stream<DigitalObjectMetadata> getObjectMetadata() {
+
+		return this.getObjectIds()
+				.map(this::getMetadata)
+				.filter(Objects::nonNull);
 	}
 
 	@Override

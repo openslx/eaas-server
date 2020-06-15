@@ -37,8 +37,11 @@ public class SlirpComponentRequest extends ComponentRequest {
     @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.2")
     private String ip4Address = "10.0.2.2";
 
-    @XmlElement(required = false, nillable = false, defaultValue = "24")
-    private Integer netmask = 24;
+    @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.1")
+    private String gateway = "10.0.2.1";
+
+    @XmlElement(required = false, nillable = false, defaultValue = "255.255.255.0")
+    private String netmask = "255.255.255.0";
 
     @XmlElement(required = false, nillable = false, defaultValue = "true")
     private boolean dhcp = true;
@@ -70,11 +73,19 @@ public class SlirpComponentRequest extends ComponentRequest {
         this.ip4Address = ip4Address;
     }
 
-    public Integer getNetmask() {
+    public String getGateway() {
+        return gateway;
+    }
+
+    public void setGateway(String gateway) {
+        this.gateway = gateway;
+    }
+
+    public String getNetmask() {
         return netmask;
     }
 
-    public void setNetmask(Integer netmask) {
+    public void setNetmask(String netmask) {
         this.netmask = netmask;
     }
 

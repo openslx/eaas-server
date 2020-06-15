@@ -27,14 +27,13 @@ import javax.activation.DataHandler;
 import javax.ejb.Stateless;
 import javax.inject.Inject;
 import javax.jws.WebService;
-import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
-import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
@@ -100,10 +99,17 @@ public class ImageArchiveWS
 				.deleteMetadata(envId);
 	}
 
+	@Deprecated
 	public String importImageFromUrl(String backend, URL url, ImageArchiveMetadata request) throws BWFLAException
 	{
 		return this.lookup(backend)
 				.importImageFromUrl(url, request);
+	}
+
+	public TaskState importImageFromUrlAsync(String backend, URL url, ImageArchiveMetadata request) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.importImageFromUrlAsync(url, request);
 	}
 
 	@TransactionTimeout(value = 1, unit = TimeUnit.DAYS)
@@ -128,6 +134,17 @@ public class ImageArchiveWS
 	{
 		return this.lookup(backend)
 				.createImage(size, type);
+	}
+
+	public TaskState createImageAsync(String backend, String size, ImageType type, ImageMetadata d) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.createImage(size, type, d);
+	}
+
+	public TaskState getTaskState(String id)
+	{
+		return ImageArchiveRegistry.getState(id);
 	}
 
 	public void updateConfiguration(String backend, String conf) throws BWFLAException
@@ -206,9 +223,14 @@ public class ImageArchiveWS
 				.getNameIndexes();
 	}
 
-	public void addNameIndexesEntry(String backend, Entry entry, Alias alias) throws BWFLAException {
+	public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
 		this.lookup(backend)
 				.addNameIndexesEntry(entry, alias);
+	}
+
+	public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
+		this.lookup(backend)
+				.deleteNameIndexesEntry(id, version);
 	}
 
 	public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {

@@ -10,6 +10,7 @@ import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentWithExternalFilesRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.UviComponentRequest;
+
 import de.bwl.bwfla.emucomp.api.*;
 import org.apache.tamaya.inject.api.Config;
 
@@ -53,6 +54,7 @@ public class UviComponent {
             throw new RuntimeException("Constructing web-services failed!", e);
         }
     }
+
 
     private String autoStartScript(String osId, String filename, String application)
     {

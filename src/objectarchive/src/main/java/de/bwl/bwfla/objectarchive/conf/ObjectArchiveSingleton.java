@@ -33,9 +33,10 @@ import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import org.apache.tamaya.inject.api.Config;
 
@@ -71,6 +72,10 @@ public class ObjectArchiveSingleton
 	@Inject
 	@Config(value="commonconf.serverdatadir")
 	private String serverdatadir;
+
+	@Inject
+	@Config(value="objectarchive.default_archive")
+	private String defaultArchive;
 
 	public static final String tmpArchiveDir = "emil-temp-objects";
 	public static final String tmpArchiveName = "emil-temp-objects";
@@ -135,23 +140,29 @@ public class ObjectArchiveSingleton
 
 		// add mets remote
 		File remoteMetsMd = new File(serverdatadir, remoteMetsObjects);
-		archives.add(new DigitalObjectMETSFileArchive(remoteArchiveName, remoteMetsMd.getAbsolutePath(), null, false));
+		try {
+			archives.add(new DigitalObjectMETSFileArchive(remoteArchiveName, remoteMetsMd.getAbsolutePath(), null, false));
+		}
+		catch (BWFLAException e)
+		{
+			LOG.severe("failed to initialize mets remote archive " + e.getMessage());
+		}
 		
 		ObjectArchiveSingleton.archiveMap = new ConcurrentHashMap<>();
 		for(DigitalObjectArchive a : archives)
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
 			LOG.info("adding object archive" + a.getName());
-			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase("default")) {
-				ObjectArchiveSingleton.archiveMap.put("default", a);
+			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase(defaultArchive)) {
+				ObjectArchiveSingleton.archiveMap.put(defaultArchive, a);
 				LOG.warning("setting archive " + a.getName() + " as default");
 			}
 		}
 
 		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
 		archiveMap.put(_a.getName(), _a);
-		if(!archiveMap.containsKey("default")) {
-			ObjectArchiveSingleton.archiveMap.put("default", _a);
+		if(!archiveMap.containsKey(defaultArchive)) {
+			ObjectArchiveSingleton.archiveMap.put(defaultArchive, _a);
 		}
 	}
 

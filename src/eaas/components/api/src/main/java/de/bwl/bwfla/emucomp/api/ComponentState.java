@@ -19,8 +19,6 @@
 
 package de.bwl.bwfla.emucomp.api;
 
-import org.omg.PortableInterceptor.INACTIVE;
-
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlType;

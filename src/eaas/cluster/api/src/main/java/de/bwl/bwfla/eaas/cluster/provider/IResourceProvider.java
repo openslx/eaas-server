@@ -24,17 +24,19 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 
+import de.bwl.bwfla.eaas.cluster.IDescribable;
 import de.bwl.bwfla.eaas.cluster.ResourceHandle;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.eaas.cluster.dump.IDumpable;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelIndex;
+import de.bwl.bwfla.eaas.cluster.rest.ResourceProviderDescription;
 
 
-public interface IResourceProvider extends IDumpable
+public interface IResourceProvider extends IDumpable, IDescribable<ResourceProviderDescription>
 {
 	public CompletableFuture<ResourceHandle> allocate(UUID allocationId, ResourceSpec spec, boolean scaleup, long timeout, TimeUnit unit);
-	public void release(ResourceHandle handle);
+	public CompletableFuture<ResourceSpec> release(ResourceHandle handle);
 	
 	/** Initiates a proper shutdown of this provider. */
 	public CompletableFuture<Boolean> shutdown();

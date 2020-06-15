@@ -19,7 +19,7 @@
 
 package de.bwl.bwfla.softwarearchive;
 
-import java.util.List;
+import java.util.stream.Stream;
 
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
@@ -28,11 +28,13 @@ import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 /** The internal view on software archive implementation. */
 public interface ISoftwareArchive
 {
+	public boolean hasSoftwarePackage(String id);
 	public boolean addSoftwarePackage(SoftwarePackage software);
 	public int getNumSoftwareSeatsById(String id);
 	public SoftwarePackage getSoftwarePackageById(String id);
-	public List<String> getSoftwarePackages();
+	public Stream<String> getSoftwarePackageIds();
+	public Stream<SoftwarePackage> getSoftwarePackages();
 	public SoftwareDescription getSoftwareDescriptionById(String id);
-	public List<SoftwareDescription> getSoftwareDescriptions();
+	public Stream<SoftwareDescription> getSoftwareDescriptions();
 	public String getName();
 }

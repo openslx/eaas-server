@@ -11,7 +11,7 @@ import java.io.UnsupportedEncodingException;
 import java.util.Date;
 
 public class MachineTokenProvider {
-    private static final String authProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
+    private static String authProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
     private static String apiSecret;
 
     static {
@@ -44,10 +44,31 @@ public class MachineTokenProvider {
         }
     }
 
+    public static String getJwt(String secret)
+    {
+        if(secret == null)
+            return null;
+
+        try {
+            Algorithm algorithm = Algorithm.HMAC256(secret);
+            String token = JWT.create()
+                    .withIssuer("eaas")
+                    .withExpiresAt(new Date(System.currentTimeMillis() + (6 * 60 * 60 * 1000))) // 6h
+                    .sign(algorithm);
+            // System.out.println("Token:"  + token);
+            return "Bearer " + token;
+        } catch (JWTCreationException | UnsupportedEncodingException exception){
+            exception.printStackTrace();
+            return null;
+        }
+    }
+
     public static String getAuthProxy()
     {
         if(authProxy != null && (authProxy.isEmpty() || authProxy.equals("null")))
             return null;
+        if(!authProxy.endsWith("/"))
+            authProxy += "/";
         return authProxy;
     }
 
@@ -55,6 +76,14 @@ public class MachineTokenProvider {
     {
         if( getApiKey() != null && getAuthProxy() != null)
             return "http://jwt:" + getApiKey() + "@" + getAuthProxy();
+        else
+            return null;
+    }
+
+    public static String getProxy()
+    {
+        if( getAuthProxy() != null)
+            return "http://" + getAuthProxy();
         else
             return null;
     }

@@ -78,4 +78,20 @@ public class ImageDescription extends JaxbType
     public String getFstype() {
         return fstype;
     }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public void setType(String type) {
+        this.type = type;
+    }
+
+    public void setFstype(String fstype) {
+        this.fstype = fstype;
+    }
 }

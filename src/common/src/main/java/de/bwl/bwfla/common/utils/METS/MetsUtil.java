@@ -42,6 +42,17 @@ public class MetsUtil {
         }
     }
 
+    public static void initStructMap(Mets mets)
+    {
+        StructMapType usageMap = new StructMapType();
+       // usageMap.setTYPE(MetsEaasContext.USAGE.toString());
+        mets.getStructMap().add(usageMap);
+
+       // StructMapType installMap = new StructMapType();
+       // usageMap.setTYPE(MetsEaasContext.INSTALLATION.toString());
+       //  mets.getStructMap().add(installMap);
+    }
+
     public static Mets createMets(String id, String label)
     {
         Mets metsRoot = new Mets();
@@ -49,6 +60,7 @@ public class MetsUtil {
         metsRoot.setID(id);
         metsRoot.setLabel1(label);
 
+        initStructMap(metsRoot);
         return metsRoot;
     }
 

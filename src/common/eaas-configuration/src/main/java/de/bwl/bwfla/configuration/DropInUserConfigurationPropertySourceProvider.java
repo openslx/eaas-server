@@ -24,6 +24,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -63,13 +64,17 @@ public class DropInUserConfigurationPropertySourceProvider extends BaseConfigura
 			}
 		}
 
+		// Sort paths in lexicographical order
+		locations.sort(Comparator.comparing(URL::getPath));
+		for (URL url : locations)
+			LOG.info("Found drop-in configuration file at '" + url.getPath() + "'");
+
 		return locations.toArray(new URL[0]);
 	}
 
 	private static URL toURL(Path path)
 	{
 		try {
-			LOG.info("Found drop-in configuration file at '" + path.toString() + "'");
 			return path.toUri().toURL();
 		}
 		catch (MalformedURLException exception) {

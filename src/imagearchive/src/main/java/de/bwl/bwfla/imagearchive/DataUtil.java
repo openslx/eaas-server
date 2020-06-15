@@ -31,7 +31,7 @@ public class DataUtil {
 
 	static Logger log = Logger.getLogger("DataUtil");
 
-	static protected void writeData(InputStream inputStream, File destImgFile) throws BWFLAException {
+	public static void writeData(InputStream inputStream, File destImgFile) throws BWFLAException {
 
 
 		try {

@@ -27,12 +27,11 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 import de.bwl.bwfla.objectarchive.impl.*;
 import org.apache.commons.io.FileUtils;
-
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonSyntaxException;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import solutions.emulation.preservica.client.SDBConfiguration;
@@ -45,11 +44,12 @@ public class DigitalObjectArchiveFactory {
 	
 	private static DigitalObjectArchive fromString(String jsonString)
 	{
-		GsonBuilder gson = new GsonBuilder();
-		
+		final ObjectMapper mapper = new ObjectMapper()
+				.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
+
 		// form resulting Description object
 		try {
-			DigitalObjectArchiveDescriptor result = gson.create().fromJson(jsonString, DigitalObjectArchiveDescriptor.class); 
+			DigitalObjectArchiveDescriptor result = mapper.readValue(jsonString, DigitalObjectArchiveDescriptor.class);
 			if(result == null)
 				return null;
 			if(result.getType() == null)
@@ -58,46 +58,48 @@ public class DigitalObjectArchiveFactory {
 			switch(type)
 			{
 			case FILE:
-				DigitalObjectFileArchiveDescriptor d = gson.create().fromJson(jsonString, DigitalObjectFileArchiveDescriptor.class); 
+				DigitalObjectFileArchiveDescriptor d = mapper.readValue(jsonString, DigitalObjectFileArchiveDescriptor.class);
 				if(d == null)
 					return null;
 				
 				return new DigitalObjectFileArchive(d.getName(), d.getLocalPath(), d.isDefaultArchive());
 			case ROSETTA:
-				DigitalObjectRosettaArchiveDescriptor r = gson.create().fromJson(jsonString, DigitalObjectRosettaArchiveDescriptor.class);
+				DigitalObjectRosettaArchiveDescriptor r = mapper.readValue(jsonString, DigitalObjectRosettaArchiveDescriptor.class);
 				if(r == null)
 					return null;
 				return new DigitalObjectRosettaArchive(r.getUrl(), r.isDefaultArchive());
 			case PRESERVICA:
-				DigitalObjectPreservicaArchiveDescriptor p = gson.create().fromJson(jsonString, DigitalObjectPreservicaArchiveDescriptor.class);
+				DigitalObjectPreservicaArchiveDescriptor p = mapper.readValue(jsonString, DigitalObjectPreservicaArchiveDescriptor.class);
 				if(p == null)
 					return null;
 				SDBConfiguration conf = new SDBConfiguration(p.getSdbHost(), p.getUsername(), p.getPassword());
 				return new DigitalObjectPreservicaArchive(p.getName(), conf, p.getCollectionId(), p.isDefaultArchive());
 
 			case USER:
-				DigitalObjectUserArchiveDescriptor u = gson.create().fromJson(jsonString, DigitalObjectUserArchiveDescriptor.class);
+				DigitalObjectUserArchiveDescriptor u = mapper.readValue(jsonString, DigitalObjectUserArchiveDescriptor.class);
 				if(u == null)
 					return null;
 				return new DigitalObjectUserArchive(u.getUser());
 
 			case METS:
-				DigitalObjectMETSFileArchiveDescriptor m = 	gson.create().fromJson(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);
+				DigitalObjectMETSFileArchiveDescriptor m = mapper.readValue(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);
 				if(m == null)
 					return null;
-				return new DigitalObjectMETSFileArchive(m.getName(), m.getMetadataPath(), m.getDataPath(), m.isDefaultArchive());
+				try {
+					return new DigitalObjectMETSFileArchive(m.getName(), m.getMetadataPath(), m.getDataPath(), m.isDefaultArchive());
+				}
+				catch (BWFLAException e)
+				{
+					log.severe("failed to create DigitalObjectMETSFileArchive " + e.getMessage());
+					return null;
+				}
 				
 			default:
 				return null;
 			}
 		}
-		catch (JsonSyntaxException e)
-		{
-			// System.out.println(jsonString);
-			return null;
-		} catch (BWFLAException e) {
-			// TODO Auto-generated catch block
-
+		catch (Exception error) {
+			log.log(Level.SEVERE, "Parsing object-archive's description failed!", error);
 			return null;
 		}
 	}

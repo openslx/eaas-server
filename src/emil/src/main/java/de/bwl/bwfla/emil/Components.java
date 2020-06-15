@@ -60,6 +60,8 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
+import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
+import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
 import de.bwl.bwfla.api.eaas.SessionOptions;
 import de.bwl.bwfla.api.emucomp.Container;
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
@@ -68,15 +70,19 @@ import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.common.services.sse.EventSink;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+
+import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.EventObserver;
 import de.bwl.bwfla.emil.utils.components.ContainerComponent;
@@ -203,6 +209,9 @@ public class Components {
     @AuthenticatedUser
     private UserContext authenticatedUser;
 
+    @Inject
+    private ObjectRepository objectRepository;
+
     /** EaasWS web-service */
     private EaasWS eaas;
 
@@ -278,32 +287,41 @@ public class Components {
         sessionStatsWriter.append(session);
     }
 
-    ComponentResponse createComponent(ComponentRequest request) throws BWFLAException
+    ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
 
-        final TaskStack cleanups = new TaskStack();
+        final TaskStack cleanups = new TaskStack(LOG);
         final List<EventObserver> observer = new ArrayList<>();
 
-        if(request.getClass().equals(UviComponentRequest.class)) {
-            MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest)request);
-            result = createMachineComponent(machineComponentRequest, cleanups, observer);
+        if (request.getClass().equals(UviComponentRequest.class)) {
+            try {
+                MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest) request);
+                result = this.createMachineComponent(machineComponentRequest, cleanups, observer);
+            }
+            catch (BWFLAException error) {
+                throw Components.newInternalError(error);
+            }
         }
         else if (request.getClass().equals(MachineComponentRequest.class)) {
             result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(ContainerComponentRequest.class)) {
             result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(SwitchComponentRequest.class)) {
+            result = this.createSwitchComponent((SwitchComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(NodeTcpComponentRequest.class)) {
+            result = this.createNodeTcpComponent((NodeTcpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SlirpComponentRequest.class)) {
             result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SocksComponentRequest.class)) {
             result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
         }  else {
-            throw new BWFLAException("Invalid component request");
+            throw new BadRequestException("Invalid component request");
         }
 
         final String cid = result.getId();
         final ComponentSession session = new ComponentSession(cid, request, cleanups, observer);
-        cleanups.push("unregister-session/" + cid, () -> this.unregister(session));
+        cleanups.push("unregister-component/" + cid, () -> this.unregister(session));
 
         this.register(session);
 
@@ -327,34 +345,53 @@ public class Components {
      * @HTTP 400 if the request does not contain an environment id
      * @HTTP 400 if the given environment id is invalid or cannot be associated
      *       with an existing environment
+     * @HTTP 429 if backend resources are exhausted or quota limits are reached
      * @HTTP 500 if the backend was not able to instantiate a new component
      * @HTTP 500 if any other internal server error occured
      * 
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public ComponentResponse createComponent(ComponentRequest request,
-                                             @Context final HttpServletResponse response) {
-
-        ComponentResponse result = null;
-        try {
-            result = createComponent(request);
-        } catch (BWFLAException e) {
-            throw new BadRequestException(Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation(e.getMessage()))
-                    .build());
-        }
-
+    public ComponentResponse createComponent(ComponentRequest request, @Context final HttpServletResponse response)
+    {
+        final ComponentResponse result = this.createComponent(request);
         response.setStatus(Response.Status.CREATED.getStatusCode());
         response.addHeader("Location", result.getId());
         return result;
     }
 
-    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createSwitchComponent(SwitchComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
+        try {
+            String switchId = eaasClient.getEaasWSPort(eaasGw).createSession(desc.getConfig().value(false));
+            cleanups.push("release-component/" + switchId, () -> eaas.releaseSession(switchId));
+            return new ComponentResponse(switchId);
+        }
+        catch (Exception error) {
+            cleanups.execute();
+            throw Components.newInternalError(error);
+        }
+    }
+
+    protected ComponentResponse createNodeTcpComponent(NodeTcpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+        throws WebApplicationException {
+        try {
+            String nodeTcpId = eaasClient.getEaasWSPort(eaasGw).createSession(desc.getConfig().value(false));
+            cleanups.push("release-component/" + nodeTcpId, () -> eaas.releaseSession(nodeTcpId));
+            return new ComponentResponse(nodeTcpId);
+        }
+        catch (Exception error) {
+            cleanups.execute();
+            throw Components.newInternalError(error);
+        }
+    }
+
+    protected ComponentResponse createSlirpComponent(SlirpComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException {
         try {
             VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
             
@@ -362,29 +399,36 @@ public class Components {
                 slirpConfig.setHwAddress(desc.getHwAddress());
             }
             if (desc.getIp4Address() != null && !desc.getIp4Address().isEmpty()) {
-                slirpConfig.setIp4Address(desc.getIp4Address());
+                slirpConfig.setNetwork(desc.getIp4Address());
             }
-            if (desc.getNetmask() != null && desc.getNetmask() != 0) {
+            if (desc.getNetmask() != null) {
                 slirpConfig.setNetmask(desc.getNetmask());
             }
+
+            if(desc.getGateway() != null)
+                slirpConfig.setGateway(desc.getGateway());
+
             if (desc.getDnsServer() != null && !desc.getDnsServer().isEmpty()) {
                 slirpConfig.setDnsServer(desc.getDnsServer());
             }
             slirpConfig.setDhcpEnabled(desc.isDhcp());
 
             String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
-            cleanups.push("release-session/" + slirpId, () -> eaas.releaseSession(slirpId));
+            cleanups.push("release-component/" + slirpId, () -> eaas.releaseSession(slirpId));
             return new ComponentResponse(slirpId);
-        } catch (Throwable e) {
+        }
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
-            throw new InternalServerErrorException(
-                    "Server has encountered an internal error: "
-                            + e.getMessage(),
-                    e);
+
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
-    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         try {
             VdeSocksConfiguration socksConfig = new VdeSocksConfiguration();
             
@@ -398,18 +442,21 @@ public class Components {
                 socksConfig.setNetmask(desc.getNetmask());
             }
             String socksId = eaasClient.getEaasWSPort(eaasGw).createSession(socksConfig.value(false));
-            cleanups.push("release-session/" + socksId, () -> eaas.releaseSession(socksId));
+            cleanups.push("release-component/" + socksId, () -> eaas.releaseSession(socksId));
             return new ComponentResponse(socksId);
-        } catch (Throwable e) {
+        }
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
-            throw new InternalServerErrorException(
-                    "Server has encountered an internal error: "
-                            + e.getMessage(),
-                    e);
+
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
-    protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         if (desc.getEnvironment() == null) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -505,20 +552,18 @@ public class Components {
                         .build());
             }
 
-            cleanups.push("release-session/" + sessionId, () -> eaas.releaseSession(sessionId));
+            cleanups.push("release-component/" + sessionId, () -> eaas.releaseSession(sessionId));
 
             Container container = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Container.class);
             container.startContainer(sessionId);
             return new ComponentResponse(sessionId);
         }
-        catch (BWFLAException | JAXBException | IOException error) {
-
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
 
-            throw new InternalServerErrorException(
-                    Response.serverError()
-                            .entity(new ErrorInformation("Server has encountered an internal error: " + error.getMessage()))
-                            .build(), error);
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
@@ -595,7 +640,9 @@ public class Components {
         return binding;
     }
 
-    protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer) {
+    protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer)
+            throws WebApplicationException
+    {
         if (machineDescription.getEnvironment() == null) {
             throw new BadRequestException(Response
                     .status(Response.Status.BAD_REQUEST)
@@ -657,7 +704,7 @@ public class Components {
                 if(rootfs == null)
                     throw new BadRequestException(Response
                             .status(Response.Status.BAD_REQUEST)
-                            .entity(new ErrorInformation("coud not find rootfs "))
+                            .entity(new ErrorInformation("could not find rootfs "))
                             .build());
                 rootfs.setFileSystemType(null);
                 this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
@@ -668,7 +715,10 @@ public class Components {
             }
             else {
                 // Wrap external input files into images
-                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia()) {
+                for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia())
+                {
+                    if(medium == null) // handle old landing-page/UI bug
+                        continue;
 
                     BlobStoreBinding binding = buildExternalFilesMedia(medium, cleanups, numInputImages++);
                     this.addBindingToEnvironment(config, binding, this.toDriveType(medium.getMediumType()));
@@ -680,6 +730,8 @@ public class Components {
             }
 
             Integer driveId = null;
+            // hack: we need to initialize the user archive:
+            objectRepository.archives().list();
             if (machineDescription.getObject() != null) {
                 driveId = addObjectToEnvironment(chosenEnv, machineDescription.getObjectArchive(), machineDescription.getObject());
             } else if (machineDescription.getSoftware() != null) {
@@ -693,6 +745,22 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
+            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs()) {
+                String hwAddress;
+                if (machineDescription.getNic() == null) {
+                    LOG.warning("HWAddress is null! Using random..." );
+                    hwAddress = NetworkUtils.getRandomHWAddress();
+                } else {
+                    hwAddress = machineDescription.getNic();
+                }
+
+                List<Nic> nics = ((MachineConfiguration) chosenEnv).getNic();
+                Nic nic = new Nic();
+                nic.setHwaddress(hwAddress);
+                nics.clear();
+                nics.add(nic);
+            }
+
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
             }
@@ -704,10 +772,12 @@ public class Components {
                         .build());
             }
 
-            cleanups.push("release-session/" + sessionId, () -> eaas.releaseSession(sessionId));
+            cleanups.push("release-component/" + sessionId, () -> eaas.releaseSession(sessionId));
 
             Machine machine = componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Machine.class);
             machine.start(sessionId);
+
+            List<MachineComponentResponse.RemovableMedia> removableMedia = getRemovableMedialist((MachineConfiguration)chosenEnv);
 
             // Register server-sent-event source
             {
@@ -715,16 +785,14 @@ public class Components {
                 observer.add(new EventObserver(srcurl, LOG));
             }
 
-            return new MachineComponentResponse(sessionId, driveId);
+            return new MachineComponentResponse(sessionId, removableMedia);
         }
-        catch (BWFLAException | JAXBException | MalformedURLException e) {
-
+        catch (Exception error) {
+            // Trigger cleanup tasks
             cleanups.execute();
-            e.printStackTrace();
-            throw new InternalServerErrorException(
-            		Response.serverError()
-                    .entity(new ErrorInformation("Server has encountered an internal error: " + e.getMessage()))
-                    .build(),e);
+            LOG.log(Level.SEVERE, "Components create machine failed", error);
+            // Return error to the client...
+            throw Components.newInternalError(error);
         }
     }
 
@@ -771,10 +839,10 @@ public class Components {
 
         if(archiveId == null || archiveId.equals("default"))
         {
-            if(authenticatedUser == null || authenticatedUser.getUsername() == null)
+            if(authenticatedUser == null || authenticatedUser.getUserId() == null)
                 archiveId = "default";
             else
-                archiveId = authenticatedUser.getUsername();
+                archiveId = authenticatedUser.getUserId();
         }
 
         FileCollection fc = objects.getFileCollection(archiveId, objectId);
@@ -818,7 +886,7 @@ public class Components {
      * @documentationType de.bwl.bwfla.emil.datatypes.rest.MachineComponentResponse
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}")
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
@@ -829,7 +897,7 @@ public class Components {
             }
 
             // TODO: find a way to get the correct driveId here
-            return new MachineComponentResponse(componentId, null);
+            return new MachineComponentResponse(componentId, new ArrayList<>());
         } catch (BWFLAException | MalformedURLException e) {
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
@@ -847,18 +915,6 @@ public class Components {
         return true;
     }
 
-    public boolean keepalive(String componentId, boolean ignoreMissing) throws BWFLAException {
-        ComponentSession session = sessions.get(componentId);
-        if(session == null) {
-            if(!ignoreMissing)
-                LOG.info("Component Session null! Should throw instead. " + componentId);
-            return false;
-        }
-
-        session.keepalive();
-        return true;
-    }
-
     /**
      * Sends a keepalive request to the component. Keepalives have to be sent
      * in regular intervals or the component will automatically terminate.
@@ -872,12 +928,14 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
-    @Secured({Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
+        final ComponentSession session = sessions.get(componentId);
+        if (session == null)
+            throw new NotFoundException();
 
         try {
-            keepalive(componentId, false);
+            session.keepalive();
         }
         catch (BWFLAException error) {
             throw new NotFoundException(Response
@@ -900,7 +958,6 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
-    @Secured({Role.PUBLIC})
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
@@ -940,7 +997,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/controlurls")
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
@@ -964,7 +1021,7 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/result")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getResult(@PathParam("componentId") String componentId)
@@ -1006,7 +1063,7 @@ public class Components {
      * @HTTP 408 if no screenshot could be retrieved from the emulator
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/screenshot")
     @Produces("image/png")
     public InputStream screenshot(@PathParam("componentId") String componentId,
@@ -1063,10 +1120,10 @@ public class Components {
      * @HTTP 500 if any error occurs
      */
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/stop")
     @Produces(MediaType.APPLICATION_JSON)
-    public ResultUrl stop(@PathParam("componentId") String componentId,
+    public ProcessResultUrl stop(@PathParam("componentId") String componentId,
                              @Context HttpServletResponse servletResponse) {
         try {
             final ComponentSession session = sessions.get(componentId);
@@ -1076,9 +1133,10 @@ public class Components {
             if (request instanceof MachineComponentRequest) {
                 final Machine machine = componentClient.getMachinePort(eaasGw);
                 String url = machine.stop(componentId);
-                LOG.severe(url);
-                ResultUrl result = new ResultUrl();
-                result.url = url;
+
+                ProcessResultUrl result = new ProcessResultUrl();
+                result.setUrl(url);
+
                 return result;
             }
             else if (request instanceof ContainerComponentRequest) {
@@ -1092,7 +1150,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/downloadPrintJob")
     @Produces("application/pdf")
     public InputStream downloadPrintJob(@PathParam("componentId") String componentId,
@@ -1123,7 +1181,7 @@ public class Components {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/events")
     @Produces(MediaType.SERVER_SENT_EVENTS)
     public void events(@PathParam("componentId") String componentId, @Context SseEventSink sink, @Context Sse sse)
@@ -1132,15 +1190,19 @@ public class Components {
         if (session == null)
             throw new NotFoundException("Session not found: " + componentId);
 
-        if (session.hasEventSink())
-            throw new BadRequestException("An event-sink is already registered!");
-
-        LOG.warning("Start forwarding server-sent-events for session " + componentId);
-        session.setEventSink(sink, sse);
+        if (session.hasEventSink()) {
+            LOG.info("An event-sink is already registered! Updating...");
+            session.getEventSink()
+                    .reset(sink, sse);
+        }
+        else {
+            LOG.warning("Start forwarding server-sent-events for session " + componentId);
+            session.setEventSink(sink, sse);
+        }
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/printJobs")
     @Produces(MediaType.APPLICATION_JSON)
     public List<String> printJobs(@PathParam("componentId") String componentId) {
@@ -1167,7 +1229,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/snapshot")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1183,7 +1245,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/checkpoint")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1200,7 +1262,7 @@ public class Components {
      * @return A JSON response containing the result message.
      */
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/changeMedia")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
@@ -1256,7 +1318,7 @@ public class Components {
      * @param componentId The component's ID to release.
      */
     @DELETE
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}")
     public void releaseComponent(@PathParam("componentId") String componentId) {
         ComponentSession session = sessions.get(componentId);
@@ -1272,7 +1334,58 @@ public class Components {
     }
 
 
+    private List<MachineComponentResponse.RemovableMedia> getRemovableMedialist(MachineConfiguration env)
+    {
+        List<MachineComponentResponse.RemovableMedia> result = new ArrayList<>();
+        for(AbstractDataResource binding : env.getAbstractDataResource()) {
+            if (!(binding instanceof ObjectArchiveBinding))
+                continue;
+
+            ObjectArchiveBinding objectArchiveBinding = (ObjectArchiveBinding) binding;
+            int driveIndex = EmulationEnvironmentHelper.getDriveId(env, objectArchiveBinding.getObjectId());
+            Drive d = EmulationEnvironmentHelper.getDrive(env, driveIndex);
+            if (d == null) {
+                LOG.warning("could not resolve drive for objectId: " + objectArchiveBinding.getObjectId());
+                continue;
+            }
+
+            if (d.getType() != Drive.DriveType.FLOPPY && d.getType() != Drive.DriveType.CDROM)
+            {
+                LOG.warning("unsupported drive type: " + d.getType().value() + " for objectId " + objectArchiveBinding.getObjectId());
+                continue;
+            }
+
+            MachineComponentResponse.RemovableMedia rm = new MachineComponentResponse.RemovableMedia();
+            rm.setArchive(objectArchiveBinding.getArchive());
+            rm.setDriveIndex(driveIndex + "");
+            rm.setId(objectArchiveBinding.getObjectId());
+            result.add(rm);
+        }
+        return result;
+    }
+
     /* ==================== Internal Helpers ==================== */
+
+    static WebApplicationException newInternalError(Exception error)
+    {
+        Response.Status status = null;
+        String message = null;
+
+        if (error instanceof OutOfResourcesException_Exception || error instanceof QuotaExceededException_Exception) {
+            status = Response.Status.TOO_MANY_REQUESTS;
+            message = "RESOURCES-EXHAUSTED-ERROR: " + error.getMessage();
+        }
+        else {
+            status = Response.Status.INTERNAL_SERVER_ERROR;
+            message = "INTERNAL-SERVER-ERROR: " + error.getMessage();
+        }
+
+        final Response response = Response.status(status)
+                .entity(new ErrorInformation(message))
+                .build();
+
+        return new WebApplicationException(error, response);
+    }
 
     private Snapshot createSnapshot(String componentId, boolean checkpoint)
             throws BWFLAException, InterruptedException, JAXBException
@@ -1378,75 +1491,6 @@ public class Components {
         return System.currentTimeMillis();
     }
 
-    public static class TaskStack
-    {
-        private final Deque<Task> tasks = new ArrayDeque<>();
-
-        public void push(String name, Runnable task)
-        {
-            this.push(new Task(name, task));
-        }
-
-        public void push(Task task)
-        {
-            tasks.push(task);
-        }
-
-        public Task pop()
-        {
-            return tasks.pop();
-        }
-
-        public boolean isEmpty()
-        {
-            return tasks.isEmpty();
-        }
-
-        public boolean execute()
-        {
-            boolean result = true;
-            while (!this.isEmpty())
-                result = result && this.pop().run();
-
-            return result;
-        }
-
-        public static class Task
-        {
-            private final String name;
-            private final Runnable runnable;
-
-            private Task(String name, Runnable runnable)
-            {
-                this.name = name;
-                this.runnable = runnable;
-            }
-
-            public String name()
-            {
-                return name;
-            }
-
-            public Runnable runnable()
-            {
-                return runnable;
-            }
-
-            public boolean run()
-            {
-                LOG.log(Level.WARNING, "Running task '" + name + "'...");
-                try {
-                    runnable.run();
-                    return true;
-                }
-                catch (Exception error) {
-                    LOG.log(Level.WARNING, "Running task '" + name + "' failed!\n", error);
-                    return false;
-                }
-            }
-        }
-    }
-
     private class ComponentSession
     {
         private final AtomicLong keepaliveTimestamp;
@@ -1509,10 +1553,10 @@ public class Components {
 //            }
 
             // Run all tasks in reverse order
-            LOG.info("Releasing session '" + id + "'...");
+            LOG.info("Releasing component '" + id + "'...");
             if (tasks.execute())
-                LOG.info("Session '" + id + "' released");
-            else LOG.log(Level.WARNING, "Releasing session '" + id + "' failed!");
+                LOG.info("Component '" + id + "' released");
+            else LOG.log(Level.WARNING, "Releasing component '" + id + "' failed!");
         }
 
         public String getId()

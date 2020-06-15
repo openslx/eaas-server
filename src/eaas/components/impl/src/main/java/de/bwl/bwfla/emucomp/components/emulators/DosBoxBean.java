@@ -143,9 +143,8 @@ public class DosBoxBean extends EmulatorBean {
 	}
 
 	@Override
-	public boolean connectDrive(Drive drive, boolean attach) {
-		LOG.warning("Hotplug is not supported by this emulator.");
-		return false;
+	public boolean connectDrive(Drive drive, boolean attach) throws BWFLAException {
+		throw this.newNotSupportedException();
 	}
 
 	@Override
@@ -183,9 +182,8 @@ public class DosBoxBean extends EmulatorBean {
 	}
 
 	@Override
-	protected boolean addNic(Nic nic) {
-		LOG.warning("Network connection is currently not implemented.");
-		return false;
+	protected boolean addNic(Nic nic) throws BWFLAException {
+		throw this.newNotImplementedException();
 	}
 
 	private String addQuotes(String s){

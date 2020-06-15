@@ -21,23 +21,27 @@ package de.bwl.bwfla.objectarchive.impl;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
-import javax.activation.DataHandler;
-import javax.activation.FileDataSource;
 import javax.inject.Inject;
 
+
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
-import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
@@ -185,6 +189,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			case FLOPPY:
 				targetDir = targetDir.resolve("floppy");
 				break;
+			case DISK:
+				targetDir = targetDir.resolve("disk");
+				break;
 			default:
 				throw new BWFLAException("unsupported type " + type);
 		}
@@ -281,33 +288,46 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		writeMetsFile(m);
 	}
 
-	public List<String> getObjectList()
-	{	
-		List<String> objects = new ArrayList<String>();
-		
-		File objectDir = new File(localPath);
-		if(!objectDir.exists() && !objectDir.isDirectory())
-		{
-			log.info("objectDir " + localPath + " does not exist");
-			return objects;
+	@Override
+	public Stream<String> getObjectIds()
+	{
+		final Path basepath = this.getLocalPath();
+		if (!Files.exists(basepath)) {
+			log.warning("No object-archive exists at " + basepath.toString() + "!");
+			return Stream.empty();
 		}
 
-		for(File dir: objectDir.listFiles())
-		{
-			if(dir != null && !dir.isDirectory())
-				continue;
+		try {
+			final Function<Path, String> mapper = (path) -> {
+				try {
+					return new ObjectFileManifestation(objectFileFilter, path.toFile())
+							.getId();
+				}
+				catch (BWFLAException error) {
+					final String name = path.getFileName().toString();
+					log.log(Level.WARNING, "Parsing object '" + name + "' failed!", error);
+					return null;
+				}
+			};
 
-			ObjectFileManifestation mf = null;
-			try {
-				mf = new ObjectFileManifestation(objectFileFilter, dir);
-			} catch (BWFLAException e) {
-				log.log(Level.WARNING, e.getMessage(), e);
-			}
-
-			if(!mf.isEmpty())
-				objects.add(mf.getId());
+			final DirectoryStream<Path> files = Files.newDirectoryStream(basepath);
+			return StreamSupport.stream(files.spliterator(), false)
+					.filter((path) -> Files.isDirectory(path))
+					.map(mapper)
+					.filter(Objects::nonNull)
+					.onClose(() -> {
+						try {
+							files.close();
+						}
+						catch (Exception error) {
+							log.log(Level.WARNING, "Closing directory-stream failed!", error);
+						}
+					});
 		}
-		return objects;
+		catch (Exception exception) {
+			log.log(Level.SEVERE, "Reading object-archive's directory failed!", exception);
+			return Stream.empty();
+		}
 	}
 
 	private boolean objectExits(String objectId)
@@ -374,9 +394,16 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 				throw new BWFLAException("invalid file entry type");
 
 			String url = Paths.get(localPath).relativize(targetDir).toString();
-			log.warning(" local path url " + url);
+
 			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQID(): null;
 			properties.deviceId = entry.getType() != null ? entry.getType().toQID() : null;
+
+			String fileName = entry.getLocalAlias();
+			if (fileName == null || fileName.isEmpty())
+				fileName = entry.getId();
+			url += "/" + fileName;
+
+			log.warning(" local path url " + url);
 
 			MetsUtil.addFile(m, url, properties);
 		}
@@ -452,7 +479,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	public Path getLocalPath()
 	{
-		return new File(localPath).toPath();
+		return Paths.get(localPath);
 	}
 	
 	@Override
@@ -583,6 +610,24 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		}
 		MetsObject mets = new MetsObject(metsPath.toFile());
 		return mets;
+	}
+
+	@Override
+	public Stream<DigitalObjectMetadata> getObjectMetadata() {
+
+		final Function<String, DigitalObjectMetadata> mapper = (id) -> {
+			try {
+				return this.getMetadata(id);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Reading object's metadata failed!", error);
+				return null;
+			}
+		};
+
+		return this.getObjectIds()
+				.map(mapper)
+				.filter(Objects::nonNull);
 	}
 
 	@Override

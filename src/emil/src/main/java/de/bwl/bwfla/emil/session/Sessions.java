@@ -19,11 +19,15 @@
 
 package de.bwl.bwfla.emil.session;
 
-import de.bwl.bwfla.eaas.client.ComponentGroupClient;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.*;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emil.session.rest.DetachRequest;
+import de.bwl.bwfla.emil.session.rest.RunningNetworkEnvironmentResponse;
+import de.bwl.bwfla.emil.session.rest.SessionComponent;
+import de.bwl.bwfla.emil.session.rest.SessionResponse;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
@@ -37,6 +41,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
+import java.net.URI;
 import java.time.Duration;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
@@ -60,15 +65,13 @@ public class Sessions
 	private ComponentClient componentClient;
 
 	@Inject
-	private ComponentGroupClient groupClient;
-
-	@Inject
 	@Config(value = "ws.eaasgw")
 	private String eaasGw;
 
 	@Inject
 	@Config("components.client_timeout")
 	private Duration resourceExpirationTimeout;
+
 
 	/* ========================= Public API ========================= */
 
@@ -86,9 +89,10 @@ public class Sessions
 
 	@DELETE
 	@Path("/{id}")
+	@Secured(roles = {Role.RESTRCITED})
 	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
 	{
-		sessions.unregister(id);
+		sessions.remove(id);
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
@@ -103,10 +107,10 @@ public class Sessions
 
 	@DELETE
 	@Consumes(MediaType.APPLICATION_JSON)
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/resources")
 	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
 	{
-		System.out.println("delete");
 		sessions.remove(id, resources);
 		response.setStatus(Response.Status.OK.getStatusCode());
 	}
@@ -135,6 +139,7 @@ public class Sessions
 	@POST
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Produces(MediaType.APPLICATION_JSON)
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/detach")
 	public void setLifetime(@PathParam("id") String id, DetachRequest request, @Context final HttpServletResponse response)
 	{
@@ -143,24 +148,81 @@ public class Sessions
 	}
 
 	@POST
-	@Secured({Role.PUBLIC})
+	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/keepalive")
 	public void keepalive(@PathParam("id") String id) {
-		final Session session = sessions.get(id);
-		if (session == null) {
+		if (!sessions.keepalive(id)) {
 			throw new NotFoundException(Response.status(Response.Status.NOT_FOUND)
 					.entity(new ErrorInformation("Session not found!", "Session-ID: " + id))
 					.build());
 		}
-		sessions.keepAlive(session, null);
 	}
 
 	@GET
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
-	public Collection<Session> list()
-	{
+	public Collection<Session> list() {
 		return sessions.list();
 	}
+
+	@GET
+	@Secured(roles = {Role.PUBLIC})
+	@Path("/network-environments")
+	@Produces(MediaType.APPLICATION_JSON)
+	public List<RunningNetworkEnvironmentResponse> getSessionsWithNetworkEnvID() {
+		ArrayList<RunningNetworkEnvironmentResponse> builder = new ArrayList<>();
+		for (Session session : sessions.list()) {
+			if (session instanceof NetworkSession) {
+				final SessionResponse result = new SessionResponse(((NetworkSession) session).getNetworkRequest());
+				builder.add(new RunningNetworkEnvironmentResponse(session, result.getNetwork().getNetworkEnvironmentId()));
+			}
+		}
+		return builder;
+	}
+
+	@GET
+	@Secured(roles = {Role.PUBLIC})
+	@Path("/{id}")
+	public SessionResponse listComponents(@PathParam("id") String id) {
+		try {
+			Session session = sessions.get(id);
+			if(session == null || !(session instanceof NetworkSession))
+				throw new BWFLAException("session not found " + id);
+
+			SessionResponse result = new SessionResponse(((NetworkSession) session).getNetworkRequest());
+			for (de.bwl.bwfla.emil.session.SessionComponent component : session.components()) {
+
+				String type = componentClient.getComponentPort(eaasGw).getComponentType(component.id());
+				if(type.equals("nodetcp")) {
+					NetworkResponse networkResponse = new NetworkResponse(session.id());
+
+					Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(component.id()));
+
+					URI uri = controlUrls.get("info");
+					if(uri == null)
+						continue;
+					String nodeInfoUrl = uri.toString();
+					networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
+					SessionComponent sc = new SessionComponent(component.id(), type, null);
+					sc.addNetworkData(networkResponse);
+
+				} else if (type.equals("machine")){
+                    String environmentId = componentClient.getComponentPort(eaasGw).getEnvironmentId(component.id());
+                    result.add(new SessionComponent(component.id(), type, environmentId));
+				} else
+					result.add(new SessionComponent(component.id(), type, null));
+			}
+			return result;
+		} catch (BWFLAException e) {
+			e.printStackTrace();
+			throw new ServerErrorException(Response
+					.status(Response.Status.INTERNAL_SERVER_ERROR)
+					.entity(new ErrorInformation(
+							"Could not acquire group information.", e.getMessage()))
+					.build());
+		}
+	}
+
 
 	/* ========================= Internal Helpers ========================= */
 

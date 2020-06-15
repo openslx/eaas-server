@@ -2,6 +2,8 @@ package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.BwflaFileInputStream;
+import de.bwl.bwfla.common.utils.METS.MetsUtil;
+
 import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -79,9 +81,51 @@ public class MetsObject {
         return out;
     }
 
+    private static boolean containsId(List <DivType.Fptr> fptrs, String fileId)
+    {
+        for(DivType.Fptr fptr : fptrs)
+        {
+            if(fptr.getFILEID().equals(fileId))
+                return true;
+        }
+        return false;
+    }
+
+    private void setStructInfo(ObjectFile of)
+    {
+        List<StructMapType> listStructMap = metsRoot.getStructMap();
+        for (StructMapType struct : listStructMap) {
+
+            DivType div = struct.getDiv();
+            if (div == null)
+                continue;
+
+            List<DivType> divlist = div.getDiv();
+            for (DivType _div : divlist) {
+                List <DivType.Fptr> fptrs = _div.getFptr();
+                if(!containsId(fptrs, of.id))
+                    continue;
+
+                String label = _div.getLabel3();
+                BigInteger order = _div.getORDER();
+
+                of.label = label;
+                if(order != null)
+                    of.order = order.toString();
+                return;
+            }
+        }
+    }
+
     private void init() {
         metsContextMap = new HashMap<>();
         objectFiles = new HashMap<>();
+
+        List<StructMapType> listStructMap = metsRoot.getStructMap();
+        if(listStructMap == null || listStructMap.size() == 0)
+        {
+            MetsUtil.initStructMap(metsRoot);
+        }
 
 //        List<StructMapType> listStructMap = metsRoot.getStructMap();
 //        for (StructMapType struct : listStructMap) {
@@ -120,12 +164,15 @@ public class MetsObject {
                         ObjectFile of = new ObjectFile();
                         getFileLocation(of, file);
                         setTypeInfo(of, file);
+                        of.id = file.getID();
+
+                        setStructInfo(of);
 
                         if(file.getSIZE() != null)
                             of.size = file.getSIZE();
-                        of.id = file.getID();
+
                         objectFiles.put(of.id, of);
-                        log.info(of.toString());
+                        // log.info(of.toString());
                     }
                     catch (MetsObjectMetadataException e)
                     {
@@ -371,8 +418,13 @@ public class MetsObject {
             log.warning("adding fc: " + url + " of.id" + of.id );
             FileCollectionEntry fce = new FileCollectionEntry(url, t, of.id);
             fce.setResourceType(rt);
+
+            if(of.label != null)
+                fce.setLabel(of.label);
+
             if(of.filename != null)
                 fce.setLocalAlias(of.filename);
+
             c.files.add(fce);
         }
         try {
@@ -424,11 +476,17 @@ public class MetsObject {
         String id;
         String filename;
 
+        String label;
+        String order;
+
         public String toString() {
             String out = "fileId: " + id + "\n";
             out += "filetype: " + fileType + "\n";
             out += "mediumtype " + mediumType + "\n";
             out += "size: " + size + "\n";
+            out += "label: " + label + "\n";
+            out += "order: " + order + "\n";
+
             for (String loc : fileLocations)
             {
                 out += "loc: " + loc + "\n";

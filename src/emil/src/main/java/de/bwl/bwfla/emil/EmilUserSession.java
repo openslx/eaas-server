@@ -2,28 +2,26 @@ package de.bwl.bwfla.emil;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.JsonBuilder;
-import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment;
 import de.bwl.bwfla.emil.datatypes.UserSessionResponse;
 import de.bwl.bwfla.emil.datatypes.UserSessions;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emucomp.api.AbstractDataResource;
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
-import de.bwl.bwfla.emucomp.api.MachineConfiguration;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonArrayBuilder;
+import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.util.List;
 
@@ -45,7 +43,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @Path("delete")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete(@QueryParam("sessionId") String id) {
@@ -63,7 +61,7 @@ public class EmilUserSession extends EmilRest {
 
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/list")
     @Produces(MediaType.APPLICATION_JSON)
     public Response userSessionList()
@@ -72,40 +70,37 @@ public class EmilUserSession extends EmilRest {
 
         sessions = userSessions.toList();
         try {
-            JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-            json.beginObject();
-            json.add("status", "0");
-            json.name("environments");
-            json.beginArray();
-
+            final JsonArrayBuilder environments = Json.createArrayBuilder();
             for (EmilSessionEnvironment emilenv : sessions) {
-                if(!emilenv.isVisible())
+                if(!emilEnvRepo.isEnvironmentVisible(emilenv))
                     continue;
 
-                json.beginObject();
-                json.add("title", emilenv.getTitle());
-                json.add("envId", emilenv.getEnvId());
-                json.add("objectId", emilenv.getObjectId());
-                json.add("archiveId", emilenv.getObjectArchiveId());
-                json.add("userId", emilenv.getUserId());
-                json.add("creationDate", emilenv.getCreationDate() + "");
-                json.endObject();
+                final JsonObjectBuilder environment = Json.createObjectBuilder()
+                        .add("title", emilenv.getTitle())
+                        .add("envId", emilenv.getEnvId())
+                        .add("objectId", emilenv.getObjectId())
+                        .add("archiveId", emilenv.getObjectArchiveId())
+                        .add("userId", emilenv.getUserId())
+                        .add("creationDate", emilenv.getCreationDate() + "");
+
+                environments.add(environment);
             }
 
-            json.endArray();
-            json.endObject();
-            json.finish();
+            final JsonObject json = Json.createObjectBuilder()
+                    .add("status", "0")
+                    .add("environments", environments)
+                    .build();
 
             return Emil.createResponse(Response.Status.OK, json.toString());
         }
-        catch(IOException e)
+        catch(Exception e)
         {
             return Emil.internalErrorResponse(e);
         }
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @Path("/session")
     @Produces(MediaType.APPLICATION_JSON)
     public UserSessionResponse getUserSession(@QueryParam("userId") String userId, @QueryParam("objectId") String objectId) {

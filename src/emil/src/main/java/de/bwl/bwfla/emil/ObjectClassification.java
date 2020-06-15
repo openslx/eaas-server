@@ -3,15 +3,15 @@ package de.bwl.bwfla.emil;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.EnvironmentInfo;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.OverrideCharacterizationRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.rest.ClientClassificationRequest;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
-import de.bwl.bwfla.emil.datatypes.security.AuthenticatedUser;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
-import de.bwl.bwfla.emil.datatypes.security.UserContext;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ClassificationTask;
 import de.bwl.bwfla.emucomp.api.FileCollection;
@@ -99,7 +99,7 @@ public class ObjectClassification {
     }
 
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @POST
     @Path("/overrideObjectCharacterization")
     @Produces(MediaType.APPLICATION_JSON)
@@ -116,7 +116,7 @@ public class ObjectClassification {
         }
     }
 
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @POST
     @Produces(MediaType.APPLICATION_JSON)
     @Path("/")
@@ -160,7 +160,7 @@ public class ObjectClassification {
         request.userCtx = null;
 
         if(authenticatedUser != null)
-            request.userCtx = authenticatedUser.getUsername();
+            request.userCtx = authenticatedUser.getUserId();
 
         return taskManager.submitTask(new ClassificationTask(request));
     }
@@ -181,7 +181,7 @@ public class ObjectClassification {
         request.userCtx = null;
 
         if(authenticatedUser != null)
-            request.userCtx = authenticatedUser.getUsername();
+            request.userCtx = authenticatedUser.getUserId();
 
         if(!forceCharacterization || noUpdate)
             try {
@@ -191,6 +191,15 @@ public class ObjectClassification {
         return taskManager.submitTask(new ClassificationTask(request));
     }
 
+    public ClassificationResult getCachedEnvironmentsForObject(String objectId)
+    {
+        try {
+            return load(objectId);
+        } catch (NoSuchElementException e) {
+            LOG.severe("no classification data found");
+            return new ClassificationResult();
+        }
+    }
 
     private void setCachedEnvironmentsForObject(String objectId, List<EnvironmentInfo> environments, String userDescription)
             throws BWFLAException {
@@ -199,7 +208,7 @@ public class ObjectClassification {
         try {
             result = load(objectId);
         } catch (NoSuchElementException e) {
-            result = new ClassificationResult();
+            result = new ClassificationResult(objectId);
         }
 
         result.setEnvironmentList(environments);

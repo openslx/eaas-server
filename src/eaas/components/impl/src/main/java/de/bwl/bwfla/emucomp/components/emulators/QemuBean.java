@@ -12,8 +12,6 @@ import java.util.Set;
 
 import javax.inject.Inject;
 
-import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
@@ -52,7 +50,7 @@ public class QemuBean extends EmulatorBean
 	}
 
 	public enum QEMU_ARCH {
-		x86_64, ppc, i386
+		x86_64, ppc, i386, sparc,
 	}
 
 	private boolean isValidQemuArch(String qemuArch) {
@@ -105,21 +103,20 @@ public class QemuBean extends EmulatorBean
 
 				if(token.contains("-enable-kvm"))
 				{
-					try{
-						if(!kvmCheck())
-							continue;
-
-						super.isKvmDeviceEnabled = true;
-					}
-					catch(Exception e)
-					{
-						LOG.info(e.getMessage());
+					if (!this.runKvmCheck()) {
+						LOG.warning("KVM device is required, but not available!");
 						continue;
 					}
+
+					super.isKvmDeviceEnabled = true;
 				}
 
 				if(token.contains("nic,model="))
-					token += ",macaddr=" + NetworkUtils.getRandomHWAddress();
+					token += ",macaddr=" + emuEnvironment.getNic().get(0).getHwaddress();
+
+				if(emuEnvironment.getNic().size() > 1){
+					throw new BWFLAException("We do not support multiple hwAddresses ... yet");
+				}
 
 				emuRunner.addArgument(token.trim());
 			}
@@ -129,19 +126,25 @@ public class QemuBean extends EmulatorBean
 			emuRunner.addArgument("-full-screen");
 		}
 		else if (this.isSdlBackendEnabled()) {
-			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 			emuRunner.addArguments("-k", "en-us");
+			if (this.isPulseAudioEnabled())
+				emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
+			else emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 		} else if (this.isXpraBackendEnabled()){
 			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 		}
 
-		final Path printerOutput = this.getDataDir().resolve("print").resolve("printer.out");
-		emuContainerFilesToCheckpoint.add(printerOutput.toString());
-		emuRunner.addArgument("-chardev");
-		emuRunner.addArgument("file",",id=char0",",path=" + printerOutput.toString());
-		emuRunner.addArguments("-parallel","chardev:char0");
+		// Qemu's pipe-based character-device requires two pipes (<name>.in + <name>.out) to be created
+		final String printerFileName = "parallel-port";
+		final Path printerBasePath = this.getPrinterDir().resolve(printerFileName);
+		final Path printerOutPath = this.getPrinterDir().resolve(printerFileName + ".out");
+		PostScriptPrinter.createUnixPipe(printerBasePath.toString() + ".in");
+		PostScriptPrinter.createUnixPipe(printerOutPath.toString());
 
-		printer = new PostScriptPrinter(printerOutput, this);
+		// Configure printer device
+		super.printer = new PostScriptPrinter(printerOutPath, this, LOG);
+		emuRunner.addArguments("-chardev", "pipe,id=printer,path=" + printerBasePath.toString());
+		emuRunner.addArguments("-parallel", "chardev:printer");
 	}
 
 	@Override
@@ -180,19 +183,19 @@ public class QemuBean extends EmulatorBean
 				break;
 
 			case DISK:
-				// FIXME
-				// we should come up with a better way of separating qemu binaries
-				if (!qemu_bin.contains("ppc")) {
-					emuRunner.addArgument("-drive");
-					emuRunner.addArgument("file=", imagePath.toString(),
-							",if=", drive.getIface(),
-							",bus=", drive.getBus(),
-							",unit=", drive.getUnit(),
-							",media=disk");
-				} else {
-					emuRunner.addArgument("-drive");
-					emuRunner.addArgument("file=", imagePath.toString());
+				emuRunner.addArgument("-drive");
+				String fileArgument= "file=" + imagePath.toString();
+				if(drive.getIface()!= null && !drive.getIface().isEmpty())
+				{
+					fileArgument += ",if=" + drive.getIface();
+					if(drive.getIface().equalsIgnoreCase("ide"))
+					{
+						fileArgument += ",bus=" + drive.getBus() + ",unit=" + drive.getUnit();
+					}
 				}
+				fileArgument += ",media=disk";
+				emuRunner.addArgument(fileArgument);
+
 				if (drive.isBoot())
 					emuRunner.addArguments("-boot", "order=c");
 
@@ -200,7 +203,7 @@ public class QemuBean extends EmulatorBean
 
 			case CDROM:
 
-				if (!qemu_bin.contains("ppc")) {
+				if (!qemu_bin.contains("ppc") && !qemu_bin.contains("sparc")) {
 					emuRunner.addArgument("-drive");
 					emuRunner.addArgument("file=", imagePath.toString(), ",if=", drive.getIface(),
 							",bus=", drive.getBus(),
@@ -414,34 +417,40 @@ public class QemuBean extends EmulatorBean
 			}
 	}
 
-	private boolean kvmCheck() throws IOException, BWFLAException
+	private boolean runKvmCheck() throws BWFLAException
 	{
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner("kvm-ok");
+		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner("kvm-ok");
 		runner.redirectStdErrToStdOut(false);
-		if(!runner.execute(false, false))
-			throw new BWFLAException(runner.getStdErrString());
+		runner.setLogger(LOG);
+		try {
+			if (!runner.execute(false, false)) {
+				runner.printStdOut();
+				runner.printStdErr();
+				return false;
+			}
 
-		boolean isKvmAvailable = false;
-
-		if (runner.getStdOutString().contains("KVM acceleration can be used")) {
-		isKvmAvailable = true;
+			return runner.getStdOutString()
+					.contains("KVM acceleration can be used");
 		}
-
-		runner.cleanup();
-		return isKvmAvailable;
+		catch (IOException error) {
+			throw new BWFLAException("Reading kvm-ok output failed!", error);
+		}
+		finally {
+			runner.cleanup();
+		}
 	}
 
 	private String fmtDate(long epoch)
 	{
 		Date d = new Date(epoch);
-		DateFormat format = new SimpleDateFormat("YYYY-MM-DD'T'hh:mm:ss"); // 2006-06-17T16:01:21
+		DateFormat format = new SimpleDateFormat("YYYY-MM-dd'T'hh:mm:ss"); // 2006-06-17T16:01:21
 		String formatted = format.format(d);
 		return formatted;
 	}
 
 	protected void setEmulatorTime(long epoch)
 	{
-		// LOG.info("set emulator time: "  + epoch + " " + "fmtStr" + fmtDate(epoch));
+		LOG.info("set emulator time: "  + epoch + " " + "fmtStr" + fmtDate(epoch));
 		emuRunner.addArgument("-rtc");
 		emuRunner.addArgument("base="+fmtDate(epoch));
 	}

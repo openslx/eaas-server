@@ -20,7 +20,6 @@
 package de.bwl.bwfla.eaas.cluster.provider;
 
 import java.io.IOException;
-import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -68,6 +67,8 @@ import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeAllocatorBLADES;
 import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeAllocatorGCE;
 import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeAllocatorJCLOUDS;
 import de.bwl.bwfla.eaas.cluster.provider.iaas.NodeNameGenerator;
+import de.bwl.bwfla.eaas.cluster.rest.NodePoolDescription;
+import de.bwl.bwfla.eaas.cluster.rest.ResourceProviderDescription;
 
 
 public class ResourceProvider implements IResourceProvider
@@ -250,19 +251,22 @@ public class ResourceProvider implements IResourceProvider
 	}
 	
 	@Override
-	public void release(ResourceHandle handle)
+	public CompletableFuture<ResourceSpec> release(ResourceHandle handle)
 	{
 		if (handle == null)
 			throw new IllegalArgumentException();
-		
+
+		CompletableFuture<ResourceSpec> result = new CompletableFuture<>();
+
 		Runnable task = () -> {
-			resources.release(handle);
+			result.complete(resources.release(handle));
 			log.info("Resources for allocation " + handle.getAllocationID() + " released");
 			log.info("Resources from " + resources.getNumAllocations() + " allocation(s) still reserved");
 			this.processDeferredAllocations();
 		};
 		
 		this.submit(PRIORITY_RELEASE, task);
+		return result;
 	}
 	
 	@Override
@@ -309,7 +313,40 @@ public class ResourceProvider implements IResourceProvider
 	{
 		return metrics;
 	}
-	
+
+	@Override
+	public ResourceProviderDescription describe(boolean detailed)
+	{
+		final Callable<ResourceProviderDescription> trigger = () -> {
+			final NodePoolDescription npdesc = new NodePoolDescription()
+					.setCapacity(pool.getCapacity())
+					.setPendingResources(pool.getPendingResources())
+					.setFreeResources(resources.getFreeResources());
+
+			if (detailed) {
+				npdesc.setNumNodesUnhealthy(pool.getNumUnhealthyNodes())
+						.setNumNodesUnused(pool.getNumUnusedNodes())
+						.setNodes(resources.describe(detailed));
+			}
+
+			return new ResourceProviderDescription(this.getName(), config.getType())
+					.setNumRequestsTotal(metrics.getNumRequests())
+					.setNumRequestsDeferred(metrics.getNumRequestsDeferred())
+					.setNumRequestsExpired(metrics.getNumRequestsExpired())
+					.setNumRequestsFailed(metrics.getNumRequestsFailed())
+					.setNodePool(npdesc);
+		};
+
+		try {
+			return executor.submit(trigger)
+					.get();
+		}
+		catch (Exception exception) {
+			log.log(Level.SEVERE,"Describing resource provider failed!", exception);
+			return null;
+		}
+	}
+
 	
 	/** Exposed provider's metrics */
 	public static interface Metrics
@@ -321,7 +358,7 @@ public class ResourceProvider implements IResourceProvider
 	}
 	
 	
-	/* ========== Admin REST-API ========== */
+	/* ========== Debug REST-API ========== */
 	
 	@Override
 	public void dump(JsonGenerator json, DumpConfig dconf, int flags)
@@ -659,7 +696,7 @@ public class ResourceProvider implements IResourceProvider
 		if (config.getDomain() == null)
 			return;
 
-		nid.setDomainName(nodeNameGenerator.next() + "." + config.getDomain());
+		nid.setDomainName(nid.getSubDomainName() + "." + config.getDomain());
 
 		final DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
 		for (int i = 0; i < DNS_TRANSACTION_RETRIES_NUM; ++i) {

@@ -3,23 +3,34 @@ package de.bwl.bwfla.objectarchive;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
+import javax.activation.DataHandler;
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.ejb.Stateless;
+import javax.inject.Inject;
 import javax.jws.WebService;
 import javax.xml.bind.JAXBException;
+import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
+import de.bwl.bwfla.common.datatypes.GenericId;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionWriter;
+import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
-import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectMetadata;
-import de.bwl.bwfla.objectarchive.datatypes.TaskState;
+
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
-import gov.loc.mets.Mets;
+import org.apache.tamaya.inject.ConfigurationInjection;
+import org.apache.tamaya.inject.api.Config;
 
 import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveName;
 
@@ -29,30 +40,39 @@ import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveN
 public class ObjectArchiveFacadeWS 
 {
 	protected static final Logger LOG = Logger.getLogger(ObjectArchiveFacadeWS.class.getName());
+
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private Executor executor = null;
+
+	@Inject
+	@Config(value="objectarchive.default_archive")
+	private String defaultArchive;
+
+	@Inject
+	@Config(value="objectarchive.user_archive_prefix")
+	private String USERARCHIVEPRIFIX;
 	
 	@PostConstruct
 	private void initialize()
 	{
-		
+		ConfigurationInjection.getConfigurationInjector().configure(this);
 	}
 	
 	/**
 	 * @return list of object IDs
 	 */
 
-	// todo: make it a configuration option
-	private static String USERARCHIVEPRIFIX = "user_archive";
-
 	private DigitalObjectArchive getArchive(String archive) throws BWFLAException
 	{
 		if(!ObjectArchiveSingleton.confValid)
 		{
-			LOG.severe("ObjectArchive not configured");
-			return null;
+			final String message = "Object archive '" + archive + "' not configured!";
+			LOG.severe(message);
+			throw new BWFLAException(message);
 		}
 
 		if(archive == null)
-			archive = "default";
+			archive = defaultArchive;
 
 		DigitalObjectArchive a = ObjectArchiveSingleton.archiveMap.get(archive);
 		if(a != null)
@@ -67,9 +87,11 @@ public class ObjectArchiveFacadeWS
 		throw new BWFLAException("Object archive " + archive + " not found");
 	}
 
-	public List<String> getObjectList(String archive) throws BWFLAException {
+	public @XmlMimeType("application/xml") DataHandler getObjectIds(String archive) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
-		return a.getObjectList();
+//		return a.getObjectList();
+		final Stream<String> ids = a.getObjectIds();
+		return this.toDataHandler(ids.map(GenericId::new), GenericId.class, JaxbNames.DIGITAL_OBJECT_IDS);
 	}
 
 	/**
@@ -106,6 +128,12 @@ public class ObjectArchiveFacadeWS
 	public DigitalObjectMetadata getObjectMetadata(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		return a.getMetadata(id);
+	}
+
+	public @XmlMimeType("application/xml") DataHandler getObjectMetadataCollection(String archive) throws BWFLAException {
+		final DigitalObjectArchive a = getArchive(archive);
+		final Stream<DigitalObjectMetadata> objects = a.getObjectMetadata();
+		return this.toDataHandler(objects, DigitalObjectMetadata.class, JaxbNames.DIGITAL_OBJECTS);
 	}
 
 	public int getNumObjectSeats(String archive, String id) throws BWFLAException {
@@ -149,8 +177,6 @@ public class ObjectArchiveFacadeWS
 		
 		for(DigitalObjectArchive a : ObjectArchiveSingleton.archiveMap.values())
 		{
-			if(a.getName().equals("default"))
-				continue;
 			a.sync();
 		}
 	}
@@ -175,5 +201,20 @@ public class ObjectArchiveFacadeWS
 
 	public void registerUserArchive(String userId) throws BWFLAException {
 		ObjectArchiveSingleton.archiveMap.put(userId, new DigitalObjectUserArchive(userId));
+	}
+
+	private <T> DataHandler toDataHandler(Stream<T> source, Class<T> klass, String name)
+	{
+		try {
+			final String mimetype = "application/xml";
+			final JaxbCollectionWriter<T> pipe = new JaxbCollectionWriter<>(source, klass, name, mimetype, LOG);
+			executor.execute(pipe);
+			return pipe.getDataHandler();
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Returning data-handler for '" + name + "' failed!", error);
+			source.close();
+			return null;
+		}
 	}
 }

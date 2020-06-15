@@ -2,7 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-proxy-impl</artifactId>
-        <name>EaaS proxy and orchestration server implementation</name>
+	<description>EaaS proxy and orchestration server implementation</description>
 	<packaging>war</packaging>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>
@@ -50,7 +50,7 @@
 				</dependencies>
 				<executions>
 					<execution>
-						<id>unpack</id>
+						<id>unpack-wsdls</id>
 						<phase>initialize</phase>
 						<goals>
 							<goal>unpack</goal>
@@ -62,7 +62,6 @@
 									<artifactId>eaas-components-impl</artifactId>
 									<version>${project.version}</version>
 									<type>war</type>
-									<overWrite>true</overWrite>
 									<outputDirectory>${project.build.directory}/dependency</outputDirectory>
 									<includes>WEB-INF/wsdl/*.wsdl</includes>
 								</artifactItem>
@@ -76,7 +75,7 @@
 				<artifactId>cxf-java2ws-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>wsdl-eaascomponent</id>
+						<id>wsdl-eaasws</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>java2ws</goal>
@@ -84,17 +83,6 @@
 						<configuration>
 							<className>de.bwl.bwfla.eaas.EaasWS</className>
 							<address>http://localhost:8080/eaas/EaasWS</address>
-						</configuration>
-					</execution>
-					<execution>
-						<id>wsdl-componentgroup</id>
-						<phase>process-classes</phase>
-						<goals>
-							<goal>java2ws</goal>
-						</goals>
-						<configuration>
-							<className>de.bwl.bwfla.eaas.ComponentGroup</className>
-							<address>http://localhost:8080/eaas/ComponentGroup</address>
 						</configuration>
 					</execution>
 				</executions>
@@ -110,6 +98,7 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
@@ -130,11 +119,11 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-api</artifactId>
-			<scope>compile</scope>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>

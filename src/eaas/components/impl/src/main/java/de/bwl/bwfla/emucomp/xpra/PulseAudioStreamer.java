@@ -59,6 +59,8 @@ public class PulseAudioStreamer implements IAudioStreamer
 	private final Bin audio;
 	private boolean closed;
 
+	private static final long OUTPUT_QUEUE_OFFER_TIMEOUT = 5L;
+
 
 	public PulseAudioStreamer(String cid, Path pulsesock)
 	{
@@ -74,7 +76,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			throw error;
 		}
 
-		this.outqueue = new ArrayBlockingQueue<>(8);
+		this.outqueue = new ArrayBlockingQueue<>(16);
 		this.pipeline = PulseAudioStreamer.createPipeline(log);
 		this.audio = PulseAudioStreamer.createAudioBin(pulsesock.toString());
 		this.webrtc= PulseAudioStreamer.createWebRtcBin(pipeline, outqueue, log);
@@ -85,9 +87,14 @@ public class PulseAudioStreamer implements IAudioStreamer
 	}
 
 	@Override
-	public String pollServerControlMessage(long timeout, TimeUnit unit) throws InterruptedException
+	public String pollServerControlMessage(long timeout, TimeUnit unit)
 	{
-		return outqueue.poll(timeout, unit);
+		try {
+			return outqueue.poll(timeout, unit);
+		}
+		catch (InterruptedException error) {
+			return null;  // Ignore it!
+		}
 	}
 
 	@Override
@@ -139,6 +146,9 @@ public class PulseAudioStreamer implements IAudioStreamer
 	{
 		log.info("Stopping audio streamer...");
 		pipeline.stop();
+
+		final ControlMessage<EosData> eosmessage = ControlMessage.wrap(new EosData());
+		outqueue.offer(eosmessage.toString());
 	}
 
 	@Override
@@ -209,7 +219,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			final ControlMessage<SdpData> message = ControlMessage.wrap(sdp);
 			try {
 				log.info("Sending SDP-offer...");
-				outqueue.put(message.toString());
+				outqueue.offer(message.toString(), OUTPUT_QUEUE_OFFER_TIMEOUT, TimeUnit.SECONDS);
 			}
 			catch (InterruptedException error) {
 				log.log(Level.WARNING, "Sending SDP-offer failed!", error);
@@ -237,7 +247,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			final ControlMessage<IceData> message = ControlMessage.wrap(ice);
 			try {
 				log.info("Sending ICE-candidate: " + candidate);
-				outqueue.put(message.toString());
+				outqueue.offer(message.toString(), OUTPUT_QUEUE_OFFER_TIMEOUT, TimeUnit.SECONDS);
 			}
 			catch (InterruptedException error) {
 				log.log(Level.WARNING, "Sending ICE-candidate failed!", error);
@@ -273,6 +283,7 @@ class ControlMessage<T extends JsonSerializable> implements JsonSerializable
 	{
 		static final String SDP = "sdp";
 		static final String ICE = "ice";
+		static final String EOS = "eos";
 	}
 
 	private String type;
@@ -347,6 +358,11 @@ class ControlMessage<T extends JsonSerializable> implements JsonSerializable
 	static ControlMessage<IceData> wrap(IceData ice)
 	{
 		return new ControlMessage<>(Types.ICE, ice);
+	}
+
+	static ControlMessage<EosData> wrap(EosData eos)
+	{
+		return new ControlMessage<>(Types.EOS, eos);
 	}
 }
 
@@ -462,6 +478,28 @@ class IceData implements JsonSerializable
 		return Json.createObjectBuilder()
 				.add("candidate", candidate)
 				.add("sdpMLineIndex", sdpMLineIndex)
+				.build();
+	}
+
+	@Override
+	public String toString()
+	{
+		return this.toJson().toString();
+	}
+}
+
+
+class EosData implements JsonSerializable
+{
+	EosData()
+	{
+		// Empty!
+	}
+
+	@Override
+	public JsonObject toJson()
+	{
+		return Json.createObjectBuilder()
 				.build();
 	}
 

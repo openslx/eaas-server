@@ -14,19 +14,19 @@
 
 	<build>
 		<plugins>
-                        <plugin>
-                                <groupId>org.apache.maven.plugins</groupId>
-                                <artifactId>maven-war-plugin</artifactId>
-                                <configuration>
-                                        <webResources>
-                                                <webResource>
-                                                        <directory>${project.build.directory}/generated/</directory>
-                                                        <includes><include>wsdl/*.wsdl</include></includes>
-                                                        <targetPath>WEB-INF</targetPath>
-                                                </webResource>
-                                        </webResources>
-                                </configuration>
-                        </plugin>
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-war-plugin</artifactId>
+				<configuration>
+					<webResources>
+						<webResource>
+							<directory>${project.build.directory}/generated/</directory>
+							<includes><include>wsdl/*.wsdl</include></includes>
+							<targetPath>WEB-INF</targetPath>
+						</webResource>
+					</webResources>
+				</configuration>
+			</plugin>
 			<plugin>
 				<groupId>org.apache.cxf</groupId>
 				<artifactId>cxf-java2ws-plugin</artifactId>
@@ -51,15 +51,16 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
-			<artifactId>ReadWikidata</artifactId>
+			<artifactId>eaas-wikidata</artifactId>
 		</dependency>
-
 		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
+			<groupId>jakarta.jws</groupId>
+			<artifactId>jakarta.jws-api</artifactId>
+			<scope>provided</scope>
 		</dependency>
 	</dependencies>
 </project>

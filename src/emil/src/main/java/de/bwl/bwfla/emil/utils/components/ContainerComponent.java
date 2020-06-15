@@ -50,6 +50,7 @@ public class ContainerComponent {
     @Config(value = "rest.blobstore")
     private String blobStoreRestAddress;
 
+
     private BlobStore blobstore;
 
     @Inject
@@ -73,13 +74,14 @@ public class ContainerComponent {
     {
         try {
             this.imagebuilder = ImageBuilderClient.get().getImageBuilderPort(imageBuilderAddress);
+            this.blobstore = blobStoreClient.getBlobStorePort(blobStoreWsAddress);
         } catch (BWFLAException e) {
             throw new RuntimeException("Constructing web-services failed!", e);
         }
     }
 
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles);
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
         File tmpfile = File.createTempFile("metadata.json", null, null);
         Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
 
@@ -101,7 +103,7 @@ public class ContainerComponent {
         }
     }
 
-    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles) throws BWFLAException {
+    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws BWFLAException {
         ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
         final String inputDir = "container-input";
@@ -110,7 +112,9 @@ public class ContainerComponent {
         metadata.setTelnet(true);
         metadata.setProcess("/bin/sh");
         args.add("-c");
-        args.add("mkdir " + outputDir + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job > " + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
+        args.add("mkdir " + outputDir
+                + " && emucon-cgen --enable-extensive-caps \"$@\"; runc run eaas-job | tee "
+                + outputDir + "/container-log-" + UUID.randomUUID() + ".log");
         args.add("");
 
         args.add("--output");
@@ -135,6 +139,12 @@ public class ContainerComponent {
                 args.add("--env");
                 args.add(env);
             }
+        }
+
+        if(config.getProcess().getWorkingDir() != null)
+        {
+            args.add("--workdir");
+            args.add(config.getProcess().getWorkingDir());
         }
 
         // Add emulator's command
@@ -166,7 +176,7 @@ public class ContainerComponent {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0);
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0, linuxRuntime.isTelnetEnabled());
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))

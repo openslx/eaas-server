@@ -63,6 +63,7 @@ public class ContainerUtil {
                 .setMediumType(MediumType.HDD)
                 .setPartitionTableType(PartitionTableType.NONE)
                 .setFileSystemType(FileSystemType.EXT4)
+                .setLabel("container")
                 .setSizeInMb(1024 * 10); // 10 Gb virtual size
     }
 
@@ -193,7 +194,7 @@ public class ContainerUtil {
         iD.setId(binding.getImageId());
         iD.setFstype(FileSystemType.EXT4.toString());
 
-        Entry entry = new Entry();
+        ImageMetadata entry = new ImageMetadata();
         Alias alias = new Alias();
 
         entry.setImage(iD);
@@ -290,6 +291,7 @@ public class ContainerUtil {
         if (containerRequest.getImageType() == ImportContainerRequest.ContainerImageType.DOCKERHUB) {
             process.setEnvironmentVariables(((DockerImport) result.getMetadata()).getEnvVariables());
             process.setArguments(((DockerImport) result.getMetadata()).getEntryProcesses());
+            process.setWorkingDir(((DockerImport) result.getMetadata()).getWorkingDir());
         } else {
             process.setArguments(containerRequest.getProcessArgs());
 
@@ -299,7 +301,7 @@ public class ContainerUtil {
 
         config.setProcess(process);
 
-        config.setId("dummy");
+        config.setId(containerRequest.getUrlString());
 
         LOG.warning(config.toString());
         LOG.info("importing config: " + config.toString());

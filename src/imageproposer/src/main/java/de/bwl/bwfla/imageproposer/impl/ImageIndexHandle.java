@@ -190,7 +190,7 @@ public class ImageIndexHandle
 							if(operatingSystemInformation.getExtensions() != null)
 							{
 								for (String ext : operatingSystemInformation.getExtensions()) {
-									log.severe("adding ext " + ext + " with img " + image);
+									// log.severe("adding ext " + ext + " with img " + image);
 									index.addEnvironmentWithExt(ext, image);
 								}
 							}

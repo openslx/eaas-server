@@ -40,9 +40,6 @@ public class ClusterManagerConfig extends BaseConfig
 {
 	@Config("clustermanager.name")
 	private String name = null;
-	
-	@Config("clustermanager.admin_api_access_token")
-	private String adminApiAccessToken = null;
 
 	private List<ResourceProviderConfig> providers = new ArrayList<ResourceProviderConfig>();
 
@@ -59,18 +56,6 @@ public class ClusterManagerConfig extends BaseConfig
 		ConfigHelpers.check(name, "Name is invalid!");
 		
 		this.name = name;
-	}
-
-	public String getAdminApiAccessToken()
-	{
-		return adminApiAccessToken;
-	}
-
-	public void setAdminApiAccessToken(String token)
-	{
-		ConfigHelpers.check(token, "Admin-API access token is invalid!");
-
-		this.adminApiAccessToken = token;
 	}
 
 	public List<ResourceProviderConfig> getResourceProviderConfigs()
@@ -131,7 +116,6 @@ public class ClusterManagerConfig extends BaseConfig
 		
 		// Re-check the arguments...
 		this.setName(name);
-		this.setAdminApiAccessToken(adminApiAccessToken);
 		this.setResourceProviderConfigs(providers);
 
 		for (ResourceProviderConfig provider : providers)

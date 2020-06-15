@@ -27,30 +27,22 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.api.metadata.DockerImport;
 import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
-import jdk.nashorn.internal.parser.JSONParser;
 
 import javax.activation.DataHandler;
 import javax.activation.URLDataSource;
-import javax.xml.bind.JAXBException;
-import java.io.BufferedReader;
+import javax.json.*;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
 import static de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ArchiveFormat.DOCKER;
 
 
 public abstract class MediumBuilder
 {
-	protected final Logger log = Logger.getLogger(this.getClass().getName());
-
 	public abstract ImageHandle execute(Path workdir, ImageDescription description) throws BWFLAException;
 
 
@@ -59,26 +51,13 @@ public abstract class MediumBuilder
 	public static void delete(Path start, Logger log)
 	{
 		// Delete file or a directory recursively
-		try (final Stream<Path> stream = Files.walk(start)) {
-			final Consumer<Path> deleter = (path) -> {
-				try {
-					Files.delete(path);
-				}
-				catch (Exception error) {
-					final String message = "Deleting '" + path.toString() + "' failed! ("
-							+ error.getClass().getName() + ": " + error.getMessage() + ")";
-
-					log.warning(message);
-				}
-			};
-
-			stream.sorted(Comparator.reverseOrder())
-					.forEach(deleter);
-		}
-		catch (Exception error) {
-			String message = "Deleting '" + start.toString() + "' failed!\n";
-			log.log(Level.WARNING, message, error);
-		}
+		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+		process.setCommand("sudo");
+		process.addArgument("--non-interactive");
+		process.addArguments("rm", "-r", "-f");
+		process.addArgument(start.toString());
+		process.setLogger(log);
+		process.execute();
 	}
 
 	public static void unmount(Path path, Logger log)
@@ -107,7 +86,7 @@ public abstract class MediumBuilder
 			switch (entry.getArchiveFormat()) {
 				case DOCKER:
 					ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
-					DockerTools docker = new DockerTools(workdir, ds);
+					DockerTools docker = new DockerTools(workdir, ds, log);
 					docker.pull();
 					docker.unpack();
 					break;
@@ -126,13 +105,10 @@ public abstract class MediumBuilder
 				handler = entry.getData();
 			}
 
-			if(entry.getSubdir() != null){
-				Path subdirPath = dstdir.resolve(entry.getSubdir());
-				if(dstdir.resolve(subdirPath).toFile().mkdir()) {
-					dstdir = subdirPath;
-				} else {
-					throw new BWFLAException("failed to create subdirecoty!");
-				}
+			if (entry.getSubdir() != null){
+				Path subdir = dstdir.resolve(entry.getSubdir());
+				Files.createDirectories(subdir);
+				dstdir = subdir;
 			}
 
 			switch (entry.getAction()) {
@@ -158,7 +134,7 @@ public abstract class MediumBuilder
 						ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
 						if(ds.rootfs == null)
 							throw new BWFLAException("Docker data source not ready. Prepare() before calling build");
-						ImageHelper.rsync(ds.rootfs, dstdir);
+						ImageHelper.rsync(ds.rootfs, dstdir, log);
 
 						DockerImport dockerMd = new DockerImport();
 						dockerMd.setImageRef(ds.imageRef);
@@ -168,6 +144,7 @@ public abstract class MediumBuilder
 						dockerMd.setEmulatorVersion(ds.version);
 						dockerMd.setEmulatorType(ds.emulatorType);
 						DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
+						runner.setLogger(log);
 						runner.setCommand("/bin/bash");
 						dstdir.getParent().resolve("image");
 
@@ -175,31 +152,45 @@ public abstract class MediumBuilder
 
 						Path imageDir = dstdir.getParent().resolve("image");
 
-						if(imageDir.toFile().exists()) {
-							runner.addArgument("jq '{Cmd: .config.Cmd, Env: .config.Env}' " + dstdir + "/../image/blobs/\"$(jq -r .config.digest " + dstdir + "/../image/blobs/\"$(jq -r .manifests[].digest " + dstdir + "/../image/index.json | tr : /)\" | tr : /)\"");
+						if (Files.exists(imageDir)) {
+							runner.addArgument("jq '{Cmd: .config.Cmd, Env: .config.Env, WorkingDir: .config.WorkingDir}' "
+									+ dstdir + "/../image/blobs/\"$(jq -r .config.digest "
+									+ dstdir + "/../image/blobs/\"$(jq -r .manifests[].digest "
+									+ dstdir + "/../image/index.json | tr : /)\" | tr : /)\"");
 							runner.start();
 						} else {
 							throw new BWFLAException("docker container doesn't contain image directory");
 						}
 
+						try {
+							runner.waitUntilFinished();
 
-						runner.waitUntilFinished();
+							try (final JsonReader reader = Json.createReader(runner.getStdOutReader())) {
+								final JsonObject json = reader.readObject();
+								final ArrayList<String> envvars = new ArrayList<>();
+								JsonArray envArray = json.getJsonArray("Env");
+								for(int i = 0; i < envArray.size(); i++)
+									envvars.add(envArray.getString(i));
 
-						javax.json.JsonReader jr =
-								javax.json.Json.createReader(runner.getStdOutReader());
-						javax.json.JsonObject jo = jr.readObject();
-						javax.json.JsonArray envVarialbes = jo.getJsonArray("Env");
-						javax.json.JsonArray processes = jo.getJsonArray("Cmd");
+								final ArrayList<String> cmds = new ArrayList<>();
+								JsonArray cmdJson = json.getJsonArray("Cmd");
+								for(int i = 0; i < cmdJson.size(); i++)
+									cmds.add(cmdJson.getString(i));
 
+								JsonString workDirObject = json.getJsonString("WorkingDir");
+								if(workDirObject != null)
+									dockerMd.setWorkingDir(workdir.toString());
+								dockerMd.setEntryProcesses(cmds);
+								dockerMd.setEnvVariables(envvars);
+							}
 
-						List processList = IntStream.range(0, processes.size()).mapToObj(processes::getString).collect(Collectors.toList());
-						List environmentsList = IntStream.range(0, envVarialbes.size()).mapToObj(envVarialbes::getString).collect(Collectors.toList());
-
-						dockerMd.setEntryProcesses(new ArrayList(processList));
-						dockerMd.setEnvVariables(new ArrayList(environmentsList));
-
-						md = dockerMd;
+							md = dockerMd;
+						}
+						finally {
+							runner.cleanup();
+						}
 					}
+
 					break;
 			}
 		}

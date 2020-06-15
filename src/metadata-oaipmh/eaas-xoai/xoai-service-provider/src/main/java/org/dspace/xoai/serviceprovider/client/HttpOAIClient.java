@@ -8,11 +8,13 @@
 
 package org.dspace.xoai.serviceprovider.client;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.HttpStatus;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpUriRequest;
+import org.apache.http.client.params.ClientPNames;
 import org.apache.http.conn.ClientConnectionManager;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
@@ -22,6 +24,7 @@ import org.apache.http.conn.ssl.TrustStrategy;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.BasicClientConnectionManager;
 import org.apache.http.impl.conn.PoolingClientConnectionManager;
+import org.apache.http.message.BasicHeader;
 import org.apache.http.params.BasicHttpParams;
 import org.apache.http.params.CoreProtocolPNames;
 import org.apache.http.params.HttpConnectionParams;
@@ -37,6 +40,9 @@ import java.security.NoSuchAlgorithmException;
 import java.security.UnrecoverableKeyException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.time.Duration;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 public class HttpOAIClient implements OAIClient {
@@ -46,10 +52,22 @@ public class HttpOAIClient implements OAIClient {
 	private String userAgent;
 	private List<String> baseUrlsHttpsExclusion;
 	
-	public HttpOAIClient(String baseUrl) {
+	public HttpOAIClient(String baseUrl, String accessToken, Duration timeout) {
 		this.baseUrl = baseUrl;
+		this.timeout = (int) timeout.toMillis();
+
+		// Add auth-header to all requests
+		final Collection<Header> headers = new ArrayList<>();
+		if (accessToken != null)
+			headers.add(new BasicHeader("Authorization", accessToken));
+
+		final HttpParams params = this.createHttpParams();
+		if (!headers.isEmpty())
+			params.setParameter(ClientPNames.DEFAULT_HEADERS, headers);
+
 		// Allow multiple concurrent connections per server
-		httpclient = new DefaultHttpClient(new PoolingClientConnectionManager(), createHttpParams());
+		httpclient = new DefaultHttpClient(new PoolingClientConnectionManager(), params);
+
 	}
 
 

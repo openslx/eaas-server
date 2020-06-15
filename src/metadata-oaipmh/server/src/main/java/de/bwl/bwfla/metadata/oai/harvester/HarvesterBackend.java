@@ -22,6 +22,7 @@ package de.bwl.bwfla.metadata.oai.harvester;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import org.apache.tamaya.ConfigurationProvider;
 import org.dspace.xoai.serviceprovider.exceptions.HarvestException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
@@ -49,12 +50,17 @@ public class HarvesterBackend
 		final PrefixLoggerContext logctx = new PrefixLoggerContext()
 				.add(config.getName());
 
+		final String secret = ConfigurationProvider.getConfiguration()
+				.get("rest.internalApiSecret");
+
 		this.log = new PrefixLogger(this.getClass().getName(), logctx);
 		this.state = state;
 		this.streams = new ArrayList<>(config.getStreamConfigs().size());
 
-		for (BackendConfig.StreamConfig sc : config.getStreamConfigs())
+		for (BackendConfig.StreamConfig sc : config.getStreamConfigs()) {
+			sc.getSinkConfig().setSecret(secret);
 			streams.add(new DataStream(sc, http, log));
+		}
 	}
 
 	public HarvesterBackend(BackendConfig config, Client http)

@@ -19,13 +19,15 @@
 
 package de.bwl.bwfla.emil;
 
+import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.util.*;
 import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
@@ -40,40 +42,40 @@ import javax.ws.rs.ServerErrorException;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.xml.bind.JAXBException;
 
-import de.bwl.bwfla.api.eaas.ComponentGroupElement;
-import de.bwl.bwfla.api.emucomp.GetControlUrlsResponse;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.emil.datatypes.rest.NodeTcpComponentRequest;
+import de.bwl.bwfla.emil.datatypes.rest.SlirpComponentRequest;
+import de.bwl.bwfla.emil.datatypes.rest.SwitchComponentRequest;
 import de.bwl.bwfla.emil.session.NetworkSession;
 import de.bwl.bwfla.emil.session.Session;
+import de.bwl.bwfla.emil.session.SessionComponent;
 import de.bwl.bwfla.emil.session.SessionManager;
 import de.bwl.bwfla.emucomp.api.NodeTcpConfiguration;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.eaas.client.EaasClient;
-import de.bwl.bwfla.emil.datatypes.ErrorInformation;
-import de.bwl.bwfla.emil.datatypes.GroupComponent;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.NetworkRequest;
 import de.bwl.bwfla.emil.datatypes.NetworkResponse;
 import de.bwl.bwfla.emucomp.api.NetworkSwitchConfiguration;
 import de.bwl.bwfla.emucomp.api.VdeSlirpConfiguration;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 
+
 @Path("/networks")
 @ApplicationScoped
 public class Networks {
-    @Inject
-    private EaasClient eaasClient;
-    
     @Inject
     private ComponentClient componentClient;
 
     @Inject
     private SessionManager sessions = null;
+
+    @Inject
+    private Components components = null;
 
     @Inject
     @Config(value = "ws.eaasgw")
@@ -82,11 +84,11 @@ public class Networks {
     protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
-    public NetworkResponse createNetwork(NetworkRequest network, @Context final HttpServletResponse response) {
-        if (network.getComponents() == null) {
+    public NetworkResponse createNetwork(NetworkRequest networkRequest, @Context final HttpServletResponse response) {
+        if (networkRequest.getComponents() == null) {
             throw new BadRequestException(
                     Response.status(Response.Status.BAD_REQUEST)
                     .entity(new ErrorInformation("No components field given in the input data."))
@@ -96,19 +98,34 @@ public class Networks {
         NetworkResponse networkResponse = null;
         try {
             // a switch comes included with every network group
-            NetworkSwitchConfiguration switchConfig = new NetworkSwitchConfiguration();
-            String switchId = eaasClient.getEaasWSPort(eaasGw).createSession(switchConfig.value(false));
+            final SwitchComponentRequest switchComponentRequest = new SwitchComponentRequest();
+            switchComponentRequest.setConfig(new NetworkSwitchConfiguration());
+            final String switchId = components.createComponent(switchComponentRequest).getId();
+            final NetworkSession session = new NetworkSession(switchId, networkRequest);
+            session.components()
+                    .add(new SessionComponent(switchId));
 
-            Session session = sessions.createNetworkSession(switchId);
+            sessions.register(session);
+
             networkResponse = new NetworkResponse(session.id());
 
+            if (networkRequest.hasInternet()) {
+                final String slirpMac = new VdeSlirpConfiguration().getHwAddress();
+                SlirpComponentRequest slirpConfig = new SlirpComponentRequest();
+                slirpConfig.setHwAddress(slirpMac);
+                slirpConfig.setDhcp(networkRequest.isDhcp());
 
-            if (network.hasInternet()) {
-                VdeSlirpConfiguration slirpConfig = new VdeSlirpConfiguration();
-                String slirpMac = slirpConfig.getHwAddress();
-                slirpConfig.setDhcpEnabled(false);
-                String slirpId = eaasClient.getEaasWSPort(eaasGw).createSession(slirpConfig.value(false));
-                sessions.addComponent(session, slirpId);
+                slirpConfig.setGateway(networkRequest.getGateway());
+
+                if (networkRequest.getGateway() != null){
+                    slirpConfig.setGateway(networkRequest.getGateway());
+                }
+                if (networkRequest.getNetwork() != null)
+                    slirpConfig.setIp4Address(networkRequest.getNetwork());
+
+                final String slirpId = components.createComponent(slirpConfig).getId();
+                session.components()
+                        .add(new SessionComponent(slirpId));
 
                 Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(slirpId));
                 String slirpUrl = controlUrls.get("ws+ethernet+" + slirpMac).toString();
@@ -116,23 +133,26 @@ public class Networks {
                 componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, slirpUrl);
             }
 
-            if(network.isDhcp())
-            {
-                NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
-                nodeConfig.setDhcp(true);
-                nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
 
-                String dhcpId = eaasClient.getEaasWSPort(eaasGw).createSession(nodeConfig.value(false));
-                sessions.addComponent(session, dhcpId);
+//            if(network.isDhcp())
+//            {
+//                NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
+//                nodeConfig.setDhcp(true);
+//                nodeConfig.setDhcpNetworkAddress(network.getDhcpNetworkAddress());
+//                nodeConfig.setDhcpNetworkMask(network.getDhcpNetworkMask());
+//                nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
+//
+//                String dhcpId = eaasClient.getEaasWSPort(eaasGw).createSession(nodeConfig.value(false));
+//                sessions.addComponent(session, dhcpId);
+//
+//                Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(dhcpId));
+//                String dhcpUrl = controlUrls.get("ws+ethernet+" + nodeConfig.getHwAddress()).toString();
+//                componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, dhcpUrl);
+//            }
 
-                Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(dhcpId));
-                String dhcpUrl = controlUrls.get("ws+ethernet+" + nodeConfig.getHwAddress()).toString();
-                componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, dhcpUrl);
-            }
-
-            if(network.isTcpGateway() && network.getTcpGatewayConfig() != null) {
+            if(networkRequest.isTcpGateway() && networkRequest.getTcpGatewayConfig() != null) {
                 String nodeTcpId = null;
-                NetworkRequest.TcpGatewayConfig tcpGatewayConfig = network.getTcpGatewayConfig();
+                NetworkRequest.TcpGatewayConfig tcpGatewayConfig = networkRequest.getTcpGatewayConfig();
 
                 NodeTcpConfiguration nodeConfig = new NodeTcpConfiguration();
                 nodeConfig.setHwAddress(NetworkUtils.getRandomHWAddress());
@@ -151,8 +171,11 @@ public class Networks {
                     nodeConfig.setDestPort(tcpGatewayConfig.getServerPort());
                 }
 
-                nodeTcpId = eaasClient.getEaasWSPort(eaasGw).createSession(nodeConfig.value(false));
-                sessions.addComponent(session, nodeTcpId);
+                final NodeTcpComponentRequest nodeComponentRequest = new NodeTcpComponentRequest();
+                nodeComponentRequest.setConfig(nodeConfig);
+                nodeTcpId = components.createComponent(nodeComponentRequest).getId();
+                session.components()
+                        .add(new SessionComponent(nodeTcpId));
 
                 Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(nodeTcpId));
                 String nodeTcpUrl = controlUrls.get("ws+ethernet+" + nodeConfig.getHwAddress()).toString();
@@ -164,21 +187,20 @@ public class Networks {
             }
 
             // add all the other components
-            for (NetworkRequest.ComponentSpec component : network.getComponents()) {
+            for (NetworkRequest.ComponentSpec component : networkRequest.getComponents()) {
                 this.addComponent(session, switchId, component);
             }
             
             response.setStatus(Response.Status.CREATED.getStatusCode());
             return networkResponse;
-        } catch (BWFLAException | JAXBException e) {
-            throw new InternalServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation("Server has encountered an internal error.", e.getMessage()))
-                    .build(), e);
+        }
+        catch (Exception error) {
+            throw Components.newInternalError(error);
         }
     }
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
     public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -200,7 +222,7 @@ public class Networks {
     }
 
     @POST
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
     public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
@@ -222,7 +244,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured({Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRCITED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
@@ -246,9 +268,10 @@ public class Networks {
     }
 
     @GET
-    @Secured({Role.PUBLIC})
+    @Secured(roles = {Role.PUBLIC})
     @Path("/{id}/wsConnection")
-    public String wsConnection(@PathParam("id") String id)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response wsConnection(@PathParam("id") String id)
     {
         try {
             Session session = sessions.get(id);
@@ -256,7 +279,13 @@ public class Networks {
                 throw new BWFLAException("session not found " + id);
 
             final String switchId = ((NetworkSession) session).getSwitchId();
-            return componentClient.getNetworkSwitchPort(eaasGw).wsConnect(switchId);
+            String link = componentClient.getNetworkSwitchPort(eaasGw).wsConnect(switchId);
+            final JsonObject json = Json.createObjectBuilder()
+                    .add("wsConnection", link)
+                    .add("ok", true)
+                    .build();
+
+            return Emil.createResponse(Response.Status.OK, json.toString());
         } catch (BWFLAException e) {
             e.printStackTrace();
             throw new ServerErrorException(Response
@@ -265,70 +294,6 @@ public class Networks {
                             "Could not find switch for session: " + id , e.getMessage()))
                     .build());
         }
-    }
-
-    @GET
-    @Secured({Role.PUBLIC})
-    @Path("/{id}")
-    public Collection<GroupComponent> listComponents(@PathParam("id") String id) {
-        try {
-            Collection<GroupComponent> result = new HashSet<GroupComponent>();
-
-            Session session = sessions.get(id);
-            if(session == null || !(session instanceof NetworkSession))
-                throw new BWFLAException("session not found " + id);
-
-            List<ComponentGroupElement> components = sessions.getComponents(session);
-            for (ComponentGroupElement componentElement : components) {
-
-                String type = componentClient.getComponentPort(eaasGw).getComponentType(componentElement.getComponentId());
-                try {
-                    if(type.equals("nodetcp")) {
-                        NetworkResponse networkResponse = new NetworkResponse(session.id());
-
-                        Map<String, URI> controlUrls = ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw).getControlUrls(componentElement.getComponentId()));
-
-                        URI uri = controlUrls.get("info");
-                        if(uri == null)
-                            continue;
-                        String nodeInfoUrl = uri.toString();
-                        networkResponse.addUrl("tcp", URI.create(nodeInfoUrl));
-
-                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
-                                networkResponse ));
-
-                    } else if (type.equals("machine")){
-                        String componentName = componentClient.getComponentPort(eaasGw).getEnvironmentId(componentElement.getComponentId());
-                        if (componentName == null)
-                            componentName = componentElement.getComponentId();
-
-                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId()),
-                                componentName));
-                    } else
-                        result.add(new GroupComponent(componentElement.getComponentId(), type, new URI("../components/" + componentElement.getComponentId())));
-                } catch (URISyntaxException e) {
-                    throw new ServerErrorException(Response
-                            .status(Response.Status.INTERNAL_SERVER_ERROR)
-                            .entity(new ErrorInformation(
-                                    "An internal server error occurred.", e.getMessage()))
-                            .build(), e);
-                } 
-            }
-            return result;
-        } catch (BWFLAException e) {
-            throw new ServerErrorException(Response
-                    .status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation(
-                            "Could not acquire group information.", e.getMessage()))
-                    .build());
-        }
-    }
-
-    @GET
-    @Secured({Role.PUBLIC})
-    @Produces(MediaType.APPLICATION_JSON)
-    public Collection<Session> getAllGroupIds() {
-            return sessions.list();
     }
 
     private void addComponent(Session session, String switchId, NetworkRequest.ComponentSpec component) {
@@ -355,11 +320,12 @@ public class Networks {
             } else {
                 uri = map.get("ws+ethernet+" + component.getHwAddress());
             }
-
             componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, uri.toString());
 
-            if (addToGroup)
-                sessions.addComponent(session, component.getComponentId());
+            if (addToGroup) {
+                session.components()
+                        .add(new SessionComponent(component.getComponentId()));
+            }
 
         } catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
@@ -382,7 +348,7 @@ public class Networks {
                     .getValue().toString();
 
             componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethurl);
-            sessions.removeComponent(session, componentId);
+            sessions.remove(session.id(), componentId);
         }
         catch (BWFLAException error) {
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)

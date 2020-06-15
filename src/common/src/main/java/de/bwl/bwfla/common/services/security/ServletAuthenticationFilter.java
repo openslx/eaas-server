@@ -58,25 +58,27 @@ public class ServletAuthenticationFilter  implements Filter {
         boolean excludePath = false;
         HttpServletRequest httpRequest = (HttpServletRequest) servletRequest;
         HttpServletResponse response=(HttpServletResponse) servletResponse;
-
+        
         String path = httpRequest.getServletPath();
         if(httpRequest.getQueryString() != null && !httpRequest.getQueryString().isEmpty())
             path += "?" + httpRequest.getQueryString();
 
-        if(excludeUrls.contains(path))
+        if(excludeUrls.contains(path)) {
             excludePath = true;
-
+        }
+        
         String pathInfo = httpRequest.getPathInfo();
         if(pathInfo != null && !pathInfo.isEmpty()) {
             for(String p : excludePaths) {
-                if (pathInfo.startsWith(p))
+                if (!p.isEmpty() && pathInfo.startsWith(p)) {
                     excludePath = true;
+                }
             }
         }
 
         if(apiSecret != null && !excludePath) {
             String jwt = getBearerToken(httpRequest);
-            // System.out.println("apiSecret " + apiSecret + " jwt " + jwt + " ");
+           //  System.out.println("apiSecret " + apiSecret + " jwt " + jwt + " ");
 
             try{
                 validateToken(jwt);

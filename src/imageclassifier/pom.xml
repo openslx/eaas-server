@@ -10,13 +10,11 @@
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
-	<properties>
-		<resteasy.version>3.0.18.Final</resteasy.version>
-	</properties>
 	<dependencies>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
@@ -27,16 +25,13 @@
 			<artifactId>eaas-components-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>edu.harvard.hul.ois</groupId>
-			<artifactId>fits</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
 			<artifactId>resteasy-jackson2-provider</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
-			<artifactId>ReadWikidata</artifactId>
+			<artifactId>eaas-wikidata</artifactId>
 		</dependency>
 		<!-- These dependencies should be removed from the sourcecode if
 		     you find the time. -->

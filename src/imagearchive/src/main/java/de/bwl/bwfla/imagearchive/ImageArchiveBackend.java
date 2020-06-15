@@ -23,20 +23,20 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
-import de.bwl.bwfla.common.utils.EaasFileUtils;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
-import de.bwl.bwfla.imagearchive.ImageIndex.Entry;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
+import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
-import org.apache.commons.io.IOUtils;
+import de.bwl.bwfla.imagearchive.tasks.CreateImageTask;
 
 import javax.activation.DataHandler;
-import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -44,7 +44,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.logging.Logger;
 
@@ -83,7 +82,7 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getNameIndexes();
 	}
 
-	public void addNameIndexesEntry(Entry entry, Alias alias) throws BWFLAException {
+	public void addNameIndexesEntry(ImageMetadata entry, Alias alias) throws BWFLAException {
 		imageHandler.addNameIndexesEntry(entry, alias);
 	}
 
@@ -168,6 +167,21 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.deleteMetaData(envId);
 	}
 
+	public TaskState importImageFromUrlAsync(URL url, ImageArchiveMetadata request) throws BWFLAException
+	{
+		if (url == null) {
+			throw new BWFLAException("image data handler is null, aborting");
+		}
+
+		try {
+			return imageHandler.importImageUrlAsync(url, request, true);
+		}
+		catch (IOException e) {
+			throw new BWFLAException(e);
+		}
+	}
+
+	@Deprecated
 	public String importImageFromUrl(URL url, ImageArchiveMetadata request) throws BWFLAException
 	{
 		if (url == null) {
@@ -182,6 +196,16 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
+	public TaskState importImageAsStreamAsync(DataHandler image, ImageArchiveMetadata iaMd) throws BWFLAException
+	{
+		if (image == null) {
+			throw new BWFLAException("image data handler is null, aborting");
+		}
+
+		return imageHandler.importImageStreamAsync(image, iaMd);
+	}
+
+	@Deprecated
 	public String importImageAsStream(DataHandler image, ImageArchiveMetadata iaMd) throws BWFLAException
 	{
 		if (image == null) {
@@ -222,6 +246,15 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		qcowOptions.setSize(size);
 		EmulatorUtils.createCowFile(destImgFile.toPath(), qcowOptions);
 		return id;
+	}
+
+	public TaskState createImage(String size, ImageType type, ImageMetadata md) throws BWFLAException
+	{
+		File target = imageHandler.getImageTargetPath(type.name());
+		CreateImageTask t = new CreateImageTask(target.toPath(), size);
+		if(md != null)
+			t.setMetadata(imageHandler.getNameIndexes(), md);
+		return ImageArchiveRegistry.submitTask(t);
 	}
 
 	public void updateConfiguration(String conf) throws BWFLAException
@@ -267,6 +300,7 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
+	@Deprecated
 	public void commitTempEnvironment(String id) throws BWFLAException
 	{
 		try {
@@ -277,6 +311,7 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
+	@Deprecated
 	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException
 	{
 		try {
@@ -359,6 +394,12 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
+	public List<TaskState> replicateImagesAsync(List<String> images)
+	{
+		return imageHandler.replicateImagesAsync(images);
+	}
+
+	@Deprecated
 	public List<String> replicateImages(List<String> images)
 	{
 		return imageHandler.replicateImages(images);
@@ -394,4 +435,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 	public int compareTo(ImageArchiveBackend backend) {
 		return compare(getConfig().getOrder(), backend.getConfig().getOrder());
 	}
+
+    public void deleteNameIndexesEntry(String id, String version) {
+		imageHandler.deleteNameIndexesEntry(id, version);
+    }
 }

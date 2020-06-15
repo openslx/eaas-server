@@ -5,30 +5,17 @@
 	<artifactId>emil</artifactId>
 	<description>EMIL - Emulation of Multimedia Objects in Libraries</description>
 	<packaging>war</packaging>
-
 	<parent>
 		<groupId>de.bwl.bwfla</groupId>
 		<artifactId>root</artifactId>
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
-
 	<build>
 		<plugins>
 			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-war-plugin</artifactId>
-				<configuration>
-					<archive>
-						<manifestEntries>
-							<Dependencies>org.apache.httpcomponents</Dependencies>
-						</manifestEntries>
-					</archive>
-				</configuration>
-			</plugin>
-			<plugin>
 				<groupId>com.webcohesion.enunciate</groupId>
-				<artifactId>enunciate-maven-plugin</artifactId>
+				<artifactId>enunciate-slim-maven-plugin</artifactId>
 				<executions>
 					<execution>
 						<goals>
@@ -39,11 +26,11 @@
 			</plugin>
 		</plugins>
 	</build>
-
 	<dependencies>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
@@ -95,14 +82,6 @@
 			<artifactId>enunciate-core-annotations</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>org.json</groupId>
-			<artifactId>json</artifactId>
-			<version>20171018</version>
-		</dependency>
-		
-		<!-- These dependencies should be removed from the sourcecode if
-		     you find the time. -->
-		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
 			<artifactId>resteasy-jaxrs</artifactId>
 			<scope>provided</scope>
@@ -110,10 +89,7 @@
 		<dependency>
 			<groupId>commons-io</groupId>
 			<artifactId>commons-io</artifactId>
-		</dependency>
-		<dependency>
-			<groupId>com.google.code.gson</groupId>
-			<artifactId>gson</artifactId>
+			<scope>provided</scope>
 		</dependency>
         <dependency>
             <groupId>de.bwl.bwfla</groupId>
@@ -121,18 +97,16 @@
         </dependency>
         <dependency>
             <groupId>de.bwl.bwfla</groupId>
-            <artifactId>ReadWikidata</artifactId>
+            <artifactId>eaas-wikidata</artifactId>
         </dependency>
 		<dependency>
 			<groupId>org.jboss.resteasy</groupId>
 			<artifactId>resteasy-multipart-provider</artifactId>
-			<version>3.6.1.Final</version>
+			<scope>provided</scope>
 		</dependency>
-        <dependency>
-            <groupId>commons-validator</groupId>
-            <artifactId>commons-validator</artifactId>
-            <version>1.4.1</version>
-            <scope>compile</scope>
-        </dependency>
-    </dependencies>
+		<dependency>
+			<groupId>com.auth0</groupId>
+			<artifactId>java-jwt</artifactId>
+		</dependency>
+	</dependencies>
 </project>

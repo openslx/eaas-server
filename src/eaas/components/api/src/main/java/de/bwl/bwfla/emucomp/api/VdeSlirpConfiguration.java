@@ -16,11 +16,14 @@ public class VdeSlirpConfiguration extends ComponentConfiguration {
     @XmlElement(required = false, nillable = false)
     private String hwAddress;
 
-    @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.2")
-    private String ip4Address = "10.0.2.2";
-    
-    @XmlElement(required = false, nillable = false, defaultValue = "24")
-    private Integer netmask = 24;
+    @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.0")
+    private String network = "10.0.2.0";
+
+    @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.1")
+    private String gateway = "10.0.2.1";
+
+    @XmlElement(required = false, nillable = false, defaultValue = "255.255.255.0")
+    private String netmask = "255.255.255.0";
     
     @XmlElement(required = false, nillable = false, defaultValue = "true")
     private boolean dhcp = true;
@@ -40,20 +43,28 @@ public class VdeSlirpConfiguration extends ComponentConfiguration {
         this.hwAddress = hwAddress;
     }
 
-    public void setIp4Address(String ip4Address) {
-        this.ip4Address = ip4Address;
+    public void setNetwork(String network) {
+        this.network = network;
     }
 
-    public String getIp4Address() {
-        return ip4Address;
+    public String getNetwork() {
+        return network;
     }
     
-    public void setNetmask(int netmask) {
+    public void setNetmask(String netmask) {
         this.netmask = netmask;
     }
 
-    public int getNetmask() {
+    public String getNetmask() {
         return netmask;
+    }
+
+    public String getGateway() {
+        return gateway;
+    }
+
+    public void setGateway(String gateway) {
+        this.gateway = gateway;
     }
 
     public boolean isDhcpEnabled() {

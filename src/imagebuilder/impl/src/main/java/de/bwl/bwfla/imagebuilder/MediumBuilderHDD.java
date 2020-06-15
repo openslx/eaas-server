@@ -20,7 +20,7 @@
 package de.bwl.bwfla.imagebuilder;
 
 
-import de.bwl.bwfla.api.imagearchive.Entry;
+import de.bwl.bwfla.api.imagearchive.ImageMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
@@ -91,7 +91,7 @@ public class MediumBuilderHDD extends MediumBuilder
 		final Path qcow = workdir.resolve(outname + outtype);
 
 		final Deque<Runnable> tasks = new ArrayDeque<Runnable>();
-		final PrefixLogger log = new PrefixLogger(super.log.getName());
+		final PrefixLogger log = new PrefixLogger(this.getClass().getSimpleName());
 		log.getContext().add(workdir.getFileName().toString());
 		{
 			final String message = "Building image " + description.toShortSummary()
@@ -110,6 +110,9 @@ public class MediumBuilderHDD extends MediumBuilder
 			if(backingFile != null)
 				options.setBackingFile(backingFile);
 			EmulatorUtils.createCowFile(qcow, options, log);
+
+			if(description.getFileSystemType() == FileSystemType.RAW)
+				return new ImageHandle(qcow, outname, outtype);
 
 			// Mount it as raw disk-image
 			final XmountOptions xmoptions = new XmountOptions();
@@ -193,7 +196,7 @@ public class MediumBuilderHDD extends MediumBuilder
 
 				for(ImageNameIndex.Entries.Entry _entry : index.getEntries().getEntry())
 				{
-					Entry indexEntry = _entry.getValue();
+					ImageMetadata indexEntry = _entry.getValue();
 					if(indexEntry.getProvenance() != null && indexEntry.getProvenance().getLayers() != null) {
 						List layerList = indexEntry.getProvenance().getLayers();
 						for(String l : ds.layers) {
@@ -238,9 +241,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			throw new BWFLAException(message);
 		}
 
-		if(label != null)
-			fsmaker.setLabel(label);
-		fsmaker.execute(device, log);
+		fsmaker.execute(device, label, log);
 	}
 
 	private static void lklmount(Path device, Path mountpoint, FileSystemType fstype, Logger log)

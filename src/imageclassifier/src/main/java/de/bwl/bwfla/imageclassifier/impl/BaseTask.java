@@ -117,10 +117,7 @@ public abstract class BaseTask extends AbstractTask<Object>
 			log.info("Begin identification...");
 			String tool = cfg.get("imageclassifier.identification_tool");
 			Classifier classifier = null;
-			if(tool != null && tool.equals("FITS"))
-				classifier =  new FitsClassifier(executor, log);
-			else
-				classifier = new SiegfriedClassifier();
+			classifier = new SiegfriedClassifier();
 
 			boolean verbosemode = Boolean.parseBoolean(cfg.get("imageclassifier.verbosemode"));
 			classifier.addDirectory(basePath);
@@ -187,10 +184,7 @@ public abstract class BaseTask extends AbstractTask<Object>
 			log.info("Begin identification...");
 			String tool = cfg.get("imageclassifier.identification_tool");
 			Classifier classifier = null;
-			if(tool != null && tool.equals("FITS"))
-				classifier =  new FitsClassifier(executor, log);
-			else
-				classifier = new SiegfriedClassifier();
+			classifier = new SiegfriedClassifier();
 
 			boolean verbosemode = Boolean.parseBoolean(cfg.get("imageclassifier.verbosemode"));
 			if (isoMountpoint != null) {

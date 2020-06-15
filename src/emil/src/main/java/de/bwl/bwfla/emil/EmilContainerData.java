@@ -17,10 +17,11 @@ import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.rest.ErrorInformation;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.emil.datatypes.security.Role;
-import de.bwl.bwfla.emil.datatypes.security.Secured;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportContainerTask;
@@ -83,7 +84,7 @@ public class EmilContainerData extends EmilRest {
      * 
      * @return List of Container Runtimes
      */
-    @Secured({Role.PUBLIC})
+    @Secured(roles={Role.PUBLIC})
     @GET
     @Path("/getOriginRuntimeList")
     @Produces(MediaType.APPLICATION_JSON)
@@ -112,7 +113,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/updateContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -189,7 +190,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("update successful");
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/importContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -198,7 +199,7 @@ public class EmilContainerData extends EmilRest {
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/importEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -207,7 +208,7 @@ public class EmilContainerData extends EmilRest {
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/updateLatestEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -215,7 +216,7 @@ public class EmilContainerData extends EmilRest {
         envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
@@ -258,17 +259,15 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("delete success!");
     }
 
-    @Secured({Role.RESTRCITED})
+    @Secured(roles={Role.RESTRCITED})
     @POST
     @Path("/saveImportedContainer")
     @Produces(MediaType.APPLICATION_JSON)
     public Response saveImportedContainer(SaveImportedContainerRequest saveImpContainerReq) {
         try {
-            emilEnvRepo.saveImportedContainer(saveImpContainerReq.getId(),
-                    saveImpContainerReq.getTitle(),
-                    saveImpContainerReq.getDescription(),
-                    saveImpContainerReq.getAuthor());
+            emilEnvRepo.saveImportedContainer(saveImpContainerReq);
         } catch (BWFLAException e1) {
+            e1.printStackTrace();
             return Emil.internalErrorResponse(e1);
         }
         return Emil.successMessageResponse("save success!");

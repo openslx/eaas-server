@@ -1,27 +1,28 @@
 package de.bwl.bwfla.common.interfaces;
 
-import java.util.List;
-
-import javax.ejb.Remote;
-import javax.jws.WebMethod;
-import javax.jws.WebService;
-
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 
+import javax.activation.DataHandler;
+
+
 public interface SoftwareArchiveWSRemote
 {
+	public boolean hasSoftwarePackage(String id);
+
 	public boolean addSoftwarePackage(SoftwarePackage software);
 	
 	public int getNumSoftwareSeatsById(String id);
 	
 	public SoftwarePackage getSoftwarePackageById(String id);
-	
-	public List<String> getSoftwarePackages();
-	
+
+	public DataHandler getSoftwarePackages();
+
+	public DataHandler getSoftwarePackageIds();
+
 	public SoftwareDescription getSoftwareDescriptionById(String id);
 	
-	public List<SoftwareDescription> getSoftwareDescriptions();
+	public DataHandler getSoftwareDescriptions();
 	
 	public String getName();
 }

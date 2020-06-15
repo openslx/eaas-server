@@ -32,29 +32,30 @@ import de.bwl.bwfla.eaas.cluster.exception.AllocationFailureException;
 import de.bwl.bwfla.eaas.cluster.exception.OutOfResourcesException;
 import de.bwl.bwfla.eaas.cluster.metadata.LabelSelector;
 import de.bwl.bwfla.eaas.cluster.provider.IResourceProvider;
+import de.bwl.bwfla.eaas.cluster.rest.ClusterDescription;
 
 
-public interface IClusterManager extends IDumpable
+public interface IClusterManager extends IDumpable, IDescribable<ClusterDescription>
 {
-    public ResourceHandle allocate(UUID aid, ResourceSpec spec, Duration duration)
+    public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, Duration duration)
             throws TimeoutException, AllocationFailureException, OutOfResourcesException;
     
-    public ResourceHandle allocate(UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+    public ResourceHandle allocate(String tenant, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 	
-    public ResourceHandle allocate(LabelSelector selector, UUID aid, ResourceSpec spec, Duration duration)
+    public ResourceHandle allocate(String tenant, LabelSelector selector, UUID aid, ResourceSpec spec, Duration duration)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
     
 	public ResourceHandle allocate(
-			LabelSelector selector, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			String tenant, LabelSelector selector, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 	
 	public ResourceHandle allocate(
-			Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, Duration duration)
+			String tenant, Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, Duration duration)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 	
 	public ResourceHandle allocate(
-			Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
+			String tenant, Collection<LabelSelector> selectors, UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException, OutOfResourcesException;
 			
 	public void release(ResourceHandle handle);
@@ -65,5 +66,4 @@ public interface IClusterManager extends IDumpable
 	public Comparator<IResourceProvider> getResourceProviderComparator();
 	public String getName();
 	public Collection<String> getProviderNames();
-	public boolean checkAccessToken(String token);
 }

@@ -80,7 +80,7 @@ public class MetaDataSinks
 				final Environment environment = Environment.fromValue(item.getMetaData());
 				final ImageArchiveMetadata iamd = new ImageArchiveMetadata();
 				iamd.setType(ImageType.BASE);  // TODO: how should this type be supplied?
-				log.info("inserting item " + environment.getId());
+				// log.info("inserting item " + environment.getId());
 				db.importMetadata(archive, environment, iamd, true);
 			}
 			catch (JAXBException error) {
@@ -129,7 +129,7 @@ public class MetaDataSinks
 		public void insert(ItemDescription item) throws BWFLAException
 		{
 			try {
-				log.severe(item.getMetaData());
+				// log.severe(item.getMetaData());
 				final EmilEnvironment environment = EmilEnvironment.fromValue(item.getMetaData(), EmilEnvironment.class);
 				environment.setArchive("remote");
 				environmentRepository.save(environment, false);

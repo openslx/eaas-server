@@ -88,7 +88,7 @@ public class ReplicateImageTask extends AbstractTask<Object> {
 
 
             if (emulatorSpec.getOciSourceUrl() == null || emulatorSpec.getOciSourceUrl().isEmpty()) {
-                Entry entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
+                ImageMetadata entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
 
                 if (entry == null)
                     throw new BWFLAException("emulator entry not found. can't publish this environment");
@@ -105,7 +105,7 @@ public class ReplicateImageTask extends AbstractTask<Object> {
                 throw new BWFLAException("this environment cannot be imported. old metadata. set an emulator first");
 
             ImageNameIndex index = request.environmentHelper.getNameIndexes();
-            Entry entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
+            ImageMetadata entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
             if(entry == null) // we need to import the emulator
             {
                 if(emulatorSpec == null)

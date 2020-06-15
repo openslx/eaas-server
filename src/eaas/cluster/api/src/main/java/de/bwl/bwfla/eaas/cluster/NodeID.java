@@ -25,6 +25,7 @@ public class NodeID implements Comparable<NodeID>
 	private final String ip;
 	private String fqdn = null;
 	private String protocol = "";
+	private String subdomain = null;
 	
 	public NodeID(String ip)
 	{
@@ -61,7 +62,17 @@ public class NodeID implements Comparable<NodeID>
 		return protocol + ((fqdn != null) ? fqdn : ip);
     }
 
-    public String toString()
+	public void setSubDomainName(String name)
+	{
+		this.subdomain = name;
+	}
+
+	public String getSubDomainName()
+	{
+		return subdomain;
+	}
+
+	public String toString()
 	{
 		String nid = ip;
 		if (fqdn != null)

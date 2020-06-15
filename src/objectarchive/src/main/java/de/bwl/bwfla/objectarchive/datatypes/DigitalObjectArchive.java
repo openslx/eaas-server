@@ -21,8 +21,11 @@ package de.bwl.bwfla.objectarchive.datatypes;
 
 import java.nio.file.Path;
 import java.util.List;
+import java.util.stream.Stream;
 
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 
 /**
@@ -35,13 +38,14 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
  */
 public interface DigitalObjectArchive
 {
-	public List<String> getObjectList(); 
-	public FileCollection getObjectReference(String objectId);
+
+	Stream<String> getObjectIds();
+	FileCollection getObjectReference(String objectId);
 	void importObject(String metsdata) throws BWFLAException;
 	String getName();
 	Path getLocalPath();
 	DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException;
-
+	Stream<DigitalObjectMetadata> getObjectMetadata();
 	boolean isDefaultArchive();
 
     int getNumObjectSeats(String id);

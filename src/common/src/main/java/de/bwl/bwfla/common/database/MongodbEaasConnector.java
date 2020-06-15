@@ -430,7 +430,11 @@ public class MongodbEaasConnector {
 					clazz = (Class<T>) Class.forName(className);
 				} catch (ClassNotFoundException e) {
 					try {
-						clazz = (Class<T>) Class.forName("de.bwl.bwfla.emil.datatypes." + document.getString(clazzkey));
+						String klass = document.getString(clazzkey);
+						if(klass.contains("EmilNetworkEnvironment"))
+							klass = "NetworkEnvironment";
+
+						clazz = (Class<T>) Class.forName("de.bwl.bwfla.emil.datatypes." + klass);
 					} catch (ClassNotFoundException e1) {
 						e1.printStackTrace();
 						throw new MongoException("Deserializing document failed!", e1);

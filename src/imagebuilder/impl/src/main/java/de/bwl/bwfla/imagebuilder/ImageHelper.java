@@ -105,10 +105,11 @@ class ImageHelper {
 		process.addArguments("--non-interactive");
 		process.addArgument("tar");
 		process.addArgument("--no-same-owner");
-		process.addArguments("-v", "-xzf", "-");
+		process.addArguments("-xzf", "-");
 		process.setWorkingDirectory(dstdir);
 		process.setLogger(log);
-		process.start();
+		if (!process.start())
+			throw new BWFLAException("Starting untar failed!");
 
 		try (InputStream in = handler.getInputStream(); OutputStream out = process.getStdInStream()) {
 			IOUtils.copy(in, out);
@@ -125,6 +126,9 @@ class ImageHelper {
 			throw new BWFLAException("Extracting tar archive failed!", error);
 		}
 		finally {
+			if (process.isProcessRunning())
+				process.kill();
+
 			process.cleanup();
 		}
 	}
@@ -140,13 +144,14 @@ class ImageHelper {
 		}
 	}
 
-	public static void rsync(Path sourceDir, Path targetDir) throws BWFLAException {
+	public static void rsync(Path sourceDir, Path targetDir, Logger log) throws BWFLAException {
 		DeprecatedProcessRunner rsyncRunner = new DeprecatedProcessRunner();
 		rsyncRunner.setCommand("rsync");
 		rsyncRunner.addArgument("-crlptgoD");
 		rsyncRunner.addArguments( "--delete"); // , "--no-o", "--no-g");
 		rsyncRunner.addArgument(sourceDir.toAbsolutePath().toString() + "/");
 		rsyncRunner.addArgument(targetDir.toAbsolutePath().toString());
+		rsyncRunner.setLogger(log);
 		if (!rsyncRunner.execute())
 			throw new BWFLAException("rsync failed");
 	}

@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.logging.Level;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.emucomp.api.Nic;
@@ -72,8 +73,8 @@ public class AmigaBean extends EmulatorBean {
             imagePath = Paths.get(this.lookupResource(drive.getData(), this.getImageFormatForDriveType(drive.getType())));
             //check if this is first image
             if (floppyDriveCounter < 4)
-                emuRunner.addArgument("--floppy-drive-" + floppyDriveCounter + "=" + imagePath.toRealPath());
-            emuRunner.addArgument("--floppy-image-" + (floppyDriveCounter) + "=" + imagePath.toRealPath());
+                emuRunner.addArgument("--floppy-drive-" + floppyDriveCounter + "=" + imagePath.toAbsolutePath());
+            emuRunner.addArgument("--floppy-image-" + (floppyDriveCounter) + "=" + imagePath.toAbsolutePath());
 
 
             ++floppyDriveCounter;
@@ -86,19 +87,15 @@ public class AmigaBean extends EmulatorBean {
     }
 
     @Override
-    public boolean connectDrive(Drive drive, boolean attach) {
-        if (!emuRunner.isProcessRunning()) {
-            LOG.warning("Hotplug is unavailable because emulator is not running.");
-            return false;
-        }
-        LOG.severe("Hotplug is not implemented yet.");
-        return false;
-
+    public boolean connectDrive(Drive drive, boolean attach) throws BWFLAException
+    {
+        throw this.newNotImplementedException();
     }
 
     @Override
-    protected boolean addNic(Nic nic) {
-        LOG.warning("Network connection is currently not implemented.");
+    protected boolean addNic(Nic nic) throws BWFLAException
+    {
         return false;
+        // throw this.newNotImplementedException();
     }
 }

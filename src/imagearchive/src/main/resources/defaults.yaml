@@ -11,7 +11,7 @@ imagearchive.backends:
     type: filesystem
     basepath: /home/bwfla/image-archive/
     http_prefix: http://localhost:8080/imagearchive/default
-    nameindex_config_path: /home/bwfla/.bwFLA/nameindices/default/
+    nameindex_config_path: /home/bwfla/server-data/image-index/
 
 database:
     meta_data_collection: metadata

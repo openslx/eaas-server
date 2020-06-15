@@ -25,9 +25,9 @@
    <param-value>/ImageArchiveWS?wsdl</param-value>
   </init-param>
   <init-param>
-   <param-name>excludePaths</param-name>
-   <!-- Comma separated list of excluded servlets  -->
-   <param-value>/public</param-value>
+    <param-name>excludePaths</param-name>
+    <!-- Comma separated list of excluded servlets  -->
+    <param-value></param-value>
   </init-param>
  </filter>
 
