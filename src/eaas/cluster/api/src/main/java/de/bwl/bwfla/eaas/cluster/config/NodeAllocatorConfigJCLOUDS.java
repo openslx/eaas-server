@@ -303,6 +303,9 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 		@Config("auth.password")
 		private String authPassword= null;
 
+		@Config("key_pair")
+		private String keyPairName = null;
+
 
 		public ProviderConfigOPENSTACK()
 		{
@@ -369,6 +372,18 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 			this.authPassword = password;
 		}
 
+		public String getKeyPairName()
+		{
+			return keyPairName;
+		}
+
+		public void setKeyPairName(String name)
+		{
+			ConfigHelpers.check(name, "Provider's key-pair name is invalid!");
+
+			this.keyPairName = name;
+		}
+
 		@Override
 		public void load(Configuration config) throws ConfigException
 		{
@@ -385,6 +400,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 			this.setAuthProjectName(authProjectName);
 			this.setAuthUser(authUser);
 			this.setAuthPassword(authPassword);
+			this.setKeyPairName(keyPairName);
 		}
 
 		@Override

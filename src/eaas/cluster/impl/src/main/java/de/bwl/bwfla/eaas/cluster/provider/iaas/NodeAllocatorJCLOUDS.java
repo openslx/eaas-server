@@ -488,6 +488,14 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 						break;
 				}
 
+				final String keypair = ((NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK) config.getProviderConfig())
+						.getKeyPairName();
+
+				if (keypair != null) {
+					options.as(NovaTemplateOptions.class)
+							.keyPairName(keypair);
+				}
+
 				break;
 
 			default:
