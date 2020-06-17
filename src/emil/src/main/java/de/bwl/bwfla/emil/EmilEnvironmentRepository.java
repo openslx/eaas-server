@@ -89,6 +89,11 @@ public class EmilEnvironmentRepository {
 
 	private static boolean initialized = false;
 
+	public boolean isInitialized()
+	{
+		return initialized;
+	}
+
 	public final class MetadataCollection {
 		public static final String PUBLIC = "public";
 		public static final String REMOTE = "remote";
@@ -286,6 +291,8 @@ public class EmilEnvironmentRepository {
 		{
 			e.printStackTrace();
 		}
+
+		initialized = true;
 
 //		try {
 //			try {
@@ -505,35 +512,36 @@ public class EmilEnvironmentRepository {
 		return db.getRootlessJaxbObjects(getCollectionCtx(), type, "type");
 	}
 
+	public void importOldDb() throws BWFLAException {
+		List<EmilEnvironment> oldEnvs = null;
+		try {
+			 oldEnvs = importHelper.importExistentEnv(dbConnector.getInstance("eaas"), "emilEnv");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		for(EmilEnvironment env : oldEnvs)
+		{
+			Environment e = environmentsAdapter.getEnvironmentById("default", env.getEnvId());
+			if(e == null)
+			{
+				LOG.warning("old env import failed. env not found: " + env.getEnvId());
+				continue;
+			}
+
+			LOG.warning("importing " + env.getEnvId());
+			LOG.warning(env.toString());
+
+			env.setArchive(MetadataCollection.DEFAULT);
+			save(env, false);
+
+			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
+			LOG.warning(__env.isVisible() + " y");
+		}
+	}
+
 	public int initialize() throws JAXBException, BWFLAException {
 		int counter = 0;
-
-//		List<EmilEnvironment> oldEnvs = null;
-//		try {
-//			 oldEnvs = importHelper.importExistentEnv(dbConnector.getInstance("eaas"), "emilEnv");
-//		} catch (IOException e) {
-//			e.printStackTrace();
-//		}
-//
-//		for(EmilEnvironment env : oldEnvs)
-//		{
-//			Environment e = environmentsAdapter.getEnvironmentById("default", env.getEnvId());
-//			if(e == null)
-//			{
-//				LOG.warning("old env import failed. env not found: " + env.getEnvId());
-//				continue;
-//			}
-//
-//			LOG.warning("importing " + env.getEnvId());
-//			LOG.warning(env.toString());
-//			LOG.warning(env.isVisible() + " xxx \n");
-//
-//			env.setArchive(MetadataCollection.PUBLIC);
-//			save(env, false);
-//
-//			EmilEnvironment __env = getEmilEnvironmentById(env.getEnvId());
-//			LOG.warning(__env.isVisible() + "yyy");
-//		}
 
 		importFromFolder("import");
 
@@ -660,18 +668,18 @@ public class EmilEnvironmentRepository {
 	}
 
 
-	public List<EmilEnvironment> getEmilEnvironments(String userCtx)
+	public Stream<EmilEnvironment> getEmilEnvironments(String userCtx)
 	{
 		final Stream<EmilEnvironment> all = loadEmilEnvironments(userCtx);
 		final HashSet<String> known = new HashSet<>();
 
-		return all.filter(e -> {
-			if(known.contains(e.getEnvId()))
-				return false;
-			return known.add(e.getEnvId());
-		}).filter(this::isEnvironmentVisible)
-				.filter(e-> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
-				.collect(Collectors.toList());
+		return all.filter(this::isEnvironmentVisible)
+				.filter(e -> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
+				.filter(e -> {
+					if (known.contains(e.getEnvId()))
+						return false;
+					return known.add(e.getEnvId());
+				});
 	}
 
 	public List<NetworkEnvironment> getNetworkEnvironments() {
@@ -679,7 +687,7 @@ public class EmilEnvironmentRepository {
 		return emilNetworkEnvironments.collect(Collectors.toList());
 	}
 
-	public List<EmilEnvironment> getEmilEnvironments() {
+	public Stream<EmilEnvironment> getEmilEnvironments() {
 
 		String userCtx = getUserCtx();
 		return getEmilEnvironments(userCtx);

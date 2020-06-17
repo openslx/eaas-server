@@ -19,7 +19,9 @@
 
 package de.bwl.bwfla.emil;
 
-import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
@@ -55,12 +57,13 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.util.ArrayList;
+import javax.ws.rs.core.StreamingOutput;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import java.util.logging.Level;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -96,6 +99,13 @@ public class ObjectRepository extends EmilRest
 	private String USER_ARCHIVE_PREFIX;
 
 
+	private static boolean initialized = false;
+
+	public boolean isInitialized()
+	{
+		return initialized;
+	}
+
 	@PostConstruct
     private void initialize()
 	{
@@ -103,6 +113,8 @@ public class ObjectRepository extends EmilRest
 			objHelper = new ObjectArchiveHelper(objectArchive);
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 			objArchives = new HashSet<>(objHelper.getArchives());
+
+			initialized = true;
 		}
 		catch (BWFLAException error) {
 			LOG.log(Level.SEVERE, "Initializing object-repository failed!", error);
@@ -250,7 +262,7 @@ public class ObjectRepository extends EmilRest
 		 *
 		 * @HTTP 500 if archive is not found
 		 *
-		 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListResponse
+		 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListItem
 		 */
 		@GET
 		@Secured(roles = {Role.RESTRCITED})
@@ -260,40 +272,50 @@ public class ObjectRepository extends EmilRest
 			LOG.info("Listing all digital objects in archive '" + archiveId + "'...");
 
 			try {
-				final List<String> objects = objHelper.getObjectList(archiveId);
-				if (objects == null) {
-					final String message = "No objects found in archive '" + archiveId + "'!";
-					LOG.warning(message);
-					return Response.status(Response.Status.BAD_REQUEST)
-							.entity(message)
-							.build();
-				}
+				final Stream<DigitalObjectMetadata> objects = objHelper.getObjectMetadata(archiveId);
 
-				final ArrayList<ObjectListItem> objList = new ArrayList<>();
-				for (String id : objects) {
-					SoftwarePackage software = swHelper.getSoftwarePackageById(id);
-					if (software != null)
-						continue;
+				// Construct response (in streaming-mode)
+				final StreamingOutput output = (ostream) -> {
+					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
+						final ObjectMapper mapper = new ObjectMapper();
+						json.writeStartArray();
+						objects.forEach((object) -> {
+							try {
+								final String id = object.getId();
+								if (swHelper.hasSoftwarePackage(id))
+									return;
 
-					DigitalObjectMetadata md = objHelper.getObjectMetadata(archiveId, id);
-					ObjectListItem item = new ObjectListItem(id);
-					item.setTitle(md.getTitle());
-					item.setArchiveId(archiveId);
+								final ObjectListItem item = new ObjectListItem(id);
+								item.setTitle(object.getTitle());
+								item.setArchiveId(archiveId);
+								item.setThumbnail(object.getThumbnail());
+								item.setSummary(object.getSummary());
 
-//				try {
-//					item.setDescription(archive.getClassificationResultForObject(id).getUserDescription());
-//				} catch (NoSuchElementException e){
-//					LOG.info("no cache for " + id + ". Getting default description");
-//					item.setDescription(md.getDescription());
-//				}
+//								try {
+//									item.setDescription(archive.getClassificationResultForObject(id).getUserDescription());
+//								} catch (NoSuchElementException e){
+//									LOG.info("no cache for " + id + ". Getting default description");
+//									item.setDescription(object.getDescription());
+//								}
 
-					item.setThumbnail(md.getThumbnail());
-					item.setSummary(md.getSummary());
-					objList.add(item);
-				}
+								mapper.writeValue(json, item);
+							}
+							catch (Exception error) {
+								LOG.log(Level.WARNING, "Serializing object's metadata failed!", error);
+								throw new RuntimeException(error);
+							}
+						});
+
+						json.writeEndArray();
+						json.flush();
+					}
+					finally {
+						objects.close();
+					}
+				};
 
 				return Response.ok()
-						.entity(objList)
+						.entity(output)
 						.build();
 			}
 			catch (Exception error) {

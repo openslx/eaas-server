@@ -35,6 +35,9 @@ public class DockerImport extends ImageBuilderMetadata {
     @XmlElement
     private ArrayList<String> envVariables;
 
+    @XmlElement
+    private String workingDir;
+
     public String getImageRef() {
         return imageRef;
     }
@@ -97,5 +100,13 @@ public class DockerImport extends ImageBuilderMetadata {
 
     public void setEnvVariables(ArrayList envVariables) {
         this.envVariables = envVariables;
+    }
+
+    public String getWorkingDir() {
+        return workingDir;
+    }
+
+    public void setWorkingDir(String workingDir) {
+        this.workingDir = workingDir;
     }
 }

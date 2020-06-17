@@ -153,7 +153,10 @@ public abstract class MediumBuilder
 						Path imageDir = dstdir.getParent().resolve("image");
 
 						if (Files.exists(imageDir)) {
-							runner.addArgument("jq '{Cmd: .config.Cmd, Env: .config.Env}' " + dstdir + "/../image/blobs/\"$(jq -r .config.digest " + dstdir + "/../image/blobs/\"$(jq -r .manifests[].digest " + dstdir + "/../image/index.json | tr : /)\" | tr : /)\"");
+							runner.addArgument("jq '{Cmd: .config.Cmd, Env: .config.Env, WorkingDir: .config.WorkingDir}' "
+									+ dstdir + "/../image/blobs/\"$(jq -r .config.digest "
+									+ dstdir + "/../image/blobs/\"$(jq -r .manifests[].digest "
+									+ dstdir + "/../image/index.json | tr : /)\" | tr : /)\"");
 							runner.start();
 						} else {
 							throw new BWFLAException("docker container doesn't contain image directory");
@@ -174,6 +177,9 @@ public abstract class MediumBuilder
 								for(int i = 0; i < cmdJson.size(); i++)
 									cmds.add(cmdJson.getString(i));
 
+								JsonString workDirObject = json.getJsonString("WorkingDir");
+								if(workDirObject != null)
+									dockerMd.setWorkingDir(workdir.toString());
 								dockerMd.setEntryProcesses(cmds);
 								dockerMd.setEnvVariables(envvars);
 							}

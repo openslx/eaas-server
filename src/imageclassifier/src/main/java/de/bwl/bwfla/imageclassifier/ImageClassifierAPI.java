@@ -19,14 +19,14 @@
 
 package de.bwl.bwfla.imageclassifier;
 
-import java.io.IOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -42,7 +42,6 @@ import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.imageclassifier.client.Identification;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
 import de.bwl.bwfla.imageclassifier.client.IdentificationResponse;
@@ -216,17 +215,10 @@ public class ImageClassifierAPI
 	{
 		cause.printStackTrace();
 
-		JsonBuilder json = new JsonBuilder();
-		try {
-			json.beginObject();
-			json.add("message", "Server has encountered an internal error!");
-			json.add("cause", cause.toString());
-			json.endObject();
-		}
-		catch (IOException exception) {
-			LOG.warning("Constructing JSON response failed!");
-			LOG.log(Level.WARNING, exception.getMessage(), exception);
-		}
+		final JsonObject json = Json.createObjectBuilder()
+				.add("message", "Server has encountered an internal error!")
+				.add("cause", cause.toString())
+				.build();
 
 		return ImageClassifierAPI.createResponse(Status.INTERNAL_SERVER_ERROR, json.toString());
 	}
@@ -238,16 +230,9 @@ public class ImageClassifierAPI
 
 	private static Response createMessageResponse(Status status, String message)
 	{
-		JsonBuilder json = new JsonBuilder();
-		try {
-			json.beginObject();
-			json.add("message", message);
-			json.endObject();
-		}
-		catch (IOException exception) {
-			LOG.warning("Constructing JSON response failed!");
-			LOG.log(Level.WARNING, exception.getMessage(), exception);
-		}
+		final JsonObject json = Json.createObjectBuilder()
+				.add("message", message)
+				.build();
 
 		return ImageClassifierAPI.createResponse(status, json.toString());
 	}

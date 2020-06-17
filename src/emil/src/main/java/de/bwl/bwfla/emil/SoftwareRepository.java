@@ -19,7 +19,9 @@
 
 package de.bwl.bwfla.emil;
 
-import de.bwl.bwfla.api.objectarchive.DigitalObjectMetadata;
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -43,6 +45,7 @@ import javax.json.JsonObject;
 import javax.json.stream.JsonGenerator;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -50,10 +53,11 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
-import java.io.StringWriter;
+import javax.ws.rs.core.StreamingOutput;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -140,6 +144,55 @@ public class SoftwareRepository extends EmilRest
 
 	public class SoftwarePackages
 	{
+		/**
+		 * Looks up and returns all software packages.
+		 * @return A JSON response containing a list of software packages or an error message.
+		 */
+		@GET
+		@Secured(roles = {Role.PUBLIC})
+		@Produces(MediaType.APPLICATION_JSON)
+		public Response list()
+		{
+			LOG.info("Listing all software-packages...");
+
+			try {
+				final Stream<SoftwarePackage> packages = swHelper.getSoftwarePackages();
+				if (packages == null)
+					throw new NotFoundException();
+
+				// Construct response (in streaming-mode)
+				final StreamingOutput output = (ostream) -> {
+					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
+						final ObjectMapper mapper = new ObjectMapper();
+						json.writeStartObject();
+						json.writeStringField("status", "0");
+						json.writeArrayFieldStart("packages");
+						packages.forEach((pkg) -> {
+							try {
+								mapper.writeValue(json, SoftwareRepository.toEmilSoftwareObject(pkg));
+							}
+							catch (Exception error) {
+								LOG.log(Level.WARNING, "Serializing software-package failed!", error);
+								throw new RuntimeException(error);
+							}
+						});
+						json.writeEndArray();
+						json.writeEndObject();
+						json.flush();
+					}
+					finally {
+						packages.close();
+					}
+				};
+
+				return SoftwareRepository.createResponse(Status.OK, output);
+			}
+			catch (Throwable error) {
+				LOG.log(Level.WARNING, "Listing software-packages failed!", error);
+				return Emil.internalErrorResponse(error);
+			}
+		}
+
 		@GET
 		@Path("/{softwareId}")
 		@Secured(roles = {Role.PUBLIC})
@@ -149,27 +202,11 @@ public class SoftwareRepository extends EmilRest
 			LOG.info("Looking up software-package '" + softwareId + "'...");
 
 			try {
-				EmilSoftwareObject swo = new EmilSoftwareObject();
 				SoftwarePackage software = swHelper.getSoftwarePackageById(softwareId);
-				if (software == null) {
-					// TODO: throw NotFoundException here!
-					return SoftwareRepository.createResponse(Status.OK, swo);
-				}
+				if (software == null)
+					throw new NotFoundException();
 
-				swo.setIsPublic(software.isPublic());
-				swo.setObjectId(software.getObjectId());
-				swo.setArchiveId(software.getArchive());
-				swo.setAllowedInstances(software.getNumSeats());
-				List<String> fmts = software.getSupportedFileFormats();
-				if (fmts == null)
-					fmts = new ArrayList<String>();
-
-				swo.setNativeFMTs(fmts);
-				swo.setExportFMTs(new ArrayList<String>());
-				swo.setImportFMTs(new ArrayList<String>());
-				swo.setLicenseInformation(software.getLicence());
-				swo.setIsOperatingSystem(software.getIsOperatingSystem());
-				swo.setQID(software.getQID());
+				EmilSoftwareObject swo = SoftwareRepository.toEmilSoftwareObject(software);
 				return SoftwareRepository.createResponse(Status.OK, swo);
 			}
 			catch(Throwable error) {
@@ -291,34 +328,38 @@ public class SoftwareRepository extends EmilRest
 			LOG.info("Listing all software-package descriptions...");
 
 			try {
-				List<SoftwareDescription> descriptions = swHelper.getSoftwareDescriptions();
+				final Stream<SoftwareDescription> descriptions = swHelper.getSoftwareDescriptions();
 				if (descriptions == null) {
 					// TODO: throw NotFoundException here!
 					return SoftwareRepository.errorMessageResponse("Software archive could not be read!");
 				}
 
-				// Construct response
-				final StringWriter writer = new StringWriter(2048);
-				final JsonGenerator json = Json.createGenerator(writer);
-				json.writeStartObject();
-				json.write("status", "0");
-				json.writeStartArray("descriptions");
-				for (SoftwareDescription desc : descriptions) {
-					json.writeStartObject();
-					json.write("id", desc.getSoftwareId());
-					json.write("label", desc.getLabel());
-					json.write("isPublic", desc.isPublic());
-					json.write("archiveId", (desc.getArchiveId() != null) ? desc.getArchiveId() : "default");
-					json.write("isOperatingSystem", desc.getIsOperatingSystem());
-					json.writeEnd();
-				}
+				// Construct response (in streaming-mode)
+				final StreamingOutput output = (ostream) -> {
+					try (final JsonGenerator json = Json.createGenerator(ostream)) {
+						json.writeStartObject();
+						json.write("status", "0");
+						json.writeStartArray("descriptions");
+						descriptions.forEach((desc) -> {
+							json.writeStartObject();
+							json.write("id", desc.getSoftwareId());
+							json.write("label", desc.getLabel());
+							json.write("isPublic", desc.isPublic());
+							json.write("archiveId", (desc.getArchiveId() != null) ? desc.getArchiveId() : "default");
+							json.write("isOperatingSystem", desc.getIsOperatingSystem());
+							json.writeEnd();
+						});
 
-				json.writeEnd();
-				json.writeEnd();
-				json.flush();
-				json.close();
+						json.writeEnd();
+						json.writeEnd();
+						json.flush();
+					}
+					finally {
+						descriptions.close();
+					}
+				};
 
-				return SoftwareRepository.createResponse(Status.OK, writer.toString());
+				return SoftwareRepository.createResponse(Status.OK, output);
 			}
 			catch (Throwable error) {
 				LOG.log(Level.WARNING, "Listing software-package descriptions failed!", error);
@@ -382,5 +423,25 @@ public class SoftwareRepository extends EmilRest
 				return Emil.internalErrorResponse(error);
 			}
 		}
+	}
+
+	private static EmilSoftwareObject toEmilSoftwareObject(SoftwarePackage software)
+	{
+		EmilSoftwareObject swo = new EmilSoftwareObject();
+		swo.setIsPublic(software.isPublic());
+		swo.setObjectId(software.getObjectId());
+		swo.setArchiveId(software.getArchive());
+		swo.setAllowedInstances(software.getNumSeats());
+		List<String> fmts = software.getSupportedFileFormats();
+		if (fmts == null)
+			fmts = new ArrayList<String>();
+
+		swo.setNativeFMTs(fmts);
+		swo.setExportFMTs(new ArrayList<String>());
+		swo.setImportFMTs(new ArrayList<String>());
+		swo.setLicenseInformation(software.getLicence());
+		swo.setIsOperatingSystem(software.getIsOperatingSystem());
+		swo.setQID(software.getQID());
+		return swo;
 	}
 }

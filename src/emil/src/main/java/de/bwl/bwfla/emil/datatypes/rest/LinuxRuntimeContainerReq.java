@@ -18,6 +18,9 @@ public class LinuxRuntimeContainerReq {
     @XmlElement(required = true)
     private boolean isDHCPenabled;
 
+    @XmlElement(required = false, defaultValue = "false")
+    private boolean isTelnetEnabled;
+
     public String getUserContainerEnvironment() {
         return userContainerEnvironment;
     }
@@ -40,5 +43,13 @@ public class LinuxRuntimeContainerReq {
 
     public void setDHCPenabled(boolean DHCPenabled) {
         isDHCPenabled = DHCPenabled;
+    }
+
+    public boolean isTelnetEnabled() {
+        return isTelnetEnabled;
+    }
+
+    public void setTelnetEnabled(boolean telnetEnabled) {
+        isTelnetEnabled = telnetEnabled;
     }
 }

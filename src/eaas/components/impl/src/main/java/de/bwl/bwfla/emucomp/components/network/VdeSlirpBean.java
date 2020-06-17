@@ -69,26 +69,33 @@ public class VdeSlirpBean extends EaasComponentBean {
 
             runner.addArguments("/libexec/vde/slirp-helper", "--fd", "3");
 
-            if (config.getNetwork() != null && !config.getNetwork().isEmpty()) {
-                String network;
-                String mask;
-                if(config.getNetwork().contains("/")) {
-                    try {
-                        SubnetUtils net = new SubnetUtils(config.getNetwork());
-                        network = net.getInfo().getAddress();
-                        mask = net.getInfo().getNetmask();
-                    } catch (IllegalArgumentException e) {
-                        throw new BWFLAException("failed to extract network info from " + config.getNetwork());
-                    }
-                } else {
-                     network = config.getNetwork();
-                     mask = config.getNetmask();
-                }
-                LOG.severe("using " +  network + " " + mask);
-
-                runner.addArguments("--net", network);
-                runner.addArguments("--mask",  mask);
+            String network;
+            String mask;
+            if (config.getNetwork() == null || config.getNetwork().isEmpty()) {
+                throw new BWFLAException("network attribute is mandatory");
             }
+
+            if(config.getNetwork().contains("/")) {
+                try {
+                    SubnetUtils net = new SubnetUtils(config.getNetwork());
+                    network = net.getInfo().getAddress();
+                    mask = net.getInfo().getNetmask();
+                } catch (IllegalArgumentException e) {
+                    throw new BWFLAException("failed to extract network info from " + config.getNetwork());
+                }
+            } else {
+                 network = config.getNetwork();
+                 mask = config.getNetmask();
+            }
+
+            if(!network.endsWith(".0"))
+                throw new BWFLAException("invalid network: " + network);
+
+            LOG.severe("using " +  network + " " + mask);
+
+            runner.addArguments("--net", network);
+            runner.addArguments("--mask",  mask);
+
 
             if (config.getGateway() != null)
                 runner.addArguments("--host", config.getGateway());
@@ -97,17 +104,21 @@ public class VdeSlirpBean extends EaasComponentBean {
 //              0.0.0.0 means disable dhcp
                 runner.addArguments("--dhcp-start", "0.0.0.0");
             }
+            else {
+                // we assume the full range from 15.
+                String dhcpStart = network.substring(0, network.length() - 2) + "15";
+                runner.addArguments("--dhcp-start", dhcpStart);
+            }
 
             if (config.getDnsServer() != null && !config.getDnsServer().isEmpty()) {
                 runner.addArguments("--dns", config.getDnsServer());
             }
-
-
-
-
-
-
-
+            else
+            {
+                // we have to make sure to set a DNS, as the user might choose a network outside of 10.0.2.x (default)
+                runner.addArguments("--dns", "1.0.0.1");
+            }
+            
             if (!runner.start())
                 throw new BWFLAException("Cannot start vdeslirp process");
             vdeProcesses.add(runner);

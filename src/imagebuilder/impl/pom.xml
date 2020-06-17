@@ -17,11 +17,6 @@
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-war-plugin</artifactId>
 				<configuration>
-					<archive>
-						<manifestEntries>
-							<Dependencies>org.apache.httpcomponents</Dependencies>
-						</manifestEntries>
-					</archive>
 					<webResources>
 						<webResource>
 							<directory>${project.build.directory}/generated/</directory>
@@ -54,14 +49,16 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>imagebuilder-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.jboss.resteasy</groupId>

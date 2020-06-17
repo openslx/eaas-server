@@ -7,7 +7,6 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
-import de.bwl.bwfla.common.utils.JsonBuilder;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironment;
 import de.bwl.bwfla.emil.datatypes.NetworkEnvironmentElement;
@@ -18,6 +17,8 @@ import org.apache.tamaya.inject.api.Config;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
@@ -74,11 +75,11 @@ public class NetworkEnvironments extends EmilRest {
                         networkElement.setMacAddress(NetworkUtils.getRandomHWAddress());
             }));
             emilEnvRepo.saveNetworkEnvironemnt(envNetworkEnv);
-            JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-            json.beginObject();
-            json.add("status", "0");
-            json.endObject();
-            json.finish();
+
+            final JsonObject json = Json.createObjectBuilder()
+                    .add("status", "0")
+                    .build();
+
             return Emil.createResponse(Response.Status.OK, json.toString());
 
         } catch (Throwable t) {
@@ -120,7 +121,9 @@ public class NetworkEnvironments extends EmilRest {
                 config.setNetwork(env.getNetwork());
                 config.setUpstream_dns(env.getUpstream_dns());
                 config.setGateway(env.getGateway());
-                config.setArchived_internet_date(env.getNetworking().getArchiveInternetDate());
+                if (env.getNetworking().isArchivedInternetEnabled()) {
+                    config.setArchived_internet_date(env.getNetworking().getArchiveInternetDate());
+                }
                 NetworkConfiguration.DHCPConfiguration dhcp = new NetworkConfiguration.DHCPConfiguration();
                 dhcp.setIp(env.getNetworking().getDhcpNetworkAddress());
                 config.setDhcp(dhcp);
@@ -152,11 +155,10 @@ public class NetworkEnvironments extends EmilRest {
                 BlobHandle handle = blobstore.put(blobDescription);
                 String url = handle.toRestUrl(blobStoreRestAddress);
 
-                JsonBuilder json = new JsonBuilder(DEFAULT_RESPONSE_CAPACITY);
-                json.beginObject();
-                json.add("url", url);
-                json.endObject();
-                json.finish();
+                final JsonObject json = Json.createObjectBuilder()
+                        .add("url", url)
+                        .build();
+
                 return Emil.createResponse(Response.Status.OK, json.toString());
             }
             else

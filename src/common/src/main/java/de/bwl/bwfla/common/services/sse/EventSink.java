@@ -28,14 +28,13 @@ import java.util.concurrent.CompletionStage;
 /** Wrapper around SSE sink */
 public class EventSink
 {
-	private final SseEventSink sink;
-	private final Sse sse;
+	private SseEventSink sink;
+	private Sse sse;
 
 
 	public EventSink(SseEventSink sink, Sse sse)
 	{
-		this.sink = sink;
-		this.sse = sse;
+		this.reset(sink, sse);
 	}
 
 	public OutboundSseEvent.Builder newEventBuilder()
@@ -56,5 +55,11 @@ public class EventSink
 	public boolean isClosed()
 	{
 		return sink.isClosed();
+	}
+
+	public void reset(SseEventSink sink, Sse sse)
+	{
+		this.sink = sink;
+		this.sse = sse;
 	}
 }

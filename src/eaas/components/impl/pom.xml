@@ -2,8 +2,7 @@
 	xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
 	<modelVersion>4.0.0</modelVersion>
 	<artifactId>eaas-components-impl</artifactId>
-	<name>EaaS components SOAP service and backend implementation</name>
-	<description>An EJB module containing emulation component and its web-service API.</description>
+	<description>EaaS components SOAP service and backend implementation</description>
 	<packaging>war</packaging>
 	<parent>
 		<groupId>de.bwl.bwfla.eaas</groupId>
@@ -31,7 +30,7 @@
 				<artifactId>cxf-java2ws-plugin</artifactId>
 				<executions>
 					<execution>
-						<id>wsdl-eaascomponent</id>
+						<id>wsdl-component</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>java2ws</goal>
@@ -81,6 +80,7 @@
 				<artifactId>maven-antrun-plugin</artifactId>
 				<executions>
 					<execution>
+						<id>postprocess-wsdls</id>
 						<phase>process-classes</phase>
 						<goals>
 							<goal>run</goal>
@@ -104,7 +104,6 @@
 					</execution>
 				</executions>
 			</plugin>
-			
 		</plugins>
 	</build>
 
@@ -116,11 +115,11 @@
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>common</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>blobstore-client</artifactId>
-			<type>jar</type>
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
@@ -144,8 +143,9 @@
 			<artifactId>commons-io</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>javax.activation</groupId>
-			<artifactId>activation</artifactId>
+			<groupId>com.sun.activation</groupId>
+			<artifactId>jakarta.activation</artifactId>
+			<scope>provided</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.freedesktop.gstreamer</groupId>
