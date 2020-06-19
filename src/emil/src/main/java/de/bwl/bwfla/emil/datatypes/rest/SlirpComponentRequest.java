@@ -34,8 +34,8 @@ public class SlirpComponentRequest extends ComponentRequest {
     @XmlElement(required = false, nillable = false)
     private String hwAddress;
 
-    @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.2")
-    private String ip4Address = "10.0.2.2";
+    @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.0")
+    private String network = "10.0.2.0";
 
     @XmlElement(required = false, nillable = false, defaultValue = "10.0.2.1")
     private String gateway = "10.0.2.1";
@@ -65,12 +65,12 @@ public class SlirpComponentRequest extends ComponentRequest {
         this.hwAddress = hwAddress;
     }
 
-    public String getIp4Address() {
-        return ip4Address;
+    public String getNetwork() {
+        return network;
     }
 
-    public void setIp4Address(String ip4Address) {
-        this.ip4Address = ip4Address;
+    public void setNetwork(String network) {
+        this.network = network;
     }
 
     public String getGateway() {

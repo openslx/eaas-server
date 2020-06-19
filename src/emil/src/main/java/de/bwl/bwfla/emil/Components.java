@@ -395,9 +395,9 @@ public class Components {
             if (desc.getHwAddress() != null && !desc.getHwAddress().isEmpty()) {
                 slirpConfig.setHwAddress(desc.getHwAddress());
             }
-            if (desc.getIp4Address() != null && !desc.getIp4Address().isEmpty()) {
-                slirpConfig.setNetwork(desc.getIp4Address());
-            }
+
+            slirpConfig.setNetwork(desc.getNetwork());
+
             if (desc.getNetmask() != null) {
                 slirpConfig.setNetmask(desc.getNetmask());
             }
