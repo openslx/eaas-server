@@ -207,6 +207,9 @@ public class Components {
     @AuthenticatedUser
     private UserContext authenticatedUser;
 
+    @Inject
+    private ObjectRepository objectRepository;
+
     /** EaasWS web-service */
     private EaasWS eaas;
 
@@ -725,6 +728,8 @@ public class Components {
             }
 
             Integer driveId = null;
+            // hack: we need to initialize the user archive:
+            objectRepository.archives().list();
             if (machineDescription.getObject() != null) {
                 driveId = addObjectToEnvironment(chosenEnv, machineDescription.getObjectArchive(), machineDescription.getObject());
             } else if (machineDescription.getSoftware() != null) {
@@ -738,7 +743,7 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId()) {
+            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs()) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {
                     LOG.warning("HWAddress is null! Using random..." );
@@ -921,7 +926,6 @@ public class Components {
      * @HTTP 404 if the component id cannot be resolved to a concrete component
      */
     @POST
-    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/keepalive")
     public void keepalive(@PathParam("componentId") String componentId) {
         final ComponentSession session = sessions.get(componentId);
@@ -952,7 +956,6 @@ public class Components {
      * @HTTP 500 if the component has failed or cannot be found
      */
     @GET
-    @Secured(roles={Role.PUBLIC})
     @Path("/{componentId}/state")
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
@@ -1168,11 +1171,15 @@ public class Components {
         if (session == null)
             throw new NotFoundException("Session not found: " + componentId);
 
-        if (session.hasEventSink())
-            throw new BadRequestException("An event-sink is already registered!");
-
-        LOG.warning("Start forwarding server-sent-events for session " + componentId);
-        session.setEventSink(sink, sse);
+        if (session.hasEventSink()) {
+            LOG.info("An event-sink is already registered! Updating...");
+            session.getEventSink()
+                    .reset(sink, sse);
+        }
+        else {
+            LOG.warning("Start forwarding server-sent-events for session " + componentId);
+            session.setEventSink(sink, sse);
+        }
     }
 
     @GET

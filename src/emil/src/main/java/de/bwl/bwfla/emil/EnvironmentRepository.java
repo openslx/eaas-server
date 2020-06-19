@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.emil;
 
+import com.fasterxml.jackson.core.JsonFactory;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -65,6 +67,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.StreamingOutput;
 import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.StringWriter;
@@ -74,7 +77,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.logging.Level;
-import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @ApplicationScoped
@@ -288,17 +291,40 @@ public class EnvironmentRepository extends EmilRest
 		@GET
 		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response list(@Context final HttpServletResponse response)
+		public Response list(@QueryParam("detailed") @DefaultValue("false") boolean detailed)
 		{
 			LOG.info("Listing all available environments...");
 			try {
-				final List<EnvironmentListItem> environments = emilEnvRepo.getEmilEnvironments()
-						.stream()
-						.map(EnvironmentListItem::new)
-						.collect(Collectors.toList());
+				final Stream<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
+				final Stream<Object> entries = (!detailed) ? environments.map(EnvironmentListItem::new)
+						: environments.map((env) -> (Object) this.addEnvironmentDetailsNoThrow(env))
+								.filter(Objects::nonNull);
+
+				// Construct response (in streaming-mode)
+				final StreamingOutput output = (ostream) -> {
+					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
+						final ObjectMapper mapper = new ObjectMapper();
+						json.writeStartArray();
+						entries.forEach((entry) -> {
+							try {
+								mapper.writeValue(json, entry);
+							}
+							catch (Exception error) {
+								LOG.log(Level.WARNING, "Serializing environment failed!", error);
+								throw new RuntimeException(error);
+							}
+						});
+						json.writeEndArray();
+						json.flush();
+					}
+					finally {
+						environments.close();
+						entries.close();
+					}
+				};
 
 				return Response.status(Status.OK)
-						.entity(environments)
+						.entity(output)
 						.build();
 			}
 			catch (Throwable error) {
@@ -314,7 +340,7 @@ public class EnvironmentRepository extends EmilRest
 		@Path("/{envId}")
 		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response get(@PathParam("envId") String envId, @Context final HttpServletResponse response)
+		public Response get(@PathParam("envId") String envId)
 		{
 			LOG.info("Looking up environment '" + envId + "'...");
 
@@ -328,10 +354,7 @@ public class EnvironmentRepository extends EmilRest
 			}
 
 			try {
-				Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
-				MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;
-				List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
-				EnvironmentDetails result = new EnvironmentDetails(emilenv, machine, parents, swHelper);
+				EnvironmentDetails result = this.addEnvironmentDetails(emilenv);
 				return Response.ok()
 						.entity(result)
 						.build();
@@ -401,9 +424,9 @@ public class EnvironmentRepository extends EmilRest
 				if(envReq.getRomId() != null && envReq.getRomLabel() != null)
 				{
 					ImageArchiveBinding romBinding = new ImageArchiveBinding("default", null, envReq.getRomId(), ImageType.ROMS.value());
-					romBinding.setId("rom-" + envReq.getRomLabel());
+					romBinding.setId("rom-" + envReq.getRomId());
+					romBinding.setAccess(Binding.AccessType.COPY);
 					env.getAbstractDataResource().add(romBinding);
-					env.getNativeConfig().setValue("rom rom://" + envReq.getRomLabel());
 				}
 
 				String id = envdb.importMetadata("default", env, iaMd, false);
@@ -678,6 +701,25 @@ public class EnvironmentRepository extends EmilRest
 		public Revisions revisions(@PathParam("envId") String envId)
 		{
 			return new Revisions(envId);
+		}
+
+		private EnvironmentDetails addEnvironmentDetails(EmilEnvironment emilenv) throws BWFLAException
+		{
+			Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+			MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;
+			List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
+			return new EnvironmentDetails(emilenv, machine, parents, swHelper);
+		}
+
+		private EnvironmentDetails addEnvironmentDetailsNoThrow(EmilEnvironment emilenv)
+		{
+			try {
+				return this.addEnvironmentDetails(emilenv);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Collecting environment's details failed!", error);
+				return null;
+			}
 		}
 	}
 

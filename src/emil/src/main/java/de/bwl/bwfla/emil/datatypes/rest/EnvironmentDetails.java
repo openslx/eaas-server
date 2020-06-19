@@ -263,6 +263,196 @@ public class EnvironmentDetails {
         }
     }
 
+    public NetworkingType getNetworking()
+    {
+        return networking;
+    }
+
+    public String getParentEnvId()
+    {
+        return parentEnvId;
+    }
+
+    public String getEnvId()
+    {
+        return envId;
+    }
+
+    public String getTitle()
+    {
+        return title;
+    }
+
+    public String getDescription()
+    {
+        return description;
+    }
+
+    public String getVersion()
+    {
+        return version;
+    }
+
+    public String getEmulator()
+    {
+        return emulator;
+    }
+
+    public String getHelpText()
+    {
+        return helpText;
+    }
+
+    public boolean isEnableRelativeMouse()
+    {
+        return enableRelativeMouse;
+    }
+
+    public boolean isEnablePrinting()
+    {
+        return enablePrinting;
+    }
+
+    public boolean isShutdownByOs()
+    {
+        return shutdownByOs;
+    }
+
+    public String getTimeContext()
+    {
+        return timeContext;
+    }
+
+    public String getAuthor()
+    {
+        return author;
+    }
+
+    public boolean isCanProcessAdditionalFiles()
+    {
+        return canProcessAdditionalFiles;
+    }
+
+    public String getArchive()
+    {
+        return archive;
+    }
+
+    public String getXpraEncoding()
+    {
+        return xpraEncoding;
+    }
+
+    public String getOwner()
+    {
+        return owner;
+    }
+
+    public String getEnvType()
+    {
+        return envType;
+    }
+
+    public List<ParentEnvironment> getRevisions()
+    {
+        return revisions;
+    }
+
+    public List<SoftwareInfo> getInstalledSoftwareIds()
+    {
+        return installedSoftwareIds;
+    }
+
+    public String getUserTag()
+    {
+        return userTag;
+    }
+
+    public String getOs()
+    {
+        return os;
+    }
+
+    public String getNativeConfig()
+    {
+        return nativeConfig;
+    }
+
+    public boolean isUseXpra()
+    {
+        return useXpra;
+    }
+
+    public boolean isUseWebRTC()
+    {
+        return useWebRTC;
+    }
+
+    public String getContainerName()
+    {
+        return containerName;
+    }
+
+    public String getContainerVersion()
+    {
+        return containerVersion;
+    }
+
+    public List<Drive> getDrives()
+    {
+        return drives;
+    }
+
+    public String getTimestamp()
+    {
+        return timestamp;
+    }
+
+    public String getObjectId()
+    {
+        return objectId;
+    }
+
+    public String getObjectArchive()
+    {
+        return objectArchive;
+    }
+
+    public String getInput()
+    {
+        return input;
+    }
+
+    public String getOutput()
+    {
+        return output;
+    }
+
+    public List<String> getProcessArgs()
+    {
+        return processArgs;
+    }
+
+    public List<String> getProcessEnvs()
+    {
+        return processEnvs;
+    }
+
+    public String getRuntimeId()
+    {
+        return runtimeId;
+    }
+
+    public boolean isLinuxRuntime()
+    {
+        return isLinuxRuntime;
+    }
+
+    public boolean isServiceContainer()
+    {
+        return isServiceContainer;
+    }
+
     @XmlRootElement
     public static class ParentEnvironment {
         @XmlElement
@@ -273,6 +463,21 @@ public class EnvironmentDetails {
 
         @XmlElement
         String archive;
+
+        public String getId()
+        {
+            return id;
+        }
+
+        public String getText()
+        {
+            return text;
+        }
+
+        public String getArchive()
+        {
+            return archive;
+        }
     }
 
     @XmlRootElement
@@ -285,5 +490,20 @@ public class EnvironmentDetails {
 
         @XmlElement
         String archive;
+
+        public String getId()
+        {
+            return id;
+        }
+
+        public String getLabel()
+        {
+            return label;
+        }
+
+        public String getArchive()
+        {
+            return archive;
+        }
     }
 }
