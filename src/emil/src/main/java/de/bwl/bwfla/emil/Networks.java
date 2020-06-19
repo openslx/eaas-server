@@ -112,6 +112,7 @@ public class Networks {
 
             if (networkRequest.hasInternet()) {
                 final String slirpMac = new VdeSlirpConfiguration().getHwAddress();
+
                 SlirpComponentRequest slirpConfig = new SlirpComponentRequest();
                 slirpConfig.setHwAddress(slirpMac);
                 slirpConfig.setDhcp(networkRequest.isDhcp());
@@ -122,7 +123,7 @@ public class Networks {
                     slirpConfig.setGateway(networkRequest.getGateway());
                 }
                 if (networkRequest.getNetwork() != null)
-                    slirpConfig.setIp4Address(networkRequest.getNetwork());
+                    slirpConfig.setNetwork(networkRequest.getNetwork());
 
                 final String slirpId = components.createComponent(slirpConfig).getId();
                 session.components()
