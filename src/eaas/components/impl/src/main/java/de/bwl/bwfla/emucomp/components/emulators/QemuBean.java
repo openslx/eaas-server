@@ -110,7 +110,7 @@ public class QemuBean extends EmulatorBean
 					super.isKvmDeviceEnabled = true;
 				}
 
-				if(token.contains("nic,model="))
+				if(token.contains("nic,model=") && emuEnvironment.getNic() != null && emuEnvironment.getNic().size() >0)
 					token += ",macaddr=" + emuEnvironment.getNic().get(0).getHwaddress();
 
 				if(emuEnvironment.getNic().size() > 1){
