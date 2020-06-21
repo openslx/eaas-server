@@ -270,7 +270,12 @@ public class DeprecatedProcessRunner
 		return command;
 	}
 
-	/** Returns the current command as string. */
+	/** Quotes a single argument for shell use. */
+	static private String quoteArg(String arg) {
+		return "'" + arg.replaceAll("'", "'\\''") + "'";
+	}
+
+	/** Returns the current command as string in shell syntax. */
 	public String getCommandString()
 	{
 		if (command.isEmpty())
@@ -278,12 +283,45 @@ public class DeprecatedProcessRunner
 
 		sbuilder.setLength(0);
 		for (String arg : command) {
-			sbuilder.append(arg);
+			sbuilder.append(quoteArg(arg));
 			sbuilder.append(' ');
 		}
 
 		int last = sbuilder.length() - 1;
 		return sbuilder.substring(0, last);
+	}
+
+	/** Returns the current environment variables as string in shell syntax. */
+	public String getEnvString() throws RuntimeException
+	{
+		StringBuilder builder = new StringBuilder(1024);
+
+		for (Map.Entry<String, String> entry : environment.entrySet()) {
+			final String key = entry.getKey();
+			final String value = entry.getValue();
+
+			// Must match ASSIGNMENT_WORD in
+			// <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_10_02>.
+			if (!key.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
+				throw new RuntimeException("Environment variables cannot be encoded");
+			}
+
+			builder.append(key);
+			builder.append("=");
+			builder.append(quoteArg(value));
+			builder.append(" ");
+		}
+
+		int last = builder.length() - 1;
+		return builder.substring(0, last);
+	}
+
+	/** Returns the current command including environment variables as string in shell syntax. */
+	public String getCommandStringWithEnv() throws RuntimeException
+	{
+		final String env = this.getEnvString();
+		final String command = this.getCommandString();
+		return env + (env.length() > 0 ? " " : "") + command;
 	}
 
 	/** Returns the monitor for the running subprocess. */
