@@ -55,7 +55,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	private String author;
 
 	@XmlElement(required = false)
-	private boolean isLinuxRuntime;
+	private boolean linuxRuntime;
 
 	@XmlElement(required = false)
 	private boolean enableRelativeMouse = false;
@@ -95,7 +95,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		emulator = template.emulator;
 		timeContext = template.timeContext;
 		author = template.author;
-		isLinuxRuntime = template.isLinuxRuntime;
+		linuxRuntime = template.linuxRuntime;
 		enableRelativeMouse = template.enableRelativeMouse;
 		enablePrinting = template.enablePrinting;
 		shutdownByOs = template.shutdownByOs;
@@ -275,11 +275,11 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	}
 
 	public boolean isLinuxRuntime() {
-		return isLinuxRuntime;
+		return linuxRuntime;
 	}
 
 	public void setLinuxRuntime(boolean linuxRuntime) {
-		isLinuxRuntime = linuxRuntime;
+		this.linuxRuntime = linuxRuntime;
 	}
 
 	public String getAuthor() {
