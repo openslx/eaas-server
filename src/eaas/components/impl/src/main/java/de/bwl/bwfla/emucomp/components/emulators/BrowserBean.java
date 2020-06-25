@@ -15,6 +15,11 @@ public class BrowserBean extends EmulatorBean {
 
     @Override
     protected void prepareEmulatorRunner() throws BWFLAException {
+
+
+        // disable fake clock, otherwise it will cause rendering issues
+        this.disableFakeClock = true;
+
         emuRunner.setCommand("/usr/local/bin/eaas-browser");
         emuRunner.addEnvVariable("MAC", NetworkUtils.getRandomHWAddress());
 
