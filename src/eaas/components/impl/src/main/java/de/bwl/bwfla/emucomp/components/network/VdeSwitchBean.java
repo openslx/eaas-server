@@ -138,7 +138,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             // it will connect to the websocket url and start forwarding
             // traffic to/from the given process
             Thread readThread = threadFactory
-                    .newThread(new Connection(runner, iosock, URI.create(ethUrl)));
+                    .newThread(new Connection(this, runner, iosock, URI.create(ethUrl)));
             readThread.start();
             this.connections.put(ethUrl, readThread);
         } catch (IOException | DeploymentException e) {
@@ -146,9 +146,33 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     "Could not establish ethernet connection to " + ethUrl
                             + ": " + e.getMessage(),
                     e);
-        } catch (Connection.DisconnectExcpetion disconnectExcpetion) {
-            Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG: got disconnected... retrying");
+        }
+    }
+
+    private void reconnect(String ethUrl)
+    {
+        LOG.severe("NET_DEBUG reconnect " + ethUrl);
+        final Thread thread = this.connections.remove(ethUrl);
+        if(thread == null)
+        {
+            LOG.severe("NET_DEBUG this thread was canceld " + ethUrl);
+            return;
+        }
+
+        try {
+            // Stop the WebSocket thread!
+            thread.interrupt();
+            thread.join();
+        }
+        catch (Throwable error) {
+           LOG.severe("NET_DEBUG Disconnecting '" + ethUrl + "' failed!");
+           error.printStackTrace();
+        }
+
+        try {
             connect(ethUrl);
+        } catch (BWFLAException e) {
+            e.printStackTrace();
         }
     }
 
@@ -181,13 +205,15 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         public final WebsocketClient wsClient;
         private final URI ethUrl;
         private final IpcSocket iosocket;
+        private final VdeSwitchBean bean;
 
-        public Connection(final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
-                throws DeploymentException, IOException, DisconnectExcpetion {
+        public Connection(VdeSwitchBean bean, final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
+                throws DeploymentException, IOException {
             super();
             this.runner = runner;
             this.ethUrl = ethUrl;
             this.iosocket = iosocket;
+            this.bean = bean;
             
             // this will immediately establish the connection (or fail with an
             // exception)
@@ -216,7 +242,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     iosocket.close();
                 }
                 catch (IOException ignore) {}
-                throw new DisconnectExcpetion();
+                bean.reconnect(ethUrl.toString());
             });
         }
 
@@ -230,7 +256,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                 }
 
             } catch (InterruptedIOException ignore) {
-                this.doNotReconnect = true;
                 Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG disconnect requested");
             } catch (Exception e) {
                 Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG " + e.getMessage(), e);
@@ -245,7 +270,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             }
         }
 
-        private static class DisconnectExcpetion extends Throwable {
+        static class DisconnectExcpetion extends Throwable {
         }
     }
 }
