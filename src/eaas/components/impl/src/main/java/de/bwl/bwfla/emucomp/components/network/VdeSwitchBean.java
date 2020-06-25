@@ -146,6 +146,9 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     "Could not establish ethernet connection to " + ethUrl
                             + ": " + e.getMessage(),
                     e);
+        } catch (Connection.DisconnectExcpetion disconnectExcpetion) {
+            Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG: got disconnected... retrying");
+            connect(ethUrl);
         }
     }
 
@@ -180,7 +183,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         private final IpcSocket iosocket;
 
         public Connection(final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
-                throws DeploymentException, IOException {
+                throws DeploymentException, IOException, DisconnectExcpetion {
             super();
             this.runner = runner;
             this.ethUrl = ethUrl;
@@ -213,6 +216,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     iosocket.close();
                 }
                 catch (IOException ignore) {}
+                throw new DisconnectExcpetion();
             });
         }
 
@@ -226,9 +230,10 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                 }
 
             } catch (InterruptedIOException ignore) {
-                // all is going well, we terminated the thread ourselves
+                this.doNotReconnect = true;
+                Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG disconnect requested");
             } catch (Exception e) {
-                Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, e.getMessage(), e);
+                Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG " + e.getMessage(), e);
             }
             finally {
                 try {
@@ -238,6 +243,9 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     e1.printStackTrace();
                 }
             }
+        }
+
+        private static class DisconnectExcpetion extends Throwable {
         }
     }
 }

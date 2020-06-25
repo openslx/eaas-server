@@ -196,6 +196,7 @@ public class Networks {
             return networkResponse;
         }
         catch (Exception error) {
+            error.printStackTrace();
             throw Components.newInternalError(error);
         }
     }
