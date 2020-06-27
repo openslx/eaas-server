@@ -18,7 +18,6 @@ import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.PipingDeprecatedProcessRunner;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.Nic;
@@ -411,7 +410,7 @@ public class QemuBean extends EmulatorBean
 				echo.addArgument(command);
 				DeprecatedProcessRunner socat = new DeprecatedProcessRunner("socat");
 				socat.addArguments("-", "UNIX-CONNECT:" + monitor_path);
-				DeprecatedProcessRunner runner = new PipingDeprecatedProcessRunner(echo, socat);
+				DeprecatedProcessRunner runner = DeprecatedProcessRunner.pipe(echo, socat);
 				runner.execute();
 			} else {
 				LOG.severe("Command to qemu monitor is not valid!");

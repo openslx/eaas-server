@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import de.bwl.bwfla.conf.CommonSingleton;
 
@@ -114,6 +116,17 @@ public class DeprecatedProcessRunner
 	{
 		this(DEFAULT_CMDBUILDER_CAPACITY);
 		this.setCommand(cmd, true);
+	}
+
+	/**
+	 * Creates a new ProcessRunner piping ...runners together using /bin/sh.
+	 */
+	public static DeprecatedProcessRunner pipe(DeprecatedProcessRunner... runners) {
+		final DeprecatedProcessRunner ret = new DeprecatedProcessRunner("/bin/sh");
+		ret.addArgument("-c");
+		ret.addArgument(Arrays.asList(runners).stream().map(runner -> runner.getCommandStringWithEnv())
+				.collect(Collectors.joining(" | ")));
+		return ret;
 	}
 
 	/** Set a new logger. */
@@ -245,7 +258,7 @@ public class DeprecatedProcessRunner
 	{
 		DeprecatedProcessRunner.ensureNotEmpty(var);
 		if (!var.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
-		    throw new IllegalStateException("Environment variable name contains invalid characters.");
+			throw new IllegalStateException("Environment variable name contains invalid characters.");
 		}
 		DeprecatedProcessRunner.ensureNotNull(value, "Value for environment variable " + var + " is null.");
 		environment.put(var, value);
