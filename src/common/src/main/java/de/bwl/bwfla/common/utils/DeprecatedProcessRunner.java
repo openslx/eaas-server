@@ -244,6 +244,9 @@ public class DeprecatedProcessRunner
 	public void addEnvVariable(String var, String value)
 	{
 		DeprecatedProcessRunner.ensureNotEmpty(var);
+		if (!var.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
+		    throw new IllegalStateException("Environment variable name contains invalid characters.");
+		}
 		DeprecatedProcessRunner.ensureNotNull(value, "Value for environment variable " + var + " is null.");
 		environment.put(var, value);
 	}
