@@ -308,7 +308,7 @@ public class DeprecatedProcessRunner
 	}
 
 	/** Returns the current environment variables as string in shell syntax. */
-	public String getEnvString() throws RuntimeException
+	public String getEnvString()
 	{
 		StringBuilder builder = new StringBuilder(1024);
 
@@ -319,7 +319,7 @@ public class DeprecatedProcessRunner
 			// Must match ASSIGNMENT_WORD in
 			// <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_10_02>.
 			if (!key.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
-				throw new RuntimeException("Environment variables cannot be encoded");
+				throw new IllegalStateException("Environment variables cannot be encoded");
 			}
 
 			builder.append(key);
@@ -333,7 +333,7 @@ public class DeprecatedProcessRunner
 	}
 
 	/** Returns the current command including environment variables as string in shell syntax. */
-	public String getCommandStringWithEnv() throws RuntimeException
+	public String getCommandStringWithEnv()
 	{
 		final String env = this.getEnvString();
 		final String command = this.getCommandString();
