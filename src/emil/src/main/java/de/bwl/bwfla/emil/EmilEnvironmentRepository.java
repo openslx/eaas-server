@@ -852,7 +852,7 @@ public class EmilEnvironmentRepository {
 				env.setEnvId(req.getEnvId());
 				env.setDescription("empty hard disk");
 			} else
-				throw new BWFLAException("Environment with id " + " not found");
+				throw new BWFLAException("Environment with id " + req.getEnvId() + " not found");
 		}
 
 		EmilEnvironment newEnv = snapshot.createEnvironment(environmentsAdapter, req, env, checkpoint);
