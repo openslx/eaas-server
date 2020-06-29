@@ -20,17 +20,14 @@
 package de.bwl.bwfla.emucomp.components.network;
 
 import java.io.IOException;
-import java.io.InputStream;
 import java.io.InterruptedIOException;
-import java.io.OutputStream;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -69,7 +66,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
     // vde_switch process maintenance members
     protected final ProcessRunner runner = new ProcessRunner();
-    protected final Map<String, Thread> connections = new HashMap<String, Thread>();
+    protected final Map<String, Thread> connections = new ConcurrentHashMap<>();
 
     private Path switchPath;
 
@@ -99,9 +96,8 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     public void destroy() {
         System.out.println("vdeswitch destroyed");
         runner.close();
-        final Collection<Thread> threads = this.connections.values();
-        threads.forEach((thread) -> thread.interrupt());
-        threads.forEach((thread) -> {
+        connections.forEach((id, thread) -> thread.interrupt());
+        connections.forEach((id, thread) -> {
             try {
                 thread.join();
             } catch (InterruptedException e) {
@@ -264,9 +260,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     e1.printStackTrace();
                 }
             }
-        }
-
-        static class DisconnectExcpetion extends Throwable {
         }
     }
 }
