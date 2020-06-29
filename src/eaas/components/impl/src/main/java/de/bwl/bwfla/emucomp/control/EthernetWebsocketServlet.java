@@ -46,6 +46,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.NodeManager;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
+import de.bwl.bwfla.emucomp.components.network.VdeSwitchBean;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
@@ -72,6 +73,8 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
 
             if (connector == null
                     || !(connector instanceof EthernetConnector)) {
+
+                Logger.getLogger("EthernetWebsocketServlet").log(Level.SEVERE, "NET_DEBUG connector not found " + componentId + " " + hwAddress);
                 session.close();
             }
             this.connector = (EthernetConnector) connector;

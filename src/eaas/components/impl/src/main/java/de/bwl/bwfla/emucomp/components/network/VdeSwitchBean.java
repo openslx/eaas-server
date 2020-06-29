@@ -42,8 +42,7 @@ import javax.websocket.CloseReason;
 import javax.websocket.DeploymentException;
 import javax.websocket.Session;
 
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
 import de.bwl.bwfla.emucomp.control.IPCWebsocketProxy;
@@ -52,8 +51,6 @@ import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.ProcessRunner;
-import de.bwl.bwfla.common.utils.WebsocketClient;
 
 
 // TODO: currently the default of 32 ports is used on the switch,
@@ -208,7 +205,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         private final VdeSwitchBean bean;
 
         public Connection(VdeSwitchBean bean, final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
-                throws DeploymentException, IOException {
+                throws DeploymentException, IOException, BWFLAException {
             super();
             this.runner = runner;
             this.ethUrl = ethUrl;
@@ -232,9 +229,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                 }
             };
 
-            // if the socket is closed, closing the process/runner will
-            // automatically close the associated InputStream and thus
-            // terminate this thread
             wsClient.addCloseListener((Session session, CloseReason reason) -> {
                 runner.stop();
                 runner.cleanup();
@@ -244,6 +238,8 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                 catch (IOException ignore) {}
                 bean.reconnect(ethUrl.toString());
             });
+
+            wsClient.connect();
         }
 
         @Override

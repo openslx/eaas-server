@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.common.utils;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -42,11 +44,20 @@ public class WebsocketClient extends Endpoint {
         void onError(Session session, Throwable thr);
     }
 
-    private final Session session;
+    private Session session;
+    private final URI uri;
     private final List<CloseListener> closeListeners = new ArrayList<CloseListener>();
     private final List<ErrorListener> errorListeners = new ArrayList<ErrorListener>();
 
-    public WebsocketClient(URI uri) throws DeploymentException, IOException {
+    public WebsocketClient(URI uri) {
+        this.uri = uri;
+    }
+
+    public void connect() throws IOException, DeploymentException, BWFLAException{
+
+        if(session != null)
+            throw new BWFLAException("WebsocketClient already connected");
+
         WebSocketContainer container = ContainerProvider.getWebSocketContainer();
 
         List<String> subprotocols = new ArrayList<>();
