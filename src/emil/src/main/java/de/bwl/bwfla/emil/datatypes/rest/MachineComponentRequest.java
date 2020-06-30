@@ -172,63 +172,30 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         @XmlElement(name = "mediumType")
         private MediumType mediumType;
 
-        @XmlElement(name = "resourceType")
-        private Binding.ResourceType resourceType;
-
-        @XmlElement(name = "files")
-        private ArrayList<UserFile> files;
-
-        public ArrayList<UserFile> getFiles() {
-            if(files == null)
-                files = new ArrayList<>();
-            return files;
-        }
-
-        public MediumType getMediumType() {
-            return mediumType;
-        }
-
-        public void setMediumType(MediumType mediumType) {
-            this.mediumType = mediumType;
-        }
-
-        public Binding.ResourceType getResourceType() {
-            return resourceType;
-        }
-
-        public void setResourceType(Binding.ResourceType resourceType) {
-            this.resourceType = resourceType;
-        }
-    }
-
-    @XmlRootElement
-    @XmlAccessorType(XmlAccessType.NONE)
-    public static class UserFile extends JaxbType
-    {
-        @XmlElement(required = true)
+        @XmlElement(name = "url")
         private String url;
 
         @XmlElement(required = false)
         private String name;
 
-        public void setUrl(String url)
-        {
-            this.url = url;
+        public MediumType getMediumType() {
+            return mediumType;
         }
 
-        public void setName(String name)
-        {
-            this.name = name;
-        }
-
-        public String getUrl()
-        {
+        public String getUrl() {
             return url;
         }
 
-        public String getName()
-        {
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public String getName() {
             return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
         }
     }
 }

@@ -804,17 +804,17 @@ public class Components {
             throw new BWFLAException("user media has limited support. mediaType: " + userMedium.getMediumType() + " not supported yet");
         }
 
-        if(userMedium.getFiles().size() != 1)
-            throw new BWFLAException("usermedia request with no file found");
-
         final BlobStoreBinding binding = new BlobStoreBinding();
         binding.setId(UUID.randomUUID().toString());
 
-        String url = userMedium.getFiles().get(0).getUrl();
-        String name = userMedium.getFiles().get(0).getName();
+        String url = userMedium.getUrl();
+        if(url == null)
+            throw new BWFLAException("user media must contain a url");
 
-        binding.setLocalAlias(name);
+        String name = userMedium.getName();
+
         binding.setUrl(url);
+        binding.setLocalAlias(name);
 
         try {
             addBindingToEnvironment(env, binding, this.toDriveType(userMedium.getMediumType()));
