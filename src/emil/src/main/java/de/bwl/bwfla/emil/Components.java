@@ -726,6 +726,11 @@ public class Components {
                 }
             }
 
+            for(MachineComponentRequest.UserMedium uMedia : machineDescription.getUserMedia())
+            {
+                connectMedia(config, uMedia);
+            }
+
             Integer driveId = null;
             // hack: we need to initialize the user archive:
             objectRepository.archives().list();
@@ -790,6 +795,31 @@ public class Components {
             LOG.log(Level.SEVERE, "Components create machine failed", error);
             // Return error to the client...
             throw Components.newInternalError(error);
+        }
+    }
+
+    private void connectMedia(MachineConfiguration env, MachineComponentRequest.UserMedium userMedium) throws BWFLAException {
+        if(userMedium.getMediumType() != MediumType.CDROM || userMedium.getMediumType() != MediumType.HDD)
+        {
+            throw new BWFLAException("user media has limited support. mediaType: " + userMedium.getMediumType() + " not supported yet");
+        }
+
+        if(userMedium.getFiles().size() != 1)
+            throw new BWFLAException("usermedia request with no file found");
+
+        final BlobStoreBinding binding = new BlobStoreBinding();
+        binding.setId(UUID.randomUUID().toString());
+
+        String url = userMedium.getFiles().get(0).getUrl();
+        String name = userMedium.getFiles().get(0).getName();
+
+        binding.setLocalAlias(name);
+        binding.setUrl(url);
+
+        try {
+            addBindingToEnvironment(env, binding, this.toDriveType(userMedium.getMediumType()));
+        } catch (JAXBException e) {
+            throw new BWFLAException(e);
         }
     }
 
