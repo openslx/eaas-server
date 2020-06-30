@@ -51,6 +51,8 @@ import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
 
+import static javax.websocket.CloseReason.CloseCodes.CANNOT_ACCEPT;
+
 @ServerEndpoint("/components/{componentId}/ws+ethernet/{hwAddress}")
 public class EthernetWebsocketServlet extends IPCWebsocketProxy{
 
@@ -75,7 +77,7 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
                     || !(connector instanceof EthernetConnector)) {
 
                 Logger.getLogger("EthernetWebsocketServlet").log(Level.SEVERE, "NET_DEBUG connector not found " + componentId + " " + hwAddress);
-                session.close();
+                session.close(new CloseReason(CANNOT_ACCEPT, "component is gone"));
             }
             this.connector = (EthernetConnector) connector;
             String id = UUID.randomUUID().toString();
@@ -92,6 +94,9 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
         }
         catch (Throwable error) {
             log.log(Level.WARNING, "Setting up websocket proxy for component '" + componentId + "' failed!", error);
+            try {
+                session.close(new CloseReason(CANNOT_ACCEPT, "component is gone"));
+            } catch (IOException ignore) { }
             this.stop(session);
         }
     }

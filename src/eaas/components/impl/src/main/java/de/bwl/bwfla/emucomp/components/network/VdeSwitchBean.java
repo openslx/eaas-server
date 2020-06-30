@@ -49,6 +49,8 @@ import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import static javax.websocket.CloseReason.CloseCodes.CANNOT_ACCEPT;
+
 
 // TODO: currently the default of 32 ports is used on the switch,
 //       evaluate penalty of higher number and set to e.g. 1024 or use dynamic
@@ -113,7 +115,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     public void connect(String ethUrl) throws BWFLAException {
 
         LOG.warning("connect to " + ethUrl);
-
         try {
             // start a new VDE plug instance that connects to the switch
             DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
@@ -232,7 +233,9 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     iosocket.close();
                 }
                 catch (IOException ignore) {}
-                bean.reconnect(ethUrl.toString());
+
+                if(reason.getCloseCode() != CANNOT_ACCEPT)
+                    bean.reconnect(ethUrl.toString());
             });
 
             wsClient.connect();
