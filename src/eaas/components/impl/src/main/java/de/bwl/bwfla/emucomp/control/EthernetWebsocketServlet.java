@@ -104,8 +104,8 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
     @Override
     protected void stop(Session session)
     {
-        super.stop(session);
         connector.close();
+        super.stop(session);
     }
 
 
