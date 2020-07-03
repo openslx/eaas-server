@@ -48,26 +48,31 @@ public class WebsocketClient extends Endpoint {
     private final URI uri;
     private final List<CloseListener> closeListeners = new ArrayList<CloseListener>();
     private final List<ErrorListener> errorListeners = new ArrayList<ErrorListener>();
+    private final WebSocketContainer container;
 
-    public WebsocketClient(URI uri) {
+    public WebsocketClient(WebSocketContainer container, URI uri) {
         this.uri = uri;
+        this.container = container;
     }
 
-    public void connect() throws IOException, DeploymentException, BWFLAException{
+    public void connect() throws BWFLAException{
 
-        if(session != null)
-            throw new BWFLAException("WebsocketClient already connected");
+        try {
 
-        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+            if (session != null)
+                throw new BWFLAException("WebsocketClient already connected");
 
-        List<String> subprotocols = new ArrayList<>();
-        subprotocols.add("binary");
+            List<String> subprotocols = new ArrayList<>();
+            subprotocols.add("binary");
 
-        ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
-                .preferredSubprotocols(subprotocols)
-                .build();
+            ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
+                    .preferredSubprotocols(subprotocols)
+                    .build();
 
-        this.session = container.connectToServer(this, config, uri);
+            this.session = container.connectToServer(this, config, uri);
+        } catch (Exception e) {
+            throw new BWFLAException("WebSocket connection " + uri + " failed " + e.getMessage(), e);
+        }
     }
 
     @Override

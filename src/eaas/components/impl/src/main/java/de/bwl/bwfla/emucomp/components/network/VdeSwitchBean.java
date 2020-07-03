@@ -35,9 +35,7 @@ import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.websocket.CloseReason;
-import javax.websocket.DeploymentException;
-import javax.websocket.Session;
+import javax.websocket.*;
 
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
@@ -69,6 +67,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     // vde_switch process maintenance members
     protected final ProcessRunner runner = new ProcessRunner();
     protected final Map<String, Thread> connections = new ConcurrentHashMap<>();
+    private WebSocketContainer container;
 
     private Path switchPath;
 
@@ -86,12 +85,26 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         // create a new vde switch instance in tmpdir/sockets
         runner.command(this.vdeswitchBinary);
         runner.addArguments("-s", this.switchPath);
-        
+
+        try {
+            container = ContainerProvider.getWebSocketContainer();
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            throw new BWFLAException("Failed to obtain a WebSocketContainer instance " + t.getMessage(), t);
+        }
+
         try {
             runner.start();
         } catch (IndexOutOfBoundsException | IOException e) {
             throw new BWFLAException("Could not create a vde-switch instance!");
         }
+    }
+
+    public WebSocketContainer getContainer()
+    {
+        return container;
     }
 
     @Override
@@ -211,7 +224,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             
             // this will immediately establish the connection (or fail with an
             // exception)
-            this.wsClient = new WebsocketClient(ethUrl) {
+            this.wsClient = new WebsocketClient(bean.getContainer(), ethUrl) {
 
                 @Override
                 public void doOnMessage(ByteBuffer msg) {
