@@ -637,6 +637,24 @@ public class Components {
         return binding;
     }
 
+
+    // vde switch identifies sessions by ethUrl, we need to store these
+    protected void registerNetworkCleanupTask(String componentId, String switchId, String ethUrl) throws BWFLAException
+    {
+        ComponentSession componentSession = sessions.get(componentId);
+        if(componentSession == null)
+            throw new BWFLAException("Component not registered " + componentId);
+
+        TaskStack cleanups = componentSession.getCleanupTasks();
+        cleanups.push( "disconnect/" + ethUrl,  () -> {
+            try {
+                componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethUrl);
+            } catch (BWFLAException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
     protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {
@@ -742,7 +760,7 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs()) {
+            if(((MachineConfiguration) chosenEnv).isLinuxRuntime() || !((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs()) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {
                     LOG.warning("HWAddress is null! Using random..." );
@@ -1479,7 +1497,7 @@ public class Components {
 
         private final String id;
         private final ComponentRequest request;
-        private final TaskStack tasks;
+        private TaskStack tasks;
         private final List<EventObserver> observers;
         private EventSink esink;
 
@@ -1498,6 +1516,13 @@ public class Components {
             LOG.info("Session for component ID '" + id + "' created");
         }
 
+        public TaskStack getCleanupTasks()
+        {
+            if(tasks == null)
+                tasks = new TaskStack(LOG);
+
+            return tasks;
+        }
 
         public void keepalive() throws BWFLAException
         {

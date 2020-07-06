@@ -322,7 +322,9 @@ public class Networks {
             } else {
                 uri = map.get("ws+ethernet+" + component.getHwAddress());
             }
+
             componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, uri.toString());
+            components.registerNetworkCleanupTask(component.getComponentId(), switchId, uri.toString());
 
             if (addToGroup) {
                 session.components()

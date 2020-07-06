@@ -20,36 +20,21 @@
 package de.bwl.bwfla.emucomp.control;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.inject.Inject;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
-import javax.websocket.CloseReason;
-import javax.websocket.CloseReason.CloseCodes;
-import javax.websocket.EndpointConfig;
-import javax.websocket.OnClose;
-import javax.websocket.OnMessage;
-import javax.websocket.OnOpen;
-import javax.websocket.Session;
+import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.NodeManager;
 import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
-import de.bwl.bwfla.emucomp.components.network.VdeSwitchBean;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
 
 import static javax.websocket.CloseReason.CloseCodes.CANNOT_ACCEPT;
 
@@ -90,6 +75,9 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
             {
                 this.streamer = new OutputStreamer(session, nodeManager.getWorkerThreadFactory());
                 streamer.start();
+
+                this.pingSender = new PingSender(session, nodeManager.getWorkerThreadFactory());
+                pingSender.start();
             }
         }
         catch (Throwable error) {

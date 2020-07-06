@@ -129,23 +129,14 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
         LOG.warning("connect to " + ethUrl);
         try {
-            // start a new VDE plug instance that connects to the switch
-            DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
 
-            String socketPath = "/tmp/" + UUID.randomUUID().toString() + ".sock";
-            runner.setCommand("socat");
-            runner.addArgument("unix-listen:" + socketPath);
-            runner.addArgument("exec:" + this.vdeplugBinary + " -s " + this.switchPath);
-            runner.start();
 
-            IPCWebsocketProxy.wait(Paths.get(socketPath));
-            IpcSocket iosock = IpcSocket.connect(socketPath, IpcSocket.Type.STREAM);
-
+            LOG.warning("starting new connection thread for: " + ethUrl);
             // start a new connection thread
             // it will connect to the websocket url and start forwarding
             // traffic to/from the given process
             Thread readThread = threadFactory
-                    .newThread(new Connection(this, runner, iosock, URI.create(ethUrl)));
+                    .newThread(new Connection(this, this.switchPath.toString(), ethUrl));
             readThread.start();
             this.connections.put(ethUrl, readThread);
         } catch (IOException | DeploymentException e) {
@@ -153,33 +144,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     "Could not establish ethernet connection to " + ethUrl
                             + ": " + e.getMessage(),
                     e);
-        }
-    }
-
-    private void reconnect(String ethUrl)
-    {
-        LOG.severe("NET_DEBUG reconnect " + ethUrl);
-        final Thread thread = this.connections.remove(ethUrl);
-        if(thread == null)
-        {
-            LOG.severe("NET_DEBUG this thread was canceld " + ethUrl);
-            return;
-        }
-
-        try {
-            // Stop the WebSocket thread!
-            thread.interrupt();
-            thread.join();
-        }
-        catch (Throwable error) {
-           LOG.severe("NET_DEBUG Disconnecting '" + ethUrl + "' failed!");
-           error.printStackTrace();
-        }
-
-        try {
-            connect(ethUrl);
-        } catch (BWFLAException e) {
-            e.printStackTrace();
         }
     }
 
@@ -208,72 +172,52 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     }
 
     private static class Connection implements Runnable {
-        public final DeprecatedProcessRunner runner;
-        public final WebsocketClient wsClient;
-        private final URI ethUrl;
-        private final IpcSocket iosocket;
+        private final String ethUrl;
+        private final String socketPath;
         private final VdeSwitchBean bean;
 
-        public Connection(VdeSwitchBean bean, final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
+        public Connection(VdeSwitchBean bean, final String socketPath, final String ethUrl)
                 throws DeploymentException, IOException, BWFLAException {
             super();
-            this.runner = runner;
+            Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "connection started");
             this.ethUrl = ethUrl;
-            this.iosocket = iosocket;
+            this.socketPath = socketPath;
             this.bean = bean;
-            
-            // this will immediately establish the connection (or fail with an
-            // exception)
-            this.wsClient = new WebsocketClient(bean.getContainer(), ethUrl) {
-
-                @Override
-                public void doOnMessage(ByteBuffer msg) {
-                    try {
-                        final int size = msg.remaining();
-                        final byte[] buffer  = new byte[size];
-                        msg.get(buffer);
-                        iosocket.send(buffer, true);
-                    } catch (Throwable e) {
-                        Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, e.getMessage(), e);
-                    }
-                }
-            };
-
-            wsClient.addCloseListener((Session session, CloseReason reason) -> {
-                runner.stop();
-                runner.cleanup();
-                try {
-                    iosocket.close();
-                }
-                catch (IOException ignore) {}
-
-                if(reason.getCloseCode() != CANNOT_ACCEPT)
-                    bean.reconnect(ethUrl.toString());
-            });
-
-            wsClient.connect();
         }
 
         @Override
         public void run() {
-            try {
-                // Thread.sleep(1000);
-                final ByteBuffer buffer = ByteBuffer.allocate(4 * 1024);
-                while (!Thread.currentThread().isInterrupted() && iosocket.receive(buffer, true)) {
-                    wsClient.send(buffer);
-                }
+            long start, stop;
 
-            } catch (InterruptedIOException ignore) {
-                Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG disconnect requested");
-            } catch (Exception e) {
-                Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG " + e.getMessage(), e);
-            }
-            finally {
+            int failCounter = 10;
+            for(;!Thread.currentThread().isInterrupted() && failCounter > 0;) {
+
+                final DeprecatedProcessRunner websocat = new DeprecatedProcessRunner("/libexec/websocat");
+                websocat.addArguments("--binary", "--exit-on-eof", "--ping-interval=600");
+                websocat.addArguments("exec:vde_plug");
+                websocat.addArgument(ethUrl);
+                websocat.addArguments("--exec-args", socketPath);
+                websocat.start();
+
                 try {
-                    System.out.println(" stream has closed " + ethUrl + " -- " + runner.getCommandString()); //  + " " + runner.exitValue());
-                    wsClient.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                    start = System.currentTimeMillis();
+                    while (websocat.isProcessRunning()) {
+                        Thread.sleep(1000);
+                    }
+                    stop = System.currentTimeMillis();
+
+                    if(stop - start < 2 * 1000)
+                    {
+                        Logger.getLogger(Connection.class.getName()).log(Level.WARNING, " websocat spinning fast... ");
+                        failCounter--;
+                    }
+                    else failCounter = 10;
+
+                } catch (InterruptedException e) {
+                    Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG " + e.getMessage(), e);
+                } finally {
+                    websocat.stop();
+                    websocat.cleanup();
                 }
             }
         }

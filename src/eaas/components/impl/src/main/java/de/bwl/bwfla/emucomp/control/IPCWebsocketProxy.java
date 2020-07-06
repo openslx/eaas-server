@@ -1,6 +1,5 @@
 package de.bwl.bwfla.emucomp.control;
 
-import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
@@ -9,7 +8,6 @@ import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.websocket.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -19,6 +17,7 @@ public abstract class IPCWebsocketProxy {
     final static Logger log = Logger.getLogger(IPCWebsocketProxy.class.getName());
     protected IpcSocket iosock;
     protected OutputStreamer streamer;
+    protected PingSender pingSender;
     protected String componentId;
 
     public static void wait(Path path) throws BWFLAException
@@ -66,6 +65,15 @@ public abstract class IPCWebsocketProxy {
             }
         }
 
+        if (pingSender != null && pingSender.isRunning()) {
+            try {
+                pingSender.stop();
+            }
+            catch (Exception error) {
+                log.log(Level.WARNING, "Stopping output-streamer failed!", error);
+            }
+        }
+
         if (iosock != null) {
             try {
                 iosock.close();
@@ -105,6 +113,64 @@ public abstract class IPCWebsocketProxy {
     {
         log.log(Level.WARNING, "Websocket session for component '" + componentId + "' failed! ", error);
         this.stop(session);
+    }
+
+    protected class PingSender implements Runnable
+    {
+        private final Thread worker;
+        private final Session session;
+        private boolean running;
+
+        public PingSender(Session session, ManagedThreadFactory wfactory)
+        {
+            this.worker = wfactory.newThread(this);
+            this.session = session;
+            this.running = false;
+        }
+
+        public boolean isRunning()
+        {
+            return running;
+        }
+
+        public void start()
+        {
+            running = true;
+            worker.start();
+        }
+
+        public void stop() throws InterruptedException
+        {
+            running = false;
+            worker.join();
+        }
+
+        @Override
+        public void run()
+        {
+            try {
+                final ByteBuffer buffer = ByteBuffer.allocate(16);
+                while (running) {
+                    if (!session.isOpen())
+                        break;
+
+                    // not sure what the payload should be
+                    session.getBasicRemote()
+                            .sendPing(buffer);
+
+                    Thread.sleep(5 * 60 * 1000);
+                }
+
+                final String message = "Server requested to closed connection!";
+                session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, message));
+            }
+            catch (Exception error) {
+                log.log(Level.WARNING, "Forwarding from io-socket to client failed!", error);
+                try {
+                    session.close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, error.getMessage()));
+                } catch (IOException ignore) { }
+            }
+        }
     }
 
     protected class OutputStreamer implements Runnable
