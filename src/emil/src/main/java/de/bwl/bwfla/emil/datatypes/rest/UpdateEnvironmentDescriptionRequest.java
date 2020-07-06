@@ -36,16 +36,16 @@ public class UpdateEnvironmentDescriptionRequest extends EmilRequestType
 	private String xpraEncoding;
 	private boolean canProcessAdditionalFiles;
 	private List<Drive> drives;
-	private boolean isLinuxRuntime;
+	private boolean linuxRuntime;
 
 	private List<EnvironmentCreateRequest.DriveSetting> driveSettings;
 
 	public boolean isLinuxRuntime() {
-		return isLinuxRuntime;
+		return linuxRuntime;
 	}
 
 	public void setLinuxRuntime(boolean islinuxRuntime) {
-		isLinuxRuntime = islinuxRuntime;
+		linuxRuntime = islinuxRuntime;
 	}
 
 	public String getEnvId() {
