@@ -19,12 +19,17 @@
 
 package de.bwl.bwfla.envproposer;
 
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.envproposer.api.ProposalRequest;
+import de.bwl.bwfla.envproposer.api.ProposalResponse;
+import de.bwl.bwfla.envproposer.impl.ProposalTask;
+import de.bwl.bwfla.envproposer.impl.UserData;
+import de.bwl.bwfla.restutils.ResponseUtils;
 
-import javax.inject.Inject;
+import javax.enterprise.context.ApplicationScoped;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -34,31 +39,33 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.Status;
+import javax.ws.rs.core.UriInfo;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import de.bwl.bwfla.common.services.security.SecuredAPI;
-import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.envproposer.api.ProposalRequest;
-import de.bwl.bwfla.envproposer.api.ProposalResponse;
-import de.bwl.bwfla.envproposer.impl.ProposalTask;
-import de.bwl.bwfla.envproposer.impl.TaskManager;
-import de.bwl.bwfla.envproposer.impl.UserData;
-import de.bwl.bwfla.restutils.ResponseUtils;
 
-@Deprecated
-@Path("api/v1")
-public class EnvironmentProposerAPI
+@ApplicationScoped
+@Path("/environment-proposer/api/v2")
+public class EnvironmentProposer
 {
 	private static final Logger LOG = Logger.getLogger("ENVIRONMENT-PROPOSER");
-	
-	@Inject
-	private TaskManager taskmgr;
 
-	@Context
-	private UriInfo uri;
-	
-	
+	private final TaskManager taskmgr;
+
+
+	public EnvironmentProposer() throws BWFLAException
+	{
+		try {
+			this.taskmgr = new TaskManager();
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Initializing environment-proposer failed!", error);
+		}
+	}
+
 	/**
 	 * Submit a new proposal task
 	 *
@@ -71,19 +78,18 @@ public class EnvironmentProposerAPI
 	 * @HTTP 500 If other internal errors occure.
 	 */
 	@POST
-    @Path("/proposals")
-	@SecuredAPI
+	@Path("/proposals")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-	public Response postProposal(ProposalRequest request)
+	public Response postProposal(ProposalRequest request, @Context UriInfo uri)
 	{
 		try {
 			// Submit task
 			final String taskid = taskmgr.submitTask(new ProposalTask(request));
 
 			// Generate task's location URLs
-			final String waitLocation = this.getLocationUrl("waitqueue", taskid);
-			final String resultLocation = this.getLocationUrl("proposals", taskid);
+			final String waitLocation = EnvironmentProposer.getLocationUrl(uri, "waitqueue", taskid);
+			final String resultLocation = EnvironmentProposer.getLocationUrl(uri, "proposals", taskid);
 			final TaskInfo<Object> info = taskmgr.getTaskInfo(taskid);
 			info.setUserData(new UserData(waitLocation, resultLocation));
 
@@ -114,7 +120,6 @@ public class EnvironmentProposerAPI
 	 * @HTTP 303 If task completed. Location header will contain the URL for fetching result.
 	 */
 	@GET
-	@SecuredAPI
 	@Path("/waitqueue/{id}")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response poll(@PathParam("id") String id)
@@ -154,7 +159,6 @@ public class EnvironmentProposerAPI
 	 * @returnWrapped de.bwl.bwfla.envproposer.api.Proposal
 	 */
 	@GET
-	@SecuredAPI
     @Path("/proposals/{id}")
     @Produces(MediaType.APPLICATION_JSON)
 	public Response getProposal(@PathParam("id") String id)
@@ -187,9 +191,17 @@ public class EnvironmentProposerAPI
 
 
 	// ========== Internal Helpers ====================
-	
-	private String getLocationUrl(String subres, String id)
+
+	private static String getLocationUrl(UriInfo uri, String subres, String id)
 	{
-		return ResponseUtils.getLocationUrl(this.getClass(), uri, subres, id);
+		return ResponseUtils.getLocationUrl(EnvironmentProposer.class, uri, subres, id);
+	}
+
+	private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object>
+	{
+		public TaskManager() throws NamingException
+		{
+			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+		}
 	}
 }
