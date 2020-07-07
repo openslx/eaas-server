@@ -192,7 +192,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
             int failCounter = 10;
             for(;!Thread.currentThread().isInterrupted() && failCounter > 0;) {
 
-                if (!ethUrl.matches("^wss?://[!#-;=?-\\[\\]_a-z~]+$ "))
+                if (!ethUrl.matches("^wss?://[!#-;=?-\\[\\]_a-z~]+$"))
                         throw new IllegalArgumentException("Illegal WebSocket URL");
 
                 final DeprecatedProcessRunner websocat = new DeprecatedProcessRunner("/libexec/websocat");
