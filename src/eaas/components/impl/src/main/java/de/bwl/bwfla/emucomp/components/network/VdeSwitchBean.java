@@ -164,7 +164,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         try {
             // Stop the WebSocket thread!
             thread.interrupt();
-            thread.join();
+            // thread.join();
         }
         catch (Throwable error) {
             throw new BWFLAException("Disconnecting '" + ethUrl + "' failed!", error);
@@ -212,6 +212,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
                     if(stop - start < 2 * 1000)
                     {
                         Logger.getLogger(Connection.class.getName()).log(Level.WARNING, " websocat spinning fast... ");
+                        Thread.sleep(1000);
                         failCounter--;
                     }
                     else failCounter = 10;
