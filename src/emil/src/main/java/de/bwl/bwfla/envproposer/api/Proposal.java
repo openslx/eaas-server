@@ -20,14 +20,13 @@
 package de.bwl.bwfla.envproposer.api;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emucomp.api.MediumType;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
-import java.util.Collection;
-import java.util.Map;
 
 
 @XmlRootElement
@@ -42,24 +41,19 @@ public class Proposal
 	@XmlElement(name="image_type")
 	private MediumType imagetype;
 
-	/** @documentationExample env-id-3 */
-	@XmlElement(name="environments")
-	private Collection<String> environments;
-	
-	@XmlElement(name="suggested")
-	private Map<String, String> suggested;
+	@XmlElement(name="result")
+	private ClassificationResult result;
 
 
 	public Proposal()
 	{
 	}
 	
-	public Proposal(String imageurl, MediumType imagetype, Collection<String> environments, Map<String, String> suggested)
+	public Proposal(String imageurl, MediumType imagetype, ClassificationResult result)
 	{
 		this.imageurl = imageurl;
 		this.imagetype = imagetype;
-		this.environments = environments;
-		this.suggested = suggested;
+		this.result = result;
 	}
 
 	public Proposal setImportedImageUrl(String url)
@@ -86,25 +80,14 @@ public class Proposal
 		return imagetype;
 	}
 
-	public Proposal setEnvironments(Collection<String> environments)
+	public Proposal setResult(ClassificationResult result)
 	{
-		this.environments = environments;
+		this.result = result;
 		return this;
 	}
 
-	public Collection<String> getEnvironments()
+	public ClassificationResult getResult()
 	{
-		return environments;
-	}
-
-	public Proposal setSuggested(Map <String, String> suggested)
-	{
-		this.suggested = suggested;
-		return this;
-	}
-
-	public Map<String, String> getSuggested()
-	{
-		return suggested;
+		return result;
 	}
 }

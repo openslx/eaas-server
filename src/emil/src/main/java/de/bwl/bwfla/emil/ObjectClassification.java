@@ -165,11 +165,16 @@ public class ObjectClassification {
         return taskManager.submitTask(new ClassificationTask(request));
     }
 
-    public String getEnvironmentsForObject(FileCollection fc,
-                                                         boolean forceCharacterization,
-                                                         boolean forceProposal,
-                                                         boolean noUpdate) throws BWFLAException {
+    public String getEnvironmentsForObject(FileCollection fc, boolean forceCharacterization,
+                boolean forceProposal, boolean noUpdate) throws BWFLAException
+    {
+        final String userid = (authenticatedUser != null) ? authenticatedUser.getUserId() : null;
+        return taskManager.submitTask(this.newClassificationTask(fc, forceCharacterization, forceProposal, noUpdate, userid));
+    }
 
+    public ClassificationTask newClassificationTask(FileCollection fc, boolean forceCharacterization,
+                boolean forceProposal, boolean noUpdate, String userid) throws BWFLAException
+    {
         ClassificationTask.ClassifyObjectRequest request = new ClassificationTask.ClassifyObjectRequest();
         request.fileCollection = fc;
         request.classification = this;
@@ -178,17 +183,14 @@ public class ObjectClassification {
         request.input = null;
         request.noUpdate = noUpdate;
         request.forceProposal = forceProposal;
-        request.userCtx = null;
-
-        if(authenticatedUser != null)
-            request.userCtx = authenticatedUser.getUserId();
+        request.userCtx = userid;
 
         if(!forceCharacterization || noUpdate)
             try {
                 request.input = load(fc.id);
             } catch (NoSuchElementException ignore) {};
 
-        return taskManager.submitTask(new ClassificationTask(request));
+        return new ClassificationTask(request);
     }
 
     public ClassificationResult getCachedEnvironmentsForObject(String objectId)

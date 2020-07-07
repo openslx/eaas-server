@@ -20,7 +20,12 @@
 package de.bwl.bwfla.envproposer;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.emil.ObjectClassification;
 import de.bwl.bwfla.envproposer.api.ProposalRequest;
 import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.envproposer.impl.ProposalTask;
@@ -28,6 +33,7 @@ import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 import javax.ws.rs.Consumes;
@@ -55,6 +61,13 @@ public class EnvironmentProposer
 
 	private final TaskManager taskmgr;
 
+	@Inject
+	private ObjectClassification classifier;
+
+	@Inject
+	@AuthenticatedUser
+	private UserContext userctx;
+
 
 	public EnvironmentProposer() throws BWFLAException
 	{
@@ -79,13 +92,14 @@ public class EnvironmentProposer
 	 */
 	@POST
 	@Path("/proposals")
+	@Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
 	public Response postProposal(ProposalRequest request, @Context UriInfo uri)
 	{
 		try {
 			// Submit task
-			final String taskid = taskmgr.submitTask(new ProposalTask(request));
+			final String taskid = taskmgr.submitTask(new ProposalTask(request, classifier, userctx.getUserId()));
 
 			// Generate task's location URLs
 			final String waitLocation = EnvironmentProposer.getLocationUrl(uri, "waitqueue", taskid);
@@ -121,6 +135,7 @@ public class EnvironmentProposer
 	 */
 	@GET
 	@Path("/waitqueue/{id}")
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response poll(@PathParam("id") String id)
 	{
@@ -152,15 +167,16 @@ public class EnvironmentProposer
 			return ResponseUtils.createInternalErrorResponse(throwable);
 		}
 	}
-	
+
 	/**
 	 * Get and remove a proposal resource
 	 *
 	 * @returnWrapped de.bwl.bwfla.envproposer.api.Proposal
 	 */
 	@GET
-    @Path("/proposals/{id}")
-    @Produces(MediaType.APPLICATION_JSON)
+	@Path("/proposals/{id}")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
 	public Response getProposal(@PathParam("id") String id)
 	{
 		try {
