@@ -47,8 +47,6 @@ import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
-import static javax.websocket.CloseReason.CloseCodes.CANNOT_ACCEPT;
-
 
 // TODO: currently the default of 32 ports is used on the switch,
 //       evaluate penalty of higher number and set to e.g. 1024 or use dynamic
