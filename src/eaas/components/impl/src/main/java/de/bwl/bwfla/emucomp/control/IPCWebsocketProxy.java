@@ -167,7 +167,7 @@ public abstract class IPCWebsocketProxy {
             catch (Exception error) {
                 log.log(Level.WARNING, "Forwarding from io-socket to client failed!", error);
                 try {
-                    session.close(new CloseReason(CloseReason.CloseCodes.CLOSED_ABNORMALLY, error.getMessage()));
+                    session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, error.getMessage()));
                 } catch (IOException ignore) { }
             }
         }

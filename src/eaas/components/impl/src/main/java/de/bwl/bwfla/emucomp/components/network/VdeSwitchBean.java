@@ -58,10 +58,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     @Config("components.binary.vdeswitch")
     private String vdeswitchBinary;
 
-    @Inject
-    @Config("components.binary.vdeplug")
-    private String vdeplugBinary;
-
     private ManagedThreadFactory threadFactory;
 
     // vde_switch process maintenance members
@@ -109,7 +105,6 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
     @Override
     public void destroy() {
-        System.out.println("vdeswitch destroyed");
         runner.close();
         connections.forEach((id, thread) -> thread.interrupt());
         connections.forEach((id, thread) -> {
@@ -127,24 +122,15 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     @Override
     public void connect(String ethUrl) throws BWFLAException {
 
-        LOG.warning("connect to " + ethUrl);
-        try {
+        LOG.info("connect to " + ethUrl);
 
-
-            LOG.warning("starting new connection thread for: " + ethUrl);
-            // start a new connection thread
-            // it will connect to the websocket url and start forwarding
-            // traffic to/from the given process
-            Thread readThread = threadFactory
-                    .newThread(new Connection(this, this.switchPath.toString(), ethUrl));
-            readThread.start();
-            this.connections.put(ethUrl, readThread);
-        } catch (IOException | DeploymentException e) {
-            throw new BWFLAException(
-                    "Could not establish ethernet connection to " + ethUrl
-                            + ": " + e.getMessage(),
-                    e);
-        }
+        // start a new connection thread
+        // it will connect to the websocket url and start forwarding
+        // traffic to/from the given process
+        Thread readThread = threadFactory
+                .newThread(new Connection(this.switchPath.toString(), ethUrl));
+        readThread.start();
+        this.connections.put(ethUrl, readThread);
     }
 
     @Override
@@ -156,7 +142,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
     @Override
     public void disconnect(String ethUrl) throws BWFLAException {
-        LOG.severe("disconnect " + ethUrl);
+        LOG.info("disconnect ing connection to" + ethUrl);
         final Thread thread = this.connections.remove(ethUrl);
         if (thread == null)
             throw new BWFLAException("Unknown connection URL: " + ethUrl);
@@ -174,15 +160,11 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     private static class Connection implements Runnable {
         private final String ethUrl;
         private final String socketPath;
-        private final VdeSwitchBean bean;
 
-        public Connection(VdeSwitchBean bean, final String socketPath, final String ethUrl)
-                throws DeploymentException, IOException, BWFLAException {
+        public Connection(final String socketPath, final String ethUrl) {
             super();
-            Logger.getLogger(this.getClass().getName()).log(Level.WARNING, "connection started");
             this.ethUrl = ethUrl;
             this.socketPath = socketPath;
-            this.bean = bean;
         }
 
         @Override
@@ -204,21 +186,21 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
                 try {
                     start = System.currentTimeMillis();
-                    while (websocat.isProcessRunning()) {
+                    while (websocat.isProcessRunning() && !Thread.currentThread().isInterrupted()) {
                         Thread.sleep(1000);
                     }
                     stop = System.currentTimeMillis();
 
                     if(stop - start < 2 * 1000)
                     {
-                        Logger.getLogger(Connection.class.getName()).log(Level.WARNING, " websocat spinning fast... ");
+                        Logger.getLogger(Connection.class.getName()).log(Level.WARNING, " websocat is spinning. remote might be gone... ");
                         Thread.sleep(1000);
                         failCounter--;
                     }
                     else failCounter = 10;
 
                 } catch (InterruptedException e) {
-                    Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, "NET_DEBUG " + e.getMessage(), e);
+                    Logger.getLogger(Connection.class.getName()).log(Level.INFO, "NET_DEBUG " + e.getMessage(), e);
                 } finally {
                     websocat.stop();
                     websocat.cleanup();

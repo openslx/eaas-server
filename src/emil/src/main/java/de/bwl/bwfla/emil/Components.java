@@ -641,6 +641,7 @@ public class Components {
     // vde switch identifies sessions by ethUrl, we need to store these
     protected void registerNetworkCleanupTask(String componentId, String switchId, String ethUrl) throws BWFLAException
     {
+        LOG.info("disconnecting " + ethUrl);
         ComponentSession componentSession = sessions.get(componentId);
         if(componentSession == null)
             throw new BWFLAException("Component not registered " + componentId);
