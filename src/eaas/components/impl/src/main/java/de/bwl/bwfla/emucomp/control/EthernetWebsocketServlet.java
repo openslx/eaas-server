@@ -36,7 +36,6 @@ import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 
-import static javax.websocket.CloseReason.CloseCodes.CANNOT_ACCEPT;
 
 @ServerEndpoint("/components/{componentId}/ws+ethernet/{hwAddress}")
 public class EthernetWebsocketServlet extends IPCWebsocketProxy{
