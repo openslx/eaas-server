@@ -82,7 +82,7 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
         catch (Throwable error) {
             log.log(Level.WARNING, "Setting up websocket proxy for component '" + componentId + "' failed!", error);
             try {
-                session.close(new CloseReason(CANNOT_ACCEPT, "component is gone"));
+                session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, "component is gone"));
             } catch (IOException ignore) { }
             this.stop(session);
         }
