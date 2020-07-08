@@ -162,12 +162,12 @@ public abstract class IPCWebsocketProxy {
                 }
 
                 final String message = "Server requested to closed connection!";
-                session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, message));
+                session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, message));
             }
             catch (Exception error) {
                 log.log(Level.WARNING, "Forwarding from io-socket to client failed!", error);
                 try {
-                    session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, error.getMessage()));
+                    session.close(new CloseReason(CloseReason.CloseCodes.UNEXPECTED_CONDITION, error.getMessage()));
                 } catch (IOException ignore) { }
             }
         }
