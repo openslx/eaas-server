@@ -61,7 +61,7 @@ public class EthernetWebsocketServlet extends IPCWebsocketProxy{
                     || !(connector instanceof EthernetConnector)) {
 
                 Logger.getLogger("EthernetWebsocketServlet").log(Level.SEVERE, "NET_DEBUG connector not found " + componentId + " " + hwAddress);
-                session.close(new CloseReason(CANNOT_ACCEPT, "component is gone"));
+                session.close(new CloseReason(CloseReason.CloseCodes.GOING_AWAY, "component is gone"));
             }
             this.connector = (EthernetConnector) connector;
             String id = UUID.randomUUID().toString();
