@@ -20,13 +20,9 @@
 package de.bwl.bwfla.emucomp.components.network;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Map;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -39,8 +35,6 @@ import javax.websocket.*;
 
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
-import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
-import de.bwl.bwfla.emucomp.control.IPCWebsocketProxy;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import org.apache.tamaya.inject.api.Config;
@@ -168,8 +162,10 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         @Override
         public void run() {
             long start, stop;
-
             int failCounter = 10;
+
+            final Logger log = Logger.getLogger(Connection.class.getName());
+
             for(;!Thread.currentThread().isInterrupted() && failCounter > 0;) {
 
                 if (!ethUrl.matches("^wss?://[!#-;=?-\\[\\]_a-z~]+$"))
@@ -191,14 +187,14 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
                     if(stop - start < 2 * 1000)
                     {
-                        Logger.getLogger(Connection.class.getName()).log(Level.WARNING, " websocat is spinning. remote might be gone... ");
+                        log.warning("websocat is spinning. remote might be gone... ");
                         Thread.sleep(1000);
                         failCounter--;
                     }
                     else failCounter = 10;
 
                 } catch (InterruptedException e) {
-                    Logger.getLogger(Connection.class.getName()).log(Level.INFO, "NET_DEBUG " + e.getMessage(), e);
+                    log.log(Level.INFO, "Connection has been interrupted!", e);
                 } finally {
                     websocat.stop();
                     websocat.cleanup();

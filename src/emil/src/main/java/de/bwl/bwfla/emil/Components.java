@@ -650,8 +650,9 @@ public class Components {
         cleanups.push( "disconnect/" + ethUrl,  () -> {
             try {
                 componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethUrl);
-            } catch (BWFLAException e) {
-                e.printStackTrace();
+            } catch (BWFLAException error) {
+                final String message = "Disconnecting component '" + componentId + "' from switch '" + switchId + "' failed!";
+                LOG.log(Level.WARNING, message, error);
             }
         });
     }

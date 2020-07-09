@@ -70,7 +70,7 @@ public abstract class IPCWebsocketProxy {
                 pingSender.stop();
             }
             catch (Exception error) {
-                log.log(Level.WARNING, "Stopping output-streamer failed!", error);
+                log.log(Level.WARNING, "Stopping ping-sender failed!", error);
             }
         }
 
