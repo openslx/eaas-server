@@ -166,7 +166,9 @@ public abstract class IPCWebsocketProxy {
                 session.close(new CloseReason(CloseReason.CloseCodes.NORMAL_CLOSURE, message));
             }
             catch (Exception error) {
-                log.log(Level.WARNING, "Forwarding from io-socket to client failed!", error);
+                if (error instanceof InterruptedException)
+                    log.warning("Sending pings to client has been interrupted! Terminating sender...");
+                else log.log(Level.WARNING, "Sending pings to client failed!", error);
                 try {
                     session.close(new CloseReason(CloseReason.CloseCodes.UNEXPECTED_CONDITION, error.getMessage()));
                 } catch (IOException ignore) { }
@@ -209,9 +211,12 @@ public abstract class IPCWebsocketProxy {
         {
             try {
                 final ByteBuffer buffer = ByteBuffer.allocate(4 * 1024);
-                while (running && iosock.receive(buffer, true)) {
+                while (running) {
                     if (!session.isOpen())
                         break;
+
+                    if (!iosock.receive(buffer, 1000))
+                        continue;
 
                     session.getBasicRemote()
                             .sendBinary(buffer);
