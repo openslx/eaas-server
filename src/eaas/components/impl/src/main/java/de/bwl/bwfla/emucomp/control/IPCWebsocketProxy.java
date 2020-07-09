@@ -142,6 +142,7 @@ public abstract class IPCWebsocketProxy {
         public void stop() throws InterruptedException
         {
             running = false;
+            worker.interrupt();
             worker.join();
         }
 
