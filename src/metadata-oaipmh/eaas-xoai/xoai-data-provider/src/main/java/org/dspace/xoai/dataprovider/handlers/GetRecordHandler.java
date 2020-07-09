@@ -20,6 +20,7 @@ import org.dspace.xoai.dataprovider.model.Set;
 import org.dspace.xoai.dataprovider.parameters.OAICompiledRequest;
 import org.dspace.xoai.dataprovider.repository.Repository;
 import org.dspace.xoai.model.oaipmh.*;
+import org.dspace.xoai.model.oaipmh.Record;
 import org.dspace.xoai.xml.XSLPipeline;
 import org.dspace.xoai.xml.XmlWriter;
 
