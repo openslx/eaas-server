@@ -432,7 +432,11 @@ public class EnvironmentRepository extends EmilRest
 					env.getAbstractDataResource().add(romBinding);
 				}
 
-				String id = envdb.importMetadata("default", env, iaMd, false);
+				String id;
+				if(env.isLinuxRuntime())
+					id = envdb.importMetadata("public", env, iaMd, false);
+				else
+					id = envdb.importMetadata("default", env, iaMd, false);
 
 				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
 
@@ -443,6 +447,8 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setTitle(envReq.getLabel());
 				newEmilEnv.setEnvId(id);
 				newEmilEnv.setLinuxRuntime(env.isLinuxRuntime());
+				if(env.isLinuxRuntime())
+					newEmilEnv.setArchive("public");
 				newEmilEnv.setEnableRelativeMouse(envReq.isEnableRelativeMouse());
 				newEmilEnv.setEnablePrinting(envReq.isEnablePrinting());
 				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());
