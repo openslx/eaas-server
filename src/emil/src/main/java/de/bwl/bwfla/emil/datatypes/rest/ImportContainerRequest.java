@@ -12,8 +12,7 @@ import java.util.ArrayList;
 @XmlRootElement
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ImportContainerRequest extends EmilRequestType {
-
-    private String runtimeID;
+    
     private String name;
     private String urlString;
     private String customSubdir;
@@ -31,22 +30,6 @@ public class ImportContainerRequest extends EmilRequestType {
 
     private ArrayList<String> processArgs;
     private ArrayList<String> processEnvs;
-
-
-
-    /**
-     * @return the runtimeID
-     */
-    public String getRuntimeID() {
-        return runtimeID;
-    }
-
-    /**
-     * @param runtimeID the runtimeID to set
-     */
-    public void setRuntimeID(String runtimeID) {
-        this.runtimeID = runtimeID;
-    }
 
     /**
      * @return the name
