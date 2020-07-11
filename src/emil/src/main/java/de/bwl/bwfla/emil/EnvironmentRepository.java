@@ -1053,7 +1053,7 @@ public class EnvironmentRepository extends EmilRest
 				}
 			}
 			request.url = url;
-			request.destArchive = "public";
+			request.destArchive = "default";
 			request.environmentHelper = envdb;
 			request.label = imageReq.getLabel();
 
@@ -1061,10 +1061,8 @@ public class EnvironmentRepository extends EmilRest
 				request.type = ImageType.ROMS;
 			else if(imageReq.getImageType() != null && imageReq.getImageType().equalsIgnoreCase(ImageType.RUNTIME.value()))
 				request.type = ImageType.RUNTIME;
-			else {
+			else
 				request.type = ImageType.USER;
-				request.destArchive = "default";
-			}
 
 			try {
 				request.validate();
