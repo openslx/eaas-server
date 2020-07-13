@@ -637,6 +637,26 @@ public class Components {
         return binding;
     }
 
+
+    // vde switch identifies sessions by ethUrl, we need to store these
+    protected void registerNetworkCleanupTask(String componentId, String switchId, String ethUrl) throws BWFLAException
+    {
+        LOG.info("disconnecting " + ethUrl);
+        ComponentSession componentSession = sessions.get(componentId);
+        if(componentSession == null)
+            throw new BWFLAException("Component not registered " + componentId);
+
+        TaskStack cleanups = componentSession.getCleanupTasks();
+        cleanups.push( "disconnect/" + ethUrl,  () -> {
+            try {
+                componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethUrl);
+            } catch (BWFLAException error) {
+                final String message = "Disconnecting component '" + componentId + "' from switch '" + switchId + "' failed!";
+                LOG.log(Level.WARNING, message, error);
+            }
+        });
+    }
+
     protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {
@@ -1510,7 +1530,7 @@ public class Components {
 
         private final String id;
         private final ComponentRequest request;
-        private final TaskStack tasks;
+        private TaskStack tasks;
         private final List<EventObserver> observers;
         private EventSink esink;
 
@@ -1529,6 +1549,13 @@ public class Components {
             LOG.info("Session for component ID '" + id + "' created");
         }
 
+        public TaskStack getCleanupTasks()
+        {
+            if(tasks == null)
+                tasks = new TaskStack(LOG);
+
+            return tasks;
+        }
 
         public void keepalive() throws BWFLAException
         {
