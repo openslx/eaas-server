@@ -192,9 +192,16 @@ public abstract class MediumBuilder
 									log.warning("Metadata object " + json.toString());
 								}
 
-								JsonString workDirObject = json.getJsonString("WorkingDir");
-								if(workDirObject != null)
-									dockerMd.setWorkingDir(workdir.toString());
+								try {
+									JsonString workDirObject = json.getJsonString("WorkingDir");
+									if (workDirObject != null)
+										dockerMd.setWorkingDir(workdir.toString());
+								}
+								catch(ClassCastException e)
+								{
+									log.warning("importing WorkingDir failed");
+									log.warning("Metadata object " + json.toString());
+								}
 								dockerMd.setEntryProcesses(cmds);
 								dockerMd.setEnvVariables(envvars);
 							}
