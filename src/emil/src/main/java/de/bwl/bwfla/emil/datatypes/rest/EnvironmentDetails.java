@@ -132,7 +132,7 @@ public class EnvironmentDetails {
     private String runtimeId;
 
     @XmlElement
-    private boolean isLinuxRuntime;
+    private boolean linuxRuntime;
 
     @XmlElement
     private boolean isServiceContainer;
@@ -165,7 +165,7 @@ public class EnvironmentDetails {
         this.canProcessAdditionalFiles = emilenv.isCanProcessAdditionalFiles();
         this.archive = emilenv.getArchive();
         this.xpraEncoding = emilenv.getXpraEncoding();
-        this.isLinuxRuntime = emilenv.isLinuxRuntime();
+        this.linuxRuntime = emilenv.isLinuxRuntime();
         this.helpText = emilenv.getHelpText();
         this.timestamp = emilenv.getTimestamp();
 
@@ -445,7 +445,7 @@ public class EnvironmentDetails {
 
     public boolean isLinuxRuntime()
     {
-        return isLinuxRuntime;
+        return linuxRuntime;
     }
 
     public boolean isServiceContainer()

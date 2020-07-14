@@ -17,28 +17,38 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emucomp.api;
-
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlEnumValue;
-import javax.xml.bind.annotation.XmlType;
+package de.bwl.bwfla.envproposer.impl;
 
 
-@XmlEnum
-@XmlType(namespace = "http://bwfla.bwl.de/components/datatypes")
-public enum MediumType
+public class UserData
 {
-	@XmlEnumValue("hdd")
-	HDD,
-
-	@XmlEnumValue("cdrom")
-	CDROM,
-
-	@XmlEnumValue("floppy")
-	FLOPPY;
-
-	public static MediumType fromString(String value)
+	private String waitLocation;
+	private String resultLocation;
+	
+	
+	public UserData(String waitloc, String resultloc)
 	{
-		return MediumType.valueOf(value.toUpperCase());
+		this.waitLocation = waitloc;
+		this.resultLocation = resultloc;
+	}
+	
+	public String getWaitLocation()
+	{
+		return waitLocation;
+	}
+	
+	public void setWaitLocation(String location)
+	{
+		this.waitLocation = location;
+	}
+	
+	public String getResultLocation()
+	{
+		return resultLocation;
+	}
+	
+	public void setResultLocation(String location)
+	{
+		this.resultLocation = location;
 	}
 }

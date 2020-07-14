@@ -76,7 +76,7 @@ public class ReplicateImageTask extends AbstractTask<Object> {
 
 
         // ensure the published environments have emulator info
-        if (request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
+        if (request.env instanceof MachineConfiguration && request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
 
             if (emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty()) {
                 String containerName = emulatorContainerMap.get(emulatorSpec.getBean());

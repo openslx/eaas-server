@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -38,6 +39,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 import de.bwl.bwfla.conf.CommonSingleton;
 
@@ -114,6 +116,17 @@ public class DeprecatedProcessRunner
 	{
 		this(DEFAULT_CMDBUILDER_CAPACITY);
 		this.setCommand(cmd, true);
+	}
+
+	/**
+	 * Creates a new ProcessRunner piping ...runners together using /bin/sh.
+	 */
+	public static DeprecatedProcessRunner pipe(DeprecatedProcessRunner... runners) {
+		final DeprecatedProcessRunner ret = new DeprecatedProcessRunner("/bin/sh");
+		ret.addArgument("-c");
+		ret.addArgument(Arrays.asList(runners).stream().map(runner -> runner.getCommandStringWithEnv())
+				.collect(Collectors.joining(" | ")));
+		return ret;
 	}
 
 	/** Set a new logger. */
@@ -244,6 +257,9 @@ public class DeprecatedProcessRunner
 	public void addEnvVariable(String var, String value)
 	{
 		DeprecatedProcessRunner.ensureNotEmpty(var);
+		if (!var.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
+			throw new IllegalStateException("Environment variable name contains invalid characters.");
+		}
 		DeprecatedProcessRunner.ensureNotNull(value, "Value for environment variable " + var + " is null.");
 		environment.put(var, value);
 	}
@@ -270,7 +286,12 @@ public class DeprecatedProcessRunner
 		return command;
 	}
 
-	/** Returns the current command as string. */
+	/** Quotes a single argument for shell use. */
+	static private String quoteArg(String arg) {
+		return "'" + arg.replaceAll("'", "'\\''") + "'";
+	}
+
+	/** Returns the current command as string in shell syntax. */
 	public String getCommandString()
 	{
 		if (command.isEmpty())
@@ -278,12 +299,45 @@ public class DeprecatedProcessRunner
 
 		sbuilder.setLength(0);
 		for (String arg : command) {
-			sbuilder.append(arg);
+			sbuilder.append(quoteArg(arg));
 			sbuilder.append(' ');
 		}
 
 		int last = sbuilder.length() - 1;
 		return sbuilder.substring(0, last);
+	}
+
+	/** Returns the current environment variables as string in shell syntax. */
+	public String getEnvString()
+	{
+		StringBuilder builder = new StringBuilder(1024);
+
+		for (Map.Entry<String, String> entry : environment.entrySet()) {
+			final String key = entry.getKey();
+			final String value = entry.getValue();
+
+			// Must match ASSIGNMENT_WORD in
+			// <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_10_02>.
+			if (!key.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
+				throw new IllegalStateException("Environment variables cannot be encoded");
+			}
+
+			builder.append(key);
+			builder.append("=");
+			builder.append(quoteArg(value));
+			builder.append(" ");
+		}
+
+		int last = builder.length() - 1;
+		return builder.substring(0, last);
+	}
+
+	/** Returns the current command including environment variables as string in shell syntax. */
+	public String getCommandStringWithEnv()
+	{
+		final String env = this.getEnvString();
+		final String command = this.getCommandString();
+		return env + (env.length() > 0 ? " " : "") + command;
 	}
 
 	/** Returns the monitor for the running subprocess. */
@@ -511,12 +565,12 @@ public class DeprecatedProcessRunner
 
 		// Finally start the process
 		try {
-			log.info("Starting subprocess:  " + this.getCommandString());
 			process = builder.start();
 			pid = DeprecatedProcessRunner.lookupUnixPid(process);
+			log.info("Started subprocess (PID: " + pid + "):  " + this.getCommandString());
 		}
 		catch (IOException exception) {
-			log.log(Level.SEVERE, "Starting new subprocess failed!", exception);
+			log.log(Level.SEVERE, "Starting new subprocess failed! CMD was: " + this.getCommandString(), exception);
 			this.cleanup();
 			return false;
 		}

@@ -20,17 +20,10 @@
 package de.bwl.bwfla.emucomp.components.network;
 
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InterruptedIOException;
-import java.io.OutputStream;
 import java.net.URI;
-import java.nio.ByteBuffer;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Collection;
-import java.util.HashMap;
 import java.util.Map;
-import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -38,22 +31,15 @@ import javax.enterprise.concurrent.ManagedThreadFactory;
 import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
-import javax.websocket.CloseReason;
-import javax.websocket.DeploymentException;
-import javax.websocket.Session;
+import javax.websocket.*;
 
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.NetworkUtils;
+import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
-import de.bwl.bwfla.emucomp.components.emulators.IpcSocket;
-import de.bwl.bwfla.emucomp.control.IPCWebsocketProxy;
 import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
 import de.bwl.bwfla.emucomp.control.connectors.IConnector;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.ProcessRunner;
-import de.bwl.bwfla.common.utils.WebsocketClient;
 
 
 // TODO: currently the default of 32 ports is used on the switch,
@@ -64,15 +50,12 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     @Config("components.binary.vdeswitch")
     private String vdeswitchBinary;
 
-    @Inject
-    @Config("components.binary.vdeplug")
-    private String vdeplugBinary;
-
     private ManagedThreadFactory threadFactory;
 
     // vde_switch process maintenance members
     protected final ProcessRunner runner = new ProcessRunner();
-    protected final Map<String, Thread> connections = new HashMap<String, Thread>();
+    protected final Map<String, Thread> connections = new ConcurrentHashMap<>();
+    private WebSocketContainer container;
 
     private Path switchPath;
 
@@ -90,7 +73,16 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         // create a new vde switch instance in tmpdir/sockets
         runner.command(this.vdeswitchBinary);
         runner.addArguments("-s", this.switchPath);
-        
+
+        try {
+            container = ContainerProvider.getWebSocketContainer();
+        }
+        catch (Throwable t)
+        {
+            t.printStackTrace();
+            throw new BWFLAException("Failed to obtain a WebSocketContainer instance " + t.getMessage(), t);
+        }
+
         try {
             runner.start();
         } catch (IndexOutOfBoundsException | IOException e) {
@@ -98,13 +90,16 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         }
     }
 
+    public WebSocketContainer getContainer()
+    {
+        return container;
+    }
+
     @Override
     public void destroy() {
-        System.out.println("vdeswitch destroyed");
         runner.close();
-        final Collection<Thread> threads = this.connections.values();
-        threads.forEach((thread) -> thread.interrupt());
-        threads.forEach((thread) -> {
+        connections.forEach((id, thread) -> thread.interrupt());
+        connections.forEach((id, thread) -> {
             try {
                 thread.join();
             } catch (InterruptedException e) {
@@ -119,34 +114,15 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     @Override
     public void connect(String ethUrl) throws BWFLAException {
 
-        LOG.warning("connect to " + ethUrl);
+        LOG.info("connect to " + ethUrl);
 
-        try {
-            // start a new VDE plug instance that connects to the switch
-            DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-
-            String socketPath = "/tmp/" + UUID.randomUUID().toString() + ".sock";
-            runner.setCommand("socat");
-            runner.addArgument("unix-listen:" + socketPath);
-            runner.addArgument("exec:" + this.vdeplugBinary + " -s " + this.switchPath);
-            runner.start();
-
-            IPCWebsocketProxy.wait(Paths.get(socketPath));
-            IpcSocket iosock = IpcSocket.connect(socketPath, IpcSocket.Type.STREAM);
-
-            // start a new connection thread
-            // it will connect to the websocket url and start forwarding
-            // traffic to/from the given process
-            Thread readThread = threadFactory
-                    .newThread(new Connection(runner, iosock, URI.create(ethUrl)));
-            readThread.start();
-            this.connections.put(ethUrl, readThread);
-        } catch (IOException | DeploymentException e) {
-            throw new BWFLAException(
-                    "Could not establish ethernet connection to " + ethUrl
-                            + ": " + e.getMessage(),
-                    e);
-        }
+        // start a new connection thread
+        // it will connect to the websocket url and start forwarding
+        // traffic to/from the given process
+        Thread readThread = threadFactory
+                .newThread(new Connection(this.switchPath.toString(), ethUrl));
+        readThread.start();
+        this.connections.put(ethUrl, readThread);
     }
 
     @Override
@@ -158,7 +134,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
     @Override
     public void disconnect(String ethUrl) throws BWFLAException {
-        LOG.severe("disconnect " + ethUrl);
+        LOG.info("disconnect ing connection to" + ethUrl);
         final Thread thread = this.connections.remove(ethUrl);
         if (thread == null)
             throw new BWFLAException("Unknown connection URL: " + ethUrl);
@@ -166,7 +142,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         try {
             // Stop the WebSocket thread!
             thread.interrupt();
-            thread.join();
+            // thread.join();
         }
         catch (Throwable error) {
             throw new BWFLAException("Disconnecting '" + ethUrl + "' failed!", error);
@@ -174,68 +150,54 @@ public class VdeSwitchBean extends NetworkSwitchBean {
     }
 
     private static class Connection implements Runnable {
-        public final DeprecatedProcessRunner runner;
-        public final WebsocketClient wsClient;
-        private final URI ethUrl;
-        private final IpcSocket iosocket;
+        private final String ethUrl;
+        private final String socketPath;
 
-        public Connection(final DeprecatedProcessRunner runner, IpcSocket iosocket, final URI ethUrl)
-                throws DeploymentException, IOException {
+        public Connection(final String socketPath, final String ethUrl) {
             super();
-            this.runner = runner;
             this.ethUrl = ethUrl;
-            this.iosocket = iosocket;
-            
-            // this will immediately establish the connection (or fail with an
-            // exception)
-            this.wsClient = new WebsocketClient(ethUrl) {
-
-                @Override
-                public void doOnMessage(ByteBuffer msg) {
-                    try {
-                        final int size = msg.remaining();
-                        final byte[] buffer  = new byte[size];
-                        msg.get(buffer);
-                        iosocket.send(buffer, true);
-                    } catch (Throwable e) {
-                        Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, e.getMessage(), e);
-                    }
-                }
-            };
-
-            // if the socket is closed, closing the process/runner will
-            // automatically close the associated InputStream and thus
-            // terminate this thread
-            wsClient.addCloseListener((Session session, CloseReason reason) -> {
-                runner.stop();
-                runner.cleanup();
-                try {
-                    iosocket.close();
-                }
-                catch (IOException ignore) {}
-            });
+            this.socketPath = socketPath;
         }
 
         @Override
         public void run() {
-            try {
-                // Thread.sleep(1000);
-                final ByteBuffer buffer = ByteBuffer.allocate(4 * 1024);
-                while (!Thread.currentThread().isInterrupted() && iosocket.receive(buffer, true)) {
-                    wsClient.send(buffer);
-                }
+            long start, stop;
+            int failCounter = 10;
 
-            } catch (InterruptedIOException ignore) {
-                // all is going well, we terminated the thread ourselves
-            } catch (Exception e) {
-                Logger.getLogger(Connection.class.getName()).log(Level.SEVERE, e.getMessage(), e);
-            }
-            finally {
+            final Logger log = Logger.getLogger(Connection.class.getName());
+
+            for(;!Thread.currentThread().isInterrupted() && failCounter > 0;) {
+
+                if (!ethUrl.matches("^wss?://[!#-;=?-\\[\\]_a-z~]+$"))
+                        throw new IllegalArgumentException("Illegal WebSocket URL");
+
+                final DeprecatedProcessRunner websocat = new DeprecatedProcessRunner("/libexec/websocat");
+                websocat.addArguments("--binary", "--exit-on-eof", "--ping-interval=600");
+                websocat.addArguments("exec:vde_plug");
+                websocat.addArgument(ethUrl);
+                websocat.addArguments("--exec-args", socketPath);
+                websocat.start();
+
                 try {
-                    System.out.println(" stream has closed " + ethUrl + " -- " + runner.getCommandString()); //  + " " + runner.exitValue());
-                    wsClient.close();
-                } catch (IOException e1) {
-                    e1.printStackTrace();
+                    start = System.currentTimeMillis();
+                    while (websocat.isProcessRunning() && !Thread.currentThread().isInterrupted()) {
+                        Thread.sleep(1000);
+                    }
+                    stop = System.currentTimeMillis();
+
+                    if(stop - start < 2 * 1000)
+                    {
+                        log.warning("websocat is spinning. remote might be gone... ");
+                        Thread.sleep(1000);
+                        failCounter--;
+                    }
+                    else failCounter = 10;
+
+                } catch (InterruptedException e) {
+                    log.log(Level.INFO, "Connection has been interrupted!", e);
+                } finally {
+                    websocat.stop();
+                    websocat.cleanup();
                 }
             }
         }

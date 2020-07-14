@@ -51,6 +51,7 @@ import org.jclouds.compute.RunNodesException;
 import org.jclouds.compute.domain.Hardware;
 import org.jclouds.compute.domain.NodeMetadata;
 import org.jclouds.compute.domain.Template;
+import org.jclouds.compute.domain.TemplateBuilder;
 import org.jclouds.compute.options.TemplateOptions;
 import org.jclouds.compute.predicates.NodePredicates;
 import org.jclouds.logging.jdk.config.JDKLoggingModule;
@@ -76,6 +77,7 @@ import de.bwl.bwfla.eaas.cluster.dump.DumpTrigger;
 import de.bwl.bwfla.eaas.cluster.dump.ObjectDumper;
 import de.bwl.bwfla.eaas.cluster.provider.Node;
 import org.jclouds.openstack.nova.v2_0.compute.options.NovaTemplateOptions;
+import org.jclouds.openstack.nova.v2_0.domain.BlockDeviceMapping;
 
 
 public class NodeAllocatorJCLOUDS implements INodeAllocator
@@ -460,9 +462,48 @@ public class NodeAllocatorJCLOUDS implements INodeAllocator
 
 	private static Template newNodeTemplate(ComputeService compute, NodeAllocatorConfigJCLOUDS config)
 	{
-		return compute.templateBuilder()
+		final TemplateBuilder builder = compute.templateBuilder();
+		final TemplateOptions options = compute.templateOptions();
+		switch (config.getProviderType()) {
+			case NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK.TYPE:
+				// Disk config...
+				switch (config.getVmImageSourceType()) {
+					case NodeAllocatorConfigJCLOUDS.ImageSourceType.IMAGE:
+						builder.imageId(config.getVmImageId());
+						break;
+
+					case NodeAllocatorConfigJCLOUDS.ImageSourceType.SNAPSHOT:
+						// Use custom block-device mapping as documented at:
+						// https://docs.openstack.org/nova/queens/user/block-device-mapping.html
+						final BlockDeviceMapping mapping = BlockDeviceMapping.builder()
+								.bootIndex(0)
+								.sourceType("snapshot")
+								.destinationType("volume")
+								.uuid(config.getVmImageId())
+								.deleteOnTermination(true)
+								.build();
+
+						options.as(NovaTemplateOptions.class)
+								.blockDeviceMappings(mapping);
+						break;
+				}
+
+				final String keypair = ((NodeAllocatorConfigJCLOUDS.ProviderConfigOPENSTACK) config.getProviderConfig())
+						.getKeyPairName();
+
+				if (keypair != null) {
+					options.as(NovaTemplateOptions.class)
+							.keyPairName(keypair);
+				}
+
+				break;
+
+			default:
+				throw new IllegalStateException("Unknown provider-type: " + config.getProviderType());
+		}
+
+		return builder.options(options)
 				.hardwareId(config.getVmHardwareId())
-				.imageId(config.getVmImageId())
 				.build();
 	}
 

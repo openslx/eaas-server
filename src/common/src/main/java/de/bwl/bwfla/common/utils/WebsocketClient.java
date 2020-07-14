@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.common.utils;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+
 import java.io.IOException;
 import java.net.URI;
 import java.nio.ByteBuffer;
@@ -42,21 +44,35 @@ public class WebsocketClient extends Endpoint {
         void onError(Session session, Throwable thr);
     }
 
-    private final Session session;
+    private Session session;
+    private final URI uri;
     private final List<CloseListener> closeListeners = new ArrayList<CloseListener>();
     private final List<ErrorListener> errorListeners = new ArrayList<ErrorListener>();
+    private final WebSocketContainer container;
 
-    public WebsocketClient(URI uri) throws DeploymentException, IOException {
-        WebSocketContainer container = ContainerProvider.getWebSocketContainer();
+    public WebsocketClient(WebSocketContainer container, URI uri) {
+        this.uri = uri;
+        this.container = container;
+    }
 
-        List<String> subprotocols = new ArrayList<>();
-        subprotocols.add("binary");
+    public void connect() throws BWFLAException{
 
-        ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
-                .preferredSubprotocols(subprotocols)
-                .build();
+        try {
 
-        this.session = container.connectToServer(this, config, uri);
+            if (session != null)
+                throw new BWFLAException("WebsocketClient already connected");
+
+            List<String> subprotocols = new ArrayList<>();
+            subprotocols.add("binary");
+
+            ClientEndpointConfig config = ClientEndpointConfig.Builder.create()
+                    .preferredSubprotocols(subprotocols)
+                    .build();
+
+            this.session = container.connectToServer(this, config, uri);
+        } catch (Exception e) {
+            throw new BWFLAException("WebSocket connection " + uri + " failed " + e.getMessage(), e);
+        }
     }
 
     @Override
