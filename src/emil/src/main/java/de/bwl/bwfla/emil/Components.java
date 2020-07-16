@@ -820,7 +820,7 @@ public class Components {
     }
 
     private void connectMedia(MachineConfiguration env, MachineComponentRequest.UserMedium userMedium) throws BWFLAException {
-        if(userMedium.getMediumType() != MediumType.CDROM || userMedium.getMediumType() != MediumType.HDD)
+        if(userMedium.getMediumType() != MediumType.CDROM && userMedium.getMediumType() != MediumType.HDD)
         {
             throw new BWFLAException("user media has limited support. mediaType: " + userMedium.getMediumType() + " not supported yet");
         }

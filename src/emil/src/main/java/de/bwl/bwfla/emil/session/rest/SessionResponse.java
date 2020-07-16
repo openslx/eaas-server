@@ -20,6 +20,8 @@ public class SessionResponse extends JaxbType {
     @XmlElement
     private NetworkRequest network;
 
+    private SessionResponse() {}
+
     public SessionResponse(NetworkRequest request) {
         this.network = request;
         this.components = new ArrayList<>();
