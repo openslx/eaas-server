@@ -52,7 +52,7 @@ public class TaskManager {
 
     public String submitTask(AbstractTask<Object> task)
     {
-        return taskManager.submitTask(task);
+        return taskManager.submit(task);
     }
 
     @Secured(roles = {Role.PUBLIC})
@@ -67,7 +67,7 @@ public class TaskManager {
             return response;
 
         // No response found, lookup task's result...
-        final TaskInfo<Object> info = taskManager.getTaskInfo(taskId);
+        final TaskInfo<Object> info = taskManager.lookup(taskId);
         if (info == null)
             return new TaskStateResponse(new BWFLAException("task not found"));
 
@@ -99,7 +99,7 @@ public class TaskManager {
             return new TaskStateResponse(new BWFLAException(e));
         }
         finally {
-            taskManager.removeTaskInfo(taskId);
+            taskManager.remove(taskId);
         }
     }
 
@@ -108,10 +108,10 @@ public class TaskManager {
     @Secured(roles = {Role.PUBLIC})
     public void remove(@PathParam("id") String taskId)
     {
-        final TaskInfo<Object> task = taskManager.getTaskInfo(taskId);
+        final TaskInfo<Object> task = taskManager.lookup(taskId);
         if (task != null) {
             // Cancel and remove task
-            taskManager.removeTaskInfo(taskId);
+            taskManager.remove(taskId);
             task.result().cancel(true);
         }
 

@@ -122,7 +122,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 		if (fileCache == null)
 			fileCache = new DigitalObjectFileCache();
 
-		loaderTask = taskManager.submitTask(new LoadMetadata(collectionId));
+		loaderTask = taskManager.submit(new LoadMetadata(collectionId));
 		collection = null;
 	}
 
@@ -131,11 +131,11 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 		if(loaderTask == null)
 			return;
 
-		final TaskInfo<Collection> info = taskManager.getTaskInfo(loaderTask);
+		final TaskInfo<Collection> info = taskManager.lookup(loaderTask);
 		if (!info.result().isDone())
 			return;
 
-		taskManager.removeTaskInfo(loaderTask);
+		taskManager.remove(loaderTask);
 		try {
 			collection = info.result().get();
 		} catch (InterruptedException e) {

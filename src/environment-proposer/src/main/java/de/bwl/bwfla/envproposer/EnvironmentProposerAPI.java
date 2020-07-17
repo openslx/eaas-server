@@ -79,12 +79,12 @@ public class EnvironmentProposerAPI
 	{
 		try {
 			// Submit task
-			final String taskid = taskmgr.submitTask(new ProposalTask(request));
+			final String taskid = taskmgr.submit(new ProposalTask(request));
 
 			// Generate task's location URLs
 			final String waitLocation = this.getLocationUrl("waitqueue", taskid);
 			final String resultLocation = this.getLocationUrl("proposals", taskid);
-			final TaskInfo<Object> info = taskmgr.getTaskInfo(taskid);
+			final TaskInfo<Object> info = taskmgr.lookup(taskid);
 			info.setUserData(new UserData(waitLocation, resultLocation));
 
 			// Info message
@@ -120,7 +120,7 @@ public class EnvironmentProposerAPI
 	public Response poll(@PathParam("id") String id)
 	{
 		try {
-			final TaskInfo<Object> info = taskmgr.getTaskInfo(id);
+			final TaskInfo<Object> info = taskmgr.lookup(id);
 			if (info == null) {
 				String message = "Passed ID is invalid: " + id;
 				return ResponseUtils.createMessageResponse(Status.NOT_FOUND, message);
@@ -165,7 +165,7 @@ public class EnvironmentProposerAPI
 				return ResponseUtils.createMessageResponse(Status.BAD_REQUEST, message);
 			}
 
-			final TaskInfo<Object> info = taskmgr.getTaskInfo(id);
+			final TaskInfo<Object> info = taskmgr.lookup(id);
 			if (info == null || !info.result().isDone()) {
 				String message = "Passed ID is invalid: " + id;
 				return ResponseUtils.createMessageResponse(Status.NOT_FOUND, message);
@@ -177,7 +177,7 @@ public class EnvironmentProposerAPI
 				return ResponseUtils.createResponse(Status.OK, future.get());
 			}
 			finally {
-				taskmgr.removeTaskInfo(id);
+				taskmgr.remove(id);
 			}
 		}
 		catch (Throwable throwable) {

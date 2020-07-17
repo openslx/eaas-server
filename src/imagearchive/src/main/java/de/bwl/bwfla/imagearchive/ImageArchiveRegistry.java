@@ -124,7 +124,7 @@ public class ImageArchiveRegistry
 
 	public static TaskState submitTask(AbstractTask<String> task)
 	{
-		String taskId = taskManager.submitTask(task);
+		String taskId = taskManager.submit(task);
 		TaskState state = new TaskState(taskId);
 		return state;
 	}
@@ -136,7 +136,7 @@ public class ImageArchiveRegistry
 
 		TaskState state = new TaskState(taskId);
 		try {
-			final TaskInfo<String> info = taskManager.getTaskInfo(taskId);
+			final TaskInfo<String> info = taskManager.lookup(taskId);
 			if (info == null)
 				return null;
 

@@ -168,7 +168,7 @@ public class ObjectArchiveSingleton
 
 	public static TaskState submitTask(AbstractTask<Object> task)
 	{
-		String taskId = taskManager.submitTask(task);
+		String taskId = taskManager.submit(task);
 		TaskState state = new TaskState(taskId);
 		return state;
 	}
@@ -179,7 +179,7 @@ public class ObjectArchiveSingleton
 			return null;
 
 		TaskState state = new TaskState(taskId);
-		final TaskInfo<Object> info = taskManager.getTaskInfo(taskId);
+		final TaskInfo<Object> info = taskManager.lookup(taskId);
 		if(info == null)
 			return null;
 		if(info.result().isDone())

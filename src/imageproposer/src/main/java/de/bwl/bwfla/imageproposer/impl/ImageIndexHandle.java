@@ -81,7 +81,7 @@ public class ImageIndexHandle
 
 	public String refreshAsTask()
 	{
-		return taskmgr.submitTask(new ImageIndexBuilderTask());
+		return taskmgr.submit(new ImageIndexBuilderTask());
 	}
 
 	/**

@@ -94,14 +94,14 @@ public class ImageBuilderBackend implements IImageBuilder
 	public ImageBuildHandle build(ImageDescription description) throws BWFLAException
 	{
 		final Path workdir = this.createWorkingDir();
-		final String tid = builds.submitTask(new ImageBuildTask(workdir, description));
+		final String tid = builds.submit(new ImageBuildTask(workdir, description));
 		return new ImageBuildHandle(tid);
 	}
 
 	@Override
 	public boolean isDone(ImageBuildHandle build) throws BWFLAException
 	{
-		final TaskInfo<ImageBuilderResult> info = builds.getTaskInfo(build.getId());
+		final TaskInfo<ImageBuilderResult> info = builds.lookup(build.getId());
 		if (info == null)
 			throw new BWFLAException("Invalid image-build handle!");
 
@@ -111,7 +111,7 @@ public class ImageBuilderBackend implements IImageBuilder
 	@Override
 	public ImageBuilderResult get(ImageBuildHandle build) throws BWFLAException
 	{
-		final TaskInfo<ImageBuilderResult> info = builds.getTaskInfo(build.getId());
+		final TaskInfo<ImageBuilderResult> info = builds.lookup(build.getId());
 		if (info == null)
 			throw new BWFLAException("Invalid image-build handle!");
 
@@ -122,7 +122,7 @@ public class ImageBuilderBackend implements IImageBuilder
 			throw new BWFLAException("Retrieving image-build result failed!", error);
 		}
 		finally {
-			builds.removeTaskInfo(build.getId());
+			builds.remove(build.getId());
 		}
 	}
 

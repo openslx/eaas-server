@@ -19,7 +19,7 @@
 
 package de.bwl.bwfla.common.taskmanager;
 
-import java.util.List;
+import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
@@ -67,17 +67,17 @@ public class TaskManager<R>
 		return executor.submit(task);
 	}
 	
-	public String submitTask(AbstractTask<R> task)
+	public String submit(AbstractTask<R> task)
 	{
 		return this.submit(task, null, null);
 	}
 	
-	public String submitTask(AbstractTask<R> task, Object userdata)
+	public String submit(AbstractTask<R> task, Object userdata)
 	{
 		return this.submit(task, userdata, null);
 	}
 
-	public String submitTaskGroup(List<AbstractTask<R>> tasks)
+	public String submit(Collection<AbstractTask<R>> tasks)
 	{
 		String groupid = this.nextTaskId();
 		TaskGroup group = new TaskGroup();
@@ -91,17 +91,12 @@ public class TaskManager<R>
 		return groupid;
 	}
 
-	public TaskInfo<R> getTaskInfo(String taskid)
+	public TaskInfo<R> lookup(String taskid)
 	{
 		return tasks.get(taskid);
 	}
 
-	public TaskGroup getTaskGroup(String groupid)
-	{
-		return groups.get(groupid);
-	}
-
-	public boolean removeTaskInfo(String taskid)
+	public boolean remove(String taskid)
 	{
 		boolean removed = (tasks.remove(taskid) != null);
 		if (removed)
@@ -110,13 +105,43 @@ public class TaskManager<R>
 		return removed;
 	}
 
-	public boolean removeTaskGroup(String groupid)
+	public Groups groups()
 	{
-		boolean removed = (groups.remove(groupid) != null);
-		if (removed)
-			log.info("Task group " + groupid + " removed.");
+		return new Groups();
+	}
 
-		return removed;
+	public class Groups
+	{
+		public TaskGroup lookup(String id)
+		{
+			return groups.get(id);
+		}
+
+		public boolean remove(String id)
+		{
+			return this.remove(id, true);
+		}
+
+		public boolean remove(String id, boolean recursive)
+		{
+			if (recursive) {
+				final TaskGroup group = groups.get(id);
+				if (group == null)
+					return false;
+
+				for (String tid : group.getPendingTasks())
+					TaskManager.this.remove(tid);
+
+				for (String tid : group.getDoneTasks())
+					TaskManager.this.remove(tid);
+			}
+
+			boolean removed = (groups.remove(id) != null);
+			if (removed)
+				log.info("Group " + id + " removed.");
+
+			return removed;
+		}
 	}
 
 
@@ -136,7 +161,7 @@ public class TaskManager<R>
 
 		task.setup(id, group);
 
-		Future<R> future = this.submit(task);
+		Future<R> future = this.submit((Callable<R>) task);
 		tasks.put(id, new TaskInfo<R>(task, future, userdata));
 		log.info("Task " + id + " submitted.");
 
