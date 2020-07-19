@@ -195,7 +195,7 @@ public abstract class MediumBuilder
 								try {
 									JsonString workDirObject = json.getJsonString("WorkingDir");
 									if (workDirObject != null)
-										dockerMd.setWorkingDir(workdir.toString());
+										dockerMd.setWorkingDir(workDirObject.toString());
 								}
 								catch(ClassCastException e)
 								{
