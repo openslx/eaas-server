@@ -23,7 +23,7 @@ import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.imagebuilder.api.IImageBuilder;
@@ -166,7 +166,7 @@ public class ImageBuilderBackend implements IImageBuilder
 		}
 	}
 
-	private class ImageBuildTask extends AbstractTask<ImageBuilderResult>
+	private class ImageBuildTask extends BlockingTask<ImageBuilderResult>
 	{
 		private final ImageBuilderBackend backend;
 		private final Path workdir;

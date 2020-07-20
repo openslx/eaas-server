@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
@@ -57,7 +57,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	private final boolean isDefaultArchive;
 	private String loaderTask;
 
-	class LoadMetadata extends AbstractTask<Collection>
+	class LoadMetadata extends BlockingTask<Collection>
 	{
 		private final ExecutorService pool;
 		private final String collectionId;
@@ -343,7 +343,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 
 	}
 
-	class PreservicaSyncTask extends AbstractTask<Object>
+	class PreservicaSyncTask extends BlockingTask<Object>
 	{
 		private final List<String> objects;
 		public PreservicaSyncTask(List<String> objectIDs)

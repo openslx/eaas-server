@@ -21,10 +21,8 @@ package de.bwl.bwfla.common.taskmanager;
 
 import java.util.Collection;
 import java.util.Map;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -55,16 +53,6 @@ public class TaskManager<R>
 	public ExecutorService executor()
 	{
 		return executor;
-	}
-
-	public void execute(Runnable task)
-	{
-		executor.execute(task);
-	}
-	
-	public <T> Future<T> submit(Callable<T> task)
-	{
-		return executor.submit(task);
 	}
 	
 	public String submit(AbstractTask<R> task)
@@ -156,13 +144,11 @@ public class TaskManager<R>
 	private String submit(AbstractTask<R> task, Object userdata, TaskGroup group)
 	{
 		String id = this.nextTaskId();
-		if (group != null)
-			group.addTask(id);
+		task.setup(id, group, executor);
 
-		task.setup(id, group);
+		executor.execute(task);
 
-		Future<R> future = this.submit((Callable<R>) task);
-		tasks.put(id, new TaskInfo<R>(task, future, userdata));
+		tasks.put(id, new TaskInfo<R>(task, userdata));
 		log.info("Task " + id + " submitted.");
 
 		return id;

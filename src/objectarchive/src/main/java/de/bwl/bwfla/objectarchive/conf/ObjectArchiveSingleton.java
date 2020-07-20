@@ -34,7 +34,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
@@ -166,7 +166,7 @@ public class ObjectArchiveSingleton
 		}
 	}
 
-	public static TaskState submitTask(AbstractTask<Object> task)
+	public static TaskState submitTask(BlockingTask<Object> task)
 	{
 		String taskId = taskManager.submit(task);
 		TaskState state = new TaskState(taskId);

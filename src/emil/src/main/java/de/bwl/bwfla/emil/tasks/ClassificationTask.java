@@ -2,7 +2,7 @@ package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.ObjectClassification;
@@ -26,7 +26,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
-public class ClassificationTask extends AbstractTask<Object> {
+public class ClassificationTask extends BlockingTask<Object>
+{
 
 
     private static final Logger LOG = Logger.getLogger(ClassificationTask.class.getName());

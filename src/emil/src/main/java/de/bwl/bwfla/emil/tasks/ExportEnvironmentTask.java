@@ -1,7 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
@@ -21,7 +21,8 @@ import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ExportEnvironmentTask extends AbstractTask<Object> {
+public class ExportEnvironmentTask extends BlockingTask<Object>
+{
 
     private static final Logger LOG = Logger.getLogger(ExportEnvironmentTask.class.getName());
 
