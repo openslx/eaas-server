@@ -19,10 +19,15 @@
 
 package de.bwl.bwfla.common.taskmanager;
 
+import java.time.Duration;
 import java.util.Collection;
+import java.util.Iterator;
 import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Logger;
 
@@ -44,12 +49,32 @@ public class TaskManager<R>
 	/** Task executor */
 	private final ExecutorService executor;
 
+	/** Intervall between GC runs */
+	private Duration gcInterval = Duration.ofMinutes(5);
+
+	/** Timeout, since last access, for a task to be marked as garbage */
+	private Duration taskExpirationTimeout = Duration.ofMinutes(10);
+
+
 	/** Constructor */
 	public TaskManager(ExecutorService executor)
 	{
 		this.executor = executor;
+
+		this.schedule(this::rungc, gcInterval);
 	}
-	
+
+	public void setGarbageCollectionInterval(Duration interval)
+	{
+		this.gcInterval = interval;
+	}
+
+	public void setTaskExpirationTimeout(Duration timeout)
+	{
+		this.taskExpirationTimeout = timeout;
+	}
+
+
 	public ExecutorService executor()
 	{
 		return executor;
@@ -81,7 +106,11 @@ public class TaskManager<R>
 
 	public TaskInfo<R> lookup(String taskid)
 	{
-		return tasks.get(taskid);
+		TaskInfo<R> info = tasks.get(taskid);
+		if (info != null)
+			info.updateAccessTimestamp();
+
+		return info;
 	}
 
 	public boolean remove(String taskid)
@@ -165,5 +194,45 @@ public class TaskManager<R>
 		log.info("Task " + id + " submitted.");
 
 		return id;
+	}
+
+	private void schedule(Runnable task, Duration delay)
+	{
+		CompletableFuture.delayedExecutor(delay.toMillis(), TimeUnit.MILLISECONDS, executor)
+				.execute(task);
+	}
+
+	private void rungc()
+	{
+		try {
+			final long timeout = taskExpirationTimeout.toMillis();
+			final long curtime = TaskInfo.now();
+			int numTasksProcessed = 0;
+			int numTasksRemoved = 0;
+
+			final Iterator<Map.Entry<String, TaskInfo<R>>> iter = tasks.entrySet().iterator();
+			while (iter.hasNext()) {
+				final TaskInfo<R> info = iter.next().getValue();
+				final Future<R> result = info.result();
+				final boolean done = result.isDone() || result.isCancelled();
+				if (done && (curtime - info.getAccessTimestamp()) > timeout) {
+					log.info("Task " + info.task().getTaskId() + " expired!");
+					++numTasksRemoved;
+					iter.remove();
+				}
+
+				++numTasksProcessed;
+			}
+
+			if (numTasksRemoved > 0) {
+				final String message = numTasksRemoved + " out of " + numTasksProcessed
+						+ " task(s) expired, " + (numTasksProcessed - numTasksRemoved) + " left";
+
+				log.info(message);
+			}
+		}
+		finally {
+			this.schedule(this::rungc, gcInterval);
+		}
 	}
 }

@@ -26,11 +26,13 @@ public class TaskInfo<R>
 {
 	private final AbstractTask<R> task;
 	private Object userdata;
+	private long lastAccessTimestamp;
 	
 	TaskInfo(AbstractTask<R> task, Object userdata)
 	{
 		this.task = task;
 		this.userdata = userdata;
+		this.lastAccessTimestamp = TaskInfo.now();
 	}
 	
 	public AbstractTask<R> task()
@@ -62,4 +64,20 @@ public class TaskInfo<R>
 	{
 		this.userdata = userdata;
 	}
+
+	public long getAccessTimestamp()
+	{
+		return lastAccessTimestamp;
+	}
+
+	void updateAccessTimestamp()
+	{
+		this.lastAccessTimestamp = TaskInfo.now();
+	}
+
+	public static long now()
+	{
+		return System.currentTimeMillis();
+	}
+
 }
