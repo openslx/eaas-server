@@ -145,6 +145,19 @@ public class TaskManager<R>
 	{
 		String id = this.nextTaskId();
 		task.setup(id, group, executor);
+		task.getTaskResult()
+				.whenComplete((result, error) -> {
+					if (error == null) {
+						log.info("Task " + id + " completed.");
+						return;
+					}
+
+					String message = "Task " + id + " failed!";
+					if (error.getMessage() != null)
+						message += " Cause: " + error.getMessage();
+
+					log.warning(message);
+				});
 
 		executor.execute(task);
 
