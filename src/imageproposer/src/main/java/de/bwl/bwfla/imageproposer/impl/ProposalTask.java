@@ -23,14 +23,14 @@ import java.util.*;
 
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystemInformation;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.imageproposer.client.Proposal;
 import de.bwl.bwfla.imageproposer.client.ProposalRequest;
 
 import javax.xml.bind.JAXBException;
 
 
-public class ProposalTask extends AbstractTask<Object>
+public class ProposalTask extends BlockingTask<Object>
 {
 	private final ProposalRequest request;
 	private final ImageIndexHandle indexHandle;

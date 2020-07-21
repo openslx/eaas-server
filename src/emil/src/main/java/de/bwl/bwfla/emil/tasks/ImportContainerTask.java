@@ -1,7 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ImportEmulatorRequest;
@@ -10,7 +10,8 @@ import de.bwl.bwfla.emil.utils.ContainerUtil;
 import java.util.HashMap;
 import java.util.Map;
 
-public class ImportContainerTask extends AbstractTask<Object> {
+public class ImportContainerTask extends BlockingTask<Object>
+{
 
     private final ContainerUtil containerUtil;
     private final DatabaseEnvironmentsAdapter envHelper;

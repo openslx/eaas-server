@@ -20,64 +20,37 @@
 package de.bwl.bwfla.common.taskmanager;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.function.BiConsumer;
 
 
-public class TaskInfo<R>
+public abstract class CompletableTask<R> extends AbstractTask<R>
 {
-	private final AbstractTask<R> task;
-	private Object userdata;
-	private long lastAccessTimestamp;
-	
-	TaskInfo(AbstractTask<R> task, Object userdata)
+	protected CompletableTask()
 	{
-		this.task = task;
-		this.userdata = userdata;
-		this.lastAccessTimestamp = TaskInfo.now();
-	}
-	
-	public AbstractTask<R> task()
-	{
-		return task;
-	}
-	
-	public <T> T task(Class<T> clazz)
-	{
-		return clazz.cast(task);
-	}
-	
-	public CompletableFuture<R> result()
-	{
-		return task.getTaskResult();
-	}
-	
-	public Object userdata()
-	{
-		return userdata;
-	}
-	
-	public <T> T userdata(Class<T> clazz)
-	{
-		return clazz.cast(userdata);
-	}
-	
-	public void setUserData(Object userdata)
-	{
-		this.userdata = userdata;
+		super();
 	}
 
-	public long getAccessTimestamp()
-	{
-		return lastAccessTimestamp;
-	}
+	/** Task handler to be implemented by subclasses. */
+	protected abstract CompletableFuture<R> execute() throws Exception;
 
-	void updateAccessTimestamp()
+	@Override
+	public final void run()
 	{
-		this.lastAccessTimestamp = TaskInfo.now();
-	}
+		final CompletableFuture<R> result = this.getTaskResult();
+		try {
+			final BiConsumer<R, Throwable> completer = (outcome, error) -> {
+				// Finalize task's completion
+				this.markTaskAsDone();
+				if (error != null)
+					result.completeExceptionally(error);
+				else result.complete(outcome);
+			};
 
-	public static long now()
-	{
-		return System.currentTimeMillis();
+			this.execute()
+					.whenComplete(completer);
+		}
+		catch (Exception error) {
+			result.completeExceptionally(error);
+		}
 	}
-
 }

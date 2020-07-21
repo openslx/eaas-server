@@ -2,7 +2,7 @@ package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import java.net.URL;
 import java.util.HashMap;
@@ -10,7 +10,8 @@ import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ImportImageTask extends AbstractTask<Object> {
+public class ImportImageTask extends BlockingTask<Object>
+{
     private ImportImageTaskRequest request;
     private Logger log;
 

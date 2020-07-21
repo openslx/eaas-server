@@ -91,7 +91,7 @@ public class ImageClassifierAPI
 	public Response poll(@PathParam("id") String id)
 	{
 		try {
-			final TaskInfo<Object> info = taskmgr.getTaskInfo(id);
+			final TaskInfo<Object> info = taskmgr.lookup(id);
 			if (info == null) {
 				String message = "Passed ID is invalid: " + id;
 				return ImageClassifierAPI.errorMessageResponse(Status.NOT_FOUND, message);
@@ -150,12 +150,12 @@ public class ImageClassifierAPI
 			// Submit task
 			final ExecutorService executor = taskmgr.executor();
 			final BaseTask task = (asHistogram) ? new HistogramTask(request, executor) : new ClassificationTask(request, executor);
-			final String taskid = taskmgr.submitTask(task);
+			final String taskid = taskmgr.submit(task);
 
 			// Generate task's location URLs
 			final String waitLocation = this.getLocationUrl("waitqueue", taskid);
 			final String resultLocation = (asHistogram) ? this.getLocationUrl("histograms", taskid) : this.getLocationUrl("classifications", taskid);
-			final TaskInfo<Object> info = taskmgr.getTaskInfo(taskid);
+			final TaskInfo<Object> info = taskmgr.lookup(taskid);
 			info.setUserData(new UserData(waitLocation, resultLocation));
 			
 			// Info message
@@ -182,7 +182,7 @@ public class ImageClassifierAPI
 				return ImageClassifierAPI.errorMessageResponse(Status.BAD_REQUEST, message);
 			}
 
-			final TaskInfo<Object> info = taskmgr.getTaskInfo(id);
+			final TaskInfo<Object> info = taskmgr.lookup(id);
 			if (info == null || !info.result().isDone()) {
 				String message = "Passed ID is invalid: " + id;
 				return ImageClassifierAPI.errorMessageResponse(Status.NOT_FOUND, message);
@@ -194,7 +194,7 @@ public class ImageClassifierAPI
 				return ImageClassifierAPI.createResponse(Status.OK, future.get());
 			}
 			finally {
-				taskmgr.removeTaskInfo(id);
+				taskmgr.remove(id);
 			}
 		}
 		catch (Throwable throwable) {
