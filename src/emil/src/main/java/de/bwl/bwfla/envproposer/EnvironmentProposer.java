@@ -217,7 +217,7 @@ public class EnvironmentProposer
 	{
 		public TaskManager() throws NamingException
 		{
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+			super("ENV-PROPOSER-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
 	}
 }

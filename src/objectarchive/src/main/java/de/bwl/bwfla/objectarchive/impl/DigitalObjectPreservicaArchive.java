@@ -101,7 +101,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 
 	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Collection> {
 		public AsyncIoTaskManager() throws NamingException {
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+			super("PRESERVICA-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
 	}
 

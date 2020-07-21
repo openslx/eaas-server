@@ -30,7 +30,7 @@ public class TaskManager {
 
     private static class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
         AsyncIoTaskManager() throws NamingException {
-            super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+            super("EMIL-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
         }
     }
 

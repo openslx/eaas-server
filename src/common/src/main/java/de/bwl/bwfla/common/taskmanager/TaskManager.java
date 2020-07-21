@@ -34,11 +34,11 @@ import java.util.logging.Logger;
 
 public class TaskManager<R>
 {
+	/** Logger */
+	protected final Logger log;
+
 	/** Counter for task ID generation */
 	private final AtomicInteger idCounter = new AtomicInteger(0);
-
-	/** Logger */
-	protected final Logger log = Logger.getLogger(this.getClass().getName());
 	
 	/** Task registry */
 	private final Map<String, TaskInfo<R>> tasks = new ConcurrentHashMap<String, TaskInfo<R>>();
@@ -57,8 +57,9 @@ public class TaskManager<R>
 
 
 	/** Constructor */
-	public TaskManager(ExecutorService executor)
+	public TaskManager(String name, ExecutorService executor)
 	{
+		this.log = Logger.getLogger(name);
 		this.executor = executor;
 
 		this.schedule(this::rungc, gcInterval);
