@@ -59,12 +59,12 @@ import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
 
 
-public abstract class BaseTask extends AbstractTask<Object>
+public abstract class BaseTask extends BlockingTask<Object>
 {
 	protected final IdentificationRequest request;
 	protected final ExecutorService executor;

@@ -13,7 +13,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
@@ -57,7 +57,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	private final boolean isDefaultArchive;
 	private String loaderTask;
 
-	class LoadMetadata extends AbstractTask<Collection>
+	class LoadMetadata extends BlockingTask<Collection>
 	{
 		private final ExecutorService pool;
 		private final String collectionId;
@@ -101,7 +101,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 
 	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Collection> {
 		public AsyncIoTaskManager() throws NamingException {
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+			super("PRESERVICA-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
 	}
 
@@ -122,7 +122,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 		if (fileCache == null)
 			fileCache = new DigitalObjectFileCache();
 
-		loaderTask = taskManager.submitTask(new LoadMetadata(collectionId));
+		loaderTask = taskManager.submit(new LoadMetadata(collectionId));
 		collection = null;
 	}
 
@@ -131,11 +131,11 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 		if(loaderTask == null)
 			return;
 
-		final TaskInfo<Collection> info = taskManager.getTaskInfo(loaderTask);
+		final TaskInfo<Collection> info = taskManager.lookup(loaderTask);
 		if (!info.result().isDone())
 			return;
 
-		taskManager.removeTaskInfo(loaderTask);
+		taskManager.remove(loaderTask);
 		try {
 			collection = info.result().get();
 		} catch (InterruptedException e) {
@@ -343,7 +343,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 
 	}
 
-	class PreservicaSyncTask extends AbstractTask<Object>
+	class PreservicaSyncTask extends BlockingTask<Object>
 	{
 		private final List<String> objects;
 		public PreservicaSyncTask(List<String> objectIDs)
