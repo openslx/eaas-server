@@ -1,16 +1,16 @@
 package de.bwl.bwfla.imagearchive.tasks;
 
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.QcowOptions;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
-import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 
 import java.nio.file.Path;
 import java.util.UUID;
 
-public class CreateImageTask extends AbstractTask<String> {
+public class CreateImageTask extends BlockingTask<String>
+{
 
     private final Path target;
     private final String size;

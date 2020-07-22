@@ -17,18 +17,38 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.imageclassifier.impl;
-
-import javax.inject.Singleton;
-import javax.naming.InitialContext;
-import javax.naming.NamingException;
+package de.bwl.bwfla.envproposer.impl;
 
 
-@Singleton
-public class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object>
+public class UserData
 {
-	public TaskManager() throws NamingException
+	private String waitLocation;
+	private String resultLocation;
+	
+	
+	public UserData(String waitloc, String resultloc)
 	{
-		super("IMAGE-CLASSIFIER-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/batch"));
+		this.waitLocation = waitloc;
+		this.resultLocation = resultloc;
+	}
+	
+	public String getWaitLocation()
+	{
+		return waitLocation;
+	}
+	
+	public void setWaitLocation(String location)
+	{
+		this.waitLocation = location;
+	}
+	
+	public String getResultLocation()
+	{
+		return resultLocation;
+	}
+	
+	public void setResultLocation(String location)
+	{
+		this.resultLocation = location;
 	}
 }

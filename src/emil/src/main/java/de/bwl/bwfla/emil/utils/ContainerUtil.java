@@ -248,7 +248,7 @@ public class ContainerUtil {
                 break;
 
             default:
-                throw new BWFLAException("unkonwn imageType " + containerRequest.getImageType());
+                throw new BWFLAException("unknown imageType " + containerRequest.getImageType());
         }
 
         if (imageUrl == null)

@@ -565,12 +565,12 @@ public class DeprecatedProcessRunner
 
 		// Finally start the process
 		try {
-			log.info("Starting subprocess:  " + this.getCommandString());
 			process = builder.start();
 			pid = DeprecatedProcessRunner.lookupUnixPid(process);
+			log.info("Started subprocess (PID: " + pid + "):  " + this.getCommandString());
 		}
 		catch (IOException exception) {
-			log.log(Level.SEVERE, "Starting new subprocess failed!", exception);
+			log.log(Level.SEVERE, "Starting new subprocess failed! CMD was: " + this.getCommandString(), exception);
 			this.cleanup();
 			return false;
 		}

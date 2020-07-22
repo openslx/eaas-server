@@ -34,6 +34,10 @@
 		</dependency>
 		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>rest-utils</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>objectarchive-client</artifactId>
 		</dependency>
 		<dependency>

@@ -19,65 +19,31 @@
 
 package de.bwl.bwfla.common.taskmanager;
 
+
 import java.util.concurrent.CompletableFuture;
 
 
-public class TaskInfo<R>
+public abstract class BlockingTask<R> extends AbstractTask<R>
 {
-	private final AbstractTask<R> task;
-	private Object userdata;
-	private long lastAccessTimestamp;
-	
-	TaskInfo(AbstractTask<R> task, Object userdata)
+	protected BlockingTask()
 	{
-		this.task = task;
-		this.userdata = userdata;
-		this.lastAccessTimestamp = TaskInfo.now();
-	}
-	
-	public AbstractTask<R> task()
-	{
-		return task;
-	}
-	
-	public <T> T task(Class<T> clazz)
-	{
-		return clazz.cast(task);
-	}
-	
-	public CompletableFuture<R> result()
-	{
-		return task.getTaskResult();
-	}
-	
-	public Object userdata()
-	{
-		return userdata;
-	}
-	
-	public <T> T userdata(Class<T> clazz)
-	{
-		return clazz.cast(userdata);
-	}
-	
-	public void setUserData(Object userdata)
-	{
-		this.userdata = userdata;
+		super();
 	}
 
-	public long getAccessTimestamp()
-	{
-		return lastAccessTimestamp;
-	}
+	/** Task handler to be implemented by subclasses. */
+	protected abstract R execute() throws Exception;
 
-	void updateAccessTimestamp()
+	@Override
+	public final void run()
 	{
-		this.lastAccessTimestamp = TaskInfo.now();
-	}
+		final CompletableFuture<R> result = this.getTaskResult();
+		try {
+			result.complete(this.execute());
+		}
+		catch (Exception error) {
+			result.completeExceptionally(error);
+		}
 
-	public static long now()
-	{
-		return System.currentTimeMillis();
+		this.markTaskAsDone();
 	}
-
 }

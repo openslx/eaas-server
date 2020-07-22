@@ -17,15 +17,25 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.imageproposer;
+package de.bwl.bwfla.envproposer;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
-import java.util.logging.Logger;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
+import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.emil.ObjectClassification;
+import de.bwl.bwfla.envproposer.api.ProposalRequest;
+import de.bwl.bwfla.envproposer.api.ProposalResponse;
+import de.bwl.bwfla.envproposer.impl.ProposalTask;
+import de.bwl.bwfla.envproposer.impl.UserData;
+import de.bwl.bwfla.restutils.ResponseUtils;
 
+import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.naming.InitialContext;
+import javax.naming.NamingException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
@@ -35,78 +45,72 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.UriInfo;
 import javax.ws.rs.core.Response.Status;
-
-import de.bwl.bwfla.common.datatypes.identification.DiskType;
-import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.imageproposer.client.Proposal;
-import de.bwl.bwfla.imageproposer.client.ProposalRequest;
-import de.bwl.bwfla.imageproposer.client.ProposalResponse;
-import de.bwl.bwfla.imageproposer.impl.ImageIndexHandle;
-import de.bwl.bwfla.imageproposer.impl.ImageSorter;
-import de.bwl.bwfla.imageproposer.impl.ProposalTask;
-import de.bwl.bwfla.imageproposer.impl.TaskManager;
-import de.bwl.bwfla.imageproposer.impl.UserData;
-import de.bwl.bwfla.restutils.ResponseUtils;
+import javax.ws.rs.core.UriInfo;
+import java.util.concurrent.Future;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
-@Path("api/v1")
-public class ImageProposerAPI
+@ApplicationScoped
+@Path("/environment-proposer/api/v2")
+public class EnvironmentProposer
 {
-	private static final Logger LOG = Logger.getLogger(ImageProposerAPI.class.getName());
-	
-	
-	@Inject
-	private TaskManager taskmgr;
-	
-	@Inject
-	private ImageIndexHandle imageIndex;
+	private static final Logger LOG = Logger.getLogger("ENVIRONMENT-PROPOSER");
+
+	private final TaskManager taskmgr;
 
 	@Inject
-	private ImageSorter sorter;
+	private ObjectClassification classifier;
 
-	@Context
-	private UriInfo uri;
-	
-	
-	/** Submit a new proposal task */
-	@POST
-    @Path("/proposals")
-    @Consumes(ProposalRequest.MEDIATYPE_AS_JSON)
-    @Produces(ProposalResponse.MEDIATYPE_AS_JSON)
-	public Response postProposal(ProposalRequest request)
+	@Inject
+	@AuthenticatedUser
+	private UserContext userctx;
+
+
+	public EnvironmentProposer() throws BWFLAException
 	{
 		try {
-			// Check request...
-			if (request == null)
-				return ResponseUtils.createMessageResponse(Status.BAD_REQUEST, "Request parameter missing!");
+			this.taskmgr = new TaskManager();
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Initializing environment-proposer failed!", error);
+		}
+	}
 
-			// ... and parameters
-			final HashMap<String, List<ProposalRequest.Entry>> fileFormats = request.getFileFormats();
-			if (fileFormats == null) {
-				String message = "Incorrect fileformats parameter specified (null/empty list).";
-				return ResponseUtils.createMessageResponse(Status.BAD_REQUEST, message);
-			}
-
-			final HashMap<String, DiskType> mediaFormats = request.getMediaFormats();
-			if (mediaFormats == null) {
-				String message = "Incorrect mediaformats parameter specified (null/empty list).";
-				return ResponseUtils.createMessageResponse(Status.BAD_REQUEST, message);
-			}
-
+	/**
+	 * Submit a new proposal task
+	 *
+	 * @returnWrapped de.bwl.bwfla.envproposer.api.ProposalResponse
+	 *
+	 * @ResponseHeader Location The location URL for polling task completion.
+	 *
+	 * @HTTP 202 If task was submitted successfully.
+	 * @HTTP 503 If server is out of resources. Request should be retried later.
+	 * @HTTP 500 If other internal errors occure.
+	 */
+	@POST
+	@Path("/proposals")
+	@Secured(roles = {Role.PUBLIC})
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+	public Response postProposal(ProposalRequest request, @Context UriInfo uri)
+	{
+		try {
 			// Submit task
-			final String taskid = taskmgr.submit(new ProposalTask(request, this.imageIndex, this.sorter));
+			final String taskid = taskmgr.submit(new ProposalTask(request, classifier, userctx.getUserId()));
 
 			// Generate task's location URLs
-			final String waitLocation = this.getLocationUrl("waitqueue", taskid);
-			final String resultLocation = this.getLocationUrl("proposals", taskid);
+			final String waitLocation = EnvironmentProposer.getLocationUrl(uri, "waitqueue", taskid);
+			final String resultLocation = EnvironmentProposer.getLocationUrl(uri, "proposals", taskid);
 			final TaskInfo<Object> info = taskmgr.lookup(taskid);
 			info.setUserData(new UserData(waitLocation, resultLocation));
 
 			// Info message
-			ProposalResponse response = new ProposalResponse();
-			response.setMessage("Proposal task was submitted.");
+			final ProposalResponse response = new ProposalResponse()
+					.setMessage("Proposal task was submitted.")
+					.setId(taskid);
 
 			return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
 		}
@@ -116,13 +120,22 @@ public class ImageProposerAPI
 			return ResponseUtils.createMessageResponse(Status.SERVICE_UNAVAILABLE, message);
 		}
 		catch (Throwable throwable) {
+			LOG.log(Level.WARNING, "Submitting proposal failed!", throwable);
 			return ResponseUtils.createInternalErrorResponse(throwable);
 		}
 	}
 	
-	/** Poll a proposal task for completion */
+	/**
+	 * Poll a proposal task for completion
+	 *
+	 * @ResponseHeader Location URL for next polling request or task result.
+	 *
+	 * @HTTP 200 Task not completed, retry later.
+	 * @HTTP 303 If task completed. Location header will contain the URL for fetching result.
+	 */
 	@GET
 	@Path("/waitqueue/{id}")
+	@Secured(roles = {Role.PUBLIC})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response poll(@PathParam("id") String id)
 	{
@@ -154,11 +167,16 @@ public class ImageProposerAPI
 			return ResponseUtils.createInternalErrorResponse(throwable);
 		}
 	}
-	
-	/** Get a proposal resource */
+
+	/**
+	 * Get and remove a proposal resource
+	 *
+	 * @returnWrapped de.bwl.bwfla.envproposer.api.Proposal
+	 */
 	@GET
-    @Path("/proposals/{id}")
-    @Produces(Proposal.MEDIATYPE_AS_JSON)
+	@Path("/proposals/{id}")
+	@Secured(roles = {Role.PUBLIC})
+	@Produces(MediaType.APPLICATION_JSON)
 	public Response getProposal(@PathParam("id") String id)
 	{
 		try {
@@ -188,19 +206,18 @@ public class ImageProposerAPI
 	}
 
 
-	@POST
-	@Path("/refreshIndex")
-	@Produces(MediaType.APPLICATION_JSON)
-	public Response refresh()
+	// ========== Internal Helpers ====================
+
+	private static String getLocationUrl(UriInfo uri, String subres, String id)
 	{
-		imageIndex.refresh();
-		return ResponseUtils.createMessageResponse(Status.OK, "refresh initialized ");
+		return ResponseUtils.getLocationUrl(EnvironmentProposer.class, uri, subres, id);
 	}
-	
-	/* =============== Internal Helpers =============== */
-	
-	private String getLocationUrl(String subres, String id)
+
+	private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object>
 	{
-		return ResponseUtils.getLocationUrl(this.getClass(), uri, subres, id);
+		public TaskManager() throws NamingException
+		{
+			super("ENV-PROPOSER-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+		}
 	}
 }

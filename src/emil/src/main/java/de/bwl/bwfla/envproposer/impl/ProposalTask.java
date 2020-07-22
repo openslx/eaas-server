@@ -24,10 +24,12 @@ import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
-import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
+import de.bwl.bwfla.emil.ObjectClassification;
+import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
+import de.bwl.bwfla.emil.tasks.ClassificationTask;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
@@ -39,10 +41,6 @@ import de.bwl.bwfla.envproposer.api.ProposalRequest;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
-import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
-import de.bwl.bwfla.imageclassifier.client.Identification;
-import de.bwl.bwfla.imageclassifier.client.ImageClassifier;
-import de.bwl.bwfla.imageproposer.client.ImageProposer;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -57,24 +55,21 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Duration;
 import java.util.Comparator;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.function.ToLongFunction;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
 public class ProposalTask extends BlockingTask<Object>
 {
+	private final String userid;
 	private final ProposalRequest request;
 	private final ImageBuilder imagebuilder;
-	private final ImageClassifier classifier;
-	private final ImageProposer proposer;
+	private final ObjectClassification classifier;
 	private final BlobStore blobstore;
 	private final String blobStoreAddress;
 	private final Path workdir;
@@ -82,9 +77,11 @@ public class ProposalTask extends BlockingTask<Object>
 	private static final MediumType PREPARED_IMAGE_TYPE = MediumType.CDROM;
 
 
-	public ProposalTask(ProposalRequest request) throws BWFLAException
+	public ProposalTask(ProposalRequest request, ObjectClassification classifier, String userid) throws BWFLAException
 	{
+		this.userid = userid;
 		this.request = request;
+		this.classifier = classifier;
 
 		final Configuration config = ConfigurationProvider.getConfiguration();
 
@@ -96,9 +93,6 @@ public class ProposalTask extends BlockingTask<Object>
 					.getBlobStorePort(config.get("ws.blobstore"));
 
 			this.blobStoreAddress = config.get("rest.blobstore");
-
-			this.classifier = new ImageClassifier();
-			this.proposer = new ImageProposer();
 		}
 		catch (Exception error) {
 			throw new BWFLAException("Constructing web-services failed!", error);
@@ -305,45 +299,18 @@ public class ProposalTask extends BlockingTask<Object>
 		return fc;
 	}
 
-	private Proposal propose(String imageurl) throws InterruptedException
+	private Proposal propose(String imageurl) throws Exception
 	{
-		log.info("Classifying built image...");
-
-		final FileCollection fc = this.newFileCollection(imageurl);
-		final Identification<ClassificationEntry> classification = classifier.getClassification(fc);
-
 		log.info("Proposing environments...");
 
-		final HashMap<String, List<de.bwl.bwfla.imageproposer.client.ProposalRequest.Entry>> fileFormats = new HashMap<>();
-		final HashMap<String, DiskType> mediaFormats = new HashMap<>();
+		final FileCollection fc = this.newFileCollection(imageurl);
+		final ClassificationTask classification = classifier.newClassificationTask(fc, true, true, false, userid);
+		classification.run();
 
-		for (FileCollectionEntry fce : fc.files) {
-			final Identification.IdentificationDetails<ClassificationEntry> details = classification.getIdentificationData()
-					.get(fce.getId());
-
-			if (details == null)
-				continue;
-
-			final List<de.bwl.bwfla.imageproposer.client.ProposalRequest.Entry> fmts = details.getEntries()
-					.stream()
-					.map((ce) -> new de.bwl.bwfla.imageproposer.client.ProposalRequest.Entry(ce.getType(), ce.getCount()))
-					.collect(Collectors.toList());
-
-			fileFormats.put(fce.getId(), fmts);
-
-			if (details.getDiskType() != null)
-				mediaFormats.put(fce.getId(), details.getDiskType());
-		}
-
-		final de.bwl.bwfla.imageproposer.client.ProposalRequest imgreq =
-				new de.bwl.bwfla.imageproposer.client.ProposalRequest(fileFormats, mediaFormats);
-
-		final de.bwl.bwfla.imageproposer.client.Proposal proposal = proposer.propose(imgreq);
 		return new Proposal()
 				.setImportedImageUrl(imageurl)
 				.setImportedImageType(PREPARED_IMAGE_TYPE)
-				.setEnvironments(proposal.getImages())
-				.setSuggested(proposal.getSuggested());
+				.setResult((ClassificationResult) classification.getTaskResult().get());
 	}
 
 	private static void cleanup(Path workdir, Logger log)

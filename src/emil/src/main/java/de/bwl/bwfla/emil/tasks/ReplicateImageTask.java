@@ -2,7 +2,7 @@ package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
@@ -13,7 +13,6 @@ import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 
-import javax.inject.Inject;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -22,7 +21,8 @@ import java.util.logging.Logger;
 
 import static de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest.ContainerImageType.DOCKERHUB;
 
-public class ReplicateImageTask extends AbstractTask<Object> {
+public class ReplicateImageTask extends BlockingTask<Object>
+{
 
     private ReplicateImageTaskRequest request;
     private Logger log;
@@ -76,7 +76,7 @@ public class ReplicateImageTask extends AbstractTask<Object> {
 
 
         // ensure the published environments have emulator info
-        if (request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
+        if (request.env instanceof MachineConfiguration && request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
 
             if (emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty()) {
                 String containerName = emulatorContainerMap.get(emulatorSpec.getBean());

@@ -30,9 +30,12 @@ public enum MediumType
 {
 	@XmlEnumValue("hdd")
 	HDD,
-	@XmlEnumValue("cdrom")
-	CDROM;
 
+	@XmlEnumValue("cdrom")
+	CDROM,
+
+	@XmlEnumValue("floppy")
+	FLOPPY;
 
 	public static MediumType fromString(String value)
 	{

@@ -291,14 +291,16 @@ public class EnvironmentRepository extends EmilRest
 		@GET
 		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response list(@QueryParam("detailed") @DefaultValue("false") boolean detailed)
+		public Response list(@QueryParam("detailed") @DefaultValue("false") boolean detailed,
+							 @QueryParam("localOnly") @DefaultValue("true") boolean localOnly)
 		{
 			LOG.info("Listing all available environments...");
 			try {
 				final Stream<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
-				final Stream<Object> entries = (!detailed) ? environments.map(EnvironmentListItem::new)
+				final Stream<Object> entries = (!detailed) ? environments.filter((env) -> (!localOnly || !(env).getArchive().equals("remote"))).map(EnvironmentListItem::new)
 						: environments.map((env) -> (Object) this.addEnvironmentDetailsNoThrow(env))
-								.filter(Objects::nonNull);
+								.filter(Objects::nonNull)
+								.filter((env) -> (!localOnly || !((EnvironmentDetails) env).getArchive().equals("remote")));
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
@@ -429,7 +431,11 @@ public class EnvironmentRepository extends EmilRest
 					env.getAbstractDataResource().add(romBinding);
 				}
 
-				String id = envdb.importMetadata("default", env, iaMd, false);
+				String id;
+				if(env.isLinuxRuntime())
+					id = envdb.importMetadata("public", env, iaMd, false);
+				else
+					id = envdb.importMetadata("default", env, iaMd, false);
 
 				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
 
@@ -440,6 +446,8 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setTitle(envReq.getLabel());
 				newEmilEnv.setEnvId(id);
 				newEmilEnv.setLinuxRuntime(env.isLinuxRuntime());
+				if(env.isLinuxRuntime())
+					newEmilEnv.setArchive("public");
 				newEmilEnv.setEnableRelativeMouse(envReq.isEnableRelativeMouse());
 				newEmilEnv.setEnablePrinting(envReq.isEnablePrinting());
 				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());

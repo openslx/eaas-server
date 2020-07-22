@@ -9,6 +9,7 @@
 package org.dspace.xoai.serviceprovider;
 
 import org.dspace.xoai.model.oaipmh.*;
+import org.dspace.xoai.model.oaipmh.Record;
 import org.dspace.xoai.serviceprovider.exceptions.*;
 import org.dspace.xoai.serviceprovider.handler.*;
 import org.dspace.xoai.serviceprovider.lazy.ItemIterator;
