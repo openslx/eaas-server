@@ -325,6 +325,14 @@ public class Networks {
                 uri = map.get("ws+ethernet+" + component.getHwAddress());
             }
 
+            if(uri == null) {
+                Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(new ErrorInformation(
+                                "Cannot find suitable ethernet URI for requested component.",
+                                "Requested component has either been stopped or is not suitable for networking"))
+                        .build();
+            }
+            
             componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, uri.toString());
             components.registerNetworkCleanupTask(component.getComponentId(), switchId, uri.toString());
 
