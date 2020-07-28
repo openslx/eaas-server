@@ -219,7 +219,7 @@ public class TaskManager<R>
 				if (done && (curtime - info.getAccessTimestamp()) > timeout) {
 					log.info("Task " + info.task().getTaskId() + " expired!");
 					++numTasksRemoved;
-					iter.remove();
+					//iter.remove();  // TODO: uncomment, when user-code has been adapted accordingly!
 				}
 
 				++numTasksProcessed;
