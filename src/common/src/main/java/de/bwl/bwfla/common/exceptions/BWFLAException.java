@@ -23,6 +23,7 @@ import de.bwl.bwfla.common.utils.EaasBuildInfo;
 
 import javax.ejb.ApplicationException;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.Map;
 import java.util.TreeMap;
 
 
@@ -70,6 +71,11 @@ public class BWFLAException extends Exception
 		return this;
 	}
 
+	public String getMessageWithoutSuffix()
+	{
+		return super.getMessage();
+	}
+
 	@Override
 	public String getMessage()
 	{
@@ -91,8 +97,21 @@ public class BWFLAException extends Exception
 
 	private String getMessageSuffix()
 	{
-		if (msgsuffix == null && !properties.isEmpty()) {
-			final StringBuilder sb = new StringBuilder(512);
+		if (msgsuffix != null)
+			return msgsuffix;
+
+		final StringBuilder sb = new StringBuilder(512);
+
+		// look up root cause's message
+		final String cause = BWFLAException.lookupRootCauseMessage(super.getCause(), properties);
+		if (cause != null && !cause.isEmpty())
+			sb.append(cause);
+
+		// add meta-data suffix
+		if (!properties.isEmpty()) {
+			if (sb.length() > 0)
+				sb.append(' ');
+
 			sb.append("(");
 			properties.forEach((key, value) -> {
 				sb.append(key);
@@ -103,11 +122,34 @@ public class BWFLAException extends Exception
 
 			sb.setLength(sb.length() - 2);
 			sb.append(")");
+		}
 
+		if (sb.length() > 0) {
 			// cache the suffix
 			msgsuffix = sb.toString();
 		}
 
 		return msgsuffix;
+	}
+
+	private static String lookupRootCauseMessage(Throwable error, Map<String, String> properties)
+	{
+		if (error == null)
+			return null;
+
+		// find root cause...
+		while (true) {
+			if (error instanceof BWFLAException)
+				properties.putAll(((BWFLAException) error).properties);
+
+			if (error.getCause() == null)
+				break;
+
+			error = error.getCause();
+		}
+
+		// look up root cause's message
+		return (error instanceof BWFLAException) ?
+				((BWFLAException) error).getMessageWithoutSuffix() : error.getMessage();
 	}
 }
