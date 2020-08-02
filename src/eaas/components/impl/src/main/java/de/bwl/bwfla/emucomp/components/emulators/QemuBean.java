@@ -110,7 +110,7 @@ public class QemuBean extends EmulatorBean
 					super.isKvmDeviceEnabled = true;
 				}
 
-				if(token.contains("nic,model="))
+				if(token.contains("nic,model=") && emuEnvironment.getNic() != null && emuEnvironment.getNic().size() >0)
 					token += ",macaddr=" + emuEnvironment.getNic().get(0).getHwaddress();
 
 				if(emuEnvironment.getNic().size() > 1){
@@ -406,10 +406,11 @@ public class QemuBean extends EmulatorBean
 							.apply(command);
 				}
 
-				DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-				runner.setCommand("/bin/bash");
-				runner.addArgument("-c");
-				runner.addArguments("echo " + command + " | socat - UNIX-CONNECT:" + monitor_path);
+				DeprecatedProcessRunner echo = new DeprecatedProcessRunner("echo");
+				echo.addArgument(command);
+				DeprecatedProcessRunner socat = new DeprecatedProcessRunner("socat");
+				socat.addArguments("-", "UNIX-CONNECT:" + monitor_path);
+				DeprecatedProcessRunner runner = DeprecatedProcessRunner.pipe(echo, socat);
 				runner.execute();
 			} else {
 				LOG.severe("Command to qemu monitor is not valid!");

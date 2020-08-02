@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emucomp.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import javax.xml.bind.JAXBContext;
@@ -13,6 +14,7 @@ import java.util.logging.Logger;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlRootElement(name="emulationEnvironmentTemplate", namespace = "http://bwfla.bwl.de/common/datatypes")
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class MachineConfigurationTemplate extends  MachineConfiguration
 {
 	public static MachineConfigurationTemplate fromValue(String data) throws JAXBException {

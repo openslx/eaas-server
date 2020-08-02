@@ -60,6 +60,9 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 	@Config("vm.image_id")
 	private String vmImageId = null;
+
+	@Config("vm.image_source_type")
+	private String vmImageSourceType = ImageSourceType.IMAGE;
 	
 	@Config("vm.boot_poll_interval")
 	@WithPropertyConverter(DurationPropertyConverter.class)
@@ -161,6 +164,18 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 
 		this.vmImageId = id;
 	}
+
+	public String getVmImageSourceType()
+	{
+		return vmImageSourceType;
+	}
+
+	public void setVmImageSourceType(String source)
+	{
+		ConfigHelpers.check(source, "Image source type is invalid!");
+
+		this.vmImageSourceType = source;
+	}
 	
 	public long getVmBootPollInterval()
 	{
@@ -212,6 +227,13 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 	public boolean hasHomogeneousNodes()
 	{
 		return true;
+	}
+
+
+	public static class ImageSourceType
+	{
+		public static final String IMAGE     = "image";
+		public static final String SNAPSHOT  = "snapshot";
 	}
 
 
@@ -281,6 +303,9 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 		@Config("auth.password")
 		private String authPassword= null;
 
+		@Config("key_pair")
+		private String keyPairName = null;
+
 
 		public ProviderConfigOPENSTACK()
 		{
@@ -347,6 +372,18 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 			this.authPassword = password;
 		}
 
+		public String getKeyPairName()
+		{
+			return keyPairName;
+		}
+
+		public void setKeyPairName(String name)
+		{
+			ConfigHelpers.check(name, "Provider's key-pair name is invalid!");
+
+			this.keyPairName = name;
+		}
+
 		@Override
 		public void load(Configuration config) throws ConfigException
 		{
@@ -363,6 +400,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 			this.setAuthProjectName(authProjectName);
 			this.setAuthUser(authUser);
 			this.setAuthPassword(authPassword);
+			this.setKeyPairName(keyPairName);
 		}
 
 		@Override
@@ -412,6 +450,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 		this.setVmNetworkId(vmNetworkId);
 		this.setVmHardwareId(vmHardwareId);
 		this.setVmImageId(vmImageId);
+		this.setVmImageSourceType(vmImageSourceType);
 		this.setVmBootPollInterval(vmBootPollInterval);
 		this.setVmBootPollIntervalDelta(vmBootPollIntervalDelta);
 		this.setVmMaxNumBootPolls(vmMaxNumBootPolls);
@@ -435,6 +474,7 @@ public class NodeAllocatorConfigJCLOUDS extends NodeAllocatorConfig
 					.write("network_id", vmNetworkId)
 					.write("hardware_id", vmHardwareId)
 					.write("image_id", vmImageId)
+					.write("image_source_type", vmImageSourceType)
 					.write("boot_poll_interval", DumpHelpers.toDurationString(vmBootPollInterval))
 					.write("boot_poll_interval_delta", DumpHelpers.toDurationString(vmBootPollIntervalDelta))
 					.write("max_num_boot_polls", vmMaxNumBootPolls)

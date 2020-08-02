@@ -31,6 +31,9 @@ public class NetworkEnvironmentElement {
     @XmlElement(required = true)
     private String label;
 
+    @XmlElement(required = false)
+    private String title;
+
     @XmlElement
     private String fqdn;
 
@@ -88,5 +91,13 @@ public class NetworkEnvironmentElement {
 
     public void setWildcard(boolean wildcard) {
         this.wildcard = wildcard;
+    }
+
+    public String getTitle() {
+        return title;
+    }
+
+    public void setTitle(String title) {
+        this.title = title;
     }
 }

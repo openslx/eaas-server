@@ -168,18 +168,40 @@ public abstract class MediumBuilder
 							try (final JsonReader reader = Json.createReader(runner.getStdOutReader())) {
 								final JsonObject json = reader.readObject();
 								final ArrayList<String> envvars = new ArrayList<>();
-								JsonArray envArray = json.getJsonArray("Env");
-								for(int i = 0; i < envArray.size(); i++)
-									envvars.add(envArray.getString(i));
+
+								try {
+									JsonArray envArray = json.getJsonArray("Env");
+									for (int i = 0; i < envArray.size(); i++)
+										envvars.add(envArray.getString(i));
+								}
+								catch(ClassCastException e)
+								{
+									log.warning("importing ENV failed");
+									log.warning("Metadata object " + json.toString());
+								}
 
 								final ArrayList<String> cmds = new ArrayList<>();
-								JsonArray cmdJson = json.getJsonArray("Cmd");
-								for(int i = 0; i < cmdJson.size(); i++)
-									cmds.add(cmdJson.getString(i));
+								try {
+									JsonArray cmdJson = json.getJsonArray("Cmd");
+									for (int i = 0; i < cmdJson.size(); i++)
+										cmds.add(cmdJson.getString(i));
+								}
+								catch (ClassCastException e)
+								{
+									log.warning("importing CMD failed");
+									log.warning("Metadata object " + json.toString());
+								}
 
-								JsonString workDirObject = json.getJsonString("WorkingDir");
-								if(workDirObject != null)
-									dockerMd.setWorkingDir(workdir.toString());
+								try {
+									JsonString workDirObject = json.getJsonString("WorkingDir");
+									if (workDirObject != null)
+										dockerMd.setWorkingDir(workDirObject.toString());
+								}
+								catch(ClassCastException e)
+								{
+									log.warning("importing WorkingDir failed");
+									log.warning("Metadata object " + json.toString());
+								}
 								dockerMd.setEntryProcesses(cmds);
 								dockerMd.setEnvVariables(envvars);
 							}

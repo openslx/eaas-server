@@ -3,7 +3,7 @@ package de.bwl.bwfla.emil.tasks;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.configuration.converters.DurationPropertyConverter;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.MediumType;
@@ -17,7 +17,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
-public class CreateEmptyImageTask extends AbstractTask<Object> {
+public class CreateEmptyImageTask extends BlockingTask<Object>
+{
 
     private static final String imageBuilderAddress = ConfigurationProvider.getConfiguration().get("ws.imagebuilder");
     private static final Duration imageBuilderTimeout = DurationPropertyConverter.parse(ConfigurationProvider.getConfiguration().get("emil.containerdata.imagebuilder.timeout"));

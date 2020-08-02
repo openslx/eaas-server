@@ -166,6 +166,8 @@ public class IpcSocket
 		try {
 			final int flags = (blocking) ? 0 : SocketAPI.MSG_DONTWAIT;
 			int numbytes = SocketAPI.recv(sockfd, buffer.array(), buffer.capacity(), flags);
+			if (numbytes == 0)
+				throw new IOException("Socket reached end-of-stream!");
 			
 			// Update buffer
 			buffer.position(numbytes);

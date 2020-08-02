@@ -395,9 +395,9 @@ public class Components {
             if (desc.getHwAddress() != null && !desc.getHwAddress().isEmpty()) {
                 slirpConfig.setHwAddress(desc.getHwAddress());
             }
-            if (desc.getIp4Address() != null && !desc.getIp4Address().isEmpty()) {
-                slirpConfig.setNetwork(desc.getIp4Address());
-            }
+
+            slirpConfig.setNetwork(desc.getNetwork());
+
             if (desc.getNetmask() != null) {
                 slirpConfig.setNetmask(desc.getNetmask());
             }
@@ -637,6 +637,26 @@ public class Components {
         return binding;
     }
 
+
+    // vde switch identifies sessions by ethUrl, we need to store these
+    protected void registerNetworkCleanupTask(String componentId, String switchId, String ethUrl) throws BWFLAException
+    {
+        LOG.info("disconnecting " + ethUrl);
+        ComponentSession componentSession = sessions.get(componentId);
+        if(componentSession == null)
+            throw new BWFLAException("Component not registered " + componentId);
+
+        TaskStack cleanups = componentSession.getCleanupTasks();
+        cleanups.push( "disconnect/" + ethUrl,  () -> {
+            try {
+                componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethUrl);
+            } catch (BWFLAException error) {
+                final String message = "Disconnecting component '" + componentId + "' from switch '" + switchId + "' failed!";
+                LOG.log(Level.WARNING, message, error);
+            }
+        });
+    }
+
     protected ComponentResponse createMachineComponent(MachineComponentRequest machineDescription, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {
@@ -726,6 +746,11 @@ public class Components {
                 }
             }
 
+            for(MachineComponentRequest.UserMedium uMedia : machineDescription.getUserMedia())
+            {
+                connectMedia(config, uMedia);
+            }
+
             Integer driveId = null;
             // hack: we need to initialize the user archive:
             objectRepository.archives().list();
@@ -742,7 +767,8 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if(!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs()) {
+            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs())
+                    || ((MachineConfiguration) chosenEnv).isLinuxRuntime()) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {
                     LOG.warning("HWAddress is null! Using random..." );
@@ -790,6 +816,31 @@ public class Components {
             LOG.log(Level.SEVERE, "Components create machine failed", error);
             // Return error to the client...
             throw Components.newInternalError(error);
+        }
+    }
+
+    private void connectMedia(MachineConfiguration env, MachineComponentRequest.UserMedium userMedium) throws BWFLAException {
+        if(userMedium.getMediumType() != MediumType.CDROM && userMedium.getMediumType() != MediumType.HDD)
+        {
+            throw new BWFLAException("user media has limited support. mediaType: " + userMedium.getMediumType() + " not supported yet");
+        }
+
+        final BlobStoreBinding binding = new BlobStoreBinding();
+        binding.setId(UUID.randomUUID().toString());
+
+        String url = userMedium.getUrl();
+        if(url == null)
+            throw new BWFLAException("user media must contain a url");
+
+        String name = userMedium.getName();
+
+        binding.setUrl(url);
+        binding.setLocalAlias(name);
+
+        try {
+            addBindingToEnvironment(env, binding, this.toDriveType(userMedium.getMediumType()));
+        } catch (JAXBException e) {
+            throw new BWFLAException(e);
         }
     }
 
@@ -1479,7 +1530,7 @@ public class Components {
 
         private final String id;
         private final ComponentRequest request;
-        private final TaskStack tasks;
+        private TaskStack tasks;
         private final List<EventObserver> observers;
         private EventSink esink;
 
@@ -1498,6 +1549,13 @@ public class Components {
             LOG.info("Session for component ID '" + id + "' created");
         }
 
+        public TaskStack getCleanupTasks()
+        {
+            if(tasks == null)
+                tasks = new TaskStack(LOG);
+
+            return tasks;
+        }
 
         public void keepalive() throws BWFLAException
         {

@@ -19,14 +19,16 @@
 
 package de.bwl.bwfla.emil.datatypes.rest;
 
-import de.bwl.bwfla.emucomp.api.Nic;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.emucomp.api.Binding;
+import de.bwl.bwfla.emucomp.api.MediumType;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
-import java.util.List;
+import java.util.ArrayList;
 
 
 @XmlType(name = "machine")
@@ -65,6 +67,9 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     @XmlElement(required = false)
     private LinuxRuntimeContainerReq linuxRuntimeData;
+
+    @XmlElement
+    private ArrayList<UserMedium> userMedia;
 
     public String getEnvironment() {
         return environment;
@@ -152,5 +157,45 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     public void setNic(String nic) {
         this.nic = nic;
+    }
+
+    public ArrayList<UserMedium> getUserMedia() {
+        if(userMedia == null)
+            userMedia = new ArrayList<>();
+        return userMedia;
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class UserMedium extends JaxbType
+    {
+        @XmlElement(name = "mediumType")
+        private MediumType mediumType;
+
+        @XmlElement(name = "url")
+        private String url;
+
+        @XmlElement(required = false)
+        private String name;
+
+        public MediumType getMediumType() {
+            return mediumType;
+        }
+
+        public String getUrl() {
+            return url;
+        }
+
+        public void setUrl(String url) {
+            this.url = url;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public void setName(String name) {
+            this.name = name;
+        }
     }
 }
