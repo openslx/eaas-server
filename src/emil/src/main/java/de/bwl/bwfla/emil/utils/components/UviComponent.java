@@ -11,6 +11,7 @@ import de.bwl.bwfla.emil.datatypes.rest.ComponentWithExternalFilesRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.UviComponentRequest;
 
+import de.bwl.bwfla.emil.utils.AutoRunScripts;
 import de.bwl.bwfla.emucomp.api.*;
 import org.apache.tamaya.inject.api.Config;
 
@@ -19,9 +20,13 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
-import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 
 @ApplicationScoped
 public class UviComponent {
@@ -45,6 +50,9 @@ public class UviComponent {
     @Inject
     private BlobStoreClient blobStoreClient;
 
+    @Inject
+    private AutoRunScripts scripts = null;
+
     @PostConstruct
     public void init() {
         try {
@@ -55,27 +63,19 @@ public class UviComponent {
         }
     }
 
-
-    private String autoStartScript(String osId, String filename, String application)
+    private BlobHandle createAutostart(AutoRunScripts.Template template, String filename)
+            throws BWFLAException
     {
-        switch(osId)
-        {
-            case "Q11248": // XP
-            case "Q6072277": // XP 64bit
-           //  case "Q609733": // win9x
-                return "start \"\" \"%~dp0/" + filename + "\"";
+        final Map<String, Object> context = new HashMap<>();
+        context.put(AutoRunScripts.Variables.FILENAME, filename);
 
-        }
-        return "[autorun]\r\n" + "open=start " + "\"" + filename + "\"";
-    }
-
-    BlobHandle createAutostart(String osId, String filename, String applicationName) throws BWFLAException {
-
-        String autostart = autoStartScript(osId, filename, applicationName);
         File tmpfile = null;
         try {
+            final Writer autostart = new StringWriter();
+            template.evaluate(autostart, context);
+
             tmpfile = File.createTempFile("metadata.json", null, null);
-            Files.write(tmpfile.toPath(), autostart.getBytes(), StandardOpenOption.CREATE);
+            Files.write(tmpfile.toPath(), autostart.toString().getBytes(), StandardOpenOption.CREATE);
         } catch (IOException e) {
             e.printStackTrace();
             throw new BWFLAException(e);
@@ -92,57 +92,54 @@ public class UviComponent {
     }
 
     public MachineComponentRequest createUVIComponent(UviComponentRequest request) throws BWFLAException {
-        ArrayList<ComponentWithExternalFilesRequest.InputMedium> media;
-
         Environment chosenEnv = envHelper.getEnvironmentById(request.getArchive(), request.getEnvironment());
         MachineConfiguration config = (MachineConfiguration)chosenEnv;
 
         String osId = config.getOperatingSystemId();
         if(osId == null)
-            osId = "Unknown";
+            osId = "UNKNOWN";
 
-        BlobHandle blobHandle = createAutostart(osId, request.getUviFilename(), null);
+        final MediumType mtype = (request.isUviWriteable()) ? MediumType.HDD : MediumType.CDROM;
 
-        ComponentWithExternalFilesRequest.InputMedium m = new ComponentWithExternalFilesRequest.InputMedium();
-        if(request.isUviWriteable())
-        {
-            m.setMediumType(MediumType.HDD);
-            m.setPartitionTableType(PartitionTableType.MBR);
-            m.setFileSystemType(FileSystemType.FAT32);
+        final AutoRunScripts.Template template = scripts.lookup(osId, mtype);
+        if (template == null)
+            throw new BWFLAException("No autorun-script template found for " + osId + "+" + mtype.name() + "!");
+
+        BlobHandle blobHandle = createAutostart(template, request.getUviFilename());
+
+        ComponentWithExternalFilesRequest.InputMedium medium = new ComponentWithExternalFilesRequest.InputMedium();
+        medium.setMediumType(mtype);
+        if (mtype == MediumType.HDD) {
+            medium.setPartitionTableType(PartitionTableType.MBR);
+            medium.setFileSystemType(FileSystemType.FAT32);
         }
-        else
-            m.setMediumType(MediumType.CDROM);
 
         ComponentWithExternalFilesRequest.FileURL inputFile =
-                new ComponentWithExternalFilesRequest.FileURL("copy",
-                        request.getUviUrl(), request.getUviFilename());
+                new ComponentWithExternalFilesRequest.FileURL("copy", request.getUviUrl(), request.getUviFilename());
 
-        if(osId.equals("Unknown") || osId.equals("Q609733"))
-        {
-            ComponentWithExternalFilesRequest.FileURL autoRun =
-                    new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
-                            "autorun.inf");
-            m.getExtFiles().add(autoRun);
-        }
-        else {
-            ComponentWithExternalFilesRequest.FileURL autoRun =
-                    new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
-                            "uvi.bat");
-            m.getExtFiles().add(autoRun);
-        }
+        medium.getExtFiles()
+                .add(inputFile);
 
-        m.getExtFiles().add(inputFile);
+        ComponentWithExternalFilesRequest.FileURL autoRunScript =
+                new ComponentWithExternalFilesRequest.FileURL("copy", blobHandle.toRestUrl(blobStoreRestAddress, false),
+                            template.getFileName());
 
+        medium.getExtFiles()
+                .add(autoRunScript);
 
         for(UviComponentRequest.UviFile auxFile : request.getAuxFiles())
         {
             ComponentWithExternalFilesRequest.FileURL _inputFile =
                     new ComponentWithExternalFilesRequest.FileURL("copy",
                             auxFile.getUrl(), auxFile.getFilename());
-            m.getExtFiles().add(_inputFile);
+
+            medium.getExtFiles()
+                    .add(_inputFile);
         }
 
-        request.getInputMedia().add(m);
+        request.getInputMedia()
+                .add(medium);
+
         return (MachineComponentRequest)request;
     }
 }
