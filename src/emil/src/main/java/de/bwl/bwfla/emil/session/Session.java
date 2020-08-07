@@ -47,6 +47,7 @@ public class Session extends JaxbType
 	private String name;
 
 	private long expirationTimestamp = -1L;
+	private long configuredExpirationTimestamp = -1L;
 	private boolean detached = false;
 	private boolean failed = false;
 	private long lastUpdate;
@@ -78,12 +79,23 @@ public class Session extends JaxbType
 
 	public boolean hasExpirationTimestamp()
 	{
-		return expirationTimestamp > 0L;
+		return configuredExpirationTimestamp > 0L;
 	}
 
 	long getExpirationTimestamp()
 	{
 		return expirationTimestamp;
+	}
+
+	long getConfiguredExpirationTime()
+	{
+		return configuredExpirationTimestamp;
+	}
+
+	void setConfiguredExpirationTime(long timestamp)
+	{
+		this.configuredExpirationTimestamp = timestamp;
+		detached = true;
 	}
 
 	void setExpirationTimestamp(long timestamp)
