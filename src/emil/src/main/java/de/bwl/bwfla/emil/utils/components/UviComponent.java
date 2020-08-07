@@ -15,15 +15,17 @@ import de.bwl.bwfla.emil.utils.AutoRunScripts;
 import de.bwl.bwfla.emucomp.api.*;
 import org.apache.tamaya.inject.api.Config;
 
+import javax.activation.DataSource;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import java.io.File;
+import javax.ws.rs.core.MediaType;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -69,26 +71,23 @@ public class UviComponent {
         final Map<String, Object> context = new HashMap<>();
         context.put(AutoRunScripts.Variables.FILENAME, filename);
 
-        File tmpfile = null;
+        final Writer writer = new StringWriter();
         try {
-            final Writer autostart = new StringWriter();
-            template.evaluate(autostart, context);
+            template.evaluate(writer, context);
 
-            tmpfile = File.createTempFile("metadata.json", null, null);
-            Files.write(tmpfile.toPath(), autostart.toString().getBytes(), StandardOpenOption.CREATE);
-        } catch (IOException e) {
-            e.printStackTrace();
-            throw new BWFLAException(e);
+        }
+        catch (IOException error) {
+            throw new BWFLAException("Rendering autorun-script failed!", error);
         }
 
-        BlobDescription blobDescription = new BlobDescription();
-        blobDescription.setDataFromFile(tmpfile.toPath())
-                .setNamespace("random")
-                .setDescription("random")
+        BlobDescription blob = new BlobDescription()
+                .setData(new StringDataSource(writer.toString()))
+                .setNamespace("autorun-scripts")
+                .setDescription("Rendered autorun-script")
                 .setName("metadata")
                 .setType(".json");
 
-        return blobstore.put(blobDescription);
+        return blobstore.put(blob);
     }
 
     public MachineComponentRequest createUVIComponent(UviComponentRequest request) throws BWFLAException {
@@ -141,5 +140,45 @@ public class UviComponent {
                 .add(medium);
 
         return (MachineComponentRequest)request;
+    }
+
+    private static class StringDataSource implements DataSource
+    {
+        private final byte[] data;
+
+
+        public StringDataSource(String data)
+        {
+            this(data.getBytes());
+        }
+
+        public StringDataSource(byte[] data)
+        {
+            this.data = data;
+        }
+
+        @Override
+        public InputStream getInputStream() throws IOException
+        {
+            return new ByteArrayInputStream(data);
+        }
+
+        @Override
+        public OutputStream getOutputStream() throws IOException
+        {
+            return null;
+        }
+
+        @Override
+        public String getContentType()
+        {
+            return MediaType.APPLICATION_OCTET_STREAM;
+        }
+
+        @Override
+        public String getName()
+        {
+            return null;
+        }
     }
 }
