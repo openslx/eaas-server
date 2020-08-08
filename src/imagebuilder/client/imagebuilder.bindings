@@ -35,6 +35,11 @@
 		</jaxb:bindings>
 	</jaxws:bindings>
 	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+		<jaxb:bindings node="//xsd:complexType[@name='byteArrayDataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ByteArrayDataSource" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
 		<jaxb:bindings node="//xsd:complexType[@name='dockerDataSource']">
 			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.DockerDataSource" />
 		</jaxb:bindings>

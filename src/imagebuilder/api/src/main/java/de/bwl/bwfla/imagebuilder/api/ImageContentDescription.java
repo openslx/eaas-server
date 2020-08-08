@@ -32,6 +32,7 @@ import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlType;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -92,6 +93,7 @@ public class ImageContentDescription
 	@XmlElementRefs({
 			@XmlElementRef(type = UrlDataSource.class),
 			@XmlElementRef(type = FileDataSource.class),
+			@XmlElementRef(type = ByteArrayDataSource.class),
 			@XmlElementRef(type = DockerDataSource.class),
 	})
 	private DataSource source;
@@ -226,6 +228,11 @@ public class ImageContentDescription
 		return this.setDataSource(new UrlDataSource(url));
 	}
 
+	public ImageContentDescription setByteArrayDataSource(byte[] data)
+	{
+		return this.setDataSource(new ByteArrayDataSource(data));
+	}
+
 	public StreamableDataSource getStreamableDataSource()
 	{
 		return (StreamableDataSource) source;
@@ -240,6 +247,7 @@ public class ImageContentDescription
 	@XmlSeeAlso({
 			UrlDataSource.class,
 			FileDataSource.class,
+			ByteArrayDataSource.class,
 			DockerDataSource.class
 	})
 	@XmlRootElement
@@ -353,6 +361,48 @@ public class ImageContentDescription
 		public InputStream openInputStream() throws IOException
 		{
 			return Files.newInputStream(this.getPath());
+		}
+	}
+
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class ByteArrayDataSource extends StreamableDataSource
+	{
+		@XmlElement
+		private byte[] data;
+
+
+		public ByteArrayDataSource()
+		{
+			// Empty!
+		}
+
+		public ByteArrayDataSource(byte[] data)
+		{
+			if (data == null)
+				throw new IllegalArgumentException("Image's data array is null!");
+
+			this.data = data;
+		}
+
+		public ByteArrayDataSource setBytes(byte[] data)
+		{
+			if (data == null)
+				throw new IllegalArgumentException("Image's data array is null!");
+
+			this.data = data;
+			return this;
+		}
+
+		public byte[] getBytes()
+		{
+			return data;
+		}
+
+		@Override
+		public InputStream openInputStream() throws IOException
+		{
+			return new ByteArrayInputStream(data);
 		}
 	}
 
