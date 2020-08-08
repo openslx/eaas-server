@@ -204,6 +204,17 @@ public class ContainerComponent {
 
                 description.addContentEntry(entry);
             }
+
+            for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+                final ImageContentDescription entry = new ImageContentDescription()
+                        .setAction(inlfile.getAction())
+                        .setArchiveFormat(inlfile.getCompressionFormat())
+                        .setName(inlfile.getName())
+                        .setByteArrayDataSource(inlfile.getData())
+                        .setSubdir("container-input");
+
+                description.addContentEntry(entry);
+            }
         }
 
         return description;

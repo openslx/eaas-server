@@ -501,6 +501,16 @@ public class Components {
                     description.addContentEntry(entry);
                 }
 
+                for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+                    final ImageContentDescription entry = new ImageContentDescription()
+                            .setAction(inlfile.getAction())
+                            .setArchiveFormat(inlfile.getCompressionFormat())
+                            .setName(inlfile.getName())
+                            .setByteArrayDataSource(inlfile.getData());
+
+                    description.addContentEntry(entry);
+                }
+
                 // Build input image
                 final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
 
@@ -595,6 +605,16 @@ public class Components {
             catch (MalformedURLException error) {
                 throw new BWFLAException(error);
             }
+
+            description.addContentEntry(entry);
+        }
+
+        for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(inlfile.getAction())
+                    .setArchiveFormat(inlfile.getCompressionFormat())
+                    .setName(inlfile.getName())
+                    .setByteArrayDataSource(inlfile.getData());
 
             description.addContentEntry(entry);
         }

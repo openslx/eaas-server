@@ -27,6 +27,7 @@ import de.bwl.bwfla.emucomp.api.MediumType;
 
 import javax.xml.bind.annotation.*;
 import java.util.ArrayList;
+import java.util.Collection;
 
 
 @XmlRootElement
@@ -63,6 +64,9 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 
 		@XmlElement(name = "content")
 		private ArrayList<FileURL> extfiles = new ArrayList<FileURL>();
+
+		/** NOTE: for internal use only currently! */
+		private Collection<FileData> inlfiles = new ArrayList<>();
 
 		public InputMedium()
 		{
@@ -148,34 +152,40 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 		{
 			return extfiles;
 		}
+
+		public void setInlineFiles(Collection<FileData> inlfiles)
+		{
+			this.inlfiles = inlfiles;
+		}
+
+		public Collection<FileData> getInlineFiles()
+		{
+			return inlfiles;
+		}
 	}
 
 	@XmlRootElement
 	@XmlAccessorType(XmlAccessType.NONE)
-	public static class FileURL extends JaxbType
+	public static class BaseFileSource extends JaxbType
 	{
-
-
 		@XmlElement(required = true, name = "action")
 		private ImageContentDescription.Action action;
 
-		@XmlElement(required = true, name = "url")
-		private String url;
-
-		@XmlElement(required = true, name = "compression_format")
+		@XmlElement(name = "compression_format")
 		private ImageContentDescription.ArchiveFormat compressionFormat;
 
 		@XmlElement(required = true, name = "name")
 		private String name;
 
-		public FileURL()
+
+		protected BaseFileSource()
 		{
+			// Empty!
 		}
 
-		public FileURL(String action, String url, String name)
+		protected BaseFileSource(String action, String name)
 		{
 			this.setAction(action.toUpperCase());
-			this.setUrl(url);
 			this.setName(name);
 		}
 
@@ -192,13 +202,9 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 
 
 		@XmlElement
-		public void setCompressionFormat(String compressionFormat) {
-			this.compressionFormat = ImageContentDescription.ArchiveFormat.fromString(compressionFormat);
-		}
-
-		public void setUrl(String url)
+		public void setCompressionFormat(String compressionFormat)
 		{
-			this.url = url;
+			this.compressionFormat = ImageContentDescription.ArchiveFormat.fromString(compressionFormat);
 		}
 
 		public void setName(String name)
@@ -206,18 +212,14 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 			this.name = name;
 		}
 
-		public ImageContentDescription.ArchiveFormat getCompressionFormat() {
+		public ImageContentDescription.ArchiveFormat getCompressionFormat()
+		{
 			return compressionFormat;
 		}
 
 		public ImageContentDescription.Action getAction()
 		{
 			return action;
-		}
-
-		public String getUrl()
-		{
-			return url;
 		}
 
 		public boolean hasName()
@@ -231,5 +233,61 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 		}
 	}
 
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class FileURL extends BaseFileSource
+	{
+		@XmlElement(required = true, name = "url")
+		private String url;
 
+		public FileURL()
+		{
+			super();
+		}
+
+		public FileURL(String action, String url, String name)
+		{
+			super(action, name);
+			this.setUrl(url);
+		}
+
+		public void setUrl(String url)
+		{
+			this.url = url;
+		}
+
+		public String getUrl()
+		{
+			return url;
+		}
+	}
+
+	/** NOTE: for internal use only currently! */
+	public static class FileData extends BaseFileSource
+	{
+		// TODO: since binary data can't be inlined in json,
+		//       should it then be always base64-encoded?
+		private byte[] data;
+
+		public FileData()
+		{
+			super();
+		}
+
+		public FileData(String action, byte[] data, String name)
+		{
+			super(action, name);
+			this.setData(data);
+		}
+
+		public void setData(byte[] data)
+		{
+			this.data = data;
+		}
+
+		public byte[] getData()
+		{
+			return data;
+		}
+	}
 }
