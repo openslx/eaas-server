@@ -19,22 +19,25 @@
 
 package de.bwl.bwfla.imagebuilder.api;
 
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 
-import javax.activation.DataHandler;
-import javax.activation.DataSource;
-import javax.activation.FileDataSource;
-import javax.activation.URLDataSource;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlElementRef;
+import javax.xml.bind.annotation.XmlElementRefs;
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
-import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlType;
+import java.io.IOException;
+import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 
 
 @XmlRootElement
@@ -86,23 +89,18 @@ public class ImageContentDescription
 	@XmlElement(required = true)
 	private Action action;
 
-	@XmlElement(name = "data", required = true)
-	private @XmlMimeType("application/octet-stream") DataHandler data;
+	@XmlElementRefs({
+			@XmlElementRef(type = UrlDataSource.class),
+			@XmlElementRef(type = FileDataSource.class),
+			@XmlElementRef(type = DockerDataSource.class),
+	})
+	private DataSource source;
 
 	@XmlElement(required = true)
 	private String name;
 
-	@XmlElement(required = true)
-	private String type;
-
-	@XmlElement(required = false)
-	private URL fileURL;
-
 	@XmlElement(required = false)
 	private String subdir;
-
-	@XmlElement
-	private DockerDataSource dockerDataSource = null;
 
 	@XmlElement(required = true)
 	private ArchiveFormat archiveFormat;
@@ -116,22 +114,22 @@ public class ImageContentDescription
 	public ImageContentDescription()
 	{
 		this.action = null;
-		this.data = null;
+		this.source = null;
 		this.name = null;
 	}
 
-	public ImageContentDescription(Action action, DataHandler data)
+	public ImageContentDescription(Action action, DataSource source)
 	{
 		this.setAction(action);
-		this.setData(data);
+		this.setDataSource(source);
 
 		this.name = null;
 	}
 
-	public ImageContentDescription(Action action, DataHandler dataHandler, String name)
+	public ImageContentDescription(Action action, DataSource source, String name)
 	{
 		this.setAction(action);
-		this.setData(dataHandler);
+		this.setDataSource(source);
 		this.setName(name);
 	}
 
@@ -154,8 +152,6 @@ public class ImageContentDescription
 		this.action = action;
 		return this;
 	}
-
-
 
 	public boolean hasName()
 	{
@@ -184,96 +180,185 @@ public class ImageContentDescription
 		return this;
 	}
 
-	public ArchiveFormat getArchiveFormat() {
+	public ArchiveFormat getArchiveFormat()
+	{
 		return archiveFormat;
 	}
 
-	public ImageContentDescription setArchiveFormat(ArchiveFormat archiveFormat) {
+	public ImageContentDescription setArchiveFormat(ArchiveFormat archiveFormat)
+	{
 		this.archiveFormat = archiveFormat;
 		return this;
 	}
 
-	public DataHandler getData()
+	public DataSource getDataSource()
 	{
-		return data;
+		return source;
 	}
 
-	public ImageContentDescription setData(DataHandler data)
-	{
-		if (data == null)
-			throw new IllegalArgumentException("Image's data is null!");
-
-		this.data = data;
-		return this;
-	}
-
-	public ImageContentDescription setData(DataSource source)
+	public ImageContentDescription setDataSource(DataSource source)
 	{
 		if (source == null)
 			throw new IllegalArgumentException("Image's data source is null!");
 
-		return this.setData(new DataHandler(source ));
+		if (source instanceof DockerDataSource)
+			this.archiveFormat = ArchiveFormat.DOCKER;
+
+		this.source = source;
+		return this;
 	}
 
-	public ImageContentDescription setDataFromFile(Path path)
+	/** This method is broken and will work only for local files! */
+	@Deprecated
+	public ImageContentDescription setFileDataSource(Path path)
 	{
 		if (path == null)
 			throw new IllegalArgumentException("Image's data path is null!");
 
-		return this.setData(new FileDataSource(path.toFile()));
+		return this.setDataSource(new FileDataSource(path));
 	}
 
-	public ImageContentDescription setDataFromDockerSource(DockerDataSource ds)
-	{
-		this.dockerDataSource = ds;
-		this.archiveFormat = ArchiveFormat.DOCKER;
-		return this;
-	}
-
-	public DockerDataSource getDockerDataSource() {
-		return dockerDataSource;
-	}
-
-	public ImageContentDescription setDataFromUrl(URL url)
+	public ImageContentDescription setUrlDataSource(URL url)
 	{
 		if (url == null)
 			throw new IllegalArgumentException("Image's data URL is null!");
 
-		return this.setData(new URLDataSource(url));
+		return this.setDataSource(new UrlDataSource(url));
 	}
 
-	public URL getURL() {
-		return fileURL;
-	}
-
-	public ImageContentDescription setURL(URL fileURL) {
-		this.fileURL = fileURL;
-		return this;
-	}
-
-	/* =============== Public Utils =============== */
-
-	public static void check(String value, String prefix)
+	public StreamableDataSource getStreamableDataSource()
 	{
-		if (value == null || value.isEmpty())
-			throw new IllegalArgumentException(prefix + " is null or empty!");
+		return (StreamableDataSource) source;
 	}
 
-	public static void checkName(String name)
+	public DockerDataSource getDockerDataSource()
 	{
-		checkName(name, false);
+		return (DockerDataSource) source;
 	}
 
-	public static void checkName(String name, boolean strict)
+
+	@XmlSeeAlso({
+			UrlDataSource.class,
+			FileDataSource.class,
+			DockerDataSource.class
+	})
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static abstract class DataSource
 	{
-		ImageContentDescription.check(name, "Image's name");
-		if (strict && !name.matches(NAME_PATTERN))
-			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
+		public final boolean isStreamable()
+		{
+			return (this instanceof StreamableDataSource);
+		}
+
+		public StreamableDataSource streamable() throws BWFLAException
+		{
+			if (!this.isStreamable())
+				throw new BWFLAException("Underlying data source is not streamable!");
+
+			return (StreamableDataSource) this;
+		}
 	}
 
 	@XmlRootElement
 	@XmlAccessorType(XmlAccessType.NONE)
-	public static class DockerDataSource
+	public static abstract class StreamableDataSource extends DataSource
+	{
+		public abstract InputStream openInputStream() throws IOException;
+	}
+
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class UrlDataSource extends StreamableDataSource
+	{
+		@XmlElement
+		private URL url;
+
+
+		public UrlDataSource()
+		{
+			// Empty!
+		}
+
+		public UrlDataSource(URL url)
+		{
+			this.url = url;
+		}
+
+		public UrlDataSource setUrl(URL url)
+		{
+			this.url = url;
+			return this;
+		}
+
+		public URL getUrl()
+		{
+			return url;
+		}
+
+		@Override
+		public InputStream openInputStream() throws IOException
+		{
+			return url.openStream();
+		}
+	}
+
+	@Deprecated
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class FileDataSource extends StreamableDataSource
+	{
+		// Use string here, since Path is not JAXB-serializable
+		@XmlElement
+		private String path;
+
+
+		public FileDataSource()
+		{
+			// Empty!
+		}
+
+		public FileDataSource(String path)
+		{
+			this.path = path;
+		}
+
+		public FileDataSource(Path path)
+		{
+			this(path.toString());
+		}
+
+		public FileDataSource setPath(String path)
+		{
+			this.path = path;
+			return this;
+		}
+
+		public FileDataSource setPath(Path path)
+		{
+			return this.setPath(path.toString());
+		}
+
+		public Path getPath()
+		{
+			return Paths.get(path);
+		}
+
+		public String getPathAsString()
+		{
+			return path;
+		}
+
+		@Override
+		public InputStream openInputStream() throws IOException
+		{
+			return Files.newInputStream(this.getPath());
+		}
+	}
+
+	@XmlRootElement
+	@XmlAccessorType(XmlAccessType.NONE)
+	public static class DockerDataSource extends DataSource
 	{
 		@XmlElement
 		public String imageRef;
@@ -315,6 +400,26 @@ public class ImageContentDescription
 			this.imageRef = imageRef;
 			this.tag = tag;
 		}
+	}
 
+
+	/* =============== Public Utils =============== */
+
+	public static void check(String value, String prefix)
+	{
+		if (value == null || value.isEmpty())
+			throw new IllegalArgumentException(prefix + " is null or empty!");
+	}
+
+	public static void checkName(String name)
+	{
+		checkName(name, false);
+	}
+
+	public static void checkName(String name, boolean strict)
+	{
+		ImageContentDescription.check(name, "Image's name");
+		if (strict && !name.matches(NAME_PATTERN))
+			throw new IllegalArgumentException("Image's name contains invalid character(s)!");
 	}
 }

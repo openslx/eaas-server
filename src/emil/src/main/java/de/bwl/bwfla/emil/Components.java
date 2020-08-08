@@ -90,7 +90,6 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.api.eaas.EaasWS;
@@ -489,16 +488,15 @@ public class Components {
                         .setSizeInMb(sizeInMb);
 
                 for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+                    final URL url = new URL(extfile.getUrl());
                     final ImageContentDescription entry = new ImageContentDescription()
                             .setAction(extfile.getAction())
                             .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                            .setURL(new URL(extfile.getUrl()));
+                            .setUrlDataSource(url);
 
-
-                    if (extfile.getName() == null || extfile.getName().isEmpty())
-                        entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-                    else
+                    if (extfile.hasName())
                         entry.setName(extfile.getName());
+                    else entry.setName(Components.getFileName(url));
 
                     description.addContentEntry(entry);
                 }
@@ -580,26 +578,23 @@ public class Components {
                     .setFileSystemType(medium.getFileSystemType())
                     .setSizeInMb(sizeInMb);
         }
+
         for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
             final ImageContentDescription entry = new ImageContentDescription()
                     .setAction(extfile.getAction())
                     .setArchiveFormat(extfile.getCompressionFormat());
-//                            .setDataFromUrl(new URL(extfile.getUrl()));
-
-//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
 
             try {
-                entry.setURL(new URL(extfile.getUrl()));
-            } catch (MalformedURLException e) {
-                throw new BWFLAException(e);
-            }
-//                    else
-//                        entry.setURL(null);
+                final URL url = new URL(extfile.getUrl());
+                entry.setUrlDataSource(url);
+                if (extfile.hasName())
+                    entry.setName(extfile.getName());
+                else entry.setName(Components.getFileName(url));
 
-            if (extfile.getName() == null || extfile.getName().isEmpty())
-                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-            else
-                entry.setName(extfile.getName());
+            }
+            catch (MalformedURLException error) {
+                throw new BWFLAException(error);
+            }
 
             description.addContentEntry(entry);
         }
@@ -635,6 +630,13 @@ public class Components {
         }
 
         return binding;
+    }
+
+    public static String getFileName(URL url)
+    {
+        return Paths.get(url.getPath())
+                .getFileName()
+                .toString();
     }
 
 

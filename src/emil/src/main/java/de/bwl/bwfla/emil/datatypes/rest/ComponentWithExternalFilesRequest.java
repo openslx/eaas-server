@@ -220,6 +220,11 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 			return url;
 		}
 
+		public boolean hasName()
+		{
+			return (name != null && !name.isEmpty());
+		}
+
 		public String getName()
 		{
 			return name;
