@@ -96,6 +96,7 @@
 									<directory>${project.build.directory}/generated-sources/</directory>
 									<includes>
 										<include>**/de/bwl/bwfla/common/**</include>
+										<include>**/de/bwl/bwfla/components/**</include>
 										<include>**/BWFLAException.java</include>
 										<include>**/ObjectFactory.java</include>
 									</includes>
