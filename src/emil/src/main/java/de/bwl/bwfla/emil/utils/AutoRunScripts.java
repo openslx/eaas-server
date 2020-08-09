@@ -19,25 +19,32 @@
 
 package de.bwl.bwfla.emil.utils;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.mitchellbosecke.pebble.PebbleEngine;
 import com.mitchellbosecke.pebble.cache.template.NoOpTemplateCache;
 import com.mitchellbosecke.pebble.loader.StringLoader;
 import com.mitchellbosecke.pebble.template.PebbleTemplate;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.MediumType;
+import org.apache.tamaya.ConfigurationProvider;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
-import java.util.Arrays;
+import java.nio.file.DirectoryStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -84,25 +91,36 @@ public class AutoRunScripts
 				.loader(new StringLoader())
 				.build();
 
+		this.load(AutoRunScripts.getTemplatesDir());
+	}
+
+	private static Path getTemplatesDir()
+	{
+		final String dir = ConfigurationProvider.getConfiguration()
+				.get("emil.autorun_scripts_dir");
+
+		return Paths.get(dir);
+	}
+
+	private void load(Path basedir)
+	{
 		log.info("Loading templates...");
-		try {
-			CompiledTemplate template = new TemplateDescription()
-					.setRawContent("start \"\" \"%~dp0/{{ filename }}\"")
-					.setOperatingSystemIds(Arrays.asList("Q11248", "Q6072277"))
-					.setMediumType(MediumType.CDROM)
-					.setFileName("uvi.bat")
-					.compile(engine);
 
-			this.register(template);
+		final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
 
-			template = new TemplateDescription()
-					.setRawContent("[autorun]\r\nopen=start \"{{ filename }}\"")
-					.setOperatingSystemIds(Arrays.asList("UNKNOWN"))
-					.setMediumType(MediumType.CDROM)
-					.setFileName("autorun.inf")
-					.compile(engine);
+		try (final DirectoryStream<Path> files = Files.newDirectoryStream(basedir)) {
+			for (Path path : files) {
+				log.info("Loading: " + path.toString());
+				try {
+					final CompiledTemplate template = mapper.readValue(path.toFile(), TemplateDescription.class)
+							.compile(engine, path);
 
-			this.register(template);
+					this.register(template);
+				}
+				catch (Exception error) {
+					log.log(Level.WARNING, "Loading template '" + path.toString() + "' failed!", error);
+				}
+			}
 		}
 		catch (Exception error) {
 			throw new RuntimeException("Loading templates failed!", error);
@@ -116,14 +134,17 @@ public class AutoRunScripts
 		return osid + "/" + medium.name();
 	}
 
-	private AutoRunScripts register(CompiledTemplate template)
+	private void register(CompiledTemplate template)
 	{
 		for (String id : template.getOperatingSystemIds()) {
 			String key = AutoRunScripts.toLookupKey(id, template.getMediumType());
-			templates.put(key, template);
+			CompiledTemplate old = templates.put(key, template);
+			if (old != null) {
+				log.warning("Template for '" + key + "' already exists! Replacing...");
+				log.warning("Old template: " + old.getSourcePath());
+				log.warning("New template: " + template.getSourcePath());
+			}
 		}
-
-		return this;
 	}
 
 	private static class CompiledTemplate implements Template
@@ -132,14 +153,16 @@ public class AutoRunScripts
 		private final Collection<String> osids;
 		private final MediumType medium;
 		private final String filename;
+		private final Path path;
 
 
-		public CompiledTemplate(PebbleTemplate template, String filename, Collection<String> osids, MediumType medium)
+		public CompiledTemplate(PebbleTemplate template, Path path, String filename, Collection<String> osids, MediumType medium)
 		{
 			this.template = template;
 			this.filename = filename;
 			this.medium = medium;
 			this.osids = osids;
+			this.path = path;
 		}
 
 		// ========== Template Implementation ====================
@@ -177,21 +200,18 @@ public class AutoRunScripts
 		{
 			return medium;
 		}
+
+		private Path getSourcePath()
+		{
+			return path;
+		}
 	}
 
-	@XmlRootElement
 	private static class TemplateDescription
 	{
-		@XmlElement(name = "os_ids")
 		private List<String> osids;
-
-		@XmlElement(name = "medium_type")
 		private MediumType medium;
-
-		@XmlElement(name = "filename")
 		private String filename;
-
-		@XmlElement(name = "template")
 		private String content;
 
 
@@ -201,6 +221,7 @@ public class AutoRunScripts
 			return this;
 		}
 
+		@JsonProperty("os_ids")
 		public List<String> getOperatingSystemIds()
 		{
 			return osids;
@@ -212,6 +233,14 @@ public class AutoRunScripts
 			return this;
 		}
 
+		@JsonSetter
+		public TemplateDescription setMediumType(String medium)
+		{
+			this.medium = MediumType.fromString(medium);
+			return this;
+		}
+
+		@JsonProperty("medium_type")
 		public MediumType getMediumType()
 		{
 			return medium;
@@ -223,6 +252,7 @@ public class AutoRunScripts
 			return this;
 		}
 
+		@JsonProperty("filename")
 		public String getFileName()
 		{
 			return filename;
@@ -234,19 +264,20 @@ public class AutoRunScripts
 			return this;
 		}
 
+		@JsonProperty("template")
 		public String getRawContent()
 		{
 			return content;
 		}
 
-		public CompiledTemplate compile(PebbleEngine engine) throws BWFLAException
+		public CompiledTemplate compile(PebbleEngine engine, Path path) throws BWFLAException
 		{
 			try {
 				final PebbleTemplate template = engine.getTemplate(content);
-				return new CompiledTemplate(template, filename, osids, medium);
+				return new CompiledTemplate(template, path, filename, osids, medium);
 			}
 			catch (Exception error) {
-				throw new BWFLAException("Compiling template '" + filename + "' failed!", error);
+				throw new BWFLAException("Compiling template '" + path.toString() + "' failed!", error);
 			}
 		}
 	}
