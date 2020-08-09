@@ -292,7 +292,7 @@ public class Components {
 
         if (request.getClass().equals(UviComponentRequest.class)) {
             try {
-                MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest) request);
+                MachineComponentRequest machineComponentRequest = uviHelper.prepare((UviComponentRequest) request, LOG);
                 result = this.createMachineComponent(machineComponentRequest, cleanups, observer);
             }
             catch (BWFLAException error) {

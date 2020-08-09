@@ -31,6 +31,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.IOException;
+import java.io.StringWriter;
 import java.io.Writer;
 import java.util.Arrays;
 import java.util.Collection;
@@ -63,6 +64,7 @@ public class AutoRunScripts
 	public interface Template
 	{
 		Template evaluate(Writer writer, Map<String, Object> context) throws IOException;
+		String evaluate(Map<String, Object> context) throws IOException;
 		String getFileName();
 	}
 
@@ -147,6 +149,14 @@ public class AutoRunScripts
 		{
 			template.evaluate(writer, context);
 			return this;
+		}
+
+		@Override
+		public String evaluate(Map<String, Object> context) throws IOException
+		{
+			final Writer writer = new StringWriter();
+			this.evaluate(writer, context);
+			return writer.toString();
 		}
 
 		@Override
