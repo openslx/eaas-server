@@ -104,6 +104,11 @@ public class AutoRunScripts
 
 	private void load(Path basedir)
 	{
+		if (!Files.exists(basedir)) {
+			log.warning("Templates directory does not exist! Skip loading templates...");
+			return;
+		}
+
 		log.info("Loading templates...");
 
 		final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
