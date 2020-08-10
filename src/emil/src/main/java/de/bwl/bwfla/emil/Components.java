@@ -621,20 +621,19 @@ public class Components {
 
         // Build input image
         final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
-        // since cdrom is read-only entity, we return user ISO directly
-        if (description.getMediumType() != MediumType.CDROM) {
+        {
             final Runnable cleanup = () -> {
                 try {
                     blobstore.delete(blob);
                 } catch (Exception error) {
-                    LOG.log(Level.WARNING, "Deleting container's input image failed!\n", error);
+                    LOG.log(Level.WARNING, "Deleting machine's input image failed!\n", error);
                 }
             };
 
             cleanups.push("delete-blob/" + blob.getId(), cleanup);
         }
-        // Add input image to machine's config
 
+        // Add input image to machine's config
         final BlobStoreBinding binding = new BlobStoreBinding();
         binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
         if (description.getMediumType() != MediumType.CDROM)
