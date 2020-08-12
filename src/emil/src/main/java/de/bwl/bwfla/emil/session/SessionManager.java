@@ -89,11 +89,10 @@ public class SessionManager
 		sessions.computeIfPresent(sid, (unused, session) -> {
 			session.setName(name);
 			if (lifetime < 0) {
-				session.setExpirationTimestamp(-1);
+				session.setConfiguredExpirationTime(-1);
 			}
 			else {
-				final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
-				session.setExpirationTimestamp(timestamp);
+				session.setConfiguredExpirationTime(unit.toMillis(lifetime));
 			}
 
 			if (title != null && title.getComponentName() != null) {
@@ -117,11 +116,15 @@ public class SessionManager
 	/** Send keepalive for session */
 	public boolean keepalive(String id)
 	{
-		final Session session = this.get(id);
-		if (session == null)
-			return false;
+		sessions.computeIfPresent(id, (unused, session) -> {
 
-		session.keepalive(endpoint, log);
+			long expTime = session.getConfiguredExpirationTime();
+			if(expTime < 0)
+				return null;
+
+			session.setExpirationTimestamp(expTime + SessionManager.timems());
+			return session;
+		});
 		return true;
 	}
 

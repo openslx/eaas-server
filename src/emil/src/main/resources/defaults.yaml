@@ -21,6 +21,7 @@ emil:
   classificationDatabase: classification
   max_session_duration: 0 sec
   autorun_scripts_dir: /home/bwfla/server-data/autorun-scripts
+  retain_session: 10
 
 ws:
   blobstore: http://eaas:8080/

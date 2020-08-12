@@ -65,7 +65,7 @@ public class ImportImageTask extends CompletableTask<Object>
                 if (state.isFailed())
                     return new BWFLAException("task failed");
 
-                final String imageId = importState.getResult();
+                final String imageId = state.getResult();
 
                 try {
                     ImageMetadata entry = new ImageMetadata();
