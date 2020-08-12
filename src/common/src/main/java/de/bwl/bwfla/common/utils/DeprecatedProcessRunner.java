@@ -30,6 +30,7 @@ import java.io.Reader;
 import java.io.Writer;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -90,6 +91,7 @@ public class DeprecatedProcessRunner
 	private static final String MESSAGE_IOSTREAM_NOT_AVAILABLE = "IO-stream is not available. Process was not started properly!";
 
 	// Initialize the constants from property file
+	private static final Path PROPERTY_TMPDIR_BASE = Paths.get(CommonSingleton.runnerConf.tmpBaseDir);
 	private static final String PROPERTY_TMPDIR_PREFIX = CommonSingleton.runnerConf.tmpdirPrefix;
 	private static final String PROPERTY_STDOUT_FILENAME = CommonSingleton.runnerConf.stdoutFilename;
 	private static final String PROPERTY_STDERR_FILENAME = CommonSingleton.runnerConf.stderrFilename;
@@ -540,7 +542,7 @@ public class DeprecatedProcessRunner
 
 		// Create the temp-directory for process' output
 		try {
-			outdir = Files.createTempDirectory(PROPERTY_TMPDIR_PREFIX).toAbsolutePath();
+			outdir = Files.createTempDirectory(PROPERTY_TMPDIR_BASE, PROPERTY_TMPDIR_PREFIX).toAbsolutePath();
 			stdout = new ProcessOutput(outdir.resolve(PROPERTY_STDOUT_FILENAME));
 			stderr = new ProcessOutput(outdir.resolve(PROPERTY_STDERR_FILENAME));
 		}
