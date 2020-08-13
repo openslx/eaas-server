@@ -33,6 +33,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -69,7 +70,7 @@ public class DeprecatedProcessRunner
 	private int pid;
 	private Path workdir;
 	private Path outdir;
-	private AtomicInteger numWaitingCallers;
+	private final AtomicInteger numWaitingCallers;
 	private volatile State state;
 
 	/** Internal states */
@@ -120,27 +121,35 @@ public class DeprecatedProcessRunner
 		this.setCommand(cmd, true);
 	}
 
-	/**
-	 * Creates a new ProcessRunner piping ...runners together using /bin/sh.
-	 */
-	public static DeprecatedProcessRunner pipe(DeprecatedProcessRunner... runners) {
-		final DeprecatedProcessRunner ret = new DeprecatedProcessRunner("/bin/sh");
-		ret.addArgument("-c");
-		ret.addArgument(Arrays.asList(runners).stream().map(runner -> runner.getCommandStringWithEnv())
-				.collect(Collectors.joining(" | ")));
-		return ret;
+	/** Creates a new ProcessRunner piping ...runners together using /bin/sh. */
+	public static DeprecatedProcessRunner pipe(DeprecatedProcessRunner... runners)
+	{
+		return DeprecatedProcessRunner.pipe(Arrays.asList(runners));
+	}
+
+	/** Creates a new ProcessRunner piping ...runners together using /bin/sh. */
+	public static DeprecatedProcessRunner pipe(Collection<DeprecatedProcessRunner> runners)
+	{
+		final String args = runners.stream()
+				.map(DeprecatedProcessRunner::getCommandStringWithEnv)
+				.collect(Collectors.joining(" | "));
+
+		return new DeprecatedProcessRunner("/bin/sh")
+				.addArgument("-c")
+				.addArgument(args);
 	}
 
 	/** Set a new logger. */
-	public void setLogger(Logger log)
+	public DeprecatedProcessRunner setLogger(Logger log)
 	{
 		this.log = log;
+		return this;
 	}
 
 	/** Define a new command, resetting this runner. */
-	public void setCommand(String cmd)
+	public DeprecatedProcessRunner setCommand(String cmd)
 	{
-		this.setCommand(cmd, false);
+		return this.setCommand(cmd, false);
 	}
 
 	/**
@@ -148,7 +157,7 @@ public class DeprecatedProcessRunner
 	 * @param cmd The new command to execute.
 	 * @param keepenv If true, then the current environment variables will be reused, else cleared.
 	 */
-	public void setCommand(String cmd, boolean keepenv)
+	public DeprecatedProcessRunner setCommand(String cmd, boolean keepenv)
 	{
 		DeprecatedProcessRunner.ensureNotEmpty(cmd);
 
@@ -159,24 +168,26 @@ public class DeprecatedProcessRunner
 		command.add(cmd);
 
 		state = State.READY;
+		return this;
 	}
 
 	/**
 	 * Add a new argument to current command, separated by a space.
 	 * @param arg The argument to add.
 	 */
-	public void addArgument(String arg)
+	public DeprecatedProcessRunner addArgument(String arg)
 	{
 		DeprecatedProcessRunner.ensureNotNull(arg);
 		this.ensureStateReady();
 		command.add(arg);
+		return this;
 	}
 
 	/**
 	 * Compose a new argument from multiple values and add it to current command.
 	 * @param values The values to build the argument from.
 	 */
-	public void addArgument(String... values)
+	public DeprecatedProcessRunner addArgument(String... values)
 	{
 		this.ensureStateReady();
 
@@ -187,13 +198,14 @@ public class DeprecatedProcessRunner
 		}
 
 		command.add(sbuilder.toString());
+		return this;
 	}
 
 	/**
 	 * Append a new argument's value to last argument.
 	 * @param value The argument's value to add.
 	 */
-	public void addArgValue(String value)
+	public DeprecatedProcessRunner addArgValue(String value)
 	{
 		DeprecatedProcessRunner.ensureNotNull(value);
 		this.ensureStateReady();
@@ -201,13 +213,14 @@ public class DeprecatedProcessRunner
 		final int index = command.size() - 1;
 		String argument = command.get(index);
 		command.set(index, argument + value);
+		return this;
 	}
 
 	/**
 	 * Append new argument's values to last argument.
 	 * @param values The argument's values to add.
 	 */
-	public void addArgValues(String... values)
+	public DeprecatedProcessRunner addArgValues(String... values)
 	{
 		this.ensureStateReady();
 
@@ -221,13 +234,23 @@ public class DeprecatedProcessRunner
 		String argument = command.get(index);
 		argument += sbuilder.toString();
 		command.set(index, argument);
+		return this;
 	}
 
 	/**
 	 * Add all arguments from the specified list to current command.
 	 * @param args The arguments to add.
 	 */
-	public void addArguments(String... args)
+	public DeprecatedProcessRunner addArguments(String... args)
+	{
+		return this.addArguments(Arrays.asList(args));
+	}
+
+	/**
+	 * Add all arguments from the specified list to current command.
+	 * @param args The arguments to add.
+	 */
+	public DeprecatedProcessRunner addArguments(List<String> args)
 	{
 		this.ensureStateReady();
 
@@ -235,20 +258,8 @@ public class DeprecatedProcessRunner
 			DeprecatedProcessRunner.ensureNotNull(arg);
 			command.add(arg);
 		}
-	}
 
-	/**
-	 * Add all arguments from the specified list to current command.
-	 * @param args The arguments to add.
-	 */
-	public void addArguments(List<String> args)
-	{
-		this.ensureStateReady();
-
-		for (String arg : args) {
-			DeprecatedProcessRunner.ensureNotNull(arg);
-			command.add(arg);
-		}
+		return this;
 	}
 
 	/**
@@ -256,7 +267,7 @@ public class DeprecatedProcessRunner
 	 * @param var The variable's name.
 	 * @param value The variable's value.
 	 */
-	public void addEnvVariable(String var, String value)
+	public DeprecatedProcessRunner addEnvVariable(String var, String value)
 	{
 		DeprecatedProcessRunner.ensureNotEmpty(var);
 		if (!var.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
@@ -264,6 +275,7 @@ public class DeprecatedProcessRunner
 		}
 		DeprecatedProcessRunner.ensureNotNull(value, "Value for environment variable " + var + " is null.");
 		environment.put(var, value);
+		return this;
 	}
 
 
@@ -271,9 +283,10 @@ public class DeprecatedProcessRunner
 	 * Add all environment-variables to current command.
 	 * @param vars The variables to add.
 	 */
-	public void addEnvVariables(Map<String, String> vars)
+	public DeprecatedProcessRunner addEnvVariables(Map<String, String> vars)
 	{
-		environment.putAll(vars);
+		vars.forEach(this::addEnvVariable);
+		return this;
 	}
 
 	/** Returns the environment variables of the current command. */
@@ -356,16 +369,18 @@ public class DeprecatedProcessRunner
 	 * If not set, uses the dir of the current process.
 	 * @param dir The new working directory.
 	 */
-	public void setWorkingDirectory(Path dir)
+	public DeprecatedProcessRunner setWorkingDirectory(Path dir)
 	{
 		this.ensureStateReady();
 		workdir = dir;
+		return this;
 	}
 
 	/** Redirect the stderr of the process to stdout. */
-	public void redirectStdErrToStdOut(boolean redirect)
+	public DeprecatedProcessRunner redirectStdErrToStdOut(boolean redirect)
 	{
 		this.redirectStdErrToStdOut = redirect;
+		return this;
 	}
 
 	/** Returns the stdin of the process, as byte-stream. */
@@ -393,11 +408,12 @@ public class DeprecatedProcessRunner
 	 *
 	 * @param message The data to write.
 	 */
-	public void writeToStdIn(String message) throws IOException
+	public DeprecatedProcessRunner writeToStdIn(String message) throws IOException
 	{
 		Writer writer = this.getStdInWriter();
 		writer.write(message);
 		writer.flush();
+		return this;
 	}
 
 	/** Returns the stdout of the process, as byte-stream. */
@@ -457,7 +473,7 @@ public class DeprecatedProcessRunner
 	}
 
 	/** Print the stdout of the process to the log. */
-	public void printStdOut()
+	public DeprecatedProcessRunner printStdOut()
 	{
 		final int pid = this.getProcessId();
 
@@ -468,14 +484,15 @@ public class DeprecatedProcessRunner
 			if (!output.isEmpty())
 				log.info("Subprocess " + pid + " STDOUT:\n" + output);
 		}
-		catch(IOException e)
-		{
-			log.log(Level.SEVERE, e.getMessage(), e);
+		catch(IOException error) {
+			log.log(Level.WARNING, "Printing process-runner's stdout failed!", error);
 		}
+
+		return this;
 	}
 
 	/** Print the stderr of the process to the log. */
-	public void printStdErr()
+	public DeprecatedProcessRunner printStdErr()
 	{
 		final int pid = this.getProcessId();
 
@@ -486,10 +503,11 @@ public class DeprecatedProcessRunner
 			if (!output.isEmpty())
 				log.info("Subprocess " + pid + " STDERR:\n" + output);
 		}
-		catch(IOException e)
-		{
-			log.log(Level.SEVERE, e.getMessage(), e);
+		catch(IOException error) {
+			log.log(Level.WARNING, "Printing process-runner's stderr failed!", error);
 		}
+
+		return this;
 	}
 
 	/**
@@ -659,37 +677,40 @@ public class DeprecatedProcessRunner
 	}
 
 	/** Stop the running process and wait for termination. */
-	public void stop()
+	public DeprecatedProcessRunner stop()
 	{
 		if (state != State.STARTED)
-			return;
+			return this;
 
 		log.info("Stopping subprocess " + pid + "...");
 		process.destroy();
 
 		this.waitUntilFinished();
+		return this;
 	}
 
 	/** Stop the running process and wait for termination. */
-	public void stop(long timeout, TimeUnit unit)
+	public DeprecatedProcessRunner stop(long timeout, TimeUnit unit)
 	{
 		if (state != State.STARTED)
-			return;
+			return this;
 
 		log.info("Stopping subprocess " + pid + "...");
 		process.destroy();
 
 		this.waitUntilFinished(timeout, unit);
+		return this;
 	}
 
 	/** Kill the running process. */
-	public void kill()
+	public DeprecatedProcessRunner kill()
 	{
 		if (state != State.STARTED)
-			return;
+			return this;
 
 		log.info("Killing subprocess " + pid + "...");
 		process.destroyForcibly();
+		return this;
 	}
 
 	/** Perform the cleanup of process' temp-directory. */
@@ -754,7 +775,7 @@ public class DeprecatedProcessRunner
 				this.printStdErr();
 			}
 			catch (Exception exception) {
-				log.log(Level.SEVERE, exception.getMessage(), exception);
+				log.log(Level.WARNING, "Printing process-runner's stdout/err failed!", exception);
 			}
 		}
 
@@ -838,7 +859,7 @@ public class DeprecatedProcessRunner
 
 final class ProcessOutput
 {
-	private Path outpath;
+	private final Path outpath;
 	private InputStream outstream;
 
 	ProcessOutput(Path path)
