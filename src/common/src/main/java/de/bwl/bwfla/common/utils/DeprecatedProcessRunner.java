@@ -39,8 +39,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import de.bwl.bwfla.conf.CommonSingleton;
@@ -91,11 +93,19 @@ public class DeprecatedProcessRunner
 	/** Exception's message */
 	private static final String MESSAGE_IOSTREAM_NOT_AVAILABLE = "IO-stream is not available. Process was not started properly!";
 
+	/**
+	 * Regex for checking validity of environment variable names, which must match
+	 * <a href="https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_10_02">ASSIGNMENT_WORD</a>.
+	 */
+	private static final Predicate<String> ENVIRONMENT_VARNAME_MATCHER = Pattern.compile("^[a-zA-Z_][a-zA-Z_0-9]*$")
+			.asMatchPredicate();
+
 	// Initialize the constants from property file
 	private static final Path PROPERTY_TMPDIR_BASE = Paths.get(CommonSingleton.runnerConf.tmpBaseDir);
 	private static final String PROPERTY_TMPDIR_PREFIX = CommonSingleton.runnerConf.tmpdirPrefix;
 	private static final String PROPERTY_STDOUT_FILENAME = CommonSingleton.runnerConf.stdoutFilename;
 	private static final String PROPERTY_STDERR_FILENAME = CommonSingleton.runnerConf.stderrFilename;
+
 
 	/** Create a new ProcessRunner. */
 	public DeprecatedProcessRunner()
@@ -270,9 +280,7 @@ public class DeprecatedProcessRunner
 	public DeprecatedProcessRunner addEnvVariable(String var, String value)
 	{
 		DeprecatedProcessRunner.ensureNotEmpty(var);
-		if (!var.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
-			throw new IllegalStateException("Environment variable name contains invalid characters.");
-		}
+		DeprecatedProcessRunner.ensureValidEnvVarName(var);
 		DeprecatedProcessRunner.ensureNotNull(value, "Value for environment variable " + var + " is null.");
 		environment.put(var, value);
 		return this;
@@ -331,11 +339,7 @@ public class DeprecatedProcessRunner
 			final String key = entry.getKey();
 			final String value = entry.getValue();
 
-			// Must match ASSIGNMENT_WORD in
-			// <https://pubs.opengroup.org/onlinepubs/9699919799/utilities/V3_chap02.html#tag_18_10_02>.
-			if (!key.matches("^[a-zA-Z_][a-zA-Z_0-9]*$")) {
-				throw new IllegalStateException("Environment variables cannot be encoded");
-			}
+			DeprecatedProcessRunner.ensureValidEnvVarName(key);
 
 			builder.append(key);
 			builder.append("=");
@@ -853,6 +857,12 @@ public class DeprecatedProcessRunner
 	{
 		if (arg == null || arg.isEmpty())
 			throw new IllegalArgumentException("Argument is null or empty!");
+	}
+
+	private static void ensureValidEnvVarName(String name)
+	{
+		if (!ENVIRONMENT_VARNAME_MATCHER.test(name))
+			throw new IllegalStateException("Environment variable name contains invalid characters: " + name);
 	}
 }
 
