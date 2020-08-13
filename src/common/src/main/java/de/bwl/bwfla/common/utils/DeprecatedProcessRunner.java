@@ -365,6 +365,17 @@ public class DeprecatedProcessRunner
 		if (state != State.STARTED)
 			throw new IllegalStateException("Monitor is not available. Process was not started properly!");
 
+		if (monitor == null) {
+			try {
+				// Try to create the monitor
+				monitor = new ProcessMonitor(pid);
+			}
+			catch (FileNotFoundException e) {
+				// Likely the process was already terminated!
+				log.warning("Creating monitor for subprocess " + pid + " failed!");
+			}
+		}
+
 		return monitor;
 	}
 
@@ -600,15 +611,6 @@ public class DeprecatedProcessRunner
 		}
 
 		state = State.STARTED;
-
-		try {
-			// Try to create the monitor
-			monitor = new ProcessMonitor(pid);
-		}
-		catch (FileNotFoundException e) {
-			// Likely the process was already terminated!
-		}
-
 		return true;
 	}
 
