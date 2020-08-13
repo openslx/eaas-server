@@ -33,14 +33,11 @@ public abstract class IPCWebsocketProxy {
             runner.addArgument("BEGIN {e=1} $8==sock && $4==\"00010000\" {e=0; exit} END {exit e}");
             runner.addArgument("sock=" + path.toString());
             runner.addArgument("/proc/net/unix");
-            runner.execute(false, false);
-            int code = runner.getReturnCode();
-            if (code == 0) {
+            if (runner.execute(false)) {
                 log.info("socket seems to be ready now");
-                runner.cleanup();
                 return;
             }
-            runner.cleanup();
+
             try {
                 Thread.sleep(waittime);
             }

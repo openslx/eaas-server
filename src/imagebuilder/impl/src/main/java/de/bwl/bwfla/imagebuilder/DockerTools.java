@@ -109,21 +109,19 @@ class DockerTools {
         runner.setCommand("/bin/bash");
         runner.addArguments("-c", "skopeo inspect oci://" + ds.dockerDir.toString() + "| jq -r " + l);
         runner.setLogger(log);
-        if (!runner.execute(false, false))
-            throw new BWFLAException("getting label failed");
-
-        String result = null;
         try {
-            result = runner.getStdOutString();
-        }
-        catch (IOException e) {
-            throw new BWFLAException(e);
-        }
-        finally {
-            runner.cleanup();
-        }
+            final DeprecatedProcessRunner.Result result = runner.executeWithResult(false)
+                    .orElse(null);
 
-        return result.trim();
+            if (result == null || !result.successful())
+                throw new BWFLAException("Running skopeo failed!");
+
+            return result.stdout()
+                    .trim();
+        }
+        catch (IOException error) {
+            throw new BWFLAException("Parsing docker label failed!", error);
+        }
     }
 
 
@@ -136,21 +134,19 @@ class DockerTools {
         runner.setCommand("/bin/bash");
         runner.addArguments("-c", "skopeo inspect \"$1\":\"$2\" | jq -r .Digest", "", ds.imageRef, ds.tag);
         runner.setLogger(log);
-        if (!runner.execute(false, false))
-            throw new BWFLAException("getting docker digest failed");
-
-        String digest = null;
         try {
-            digest = runner.getStdOutString();
-        }
-        catch (IOException e) {
-            throw new BWFLAException(e);
-        }
-        finally {
-            runner.cleanup();
-        }
+            final DeprecatedProcessRunner.Result result = runner.executeWithResult(false)
+                    .orElse(null);
 
-        return digest.trim();
+            if (result == null || !result.successful())
+                throw new BWFLAException("Running skopeo failed!");
+
+            return result.stdout()
+                    .trim();
+        }
+        catch (IOException error) {
+            throw new BWFLAException("Parsing docker digest failed!", error);
+        }
     }
 
     private String[] getLayer() throws  BWFLAException {
@@ -158,22 +154,18 @@ class DockerTools {
         runner.setCommand("oci-layer-list.sh");
         runner.addArgument(ds.dockerDir.toString());
         runner.setLogger(log);
-
-        if (!runner.execute(false, false))
-            throw new BWFLAException("oci-layer-list.sh failed");
-
-        String input = null;
         try {
-            input = runner.getStdOutString();
-        }
-        catch (IOException e) {
-            e.printStackTrace();
-            throw new BWFLAException(e);
-        }
-        finally {
-            runner.cleanup();
-        }
+            final DeprecatedProcessRunner.Result result = runner.executeWithResult(false)
+                    .orElse(null);
 
-        return input.split("\\r?\\n");
+            if (result == null || !result.successful())
+                throw new BWFLAException("Running oci-layer-list.sh failed!");
+
+            return result.stdout()
+                    .split("\\r?\\n");
+        }
+        catch (IOException error) {
+            throw new BWFLAException("Parsing docker layers failed!", error);
+        }
     }
 }

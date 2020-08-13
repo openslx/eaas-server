@@ -37,6 +37,7 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Predicate;
@@ -490,14 +491,11 @@ public class DeprecatedProcessRunner
 	/** Print the stdout of the process to the log. */
 	public DeprecatedProcessRunner printStdOut()
 	{
-		final int pid = this.getProcessId();
-
 		// Print stdout, if available
 		try
 		{
 			String output = this.getStdOutString();
-			if (!output.isEmpty())
-				log.info("Subprocess " + pid + " STDOUT:\n" + output);
+			this.printStdOut(output);
 		}
 		catch(IOException error) {
 			log.log(Level.WARNING, "Printing process-runner's stdout failed!", error);
@@ -509,14 +507,11 @@ public class DeprecatedProcessRunner
 	/** Print the stderr of the process to the log. */
 	public DeprecatedProcessRunner printStdErr()
 	{
-		final int pid = this.getProcessId();
-
 		try
 		{
 			// Print stderr, if available
 			String output = this.getStdErrString();
-			if (!output.isEmpty())
-				log.info("Subprocess " + pid + " STDERR:\n" + output);
+			this.printStdErr(output);
 		}
 		catch(IOException error) {
 			log.log(Level.WARNING, "Printing process-runner's stderr failed!", error);
@@ -602,7 +597,7 @@ public class DeprecatedProcessRunner
 		try {
 			process = builder.start();
 			pid = DeprecatedProcessRunner.lookupUnixPid(process);
-			log.info("Started subprocess (PID: " + pid + "):  " + this.getCommandString());
+			log.info("Subprocess " + pid + " started:  " + this.getCommandString());
 		}
 		catch (IOException exception) {
 			log.log(Level.SEVERE, "Starting new subprocess failed! CMD was: " + this.getCommandString(), exception);
@@ -759,16 +754,15 @@ public class DeprecatedProcessRunner
 	 */
 	public boolean execute()
 	{
-		return this.execute(true, true);
+		return this.execute(true);
 	}
 
 	/**
 	 * Start this process and wait for it to finish.
 	 * @param verbose If set to true, then print stdout and stderr when process terminates.
-	 * @param cleanup If set to true, then perform cleanup-operations when process terminates.
-	 * @return @return true when the return-code of the terminated process is 0, else false.
+	 * @return true when the return-code of the terminated process is 0, else false.
 	 */
-	public boolean execute(boolean verbose, boolean cleanup)
+	public boolean execute(boolean verbose)
 	{
 		if (!this.start())
 			return false;
@@ -785,10 +779,81 @@ public class DeprecatedProcessRunner
 			}
 		}
 
-		if (cleanup)
-			this.cleanup();
+		this.cleanup();
 
 		return (retcode == 0);
+	}
+
+	/** Execute this process and return its stdout + stderr. */
+	public Optional<Result> executeWithResult() throws IOException
+	{
+		return this.executeWithResult(true);
+	}
+
+	/**
+	 * Execute this process and return its stdout + stderr.
+	 * @param verbose If set to true, then additionally log stdout and stderr when process terminates.
+	 */
+	public Optional<Result> executeWithResult(boolean verbose) throws IOException
+	{
+		if (!this.start())
+			return Optional.empty();
+
+		try {
+			final int retcode = this.waitUntilFinished();
+			final String stdout = this.getStdOutString();
+			final String stderr = this.getStdErrString();
+			if (verbose) {
+				this.printStdOut(stdout);
+				this.printStdErr(stderr);
+			}
+
+			return Optional.of(new Result(retcode, stdout, stderr));
+		}
+		finally {
+			this.cleanup();
+		}
+	}
+
+
+	/** Result of a process execution */
+	public static class Result
+	{
+		private final int retcode;
+		private final String stdout;
+		private final String stderr;
+
+		public Result()
+		{
+			this(-1, null, null);
+		}
+
+		public Result(int retcode, String stdout, String stderr)
+		{
+			this.retcode = retcode;
+			this.stdout = stdout;
+			this.stderr = stderr;
+		}
+
+		public boolean successful()
+		{
+			return (retcode == 0);
+		}
+
+		public int code()
+		{
+			return retcode;
+		}
+
+		public String stdout()
+		{
+			return stdout;
+		}
+
+		public String stderr()
+		{
+			return stderr;
+		}
 	}
 
 
@@ -797,6 +862,22 @@ public class DeprecatedProcessRunner
 	private static int lookupUnixPid(Process process)
 	{
 		return (int) process.pid();
+	}
+
+	private void printStdOut(String output)
+	{
+		if (output.isEmpty())
+			return;
+
+		log.info("Subprocess " + this.getProcessId() + " stdout:\n" + output);
+	}
+
+	private void printStdErr(String output)
+	{
+		if (output.isEmpty())
+			return;
+
+		log.info("Subprocess " + this.getProcessId() + " stderr:\n" + output);
 	}
 
 	private void reset(boolean keepenv)
@@ -908,13 +989,14 @@ final class ProcessOutput
 	{
 		StringBuilder builder = new StringBuilder(1024);
 		char[] buffer = new char[512];
-		Reader reader = this.reader();
-		while (reader.ready()) {
-			int length = reader.read(buffer);
-			if (length < 0)
-				break;  // End-of-stream
+		try (Reader reader = this.reader()) {
+			while (reader.ready()) {
+				int length = reader.read(buffer);
+				if (length < 0)
+					break;  // End-of-stream
 
-			builder.append(buffer, 0, length);
+				builder.append(buffer, 0, length);
+			}
 		}
 
 		return builder.toString();
