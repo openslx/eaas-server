@@ -311,7 +311,7 @@ public class DeprecatedProcessRunner
 
 	/** Quotes a single argument for shell use. */
 	static private String quoteArg(String arg) {
-		return "'" + arg.replaceAll("'", "'\\''") + "'";
+		return "'" + arg.replace("'", "'\\''") + "'";
 	}
 
 	/** Returns the current command as string in shell syntax. */
