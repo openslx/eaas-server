@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.emil;
 
-import java.io.IOException;
 import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -257,7 +256,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured(roles = {Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
