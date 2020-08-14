@@ -22,7 +22,6 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
 import java.util.List;
 
 @Path("EmilUserSession")
@@ -43,7 +42,7 @@ public class EmilUserSession extends EmilRest {
     }
 
     @GET
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @Path("delete")
     @Produces(MediaType.APPLICATION_JSON)
     public Response delete(@QueryParam("sessionId") String id) {

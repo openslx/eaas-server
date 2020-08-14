@@ -16,6 +16,9 @@ emil:
   authSecret: ''
   authAudience: ''
   authJwksUri: ''
+  adminRoleLabel: 'eaas-admin'
+  keycloakAdminUser: 'eaas-admin'
+  userRoleLabel: ''
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification

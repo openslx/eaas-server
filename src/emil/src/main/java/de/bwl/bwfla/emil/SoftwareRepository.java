@@ -225,7 +225,7 @@ public class SoftwareRepository extends EmilRest
 		 * @return JSON response (error) message
 		 */
 		@POST
-		@Secured(roles = {Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response create(EmilSoftwareObject swo)

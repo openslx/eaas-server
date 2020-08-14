@@ -89,7 +89,7 @@ public class Sessions
 
 	@DELETE
 	@Path("/{id}")
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
 	{
 		sessions.remove(id);

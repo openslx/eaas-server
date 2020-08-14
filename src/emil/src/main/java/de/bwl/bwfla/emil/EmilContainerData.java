@@ -113,7 +113,7 @@ public class EmilContainerData extends EmilRest {
         }
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/updateContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -190,7 +190,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("update successful");
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/importContainer")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -199,7 +199,7 @@ public class EmilContainerData extends EmilRest {
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/importEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -208,7 +208,7 @@ public class EmilContainerData extends EmilRest {
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/updateLatestEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
@@ -216,7 +216,7 @@ public class EmilContainerData extends EmilRest {
         envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/delete")
     @Produces(MediaType.APPLICATION_JSON)
@@ -259,7 +259,7 @@ public class EmilContainerData extends EmilRest {
         return Emil.successMessageResponse("delete success!");
     }
 
-    @Secured(roles={Role.RESTRCITED})
+    @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/saveImportedContainer")
     @Produces(MediaType.APPLICATION_JSON)

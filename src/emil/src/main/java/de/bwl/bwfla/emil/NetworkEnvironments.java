@@ -63,7 +63,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured(roles = {Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRICTED})
     @PUT
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
