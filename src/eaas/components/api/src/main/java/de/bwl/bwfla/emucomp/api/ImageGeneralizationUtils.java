@@ -20,8 +20,7 @@
 package de.bwl.bwfla.emucomp.api;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.DiskPartitionDescription;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
+import de.bwl.bwfla.common.utils.DiskDescription;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,12 +31,12 @@ public class ImageGeneralizationUtils {
         ntfs, vfat, hfs
     }
 
-    public static boolean checkPartition(DiskPartitionDescription.DiskPartition p, String fsType) {
-        return p.getIndex() == 1 && p.getFsType().equals(fsType);
+    public static boolean checkPartition(DiskDescription.Partition p, String fsType) {
+        return p.getIndex() == 1 && p.getFileSystemType().equals(fsType);
     }
 
-    public static boolean checkPartition(DiskPartitionDescription.DiskPartition p, String label, String fsType) {
-        return p.getPartitionName().equals(label) && p.getFsType().equals(fsType);
+    public static boolean checkPartition(DiskDescription.Partition p, String label, String fsType) {
+        return p.getPartitionName().equals(label) && p.getFileSystemType().equals(fsType);
     }
 
     public static void cleanUpFuse(File tempDDdir, File tempMountDir, String loopDev, Logger log) throws BWFLAException, IOException {

@@ -2,19 +2,18 @@ package de.bwl.bwfla.imagearchive.generalization;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.DiskPartitionDescription;
+import de.bwl.bwfla.common.utils.DiskDescription;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.imagearchive.ImageArchiveBackend;
-import de.bwl.bwfla.imagearchive.ImageHandler;
-import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import org.apache.commons.io.FileUtils;
 
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -38,7 +37,7 @@ public class ImageGeneralizer {
             image = new ImageMounter(imgFile.toPath());
             image.mountDD();
 
-            List<DiskPartitionDescription.DiskPartition> partitions = findValidPartitions(image.getDdFile().toFile(), generalization);
+            List<DiskDescription.Partition> partitions = findValidPartitions(image.getDdFile(), generalization);
             String fs = generalization.getImageGeneralization().getPrecondition().getFileSystem();
 
             if (partitions == null) {
@@ -46,11 +45,11 @@ public class ImageGeneralizer {
                         " and FileSystem " + fs + " was not found!");
             }
 
-            for (DiskPartitionDescription.DiskPartition partition : partitions) {
+            for (DiskDescription.Partition partition : partitions) {
                 File patch = null;
                 try {
-                    image.remountDDWithOffset(partition.getBegin(), partition.getSize());
-                    image.mountFileSystem(FileSystemType.fromString(partition.getFsType()));
+                    image.remountDDWithOffset(partition.getStartOffset(), partition.getSize());
+                    image.mountFileSystem(FileSystemType.fromString(partition.getFileSystemType()));
 
                     patch  = new File("/tmp/patch-" + UUID.randomUUID());
 
@@ -139,14 +138,14 @@ public class ImageGeneralizer {
      * @throws BWFLAException
      * @throws IOException
      */
-    private static List<DiskPartitionDescription.DiskPartition> findValidPartitions(File ddFile, GeneralizationPatch generalization) throws BWFLAException, IOException {
+    private static List<DiskDescription.Partition> findValidPartitions(Path ddFile, GeneralizationPatch generalization) throws BWFLAException, IOException {
         String partitionLabel = generalization.getImageGeneralization().getPrecondition().getPartitionLabel();
-        DiskPartitionDescription parted = new DiskPartitionDescription(ddFile);
-        List<DiskPartitionDescription.DiskPartition> partitions = parted.getPartitionTable();
-        List<DiskPartitionDescription.DiskPartition> validPartitions = new ArrayList<>();
-        for (DiskPartitionDescription.DiskPartition p : partitions) {
-            log.info("part: " + p.getIndex() + " start: " + p.getBegin() + " size: " + p.getSize() + " fs: "
-                    + p.getFsType() + " Flags: " + p.getFlags() + " PartitionName " + p.getPartitionName());
+        DiskDescription disk = DiskDescription.read(ddFile, log);
+        List<DiskDescription.Partition> partitions = disk.getPartitions();
+        List<DiskDescription.Partition> validPartitions = new ArrayList<>();
+        for (DiskDescription.Partition p : partitions) {
+            log.info("part: " + p.getIndex() + " start: " + p.getStartOffset() + " size: " + p.getSize() + " fs: "
+                    + p.getFileSystemType() + " Flags: " + p.getFlags() + " PartitionName " + p.getPartitionName());
             if (partitionLabel.equals("") || partitionLabel == null) {
                 return partitions;
             } else {
@@ -158,10 +157,5 @@ public class ImageGeneralizer {
             return null;
         else
             return validPartitions;
-    }
-
-    private static List<DiskPartitionDescription.DiskPartition> getPartitions (File ddFile) throws BWFLAException, IOException {
-        DiskPartitionDescription parted = new DiskPartitionDescription(ddFile);
-        return parted.getPartitionTable();
     }
 }
