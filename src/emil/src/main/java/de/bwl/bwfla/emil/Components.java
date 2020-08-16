@@ -1412,6 +1412,7 @@ public class Components {
             message = "INTERNAL-SERVER-ERROR: " + error.getMessage();
         }
 
+        error.printStackTrace();
         final Response response = Response.status(status)
                 .entity(new ErrorInformation(message))
                 .build();

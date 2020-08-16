@@ -13,9 +13,11 @@ emil:
       timeout: 15 mins
       delay: 3 secs
   authEnabled: false
-  authSecret: ''
   authAudience: ''
   authJwksUri: ''
+  adminRoleLabel: 'eaas-admin'
+  keycloakAdminUser: 'eaas-admin'
+  userRoleLabel: ''
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification

@@ -423,13 +423,13 @@ public class QemuBean extends EmulatorBean
 		runner.redirectStdErrToStdOut(false);
 		runner.setLogger(LOG);
 		try {
-			if (!runner.execute(false, false)) {
-				runner.printStdOut();
-				runner.printStdErr();
-				return false;
-			}
+			final DeprecatedProcessRunner.Result result = runner.executeWithResult()
+					.orElse(null);
 
-			return runner.getStdOutString()
+			if (result == null || !result.successful())
+				return false;
+
+			return result.stdout()
 					.contains("KVM acceleration can be used");
 		}
 		catch (IOException error) {

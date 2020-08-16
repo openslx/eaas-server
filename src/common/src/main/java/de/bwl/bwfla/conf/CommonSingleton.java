@@ -73,13 +73,26 @@ public class CommonSingleton
 		return true;
 	}
 
+	private static void validate(RunnerConf config)
+	{
+		final Path basedir = Paths.get(config.tmpBaseDir);
+		if (!Files.exists(basedir)) {
+			try {
+				Files.createDirectories(basedir);
+			}
+			catch (Exception error) {
+				throw new IllegalStateException("Creating base-directory for process-runners failed!", error);
+			}
+		}
+	}
+
 	synchronized public static void loadConf()
 	{
 		ConfigurationInjector inj = ConfigurationInjection.getConfigurationInjector();
 		inj.configure(CONF);
 		inj.configure(helpersConf);
 		inj.configure(runnerConf);
-		confValid = validate(CONF); 
-
+		CommonSingleton.validate(runnerConf);
+		confValid = validate(CONF);
 	}
 }

@@ -23,8 +23,17 @@ public class AuthenticatedUserProducer {
 
     protected static final Logger LOG = Logger.getLogger("Authentication");
 
-    // todo: allow override label
-    private final String adminRoleLabel = "eaas-admin";
+    @Inject
+    @Config(value = "emil.adminRoleLabel")
+    private String adminRoleLabel;
+
+    @Inject
+    @Config(value = "emil.userRoleLabel")
+    private String userRoleLabel;
+
+    @Inject
+    @Config(value = "emil.keycloakAdminUser")
+    private String keycloakAdminUser;
 
     public AuthenticatedUserProducer() {}
 
@@ -44,7 +53,8 @@ public class AuthenticatedUserProducer {
         Claim userIdC = jwt.getClaim("sub");
         if(!singleUserMode)
             authenticatedUser.setUserId(userIdC.asString());
-        authenticatedUser.setRole(Role.RESTRCITED);
+
+        authenticatedUser.setRole(Role.RESTRICTED);
 
         Claim usernameC = jwt.getClaim("preferred_username");
         if(usernameC != null)
@@ -52,20 +62,30 @@ public class AuthenticatedUserProducer {
             authenticatedUser.setUsername(usernameC.asString());
         }
 
-        Claim roles = jwt.getClaim("roles");
-        if(roles != null)
-        {
-            String[] roleList = roles.asArray(String.class);
-            if(roleList != null) {
-                for (String r : roleList) {
-                    if (r.equals(adminRoleLabel))
-                        authenticatedUser.setRole(Role.ADMIN);
-                }
-            }
-        }
-
         Claim nameC = jwt.getClaim("name");
         if(nameC != null)
             authenticatedUser.setName(nameC.asString());
+
+        if(authenticatedUser.getUsername() != null && authenticatedUser.getUsername().equals(keycloakAdminUser)) {
+            authenticatedUser.setRole(Role.ADMIN);
+        } else if(!adminRoleLabel.isEmpty()) {
+
+            // reset role if we require user roles
+            if(!userRoleLabel.isEmpty())
+                authenticatedUser.setRole(Role.PUBLIC);
+
+            Claim roles = jwt.getClaim("roles");
+            if (roles != null) {
+                String[] roleList = roles.asArray(String.class);
+                if (roleList != null) {
+                    for (String r : roleList) {
+                        if (r.equals(adminRoleLabel))
+                            authenticatedUser.setRole(Role.ADMIN);
+                        else if(!userRoleLabel.isEmpty() && r.equals(userRoleLabel))
+                            authenticatedUser.setRole(Role.RESTRICTED);
+                    }
+                }
+            }
+        }
     }
 }

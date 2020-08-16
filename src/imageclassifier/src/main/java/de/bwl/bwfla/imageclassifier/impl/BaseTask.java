@@ -333,11 +333,14 @@ public abstract class BaseTask extends BlockingTask<Object>
 			process.setCommand("disktype");
 			process.addArgument(isopath.toString());
 
-			process.execute(false, false);
-			String res = process.getStdOutString();
+			final DeprecatedProcessRunner.Result result = process.executeWithResult(false)
+					.orElse(null);
 
+			if (result == null || !result.successful())
+				throw new BWFLAException("Running disktype failed!");
+
+			final String res = result.stdout();
 			DiskType type = DiskType.fromJsonValue(res, DiskType.class);
-			process.cleanup();
 			log.warning(res);
 			return type;
 		}

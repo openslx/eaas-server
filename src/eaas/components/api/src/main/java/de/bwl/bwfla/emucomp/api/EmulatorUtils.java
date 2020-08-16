@@ -598,13 +598,8 @@ public class EmulatorUtils {
 		process.addArgument(dev);
 		process.addArgument(img.getAbsolutePath());
 		process.redirectStdErrToStdOut(false);
-		try {
-			if (!process.execute(false, false)) {
-				throw new BWFLAException(process.getCommandString() + " failed: " + process.getStdErrString());
-			}
-		} finally {
-			process.cleanup();
-		}
+		if (!process.execute())
+			throw new BWFLAException("Attaching loop-device failed!");
 	}
 
 	public static void connectLoop(String dev, File img, Logger log) throws BWFLAException, IOException {
@@ -614,13 +609,8 @@ public class EmulatorUtils {
 		process.addArgument(dev);
 		process.addArgument(img.getAbsolutePath());
 		process.redirectStdErrToStdOut(false);
-		try {
-			if (!process.execute(true, false)) {
-				throw new BWFLAException(process.getCommandString() + " failed: " + process.getStdErrString());
-			}
-		} finally {
-			process.cleanup();
-		}
+		if (!process.execute())
+			throw new BWFLAException("Attaching loop-device failed!");
 	}
 
 	public static void detachLoop(String dev) throws BWFLAException, IOException {

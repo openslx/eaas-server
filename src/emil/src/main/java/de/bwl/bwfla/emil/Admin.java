@@ -98,24 +98,26 @@ public class Admin extends EmilRest
 	}
 
 	@GET
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@Path("/user-info")
 	@Produces(MediaType.APPLICATION_JSON)
 	public UserInfoResponse getUserInfo()
 	{
-		if (authenticatedUser == null || authenticatedUser.getUserId() == null)
+		
+		if (authenticatedUser == null)
 			return new UserInfoResponse(new BWFLAException("no user context"));
 
 		UserInfoResponse resp = new UserInfoResponse();
 		resp.setUserId(authenticatedUser.getUserId());
 		resp.setUsername(authenticatedUser.getUsername());
 		resp.setFullName(authenticatedUser.getName());
-		resp.setRole(authenticatedUser.getRole().name());
+		if(authenticatedUser.getRole() != null)
+			resp.setRole(authenticatedUser.getRole().name());
 		return resp;
 	}
 
 	@GET
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@Path("/usage-log")
 	@Produces(MediaType.TEXT_PLAIN)
 	public Response getUsageLog()
@@ -127,7 +129,7 @@ public class Admin extends EmilRest
 	}
 
 	@DELETE
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@Path("/usage-log")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response resetUsageLog()
@@ -146,7 +148,7 @@ public class Admin extends EmilRest
 	}
 
 	@GET
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@Path("/apikey")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response getApiKey()
@@ -161,7 +163,7 @@ public class Admin extends EmilRest
 	}
 
 	@POST
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@Path("/metadata-export")
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response exportMetadata()

@@ -30,6 +30,8 @@ import org.apache.tamaya.inject.api.Config;
 @XmlAccessorType(XmlAccessType.PUBLIC_MEMBER)
 public class RunnerConf
 {
+	@Config("runners.tmpbasedir")
+	public String tmpBaseDir;
 	@Config("runners.tmpdirprefix")
 	public String tmpdirPrefix;
 	@Config("runners.stdoutfilename")

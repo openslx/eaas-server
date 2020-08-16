@@ -2,6 +2,7 @@ package de.bwl.bwfla.common.utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -40,12 +41,13 @@ public class DiskPartitionDescription {
 		process.addArguments("unit", "B", "print");
 		process.redirectStdErrToStdOut(false);
 
-		CSVReader reader = null;
-		try {
-			if (!process.execute(false, false))
-				throw new BWFLAException(process.getStdErrString());
+		final DeprecatedProcessRunner.Result result = process.executeWithResult()
+				.orElseThrow(() -> new BWFLAException("Running parted failed!"));
 
-			reader = new CSVReader(process.getStdOutReader(), ':');
+		if (!result.successful())
+			throw new BWFLAException(result.stderr());
+
+		try (CSVReader reader = new CSVReader(new StringReader(result.stdout()), ':')) {
 			String[] header = reader.readNext();
 			String[] diskinfo = reader.readNext();
 
@@ -61,11 +63,6 @@ public class DiskPartitionDescription {
 			while ((nextLine = reader.readNext()) != null) {
 				partitions.add(new DiskPartition(nextLine));
 			}
-		} finally {
-			if (reader != null)
-				reader.close();
-			if (process != null)
-				process.cleanup();
 		}
 	}
 	
