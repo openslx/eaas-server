@@ -125,7 +125,7 @@ public class EmilSoftwareData extends EmilRest {
 	 * @param swo EmilSoftwareObject as JSON string
 	 * @return JSON response (error) message
 	 */
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@POST
 	@Path("/saveSoftwareObject")
 	@Consumes(MediaType.APPLICATION_JSON)

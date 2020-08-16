@@ -5,6 +5,7 @@ helpers:
     hddhfsio: /usr/bin/hdd_io_hfs.sh
     floppyfat12create:  /usr/bin/floppy_create.sh
 runners:
+    tmpbasedir: /tmp/process-runners
     tmpdirprefix: eaas-pr-
     stdoutfilename: stdout.log
     stderrfilename: stderr.log

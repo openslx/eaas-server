@@ -33,10 +33,20 @@ chmod 644 ~/.ssh/known_hosts
 # Update repository with generated pages
 docdir="/tmp/eaas-api-docs"
 doctgt="${docdir}/public/${CI_COMMIT_REF_NAME}"
+eaasdir="$PWD"
 
 __info 'Cloning api-docs repository...'
 mkdir -p "${docdir}" && cd "${docdir}"
 git clone "${EAAS_API_DOCS_REPO_URL}" .
+
+__info 'Removing old api-docs pages...'
+branches="$(git -C "${eaasdir}" ls-remote --heads origin | cut -f 2)"
+for branch in $(ls public); do
+    if ! printf "%s" "${branches}" | grep -qFx "refs/heads/${branch}"; then
+        rm -r -f "${docdir}/public/${branch}"
+        echo "${branch}"
+    fi
+done
 
 __info 'Updating api-docs pages...'
 mkdir -p "${doctgt}"

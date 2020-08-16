@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
@@ -126,7 +127,10 @@ public class NodeManager {
                 throw (BWFLAException) error;
             else if (error.getCause() instanceof BWFLAException)
                 throw (BWFLAException) error.getCause();
-            else throw new BWFLAException("Allocating component failed!", error);
+            else {
+                log.log(Level.WARNING, "Allocating component failed!", error);
+                throw new BWFLAException("Allocating component failed!", error);
+            }
         }
     }
     

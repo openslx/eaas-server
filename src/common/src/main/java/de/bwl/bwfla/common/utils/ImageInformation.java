@@ -50,24 +50,18 @@ public class ImageInformation {
 
     public ImageInformation(String imageFile, Logger log) throws IOException, BWFLAException {
         DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-
         process.setCommand("qemu-img");
         process.addArguments("info");
         process.addArgument(imageFile);
         process.setLogger(log);
-        try {
-            if (!process.execute(false, false)) {
-                throw new BWFLAException("qemu-img info " + imageFile.toString() + " failed");
-            }
 
-            String output = process.getStdOutString();
+        final DeprecatedProcessRunner.Result result = process.executeWithResult()
+                .orElse(null);
 
-            parseOutput(output);
+        if (result == null || !result.successful())
+            throw new BWFLAException("qemu-img info " + imageFile.toString() + " failed");
 
-           //  throw new BWFLAException("qemu-img failed: " + process.getStdErrString() + " " + process.getStdOutString());
-        } finally {
-            process.cleanup();
-        }
+        this.parseOutput(result.stdout());
     }
 
     public boolean hasBackingFile() {

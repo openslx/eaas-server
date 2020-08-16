@@ -5,6 +5,7 @@
 
 package de.bwl.bwfla.imageclassifier.impl;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.imageclassifier.datatypes.Classifier;
 import de.bwl.bwfla.imageclassifier.datatypes.IdentificationOutputIndex;
@@ -22,17 +23,19 @@ public class SiegfriedClassifier extends Classifier<Siegfried.File> {
         log.info("running siegfried");
         try {
             DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-
             process.setCommand("sf");
             process.addArgument("-json");
                 process.addArgument(isopath.toAbsolutePath().toString());
 
-            process.execute(false, false);
-            String res = process.getStdOutString();
+            final DeprecatedProcessRunner.Result result = process.executeWithResult(false)
+                    .orElse(null);
+
+            if (result == null || !result.successful())
+                throw new BWFLAException("Running siegfried failed!");
+
+            final String res = result.stdout();
             // log.warning("{ \"siegfried\" : " + res + "}");
-            Siegfried sf = Siegfried.fromJsonValue("{ \"siegfried\" : " + res + "}", Siegfried.class);
-            process.cleanup();
-            return sf;
+            return Siegfried.fromJsonValue("{ \"siegfried\" : " + res + "}", Siegfried.class);
 
         }
         catch(Exception exception) {

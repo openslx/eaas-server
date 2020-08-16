@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.eaas.cluster.provider;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Iterator;
@@ -620,15 +619,15 @@ public class ResourceProvider implements IResourceProvider
 					processRunner.addEnvVariable("EAAS_CONFIG_PATH", CommonSingleton.configPath.toAbsolutePath().toString());
 					processRunner.redirectStdErrToStdOut(false);
 					processRunner.setLogger(log);
-					processRunner.execute(false, false);
 					try {
-						return processRunner.getStdOutString();
-					} catch (IOException e) {
-						e.printStackTrace();
-						return null;
+						final DeprecatedProcessRunner.Result result = processRunner.executeWithResult()
+								.orElse(null);
+
+						return (result != null && result.successful()) ? result.stdout() : null;
 					}
-					finally {
-						processRunner.cleanup();
+					catch (Exception error) {
+						log.log(Level.WARNING, "Generating cloud-config failed!", error);
+						return null;
 					}
 				});
 			}

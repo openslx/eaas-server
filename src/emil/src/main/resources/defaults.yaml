@@ -15,10 +15,14 @@ emil:
   authEnabled: false
   authAudience: ''
   authJwksUri: ''
+  adminRoleLabel: 'eaas-admin'
+  keycloakAdminUser: 'eaas-admin'
+  userRoleLabel: ''
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification
   max_session_duration: 0 sec
+  retain_session: 10
 
 ws:
   blobstore: http://eaas:8080/

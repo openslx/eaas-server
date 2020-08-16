@@ -91,7 +91,7 @@ public class HddHfsHelper extends ContainerHelper
 			DeprecatedProcessRunner runner = new DeprecatedProcessRunner(this.createScript.toString());
 			runner.addArgument(String.valueOf(size));
 			runner.addArgument(hddFile.toString());
-			success = runner.execute(true, true);
+			success = runner.execute();
 		}
 		catch(IOException e)
 		{
@@ -123,7 +123,7 @@ public class HddHfsHelper extends ContainerHelper
 			runner.addArgument("i");
 			runner.addArgument(container.getFile().getAbsolutePath());
 			runner.addArgument(file.getAbsolutePath());
-			if(!runner.execute(true, true))
+			if(!runner.execute())
 				return false;
 		}
 		
@@ -149,7 +149,7 @@ public class HddHfsHelper extends ContainerHelper
 			runner.addArgument("e");
 			runner.addArgument(container.getFile().getAbsolutePath());
 			runner.addArgument(result.getAbsolutePath());
-			success = runner.execute(true, true);
+			success = runner.execute();
         }
 		catch (IOException e)
 		{

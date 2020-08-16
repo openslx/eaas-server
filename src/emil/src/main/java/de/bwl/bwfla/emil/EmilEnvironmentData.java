@@ -82,7 +82,7 @@ public class EmilEnvironmentData
 				.getObjectDependencies(envId);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("/delete")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -92,7 +92,7 @@ public class EmilEnvironmentData
 				.delete(desc.getEnvId(), desc);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@GET
 	@Path("/getDatabaseContent")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -100,7 +100,7 @@ public class EmilEnvironmentData
 		return envrepo.getDatabaseContent(type, className);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("/createEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -110,7 +110,7 @@ public class EmilEnvironmentData
 				.create(envReq);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@GET
 	@Path("/getEnvironmentTemplates")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -128,7 +128,7 @@ public class EmilEnvironmentData
 				.list("oldStyle");
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@GET
 	@Path("/getPatches")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -171,7 +171,7 @@ public class EmilEnvironmentData
 	 * @param desc A JSON object containing description changes.
 	 * @return A JSON object containing the result message.
 	 */
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("/updateDescription")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -181,7 +181,7 @@ public class EmilEnvironmentData
 				.update(desc.getEnvId(), desc);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@GET
 	@Path("/defaultEnvironments")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -199,7 +199,7 @@ public class EmilEnvironmentData
 				.get(osId);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@GET
 	@Path("/setDefaultEnvironment")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -208,7 +208,7 @@ public class EmilEnvironmentData
 				.set(osId, envId);
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("forkRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -219,7 +219,7 @@ public class EmilEnvironmentData
 				.create();
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("revertRevision")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -239,7 +239,7 @@ public class EmilEnvironmentData
 		return envrepo.getOperatingSystemMetadata();
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -248,7 +248,7 @@ public class EmilEnvironmentData
 				.sync();
 	}
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("/importImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -267,7 +267,7 @@ public class EmilEnvironmentData
         return envrepo.getNameIndexes();
     }
 
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@POST
 	@Path("/replicateImage")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -279,7 +279,7 @@ public class EmilEnvironmentData
 
 	@POST
 	@Path("/export")
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public TaskStateResponse export(ExportRequest exportRequest) {
 		return envrepo.environments()
