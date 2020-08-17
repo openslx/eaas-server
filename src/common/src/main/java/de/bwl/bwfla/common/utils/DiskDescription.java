@@ -312,6 +312,11 @@ public class DiskDescription
 			return size;
 		}
 
+		public boolean hasFileSystemType()
+		{
+			return fstype != null;
+		}
+
 		public String getFileSystemType()
 		{
 			return fstype;
