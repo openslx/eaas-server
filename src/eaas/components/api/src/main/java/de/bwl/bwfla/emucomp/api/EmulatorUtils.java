@@ -341,7 +341,7 @@ public class EmulatorUtils {
 	}
 
 	public static Path xmount(String imagePath, Path mountpoint, XmountOptions xmountOpts, Logger log)
-			throws IllegalArgumentException, IOException, BWFLAException {
+			throws IllegalArgumentException, BWFLAException {
 		if (xmountOpts == null)
 			xmountOpts = new XmountOptions();
 

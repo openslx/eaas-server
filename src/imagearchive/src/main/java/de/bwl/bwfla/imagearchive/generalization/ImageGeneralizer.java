@@ -13,7 +13,6 @@ import java.io.InputStream;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -32,12 +31,12 @@ public class ImageGeneralizer {
      * @throws IOException
      */
     public static void  applyScriptIfCompatible(File imgFile, GeneralizationPatch generalization, String emulatorArchiveprefix) throws BWFLAException, IOException {
-        ImageMounter image = null;
-        try {
-            image = new ImageMounter(imgFile.toPath());
-            image.mountDD();
+        try (final ImageMounter mounter = new ImageMounter(log)) {
+            final Path workdir = ImageMounter.createWorkingDirectory();
+            mounter.addWorkingDirectory(workdir);
 
-            List<DiskDescription.Partition> partitions = findValidPartitions(image.getDdFile(), generalization);
+            ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve("raw"));
+            List<DiskDescription.Partition> partitions = findValidPartitions(rawmnt.getTargetImage(), generalization);
             String fs = generalization.getImageGeneralization().getPrecondition().getFileSystem();
 
             if (partitions == null) {
@@ -46,10 +45,11 @@ public class ImageGeneralizer {
             }
 
             for (DiskDescription.Partition partition : partitions) {
+                final FileSystemType fstype = FileSystemType.fromString(partition.getFileSystemType());
                 File patch = null;
                 try {
-                    image.remountDDWithOffset(partition.getStartOffset(), partition.getSize());
-                    image.mountFileSystem(FileSystemType.fromString(partition.getFileSystemType()));
+                    rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
+                    ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fstype);
 
                     patch  = new File("/tmp/patch-" + UUID.randomUUID());
 
@@ -59,26 +59,21 @@ public class ImageGeneralizer {
                     if (!patch.setExecutable(true)) {
                         throw new BWFLAException("failed to make patch executable!");
                     }
-                    File[] fsList = image.getFsDir().toFile().listFiles();
+                    File[] fsList = fsmnt.getMountPoint().toFile().listFiles();
                     if (fsList == null)
                         throw new BWFLAException("mount failed: mounted dir is null");
 
-                    if (isScriptCompatible(image.getFsDir().toFile(), generalization)) {
-                        patchPartition(image.getFsDir().toFile(), patch.toString());
+                    if (isScriptCompatible(fsmnt.getMountPoint().toFile(), generalization)) {
+                        patchPartition(fsmnt.getMountPoint().toFile(), patch.toString());
                         break;
                     } else {
-                        image.completeUnmount();
+                        fsmnt.unmount(false);
                     }
                     log.warning("Script is not compatible with partition: \n" + " Flags: " + partition.getFlags() + " PartitionName " + partition.getPartitionName());
                 } finally {
                    if(patch != null && patch.exists()) patch.delete();
                 }
             }
-            image.completeUnmount();
-            image = null;
-        } finally {
-            if (image != null)
-                image.completeUnmount();
         }
     }
 
