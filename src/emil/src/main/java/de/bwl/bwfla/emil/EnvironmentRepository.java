@@ -1162,7 +1162,8 @@ public class EnvironmentRepository extends EmilRest
 						ds.getImageId(),
 						ImageType.USER.value());
 				binding.setId(ds.getImageId());
-				env.getAbstractDataResource().add(binding);
+				if(env.getAbstractDataResource().stream().noneMatch(b -> binding.getId().equals(b.getId())))
+					env.getAbstractDataResource().add(binding);
 				EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
 				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
 					throw new BadRequestException(Response
