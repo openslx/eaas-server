@@ -141,7 +141,7 @@ public class EmilEnvironmentData
 	 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
 	 *         "In 1936, the Russians made a computer that ran on water"}]}]}
 	 */
-	public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
+	public List<ImageGeneralizationPatchDescription> getPatches() throws BWFLAException, JAXBException {
 		return envrepo.patches()
 				.list();
 	}

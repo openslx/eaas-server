@@ -32,6 +32,8 @@ import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emil.datatypes.EnvironmentDeleteRequest;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
+import de.bwl.bwfla.emil.datatypes.ImageGeneralizationPatchRequest;
+import de.bwl.bwfla.emil.datatypes.ImageGeneralizationPatchResponse;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
@@ -61,14 +63,11 @@ import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.stream.JsonGenerator;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -954,24 +953,42 @@ public class EnvironmentRepository extends EmilRest
 
 	public class Patches
 	{
+		/** List all available image-generalization patches. */
 		@GET
 		@Secured(roles={Role.RESTRCITED})
 		@Produces(MediaType.APPLICATION_JSON)
-		/**
-		 *
-		 * @return
-		 *
-		 * 		{"status": "0", "systems": [{"id": "abc", "label": "Windows XP
-		 *         SP1", "native_config": "test", "properties": [{"name":
-		 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
-		 *         "In 1936, the Russians made a computer that ran on water"}]}]}
-		 */
-		public List<GeneralizationPatch> list() throws BWFLAException, JAXBException
+		public List<ImageGeneralizationPatchDescription> list() throws BWFLAException
 		{
-			LOG.info("Listing environment patches...");
+			LOG.info("Listing image-generalization patches...");
 
 			// TODO: fix response in case of errors!
-			return envdb.getPatches();
+			return envdb.getImageGeneralizationPatches();
+		}
+
+		/** Try to apply a patch to the specified image. */
+		@POST
+		@Path("/{patchId}")
+		@Secured(roles={Role.RESTRCITED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		@Produces(MediaType.APPLICATION_JSON)
+		public Response apply(@PathParam("patchId") String patchId, ImageGeneralizationPatchRequest request)
+		{
+			LOG.info("Applying image-generalization patch...");
+			try {
+				final String newImageId = (request.getArchive() != null) ?
+						envdb.createPatchedImage(request.getArchive(), request.getImageId(), request.getImageType(), patchId)
+						: envdb.createPatchedImage(request.getImageId(), request.getImageType(), patchId);
+
+				final ImageGeneralizationPatchResponse response = new ImageGeneralizationPatchResponse();
+				response.setStatus("0");
+				response.setImageId(newImageId);
+				return Response.ok()
+						.entity(response)
+						.build();
+			}
+			catch (Throwable error) {
+				return EnvironmentRepository.internalErrorResponse(error);
+			}
 		}
 	}
 
