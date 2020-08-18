@@ -975,11 +975,33 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Applying image-generalization patch...");
 			try {
+				ImageNameIndex index = envdb.getImagesIndex();
+				ImageNameIndex.Entries.Entry originalEntry = index.getEntries()
+						.getEntry()
+						.stream()
+						.filter(e -> e.getValue().getName().equals(request.getImageId()))
+						.findAny()
+						.get();
+
+				ImageMetadata originalMetadata = originalEntry.getValue();
+				LOG.severe("label " + originalMetadata.getLabel());
+
 				final String newImageId = (request.getArchive() != null) ?
 						envdb.createPatchedImage(request.getArchive(), request.getImageId(), request.getImageType(), patchId)
 						: envdb.createPatchedImage(request.getImageId(), request.getImageType(), patchId);
 
 				final ImageGeneralizationPatchResponse response = new ImageGeneralizationPatchResponse();
+
+				ImageMetadata entry = new ImageMetadata();
+				entry.setName(newImageId);
+				entry.setLabel(originalMetadata.getLabel() + " (generalized)");
+				ImageDescription description = new ImageDescription();
+				description.setType(request.getImageType().value());
+				description.setId(newImageId);
+				entry.setImage(description);
+
+				envdb.addNameIndexesEntry(request.getArchive(), entry, null);
+
 				response.setStatus("0");
 				response.setImageId(newImageId);
 				return Response.ok()
