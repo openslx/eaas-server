@@ -91,6 +91,8 @@ public class ImageGeneralizationPatch
 				}
 
 				log.info("Partition " + partition.getIndex() + " does not match selectors, skip");
+
+				fsmnt.unmount(false);
 			}
 
 			throw new BWFLAException("Patching image failed! No matching partition was found!");
