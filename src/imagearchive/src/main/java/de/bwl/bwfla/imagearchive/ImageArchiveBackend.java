@@ -125,9 +125,6 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 				if (t.equals(ImageType.template))
 					continue;
 
-				if (t.equals(ImageType.patches))
-					continue;
-
 				if (t.equals(ImageType.tmp))
 					continue;
 

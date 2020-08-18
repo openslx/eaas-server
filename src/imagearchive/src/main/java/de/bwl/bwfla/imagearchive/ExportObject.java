@@ -69,10 +69,6 @@ public class ExportObject extends HttpExportServlet
 
 		// first path element without last letter ("/")
 		String imageArchiveName = pathElements[1].substring(0, pathElements[1].length() - 1);;
-
-		if (type.equals("patch/"))
-			type = "patches/patchesFiles/";
-
 		File metaDataFile = new File(getImageArchiveBackend(imageArchiveName).getConfig().getMetaDataPath() +"/"+ type + id);
 
 		log.warning("metaDataPath: " + metaDataFile.toPath());

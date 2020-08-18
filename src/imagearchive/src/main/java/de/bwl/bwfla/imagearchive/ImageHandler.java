@@ -998,7 +998,6 @@ public class ImageHandler
 
 			copyTemplates(metadata, "templates", ImageType.template.name());
 			copyEnvironments(metadata, ImageType.base);
-			copyTemplates(metadata, ImageType.patches.name(), ImageType.patches.name());
 			log.info("completing unmount");
 		}
 	}
