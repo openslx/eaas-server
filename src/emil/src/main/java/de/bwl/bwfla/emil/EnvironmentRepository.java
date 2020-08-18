@@ -968,7 +968,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Try to apply a patch to the specified image. */
 		@POST
 		@Path("/{patchId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response apply(@PathParam("patchId") String patchId, ImageGeneralizationPatchRequest request)
