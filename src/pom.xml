@@ -44,7 +44,6 @@
 		<resteasy.version>3.11.0.Final</resteasy.version>
 		<ejb3.version>2.3.0.Final</ejb3.version>
 		<cxf.version>3.3.6</cxf.version>
-		<opencsv.version>3.9</opencsv.version>
 
 		<!-- version definitions for maven plugins -->
 		<maven.plugin.surefire.version>3.0.0-M4</maven.plugin.surefire.version>
@@ -500,11 +499,6 @@
 				<groupId>com.webcohesion.enunciate</groupId>
 				<artifactId>enunciate-core-annotations</artifactId>
 				<version>${enunciate.version}</version>
-			</dependency>
-			<dependency>
-				<groupId>com.opencsv</groupId>
-				<artifactId>opencsv</artifactId>
-				<version>${opencsv.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.auth0</groupId>
