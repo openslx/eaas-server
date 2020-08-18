@@ -285,7 +285,16 @@ public class ClassificationTask extends BlockingTask<Object>
                 }
                 suggested.add(os);
             }
-            response.setSuggested(suggested);
+            if(defaultList.isEmpty())
+            {
+                String envId = envHelper.getDefaultEnvironment(null);
+                if(envId != null)
+                {
+                    EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(envId, request.userCtx);
+                    EnvironmentInfo infoL = new EnvironmentInfo(emilEnv.getEnvId(), emilEnv.getTitle() + " (D)");
+                    defaultList.add(infoL);
+                }
+            }
         }
         catch (BWFLAException e)
         {

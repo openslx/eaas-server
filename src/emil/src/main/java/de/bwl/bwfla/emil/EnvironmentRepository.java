@@ -168,7 +168,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/db-content")
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className)
 	{
@@ -188,7 +188,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/db-migration")
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response migrateDb()
 	{
@@ -372,7 +372,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** Create a new environment */
 		@POST
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		@Consumes(MediaType.APPLICATION_JSON)
 		public Response create(EnvironmentCreateRequest envReq)
@@ -501,7 +501,7 @@ public class EnvironmentRepository extends EmilRest
 		 */
 		@PATCH
 		@Path("/{envId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response update(@PathParam("envId") String envId, UpdateEnvironmentDescriptionRequest desc)
@@ -636,7 +636,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Delete a specific environment */
 		@DELETE
 		@Path("/{envId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		@Consumes(MediaType.APPLICATION_JSON)
 		public Response delete(@PathParam("envId") String envId, EnvironmentDeleteRequest desc)
@@ -670,7 +670,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Export the specified environment. */
 		@POST
 		@Path("/{envId}/export")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse export(@PathParam("envId") String envId, ExportRequest exportRequest)
 		{
@@ -736,7 +736,7 @@ public class EnvironmentRepository extends EmilRest
 	{
 		/** List all default environments */
 		@GET
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Map<String, String> list()
 		{
@@ -776,7 +776,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Set default environment for a specific operating system ID */
 		@PATCH
 		@Path("/{osId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public EmilResponseType set(@PathParam("osId") String osId, @QueryParam("envId") String envId)
 		{
@@ -804,7 +804,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** Create a new revision  */
 		@POST
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response create()
@@ -836,7 +836,7 @@ public class EnvironmentRepository extends EmilRest
 
 		@POST
 		@Path("/{revId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public synchronized Response revert(@PathParam("revId") String revId)
@@ -881,7 +881,7 @@ public class EnvironmentRepository extends EmilRest
 	public class Templates
 	{
 		@GET
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		/**
 		 *
@@ -955,7 +955,7 @@ public class EnvironmentRepository extends EmilRest
 	{
 		/** List all available image-generalization patches. */
 		@GET
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public List<ImageGeneralizationPatchDescription> list() throws BWFLAException
 		{
@@ -1014,7 +1014,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Synchronize internal database with the image archives. */
 		@POST
 		@Path("/sync")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response sync()
 		{
@@ -1028,7 +1028,7 @@ public class EnvironmentRepository extends EmilRest
 		/** create new image */
 		@POST
 		@Path("/create-image")
-		@Secured(roles = {Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse createImage(ImageCreateRequest imageReq)
@@ -1041,7 +1041,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Import an image for new environment */
 		@POST
 		@Path("/import-image")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importImage(ImportImageRequest imageReq)
@@ -1094,7 +1094,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Replicate an image from remote archives */
 		@POST
 		@Path("/replicate-image")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public ReplicateImagesResponse replicateImage(ReplicateImagesRequest replicateImagesRequest)
@@ -1181,7 +1181,8 @@ public class EnvironmentRepository extends EmilRest
 						ds.getImageId(),
 						ImageType.USER.value());
 				binding.setId(ds.getImageId());
-				env.getAbstractDataResource().add(binding);
+				if(env.getAbstractDataResource().stream().noneMatch(b -> binding.getId().equals(b.getId())))
+					env.getAbstractDataResource().add(binding);
 				EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
 				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
 					throw new BadRequestException(Response

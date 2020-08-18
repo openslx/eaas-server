@@ -341,6 +341,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 
 	public String getDefaultEnvironment(String osId)
 	{
+		if(osId == null)
+			osId = "default";
 		synchronized (defaultEnvironments) {
 			return defaultEnvironments.getProperty(osId);
 		}
@@ -369,6 +371,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 	public synchronized void setDefaultEnvironment(String osId, String envId) throws BWFLAException
 	{
 		synchronized (defaultEnvironments) {
+			if(osId == null) // default for all OS
+				osId = "default";
 			defaultEnvironments.setProperty(osId, envId);
 			if (config.getDefaultEnvironmentsPath() == null)
 				return;

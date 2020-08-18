@@ -389,7 +389,8 @@ public class EmulationEnvironmentHelper {
 	}
 
 	public static int addObjectArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc, int index) throws BWFLAException {
-		env.getAbstractDataResource().add(binding);
+		if(!env.getAbstractDataResource().stream().filter(b -> b.getId().equals(binding.getId())).findAny().isPresent())
+			env.getAbstractDataResource().add(binding);
 		FileCollectionEntry fce = fc.getDefaultEntry();
 		return EmulationEnvironmentHelper.registerDrive(env, binding.getId(), fce.getId(), index);
 	}
