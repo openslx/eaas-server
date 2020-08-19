@@ -1,4 +1,5 @@
 imagearchive:
+    generalization_patches_dir: /home/bwfla/server-data/image-generalization-patches
     default_backend_name: default
     backends:
         defaults:

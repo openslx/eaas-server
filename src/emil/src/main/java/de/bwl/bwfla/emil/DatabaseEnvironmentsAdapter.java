@@ -52,8 +52,12 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.toString();
     }
 
-    public ImageArchiveBinding generalizedImport(String archive, String id, ImageType imageType, String patchId) throws BWFLAException {
-        return environmentsAdapter.generalizedImport(archive, id, imageType, patchId);
+    public String createPatchedImage(String id, ImageType imageType, String patchId) throws BWFLAException {
+        return environmentsAdapter.createPatchedImage(id, imageType, patchId);
+    }
+
+    public String createPatchedImage(String archive, String id, ImageType imageType, String patchId) throws BWFLAException {
+        return environmentsAdapter.createPatchedImage(archive, id, imageType, patchId);
     }
 
     public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
@@ -130,8 +134,8 @@ public class DatabaseEnvironmentsAdapter {
       return environmentsAdapter.getTemplates();
     }
 
-    public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
-      return environmentsAdapter.getPatches();
+    public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches() throws BWFLAException {
+        return environmentsAdapter.getImageGeneralizationPatches();
     }
 
     public Environment getEnvironmentById(String id) throws BWFLAException {

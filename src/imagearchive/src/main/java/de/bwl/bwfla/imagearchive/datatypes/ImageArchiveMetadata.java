@@ -8,7 +8,7 @@ public class ImageArchiveMetadata {
 
     @XmlEnum
     public enum ImageType {
-        base, object, user, derivate, system, template, tmp, sessions, roms, containers, checkpoints, patches, runtime
+        base, object, user, derivate, system, template, tmp, sessions, roms, containers, checkpoints, runtime
     }
 
     @XmlElement

@@ -34,6 +34,7 @@ import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.tasks.CreateImageTask;
 
 import javax.activation.DataHandler;
@@ -122,9 +123,6 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		{
 			for (ImageType t : ImageType.values()) {
 				if (t.equals(ImageType.template))
-					continue;
-
-				if (t.equals(ImageType.patches))
 					continue;
 
 				if (t.equals(ImageType.tmp))
@@ -220,13 +218,14 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String imageId, ImageType type, String patchId, String emulatorArchiveprefix) throws BWFLAException
+	public String createPatchedImage(String imageId, ImageType type, ImageGeneralizationPatch patch) throws BWFLAException
 	{
+		if (patch == null)
+			throw new BWFLAException("Requested patch was not found!");
 
-		log.warning("emulatorArchiveprefix: " + emulatorArchiveprefix);
 		try {
-			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-			return imageHandler.createPatchedCow(imageId, cowId, patchId, type.name(), emulatorArchiveprefix);
+			final String cowId = UUID.randomUUID().toString();
+			return imageHandler.createPatchedImage(imageId, cowId, type.name(), patch);
 		}
 		catch (IOException e) {
 			throw new BWFLAException(e);

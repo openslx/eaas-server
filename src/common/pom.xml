@@ -76,10 +76,6 @@
 			<artifactId>jakarta.xml.ws-api</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.opencsv</groupId>
-			<artifactId>opencsv</artifactId>
-		</dependency>
-		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>eaas-configuration</artifactId>
 		</dependency>
