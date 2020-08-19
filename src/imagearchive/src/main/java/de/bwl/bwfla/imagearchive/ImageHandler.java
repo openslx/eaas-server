@@ -18,7 +18,6 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
-import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
@@ -33,13 +32,12 @@ import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
-import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizer;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.tasks.ImportImageTask;
 import org.apache.commons.io.FileUtils;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
-import org.apache.commons.io.IOUtils;
 
 
 public class ImageHandler
@@ -979,36 +977,32 @@ public class ImageHandler
 		if(!imgFile.exists())
 			throw new BWFLAException("can't find emulator image " + imgFile);
 
-		ImageMounter image = new ImageMounter(imgFile.toPath());
+		try (final ImageMounter mounter = new ImageMounter(log)) {
+			final Path workdir = ImageMounter.createWorkingDirectory();
+			mounter.addWorkingDirectory(workdir);
 
-		image.mountDD();
-		// todo: read from metadata
-		image.mountFileSystem(FileSystemType.EXT4);
+			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve("raw"));
+			// todo: read from metadata
+			ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4);
 
-		Path fsDir = image.getFsDir();
-		if(!Files.exists(fsDir))
-		{
-			image.completeUnmount();
-			throw new BWFLAException("can't find filesystem");
+			Path fsDir = fsmnt.getMountPoint();
+			if (!Files.exists(fsDir)) {
+				throw new BWFLAException("can't find filesystem");
+			}
+
+			Path metadata = fsDir.resolve("metadata");
+			if (!Files.exists(metadata)) {
+				log.severe("no metadata directory found");
+				return;
+			}
+
+			copyTemplates(metadata, "templates", ImageType.template.name());
+			copyEnvironments(metadata, ImageType.base);
+			log.info("completing unmount");
 		}
-
-		Path metadata = fsDir.resolve("metadata");
-		if(!Files.exists(metadata))
-		{
-			image.completeUnmount();
-			log.severe("no metadata directory found");
-			return;
-		}
-
-		copyTemplates(metadata, image, "templates", ImageType.template.name());
-		copyEnvironments(metadata, image, ImageType.base );
-		copyTemplates(metadata, image, ImageType.patches.name(), ImageType.patches.name());
-		log.severe("completing unmount");
-		image.completeUnmount();
-
 	}
 
-	private void copyEnvironments(Path metadata, ImageMounter image, ImageType t) throws BWFLAException {
+	private void copyEnvironments(Path metadata, ImageType t) throws BWFLAException {
 		Path environments = metadata.resolve("environments");
 		if(Files.exists(environments)) {
 			Path dst = null;
@@ -1028,7 +1022,6 @@ public class ImageHandler
 				}
 			} catch (IOException e) {
 				log.log(Level.SEVERE, "Failed to copy environments", e);
-				image.completeUnmount();
 				throw new BWFLAException(e);
 			} finally {
 				if (dst != null) {
@@ -1050,7 +1043,7 @@ public class ImageHandler
 		}
 	}
 
-	private void copyTemplates(Path metadata, ImageMounter image,  String metadataType, String metadataTarget) throws BWFLAException {
+	private void copyTemplates(Path metadata, String metadataType, String metadataTarget) throws BWFLAException {
 		Path environments = metadata.resolve(metadataType);
 		if(Files.exists(environments))
 		{
@@ -1059,7 +1052,6 @@ public class ImageHandler
 				FileUtils.copyDirectory(environments.toFile(), dst);
 			} catch (IOException e) {
 				log.log(Level.SEVERE, "Failed to copy templates", e);
-				image.completeUnmount();
 				throw new BWFLAException(e);
 			}
 		}
@@ -1121,32 +1113,15 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected String createPatchedCow(String parentId, String cowId, String patchId, String type, String emulatorArchiveprefix) throws IOException, BWFLAException {
-
-		if (parentId == null) {
-			throw new BWFLAException("imageID is null, aborting");
-		}
-
-		// check if template requires generalization
-		GeneralizationPatch generalization = null;
-		try {
-
-			InputStream is =  EaasFileUtils.fromUrlToInputSteam(new URL(emulatorArchiveprefix + "/" +  ImageType.patches + "/" + patchId), "GET", "metadata","true");
-			String generalizationStr = IOUtils.toString(is, StandardCharsets.UTF_8);
-
-			generalization = GeneralizationPatch.fromValue(generalizationStr);
-		} catch (IOException | JAXBException e) {
-			e.printStackTrace();
-			throw new BWFLAException(e);
-		}
-
-		if (generalization.getImageGeneralization() == null || generalization.getImageGeneralization().getModificationScript() == null)
-			return parentId;
+	protected String createPatchedImage(String parentId, String cowId, String type, ImageGeneralizationPatch patch)
+			throws IOException, BWFLAException
+	{
+		if (parentId == null)
+			throw new BWFLAException("Invalid image's ID!");
 
 		String newBackingFile = getArchivePrefix() + parentId;
 		File target = getImageTargetPath(type);
-		File destImgFile = new File(target, cowId);
-
+		Path destImgFile = target.toPath().resolve(cowId);
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(newBackingFile);
 		if(MachineTokenProvider.getAuthenticationProxy() != null)
@@ -1154,9 +1129,17 @@ public class ImageHandler
 		else
 			options.setProxyUrl(MachineTokenProvider.getProxy());
 
-		EmulatorUtils.createCowFile(destImgFile.toPath(), options);
-		ImageGeneralizer.applyScriptIfCompatible(destImgFile, generalization, emulatorArchiveprefix);
-		return cowId;
+		try {
+			log.info("Preparing image '" + parentId + "' for patching with patch '" + patch.getName() + "'...");
+			EmulatorUtils.createCowFile(destImgFile, options);
+			patch.applyto(destImgFile, log);
+			return cowId;
+		}
+		catch (BWFLAException error) {
+			// Remove created but unpatched image
+			Files.deleteIfExists(destImgFile);
+			throw error;
+		}
 	}
 
 	public void createOrUpdateHandle(String imageId) throws BWFLAException

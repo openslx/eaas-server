@@ -17,44 +17,59 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emucomp.api;
+package de.bwl.bwfla.emil.datatypes;
+
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "imageGeneralization", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
-        "modificationScript",
-        "precondition",
-})
-
-public class ImageGeneralization {
-
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
-    private String modificationScript;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
-    private Precondition precondition;
-
-    public Precondition getPrecondition() {
-        return precondition;
-    }
-
-    public void setPrecondition(Precondition precondition) {
-        this.precondition = precondition;
-    }
+import de.bwl.bwfla.api.imagearchive.ImageType;
 
 
-    public void setModificationScript(String modificationScript) {
-        this.modificationScript = modificationScript;
-    }
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.NONE)
+public class ImageGeneralizationPatchRequest extends JaxbType
+{
+	@XmlElement
+	private String archive;
+
+	@XmlElement
+	private String imageId;
+
+	@XmlElement
+	private ImageType imageType;
 
 
-    public String getModificationScript() {
+	public void setImageId(String imageId)
+	{
+		this.imageId = imageId;
+	}
 
-        return modificationScript;
-    }
+	public String getImageId()
+	{
+		return imageId;
+	}
 
+	public void setArchive(String archive)
+	{
+		this.archive = archive;
+	}
 
+	public String getArchive()
+	{
+		return archive;
+	}
+
+	public void setImageType(ImageType imageType)
+	{
+		this.imageType = imageType;
+	}
+
+	public ImageType getImageType()
+	{
+		return imageType;
+	}
 }

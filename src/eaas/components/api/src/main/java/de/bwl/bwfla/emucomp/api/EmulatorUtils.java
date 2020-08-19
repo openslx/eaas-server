@@ -341,7 +341,7 @@ public class EmulatorUtils {
 	}
 
 	public static Path xmount(String imagePath, Path mountpoint, XmountOptions xmountOpts, Logger log)
-			throws IllegalArgumentException, IOException, BWFLAException {
+			throws IllegalArgumentException, BWFLAException {
 		if (xmountOpts == null)
 			xmountOpts = new XmountOptions();
 
@@ -485,9 +485,10 @@ public class EmulatorUtils {
 	}
 
 	public static void ntfsMount(Path src, Path dst, String options, Logger log) throws BWFLAException {
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-		process.setLogger(log);
-		process.setCommand("ntfs-3g");
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo")
+				.addArgument("--non-interactive")
+				.addArgument("ntfs-3g")
+				.setLogger(log);
 
 		if (options != null)
 			process.addArgument(options);
@@ -561,9 +562,13 @@ public class EmulatorUtils {
 
 
 	public static void convertImage(Path inFile, Path outFile, ImageInformation.QemuImageFormat fmt, Logger log) throws BWFLAException {
+		// NOTE: our patched qemu-img is relatively old and seems to silently produce
+		//       images with incorrect size when applied to some newer VHD files!
+		//       As a workaround, use upstream qemu-img just for converting.
+
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
-		process.setCommand("qemu-img");
+		process.setCommand("/eaas/workarounds/qemu-utils/usr/bin/qemu-img");
 		process.addArguments("convert");
 		process.addArguments("-O", fmt.toString());
 		process.addArgument(inFile.toString());
@@ -631,7 +636,11 @@ public class EmulatorUtils {
 		{
 			boolean failed = true;
 			for (int i = 0; i < 20; ++i) {
-				process.setCommand("fusermount");
+				// Since we may have mounted with sudo,
+				// unmount with sudo too (see ntfs-3g)!
+				process.setCommand("sudo");
+				process.addArgument("--non-interactive");
+				process.addArgument("fusermount");
 				process.addArguments("-u");
 				process.addArgument(mntpoint.toString());
 				if (process.execute()) {

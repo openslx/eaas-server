@@ -30,3 +30,6 @@ handle:
         private_key_file: /home/bwfla/server-data/hdl-keys/admpriv.bin
         handle: 0.NA/11270
         index: 300
+
+imagemounter:
+    basedir: /tmp-storage/image-mounts
