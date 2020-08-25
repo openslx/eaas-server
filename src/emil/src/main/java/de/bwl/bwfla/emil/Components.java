@@ -310,9 +310,7 @@ public class Components {
             result = this.createNodeTcpComponent((NodeTcpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SlirpComponentRequest.class)) {
             result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(SocksComponentRequest.class)) {
-            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
-        }  else {
+        } else {
             throw new BadRequestException("Invalid component request");
         }
 
@@ -423,33 +421,6 @@ public class Components {
         }
     }
 
-    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
-            throws WebApplicationException
-    {
-        try {
-            VdeSocksConfiguration socksConfig = new VdeSocksConfiguration();
-            
-            if (desc.getHwAddress() != null && !desc.getHwAddress().isEmpty()) {
-                socksConfig.setHwAddress(desc.getHwAddress());
-            }
-            if (desc.getIp4Address() != null && !desc.getIp4Address().isEmpty()) {
-                socksConfig.setIp4Address(desc.getIp4Address());
-            }
-            if (desc.getNetmask() != null && desc.getNetmask() != 0) {
-                socksConfig.setNetmask(desc.getNetmask());
-            }
-            String socksId = eaasClient.getEaasWSPort(eaasGw).createSession(socksConfig.value(false));
-            cleanups.push("release-component/" + socksId, () -> eaas.releaseSession(socksId));
-            return new ComponentResponse(socksId);
-        }
-        catch (Exception error) {
-            // Trigger cleanup tasks
-            cleanups.execute();
-
-            // Return error to the client...
-            throw Components.newInternalError(error);
-        }
-    }
 
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
