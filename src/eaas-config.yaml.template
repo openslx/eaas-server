@@ -12,7 +12,6 @@ commonconf:
 imagearchive:
     basepath: /home/bwfla/image-archive
     httpprefix: http://132.230.4.15
-    ndbprefix:  nbd:132.230.4.15:10809:exportname=
 imageclassifier:
     fitshome: /home/rigby/bw-fla/ext/fits
     verbosemode:  false
