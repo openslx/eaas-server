@@ -283,7 +283,6 @@
 		<module>softwarearchive/softwarearchive-client</module>
 		<module>eaas</module>
 		<module>emil</module>
-		<!-- <module>shibboleth</module> -->
 		<module>preservica-client</module>
 		<module>metadata-oaipmh</module>
 		<module>metadata-repository</module>
@@ -599,14 +598,6 @@
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>
-			<!--
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>shibboleth</artifactId>
-				<version>${project.version}</version>
-				<type>ejb</type>
-			</dependency>
-			-->
 			<dependency>
 				<groupId>de.bwl.bwfla.eaas</groupId>
 				<artifactId>eaas-cluster-impl</artifactId>
