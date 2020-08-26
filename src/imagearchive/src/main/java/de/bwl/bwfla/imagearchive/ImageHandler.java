@@ -59,10 +59,6 @@ public class ImageHandler
 	/** Map containing lock-objects for images with in-progress operations */
 	private final ConcurrentHashMap<String, ImageLock> locks;
 
-	enum ExportType {
-		NBD, HTTP
-	}
-
 	public ImageHandler(ImageArchiveBackendConfig config, ImageMetadataCache cache, Logger log) throws BWFLAException {
 		this.log = log;
 		this.iaConfig = config;
