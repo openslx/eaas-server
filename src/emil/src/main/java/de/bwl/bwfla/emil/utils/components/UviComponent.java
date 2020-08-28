@@ -50,7 +50,7 @@ public class UviComponent
     private AutoRunScripts scripts = null;
 
 
-    private String createAutoRunScript(AutoRunScripts.Template template, String filename)
+    private byte[] createAutoRunScript(AutoRunScripts.Template template, String filename)
             throws BWFLAException
     {
         final Map<String, Object> context = new HashMap<>();
@@ -81,10 +81,10 @@ public class UviComponent
             throw new BWFLAException("No autorun-script template found for " + osId + "+" + mtype.name() + "!");
 
         log.info("Generating autorun-script for " + osId + "+" + mtype.name() + "...");
-        final String script = this.createAutoRunScript(template, request.getUviFilename());
+        final byte[] script = this.createAutoRunScript(template, request.getUviFilename());
 
         medium.getInlineFiles()
-                .add(new ComponentWithExternalFilesRequest.FileData("copy", script.getBytes(), template.getFileName()));
+                .add(new ComponentWithExternalFilesRequest.FileData("copy", script, template.getFileName()));
     }
 
     private void addExternalFile(ComponentWithExternalFilesRequest.InputMedium medium, String url, String name)

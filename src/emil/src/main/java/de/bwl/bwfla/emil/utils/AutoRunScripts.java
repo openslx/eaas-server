@@ -36,6 +36,8 @@ import javax.enterprise.context.ApplicationScoped;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.io.Writer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -71,7 +73,8 @@ public class AutoRunScripts
 	public interface Template
 	{
 		Template evaluate(Writer writer, Map<String, Object> context) throws IOException;
-		String evaluate(Map<String, Object> context) throws IOException;
+		byte[] evaluate(Map<String, Object> context) throws IOException;
+		Charset getTargetEncoding();
 		String getFileName();
 	}
 
@@ -117,7 +120,8 @@ public class AutoRunScripts
 			for (Path path : files) {
 				log.info("Loading: " + path.toString());
 				try {
-					final CompiledTemplate template = mapper.readValue(path.toFile(), TemplateDescription.class)
+					final String content = Files.readString(path, StandardCharsets.UTF_8);
+					final CompiledTemplate template = mapper.readValue(content, TemplateDescription.class)
 							.compile(engine, path);
 
 					this.register(template);
@@ -157,13 +161,15 @@ public class AutoRunScripts
 		private final PebbleTemplate template;
 		private final Collection<String> osids;
 		private final MediumType medium;
+		private final Charset encoding;
 		private final String filename;
 		private final Path path;
 
 
-		public CompiledTemplate(PebbleTemplate template, Path path, String filename, Collection<String> osids, MediumType medium)
+		public CompiledTemplate(PebbleTemplate template, Charset encoding, Path path, String filename, Collection<String> osids, MediumType medium)
 		{
 			this.template = template;
+			this.encoding = encoding;
 			this.filename = filename;
 			this.medium = medium;
 			this.osids = osids;
@@ -180,11 +186,18 @@ public class AutoRunScripts
 		}
 
 		@Override
-		public String evaluate(Map<String, Object> context) throws IOException
+		public byte[] evaluate(Map<String, Object> context) throws IOException
 		{
 			final Writer writer = new StringWriter();
 			this.evaluate(writer, context);
-			return writer.toString();
+			return writer.toString()
+					.getBytes(encoding);
+		}
+
+		@Override
+		public Charset getTargetEncoding()
+		{
+			return encoding;
 		}
 
 		@Override
@@ -217,6 +230,7 @@ public class AutoRunScripts
 		private List<String> osids;
 		private MediumType medium;
 		private String filename;
+		private Charset encoding;
 		private String content;
 
 
@@ -263,6 +277,24 @@ public class AutoRunScripts
 			return filename;
 		}
 
+		public TemplateDescription setTargetEncoding(Charset encoding)
+		{
+			this.encoding = encoding;
+			return this;
+		}
+
+		@JsonSetter
+		public TemplateDescription setTargetEncoding(String encoding)
+		{
+			return this.setTargetEncoding(Charset.forName(encoding));
+		}
+
+		@JsonProperty("encoding")
+		public Charset getTargetEncoding()
+		{
+			return encoding;
+		}
+
 		public TemplateDescription setRawContent(String content)
 		{
 			this.content = content;
@@ -279,7 +311,7 @@ public class AutoRunScripts
 		{
 			try {
 				final PebbleTemplate template = engine.getTemplate(content);
-				return new CompiledTemplate(template, path, filename, osids, medium);
+				return new CompiledTemplate(template, encoding, path, filename, osids, medium);
 			}
 			catch (Exception error) {
 				throw new BWFLAException("Compiling template '" + path.toString() + "' failed!", error);
