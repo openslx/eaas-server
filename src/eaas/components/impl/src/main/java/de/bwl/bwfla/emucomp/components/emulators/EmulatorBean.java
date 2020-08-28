@@ -999,7 +999,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				output = workdir.resolve("output.zip");
 				Set<String> exclude = new HashSet<>();
+
+				exclude.add("uvi.bat");
 				exclude.add("autorun.inf");
+
 				if (emuEnvironment.isLinuxRuntime())
 					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
 				else
@@ -1023,6 +1026,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			this.result.complete(handle);
+
 			String location;
 			if (blobStoreRestAddress.contains("http://eaas:8080"))
 				location = handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));

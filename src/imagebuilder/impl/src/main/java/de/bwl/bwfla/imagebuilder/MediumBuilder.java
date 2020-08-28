@@ -32,6 +32,7 @@ import javax.activation.DataHandler;
 import javax.activation.URLDataSource;
 import javax.json.*;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -97,14 +98,6 @@ public abstract class MediumBuilder
 	public static ImageBuilderMetadata build(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
 		ImageBuilderMetadata md = null;
 		for (ImageContentDescription entry : entries) {
-			DataHandler handler;
-
-			if (entry.getURL() != null) {
-				handler = new DataHandler(new URLDataSource(entry.getURL()));
-			} else {
-				handler = entry.getData();
-			}
-
 			if (entry.getSubdir() != null){
 				Path subdir = dstdir.resolve(entry.getSubdir());
 				Files.createDirectories(subdir);
@@ -120,12 +113,17 @@ public abstract class MediumBuilder
 					// FIXME: file names must be unique!
 					if (outpath.toFile().exists())
 						outpath = outpath.getParent().resolve(outpath.getFileName() + "-" + UUID.randomUUID());
-					Files.copy(handler.getInputStream(), outpath);
+
+					final ImageContentDescription.StreamableDataSource source = entry.getStreamableDataSource();
+					try (InputStream istream = source.openInputStream()) {
+						Files.copy(istream, outpath);
+					}
+
 					break;
 
 				case EXTRACT:
 					// Extract archive directly to destination!
-					ImageHelper.extract(handler, dstdir, entry.getArchiveFormat(), workdir, log);
+					ImageHelper.extract(entry, dstdir, workdir, log);
 					break;
 
 				case RSYNC:
@@ -134,6 +132,7 @@ public abstract class MediumBuilder
 						ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
 						if(ds.rootfs == null)
 							throw new BWFLAException("Docker data source not ready. Prepare() before calling build");
+
 						ImageHelper.rsync(ds.rootfs, dstdir, log);
 
 						DockerImport dockerMd = new DockerImport();

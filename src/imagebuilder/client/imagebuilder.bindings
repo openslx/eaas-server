@@ -11,14 +11,44 @@
 	</jaxws:bindings>
 	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
 		<jaxb:bindings node="//xsd:complexType[@name='imageContentDescription']">
-			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.imageContentDescription" />
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+    <jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+		<jaxb:bindings node="//xsd:complexType[@name='dataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.DataSource" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+    <jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+		<jaxb:bindings node="//xsd:complexType[@name='streamableDataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.StreamableDataSource" />
 		</jaxb:bindings>
 	</jaxws:bindings>
 	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
-    		<jaxb:bindings node="//xsd:complexType[@name='imageBuildHandle']">
-    			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageBuildHandle" />
-    		</jaxb:bindings>
-    	</jaxws:bindings>
+		<jaxb:bindings node="//xsd:complexType[@name='urlDataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.UrlDataSource" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+		<jaxb:bindings node="//xsd:complexType[@name='fileDataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.FileDataSource" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+		<jaxb:bindings node="//xsd:complexType[@name='byteArrayDataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ByteArrayDataSource" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+		<jaxb:bindings node="//xsd:complexType[@name='dockerDataSource']">
+			<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageContentDescription.DockerDataSource" />
+		</jaxb:bindings>
+	</jaxws:bindings>
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
+			<jaxb:bindings node="//xsd:complexType[@name='imageBuildHandle']">
+				<jaxb:class ref="de.bwl.bwfla.imagebuilder.api.ImageBuildHandle" />
+			</jaxb:bindings>
+		</jaxws:bindings>
 	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/imagebuilder']">
 		<jaxb:bindings node="//xsd:complexType[@name='blobHandle']">
 			<jaxb:class ref="de.bwl.bwfla.blobstore.api.BlobHandle" />

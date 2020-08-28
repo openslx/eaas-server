@@ -178,10 +178,9 @@ public class MediumBuilderHDD extends MediumBuilder
 		for(ImageContentDescription e : description.getContentEntries())
 		{
 			if(e.getArchiveFormat() == null || !e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
-			{
 				continue;
-			}
-			if(e.getDockerDataSource() == null)
+
+			if(!(e.getDataSource() instanceof ImageContentDescription.DockerDataSource))
 				continue;
 
 			ImageContentDescription.DockerDataSource ds = e.getDockerDataSource();

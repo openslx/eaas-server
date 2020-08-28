@@ -81,6 +81,7 @@ public class ObjectArchiveHelper {
 		return archive.getObjectMetadata(_archive, id);
 	}
 
+
 	public Stream<DigitalObjectMetadata> getObjectMetadata(String _archive) throws BWFLAException
 	{
 		connectArchive();
@@ -116,6 +117,13 @@ public class ObjectArchiveHelper {
 		catch (Exception error) {
 			throw new BWFLAException("Parsing object IDs failed!", error);
 		}
+
+		
+//		log.info(_archive + ": found " + objs.size() + " objects");
+//		List<String> uniqueList = new ArrayList<String>(
+//				new HashSet<String>(objs));
+//		java.util.Collections.sort(uniqueList);
+//		return uniqueList;
 	}
 
 	public FileCollection getObjectReference(String _archive, String id) throws BWFLAException

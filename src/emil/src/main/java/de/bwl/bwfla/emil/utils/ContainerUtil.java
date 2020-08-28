@@ -87,7 +87,7 @@ public class ContainerUtil {
         ImageContentDescription entry;
         entry = new ImageContentDescription();
         try {
-            entry.setURL(new URL(urlString));
+            entry.setUrlDataSource(new URL(urlString));
         } catch (MalformedURLException e) {
             final String filename = urlString;
             if (filename.contains("/")) {
@@ -97,7 +97,7 @@ public class ContainerUtil {
             if(!archiveFile.exists()) {
                 throw new BWFLAException("file " + filename + " not found in input folder");
             }
-            entry.setDataFromFile(archiveFile.toPath());
+            entry.setFileDataSource(archiveFile.toPath());
         }
         return entry;
     }
@@ -136,7 +136,7 @@ public class ContainerUtil {
 
         dockerDataSource.imageArchiveHost = envHelper.getImageArchiveHost();
         dockerDataSource.digest = digest;
-        entry.setDataFromDockerSource(dockerDataSource);
+        entry.setDataSource(dockerDataSource);
         description.addContentEntry(entry);
         ImageBuilderResult result = this.createImageFromDescription(description);
 
