@@ -42,7 +42,9 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -105,6 +107,22 @@ public class AutoRunScripts
 		return Paths.get(dir);
 	}
 
+	private static Collection<Path> listTemplateFiles(Path basedir)
+	{
+		final ArrayList<Path> paths = new ArrayList<>();
+		try (final DirectoryStream<Path> files = Files.newDirectoryStream(basedir)) {
+			files.forEach(paths::add);
+		}
+		catch (Exception error) {
+			throw new RuntimeException("Listing templates failed!", error);
+		}
+
+		// Sort paths in lexicographical order
+		paths.sort(Comparator.comparing(Path::getFileName));
+
+		return paths;
+	}
+
 	private void load(Path basedir)
 	{
 		if (!Files.exists(basedir)) {
@@ -115,24 +133,18 @@ public class AutoRunScripts
 		log.info("Loading templates...");
 
 		final ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+		for (Path path : AutoRunScripts.listTemplateFiles(basedir)) {
+			log.info("Loading: " + path.toString());
+			try {
+				final String content = Files.readString(path, StandardCharsets.UTF_8);
+				final CompiledTemplate template = mapper.readValue(content, TemplateDescription.class)
+						.compile(engine, path);
 
-		try (final DirectoryStream<Path> files = Files.newDirectoryStream(basedir)) {
-			for (Path path : files) {
-				log.info("Loading: " + path.toString());
-				try {
-					final String content = Files.readString(path, StandardCharsets.UTF_8);
-					final CompiledTemplate template = mapper.readValue(content, TemplateDescription.class)
-							.compile(engine, path);
-
-					this.register(template);
-				}
-				catch (Exception error) {
-					log.log(Level.WARNING, "Loading template '" + path.toString() + "' failed!", error);
-				}
+				this.register(template);
 			}
-		}
-		catch (Exception error) {
-			throw new RuntimeException("Loading templates failed!", error);
+			catch (Exception error) {
+				log.log(Level.WARNING, "Loading template '" + path.toString() + "' failed!", error);
+			}
 		}
 
 		log.info(templates.size() + " template(s) loaded");
