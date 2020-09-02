@@ -168,6 +168,14 @@ public class ImageMounter implements AutoCloseable
 		return this.mount(image, mountpoint, options);
 	}
 
+	/** Flush cached data to disk. */
+	public boolean sync(Mount mount) throws IllegalArgumentException
+	{
+		this.check(mount);
+
+		return ImageMounter.sync(mount.getMountPoint(), log);
+	}
+
 	/** Unmount a mounted image. */
 	public boolean unmount(Mount mount) throws IllegalArgumentException
 	{
@@ -277,6 +285,12 @@ public class ImageMounter implements AutoCloseable
 		public ImageMounter mounter()
 		{
 			return mounter;
+		}
+
+		/** Flush cached data to disk. */
+		public boolean sync() throws IllegalArgumentException
+		{
+			return mounter.sync(this);
 		}
 
 		/**
