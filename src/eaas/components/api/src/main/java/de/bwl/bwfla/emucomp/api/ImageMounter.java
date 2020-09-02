@@ -142,6 +142,22 @@ public class ImageMounter implements AutoCloseable
 	 */
 	public Mount remount(Mount mount, long offset, long size) throws BWFLAException, IllegalArgumentException
 	{
+		this.check(offset, OFFSET_MIN_BOUND, "offset");
+		this.check(size, SIZE_MIN_BOUND, "size");
+
+		final XmountOptions options = new XmountOptions();
+		options.setOffset(offset);
+		options.setSize(size);
+
+		return this.remount(mount, options);
+	}
+
+	/**
+	 * Re-mount an already mounted image, using provided options.
+	 * The previous mount will be unmounted and invalidated!
+	 */
+	public Mount remount(Mount mount, XmountOptions options) throws BWFLAException, IllegalArgumentException
+	{
 		this.check(mount);
 
 		final Path image = mount.getSourceImage();
@@ -149,7 +165,7 @@ public class ImageMounter implements AutoCloseable
 		if (!this.unmount(mount, false))
 			throw new BWFLAException("Unmounting image failed!");
 
-		return this.mount(image, mountpoint, offset, size);
+		return this.mount(image, mountpoint, options);
 	}
 
 	/** Unmount a mounted image. */
