@@ -21,22 +21,17 @@ package de.bwl.bwfla.imagebuilder;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
-import de.bwl.bwfla.emucomp.api.XmountOptions;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.api.metadata.DockerImport;
 import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
 
-import javax.activation.DataHandler;
-import javax.activation.URLDataSource;
 import javax.json.*;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ArchiveFormat.DOCKER;
@@ -48,36 +43,6 @@ public abstract class MediumBuilder
 
 
 	/* ==================== Internal Helpers ==================== */
-
-	public static void delete(Path start, Logger log)
-	{
-		// Delete file or a directory recursively
-		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-		process.setCommand("sudo");
-		process.addArgument("--non-interactive");
-		process.addArguments("rm", "-r", "-f");
-		process.addArgument(start.toString());
-		process.setLogger(log);
-		process.execute();
-	}
-
-	public static void unmount(Path path, Logger log)
-	{
-		try {
-			EmulatorUtils.unmount(path, log);
-		}
-		catch (Exception error) {
-			log.log(Level.WARNING, "Unmounting '" + path.toString() + "' failed!\n", error);
-		}
-	}
-
-	public static Path remount(Path device, Path mountpoint, XmountOptions options, Logger log)
-			throws BWFLAException, IOException
-	{
-		MediumBuilder.sync(mountpoint, log);
-		EmulatorUtils.unmount(mountpoint, log);
-		return EmulatorUtils.xmount(device.toString(), mountpoint, options, log);
-	}
 
 	// we need to prepare the data source _before_ creating and mounting the dst image to support deduplication
 	public static void prepare(List<ImageContentDescription> entries, Path workdir, Logger log) throws BWFLAException
@@ -216,13 +181,5 @@ public abstract class MediumBuilder
 			}
 		}
 		return md;
-	}
-
-	public static void sync(Path path, Logger log)
-	{
-		final DeprecatedProcessRunner process = new DeprecatedProcessRunner("sync");
-		process.setLogger(log);
-		if (!process.execute())
-			log.warning("Syncing filesystem for '" + path.toString() + "' failed!");
 	}
 }

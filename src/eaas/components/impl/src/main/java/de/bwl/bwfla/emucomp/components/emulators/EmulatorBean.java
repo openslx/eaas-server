@@ -972,43 +972,37 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		this.unmountBindings();
 
-		Path output = null;
-		String type = null;
-
-		Path rawmnt = null, fusemnt = null;
 		final BlobDescription blob = new BlobDescription()
 				.setDescription("Output for session " + this.getComponentId())
 				.setNamespace("emulator-outputs")
 				.setName("output");
 
-		try {
+		try (final ImageMounter mounter = new ImageMounter(LOG)) {
 			BlobHandle handle = null;
+			Path output = null;
+			String type = null;
+
 			if( binding.getResourceType() != Binding.ResourceType.ISO) {
 
-				final Path workdir = EaasFileUtils.createTempDirectory(this.getWorkingDir(), "output-");
-				rawmnt = workdir.resolve("raw");
-				fusemnt = workdir.resolve("fuse");
-
-				// Mount partition only
-				final XmountOptions options = new XmountOptions();
-				options.setOffset(binding.getPartitionOffset());
-				final Path rawimg = EmulatorUtils.xmount(qcow, rawmnt, options, LOG);
-
-				// Mount partition's filesystem
-				EmulatorUtils.mountFileSystem(rawimg, fusemnt, fsType);
+				final Path workdir = this.getWorkingDir().resolve("output");
+				Files.createDirectories(workdir);
 
 				output = workdir.resolve("output.zip");
-				Set<String> exclude = new HashSet<>();
-
-				exclude.add("uvi.bat");
-				exclude.add("autorun.inf");
-
-				if (emuEnvironment.isLinuxRuntime())
-					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
-				else
-					Zip32Utils.zip(output.toFile(), fusemnt.toFile(), exclude);
-
 				type = ".zip";
+
+				// Mount partition's filesystem
+				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow), workdir.resolve("raw"), binding.getPartitionOffset());
+				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
+				final Path srcdir = fsmnt.getMountPoint();
+				if (emuEnvironment.isLinuxRuntime())
+					Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
+				else {
+					Set<String> exclude = new HashSet<>();
+					exclude.add("uvi.bat");
+					exclude.add("autorun.inf");
+
+					Zip32Utils.zip(output.toFile(), srcdir.toFile(), exclude);
+				}
 
 				blob.setDataFromFile(output);
 				blob.setType(type);
@@ -1040,14 +1034,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			LOG.log(Level.WARNING, message, error);
 			throw new BWFLAException(message, error)
 					.setId(this.getComponentId());
-		}
-		finally {
-			try {
-				EmulatorUtils.checkAndUnmount(fusemnt, rawmnt);
-			}
-			catch (IOException error) {
-				LOG.log(Level.WARNING, "Could not unmount after creation of output.zip!", error);
-			}
 		}
 	}
 
