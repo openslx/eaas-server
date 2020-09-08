@@ -26,6 +26,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
+import de.bwl.bwfla.emucomp.api.ImageMounter;
 import de.bwl.bwfla.imagebuilder.api.IImageBuilder;
 import de.bwl.bwfla.imagebuilder.api.ImageBuildHandle;
 import de.bwl.bwfla.imagebuilder.api.ImageBuilderResult;
@@ -198,8 +199,12 @@ public class ImageBuilderBackend implements IImageBuilder
 				result.setMetadata(image.getMetadata());
 				return result;
 			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Building new image failed!", error);
+				throw error;
+			}
 			finally {
-				MediumBuilder.delete(workdir, log);
+				ImageMounter.delete(workdir, log);
 			}
 		}
 	}

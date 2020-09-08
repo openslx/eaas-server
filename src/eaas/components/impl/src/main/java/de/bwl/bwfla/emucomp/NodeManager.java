@@ -46,7 +46,6 @@ import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.emucomp.components.emulators.EmulatorBean;
 import de.bwl.bwfla.emucomp.components.network.NetworkSwitchBean;
 import de.bwl.bwfla.emucomp.components.network.VdeSlirpBean;
-import de.bwl.bwfla.emucomp.components.network.VdeSocksBean;
 
 @ApplicationScoped
 public class NodeManager {
@@ -206,8 +205,6 @@ public class NodeManager {
                 component = VdeSlirpBean.createVdeSlirp((VdeSlirpConfiguration) configuration);
             } else if (configuration instanceof NetworkSwitchConfiguration) {
                 component = NetworkSwitchBean.createNetworkSwitch((NetworkSwitchConfiguration) configuration);
-            } else if (configuration instanceof VdeSocksConfiguration) {
-                component = VdeSocksBean.createVdeSocks((VdeSocksConfiguration) configuration);
             } else if (configuration instanceof NodeTcpConfiguration) {
                 component = NodeTcpBean.createNodeTcp((NodeTcpConfiguration) configuration);
             } else {

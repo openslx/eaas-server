@@ -25,8 +25,6 @@ import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import org.apache.commons.io.IOUtils;
 
-import javax.activation.DataHandler;
-import javax.activation.URLDataSource;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -34,33 +32,26 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-class ImageHelper {
-
+public class ImageHelper
+{
 	public static void extract(ImageContentDescription entry, Path dstPath, Path workdir, Logger log) throws BWFLAException
 	{
-		if (entry.getData() != null)
-			ImageHelper.extract(entry.getData(), dstPath, entry.getArchiveFormat(), workdir, log);
-		else
-			ImageHelper.extract(new DataHandler(new URLDataSource(entry.getURL())), dstPath, entry.getArchiveFormat(), workdir, log);
-	}
-
-	public static void extract(DataHandler handler, Path dstPath, ImageContentDescription.ArchiveFormat format, Path workdir, Logger log)
-			throws BWFLAException
-	{
+		final ImageContentDescription.ArchiveFormat format = entry.getArchiveFormat();
 		if (format == null)
 			throw new BWFLAException("cannot extract. entry format not set.");
 
+		final ImageContentDescription.StreamableDataSource source = entry.getStreamableDataSource();
 		switch (format) {
 			case ZIP:
-				ImageHelper.unzip(handler, dstPath, log);
+				ImageHelper.unzip(source, dstPath, log);
 				return;
 
 			case TAR:
-				ImageHelper.untar(handler, dstPath, log);
+				ImageHelper.untar(source, dstPath, log);
 				return;
 
 			case SIMG:
-				ImageHelper.extractSingularityImage(handler, dstPath, workdir, log);
+				ImageHelper.extractSingularityImage(source, dstPath, workdir, log);
 				return;
 
 			default:
@@ -68,11 +59,12 @@ class ImageHelper {
 		}
 	}
 
-	private static void extractSingularityImage(DataHandler handler, Path dstdir, Path workdir, Logger log) throws BWFLAException
+	private static void extractSingularityImage(ImageContentDescription.StreamableDataSource source, Path dstdir, Path workdir, Logger log)
+			throws BWFLAException
 	{
 		final Path image = workdir.resolve("image-" + UUID.randomUUID().toString() + ".simg");
-		try {
-			Files.copy(handler.getInputStream(), image);
+		try (InputStream istream = source.openInputStream()) {
+			Files.copy(istream, image);
 
 			final String command = "sudo --non-interactive /usr/local/bin/singularity image.export " + image.toString()
 					+ " | tar -C " + dstdir.toString() + " -v -xf -";
@@ -98,7 +90,8 @@ class ImageHelper {
 		}
 	}
 
-	private static void untar(DataHandler handler, Path dstdir, Logger log) throws BWFLAException
+	private static void untar(ImageContentDescription.StreamableDataSource source, Path dstdir, Logger log)
+			throws BWFLAException
 	{
 		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setCommand("sudo");
@@ -111,7 +104,7 @@ class ImageHelper {
 		if (!process.start())
 			throw new BWFLAException("Starting untar failed!");
 
-		try (InputStream in = handler.getInputStream(); OutputStream out = process.getStdInStream()) {
+		try (InputStream in = source.openInputStream(); OutputStream out = process.getStdInStream()) {
 			IOUtils.copy(in, out);
 			in.close();
 			out.close();
@@ -134,9 +127,11 @@ class ImageHelper {
 	}
 
 
-	private static void unzip(DataHandler handler, Path dstdir, Logger log) throws BWFLAException {
-		try (final InputStream input = handler.getInputStream()) {
-			log.info("Extracting '" + handler.getName() + "' into image...");
+	private static void unzip(ImageContentDescription.StreamableDataSource source, Path dstdir, Logger log)
+			throws BWFLAException
+	{
+		try (final InputStream input = source.openInputStream()) {
+			log.info("Extracting zip archive into image...");
 			Zip32Utils.unzip(input, dstdir.toFile());
 		}
 		catch (Exception error)	{

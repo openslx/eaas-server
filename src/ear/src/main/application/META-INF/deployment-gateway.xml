@@ -11,7 +11,6 @@
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-imageproposer-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla.eaas-eaas-proxy-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-softwarearchive-0.0.1-SNAPSHOT.war" services="import"/>
-      <!-- <module name="deployment.eaas-server.ear.de.bwl.bwfla-nbd-server-impl-0.0.1-SNAPSHOT.war" services="import"/> -->
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-metadata-oaipmh-0.0.1-SNAPSHOT.war" services="import"/>
     </dependencies>
   </deployment>

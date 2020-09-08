@@ -27,9 +27,6 @@ components:
 
         runc: runc
         vdeplug: /usr/bin/vde_plug
-        vdesocks: lklsocks
-    socks.ports: 1080-1090
-    socks.listenaddress: 0.0.0.0
     xpra:
         ports: 7000-7100
         enable_gpu: false

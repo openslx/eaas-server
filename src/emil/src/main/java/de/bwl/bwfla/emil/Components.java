@@ -91,7 +91,6 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.api.eaas.EaasWS;
@@ -294,7 +293,7 @@ public class Components {
 
         if (request.getClass().equals(UviComponentRequest.class)) {
             try {
-                MachineComponentRequest machineComponentRequest = uviHelper.createUVIComponent((UviComponentRequest) request);
+                MachineComponentRequest machineComponentRequest = uviHelper.prepare((UviComponentRequest) request, LOG);
                 result = this.createMachineComponent(machineComponentRequest, cleanups, observer);
             }
             catch (BWFLAException error) {
@@ -311,9 +310,7 @@ public class Components {
             result = this.createNodeTcpComponent((NodeTcpComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SlirpComponentRequest.class)) {
             result = this.createSlirpComponent((SlirpComponentRequest) request, cleanups, observer);
-        } else if (request.getClass().equals(SocksComponentRequest.class)) {
-            result = this.createSocksComponent((SocksComponentRequest) request, cleanups, observer);
-        }  else {
+        } else {
             throw new BadRequestException("Invalid component request");
         }
 
@@ -424,33 +421,6 @@ public class Components {
         }
     }
 
-    protected ComponentResponse createSocksComponent(SocksComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
-            throws WebApplicationException
-    {
-        try {
-            VdeSocksConfiguration socksConfig = new VdeSocksConfiguration();
-            
-            if (desc.getHwAddress() != null && !desc.getHwAddress().isEmpty()) {
-                socksConfig.setHwAddress(desc.getHwAddress());
-            }
-            if (desc.getIp4Address() != null && !desc.getIp4Address().isEmpty()) {
-                socksConfig.setIp4Address(desc.getIp4Address());
-            }
-            if (desc.getNetmask() != null && desc.getNetmask() != 0) {
-                socksConfig.setNetmask(desc.getNetmask());
-            }
-            String socksId = eaasClient.getEaasWSPort(eaasGw).createSession(socksConfig.value(false));
-            cleanups.push("release-component/" + socksId, () -> eaas.releaseSession(socksId));
-            return new ComponentResponse(socksId);
-        }
-        catch (Exception error) {
-            // Trigger cleanup tasks
-            cleanups.execute();
-
-            // Return error to the client...
-            throw Components.newInternalError(error);
-        }
-    }
 
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
@@ -490,16 +460,25 @@ public class Components {
                         .setSizeInMb(sizeInMb);
 
                 for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+                    final URL url = new URL(extfile.getUrl());
                     final ImageContentDescription entry = new ImageContentDescription()
                             .setAction(extfile.getAction())
                             .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                            .setURL(new URL(extfile.getUrl()));
+                            .setUrlDataSource(url);
 
-
-                    if (extfile.getName() == null || extfile.getName().isEmpty())
-                        entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-                    else
+                    if (extfile.hasName())
                         entry.setName(extfile.getName());
+                    else entry.setName(Components.getFileName(url));
+
+                    description.addContentEntry(entry);
+                }
+
+                for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+                    final ImageContentDescription entry = new ImageContentDescription()
+                            .setAction(inlfile.getAction())
+                            .setArchiveFormat(inlfile.getCompressionFormat())
+                            .setName(inlfile.getName())
+                            .setByteArrayDataSource(inlfile.getData());
 
                     description.addContentEntry(entry);
                 }
@@ -581,46 +560,52 @@ public class Components {
                     .setFileSystemType(medium.getFileSystemType())
                     .setSizeInMb(sizeInMb);
         }
+
         for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
             final ImageContentDescription entry = new ImageContentDescription()
                     .setAction(extfile.getAction())
                     .setArchiveFormat(extfile.getCompressionFormat());
-//                            .setDataFromUrl(new URL(extfile.getUrl()));
-
-//                    if (new UrlValidator().isValid(extfile.getUrl()) && !extfile.getUrl().contains("file://"))
 
             try {
-                entry.setURL(new URL(extfile.getUrl()));
-            } catch (MalformedURLException e) {
-                throw new BWFLAException(e);
-            }
-//                    else
-//                        entry.setURL(null);
+                final URL url = new URL(extfile.getUrl());
+                entry.setUrlDataSource(url);
+                if (extfile.hasName())
+                    entry.setName(extfile.getName());
+                else entry.setName(Components.getFileName(url));
 
-            if (extfile.getName() == null || extfile.getName().isEmpty())
-                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-            else
-                entry.setName(extfile.getName());
+            }
+            catch (MalformedURLException error) {
+                throw new BWFLAException(error);
+            }
+
+            description.addContentEntry(entry);
+        }
+
+        for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+            final ImageContentDescription entry = new ImageContentDescription()
+                    .setAction(inlfile.getAction())
+                    .setArchiveFormat(inlfile.getCompressionFormat())
+                    .setName(inlfile.getName())
+                    .setByteArrayDataSource(inlfile.getData());
 
             description.addContentEntry(entry);
         }
 
         // Build input image
         final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
-        // since cdrom is read-only entity, we return user ISO directly
-        if (description.getMediumType() != MediumType.CDROM) {
+        {
             final Runnable cleanup = () -> {
                 try {
                     blobstore.delete(blob);
                 } catch (Exception error) {
-                    LOG.log(Level.WARNING, "Deleting container's input image failed!\n", error);
+                    LOG.log(Level.WARNING, "Deleting machine's input image failed!\n", error);
                 }
             };
 
             cleanups.push("delete-blob/" + blob.getId(), cleanup);
         }
-        // Add input image to machine's config
 
+        // Add input image to machine's config
         final BlobStoreBinding binding = new BlobStoreBinding();
         binding.setUrl(blob.toRestUrl(blobStoreRestAddress, false));
         if (description.getMediumType() != MediumType.CDROM)
@@ -636,6 +621,13 @@ public class Components {
         }
 
         return binding;
+    }
+
+    public static String getFileName(URL url)
+    {
+        return Paths.get(url.getPath())
+                .getFileName()
+                .toString();
     }
 
 

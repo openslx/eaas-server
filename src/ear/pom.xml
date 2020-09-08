@@ -182,25 +182,6 @@
 					<artifactId>imagearchive</artifactId>
 					<type>war</type>
 				</dependency>
-				<!--
-				<dependency>
-					<groupId>de.bwl.bwfla</groupId>
-					<artifactId>nbd-server-impl</artifactId>
-					<scope>compile</scope>
-					<type>war</type>
-				</dependency>
-				<dependency>
-					<groupId>de.bwl.bwfla</groupId>
-					<artifactId>nbd-server-resource-api</artifactId>
-					<scope>compile</scope>
-				</dependency>	
-				<dependency>
-					<groupId>de.bwl.bwfla</groupId>
-					<artifactId>nbd-server-resource-rar</artifactId>
-					<scope>compile</scope>
-					<type>rar</type>
-				</dependency>			
-				-->
 			</dependencies>
 		</profile>
 
