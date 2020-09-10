@@ -309,6 +309,12 @@ public class Binding extends AbstractDataResource {
          */
         @XmlEnumValue("floppy")
         FLOPPY("floppy"),
+
+        /**
+         * Cartridge image file
+         */
+        @XmlEnumValue("cart")
+        CART("cart"),
     	
     	/**
     	 * ZIP archive 

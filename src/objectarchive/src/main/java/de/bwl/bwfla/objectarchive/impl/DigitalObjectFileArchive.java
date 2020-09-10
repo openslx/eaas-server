@@ -192,6 +192,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			case DISK:
 				targetDir = targetDir.resolve("disk");
 				break;
+			case CART:
+				targetDir = targetDir.resolve("cart");
+				break;
 			default:
 				throw new BWFLAException("unsupported type " + type);
 		}

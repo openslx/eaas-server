@@ -299,7 +299,10 @@ public class Drive
         DISK("disk"),
         
         @XmlEnumValue("floppy")
-        FLOPPY("floppy");
+        FLOPPY("floppy"),
+
+        @XmlEnumValue("cart")
+        CART("cart");
         
         private final String value;
 
@@ -320,6 +323,8 @@ public class Drive
                     return CDROM;
                 case "Q493576":
                     return FLOPPY;
+                case "Q633454":
+                    return CART;
                 default:
                     System.out.println("unknow qid " + qid);
                     return null;
@@ -332,6 +337,8 @@ public class Drive
                     return "Q495265";
                 case FLOPPY:
                     return "Q493576";
+                case CART:
+                    return "Q633454";
                 default:
                     return null;
             }
