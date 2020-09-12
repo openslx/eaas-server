@@ -26,6 +26,11 @@ emil:
   autorun_scripts_dir: /home/bwfla/server-data/autorun-scripts
   retain_session: 10
 
+storage:
+  s3_user_bucket_url: "http://minio:9000/user-data"
+  access_key_id: ''
+  access_key_secret: ''
+
 ws:
   blobstore: http://eaas:8080/
   imagebuilder: http://eaas:8080/
