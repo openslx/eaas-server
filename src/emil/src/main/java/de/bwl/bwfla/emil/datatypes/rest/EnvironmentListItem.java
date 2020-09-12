@@ -164,4 +164,20 @@ public class EnvironmentListItem {
     public void setTimestamp(String timestamp) {
         this.timestamp = timestamp;
     }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getOperatingSystem() {
+        return operatingSystem;
+    }
+
+    public void setOperatingSystem(String operatingSystem) {
+        this.operatingSystem = operatingSystem;
+    }
 }
