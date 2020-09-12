@@ -2434,7 +2434,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			// search for binding:// and replace all occurrences with the
 			// actual path
 			// Pattern p = Pattern.compile("binding://(\\w*/?)");
-			Pattern p = Pattern.compile("binding://(\\w*/?)|rom://(.*)");
+			Pattern p = Pattern.compile("binding://(\\w*/?)|rom://(\\S+)");
 			Matcher m = p.matcher(nativeString);
 			StringBuffer sb = new StringBuffer();
 			while(m.find())
@@ -2452,7 +2452,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 						res = m.group(0);
 					}
 
-					bindingPath = this.lookupResource(res, XmountOutputFormat.RAW);
+					bindingPath = this.lookupResource(res.trim(), XmountOutputFormat.RAW);
 				} catch (Exception e) {
 					LOG.severe("lookupResource with " + m.group(1) + " failed.");
 					LOG.log(Level.SEVERE, e.getMessage(), e);
