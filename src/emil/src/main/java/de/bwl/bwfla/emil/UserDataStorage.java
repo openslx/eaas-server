@@ -31,18 +31,23 @@ public class UserDataStorage extends EmilRest {
     private String bucketUrl;
 
     @Inject
-    @Config(value = "storage.access_key_id")
+    @Config(value = "storage.user_access_key_id")
     private String access_key_id;
 
     @Inject
-    @Config(value = "storage.access_key_secret")
+    @Config(value = "storage.user_access_key_secret")
     private String access_key_secret;
 
     @GET
     @Path("/sts")
-    @Secured(roles={Role.PUBLIC})
+    @Secured(roles={Role.RESTRICTED})
     @Produces("text/plain")
     public Response getS3Token() {
+
+        String userId = "shared";
+        if(authenticatedUser != null && authenticatedUser.getUserId() != null)
+            userId = authenticatedUser.getUserId();
+
         try {
             LOG.severe("AWS_ACCESS_KEY_ID " + access_key_id);
             LOG.severe("AWS_SECRET_ACCESS_KEY " + access_key_secret);
@@ -57,7 +62,7 @@ public class UserDataStorage extends EmilRest {
                     .addEnvVariable("AWS_DEFAULT_REGION", "us-east-1")
                     .addEnvVariable("EAAS_S3_BUCKET_URL", bucketUrl)
 
-                    .addArgument("klaus") // username
+                    .addArgument(userId) // username
 
                     .setLogger(LOG);
             final DeprecatedProcessRunner.Result result = process.executeWithResult()
