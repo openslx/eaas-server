@@ -93,6 +93,7 @@ public class VdeSlirpBean extends EaasComponentBean {
 
             LOG.severe("using " +  network + " " + mask);
 
+            runner.addArgument("--disable-ipv6");
             runner.addArguments("--net", network);
             runner.addArguments("--mask",  mask);
 
