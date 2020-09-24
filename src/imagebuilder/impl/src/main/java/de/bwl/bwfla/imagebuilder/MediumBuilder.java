@@ -21,21 +21,17 @@ package de.bwl.bwfla.imagebuilder;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
-import de.bwl.bwfla.emucomp.api.XmountOptions;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.api.metadata.DockerImport;
 import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
 
-import javax.activation.DataHandler;
-import javax.activation.URLDataSource;
 import javax.json.*;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import static de.bwl.bwfla.imagebuilder.api.ImageContentDescription.ArchiveFormat.DOCKER;
@@ -47,36 +43,6 @@ public abstract class MediumBuilder
 
 
 	/* ==================== Internal Helpers ==================== */
-
-	public static void delete(Path start, Logger log)
-	{
-		// Delete file or a directory recursively
-		final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-		process.setCommand("sudo");
-		process.addArgument("--non-interactive");
-		process.addArguments("rm", "-r", "-f");
-		process.addArgument(start.toString());
-		process.setLogger(log);
-		process.execute();
-	}
-
-	public static void unmount(Path path, Logger log)
-	{
-		try {
-			EmulatorUtils.unmount(path, log);
-		}
-		catch (Exception error) {
-			log.log(Level.WARNING, "Unmounting '" + path.toString() + "' failed!\n", error);
-		}
-	}
-
-	public static Path remount(Path device, Path mountpoint, XmountOptions options, Logger log)
-			throws BWFLAException, IOException
-	{
-		MediumBuilder.sync(mountpoint, log);
-		EmulatorUtils.unmount(mountpoint, log);
-		return EmulatorUtils.xmount(device.toString(), mountpoint, options, log);
-	}
 
 	// we need to prepare the data source _before_ creating and mounting the dst image to support deduplication
 	public static void prepare(List<ImageContentDescription> entries, Path workdir, Logger log) throws BWFLAException
@@ -97,14 +63,6 @@ public abstract class MediumBuilder
 	public static ImageBuilderMetadata build(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
 		ImageBuilderMetadata md = null;
 		for (ImageContentDescription entry : entries) {
-			DataHandler handler;
-
-			if (entry.getURL() != null) {
-				handler = new DataHandler(new URLDataSource(entry.getURL()));
-			} else {
-				handler = entry.getData();
-			}
-
 			if (entry.getSubdir() != null){
 				Path subdir = dstdir.resolve(entry.getSubdir());
 				Files.createDirectories(subdir);
@@ -120,12 +78,17 @@ public abstract class MediumBuilder
 					// FIXME: file names must be unique!
 					if (outpath.toFile().exists())
 						outpath = outpath.getParent().resolve(outpath.getFileName() + "-" + UUID.randomUUID());
-					Files.copy(handler.getInputStream(), outpath);
+
+					final ImageContentDescription.StreamableDataSource source = entry.getStreamableDataSource();
+					try (InputStream istream = source.openInputStream()) {
+						Files.copy(istream, outpath);
+					}
+
 					break;
 
 				case EXTRACT:
 					// Extract archive directly to destination!
-					ImageHelper.extract(handler, dstdir, entry.getArchiveFormat(), workdir, log);
+					ImageHelper.extract(entry, dstdir, workdir, log);
 					break;
 
 				case RSYNC:
@@ -134,6 +97,7 @@ public abstract class MediumBuilder
 						ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
 						if(ds.rootfs == null)
 							throw new BWFLAException("Docker data source not ready. Prepare() before calling build");
+
 						ImageHelper.rsync(ds.rootfs, dstdir, log);
 
 						DockerImport dockerMd = new DockerImport();
@@ -217,13 +181,5 @@ public abstract class MediumBuilder
 			}
 		}
 		return md;
-	}
-
-	public static void sync(Path path, Logger log)
-	{
-		final DeprecatedProcessRunner process = new DeprecatedProcessRunner("sync");
-		process.setLogger(log);
-		if (!process.execute())
-			log.warning("Syncing filesystem for '" + path.toString() + "' failed!");
 	}
 }

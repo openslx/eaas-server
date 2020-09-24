@@ -35,9 +35,7 @@ import de.bwl.bwfla.emucomp.api.VolatileResource;
 import de.bwl.bwfla.emucomp.api.XmountOptions;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
-import org.apache.tamaya.inject.api.Config;
 
-import javax.inject.Inject;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;

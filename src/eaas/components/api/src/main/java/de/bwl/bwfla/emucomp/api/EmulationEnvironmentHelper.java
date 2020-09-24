@@ -36,7 +36,6 @@ import de.bwl.bwfla.common.services.container.helpers.ContainerHelper;
 import de.bwl.bwfla.common.services.container.helpers.ContainerHelperFactory;
 import de.bwl.bwfla.common.services.container.types.Container;
 import de.bwl.bwfla.common.services.container.types.Container.Filesystem;
-import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
@@ -271,21 +270,6 @@ public class EmulationEnvironmentHelper {
 		return uuid;
 	}
 
-	public static void removeNbdRefs(MachineConfiguration env) {
-		if (env == null)
-			return;
-
-		for (AbstractDataResource ab : env.getAbstractDataResource()) {
-			if (ab instanceof Binding) {
-				Binding b = (Binding) ab;
-				String url = b.getUrl();
-				if (url.contains("exportname")) {
-					b.setUrl("imagearchive:" + url.substring(url.lastIndexOf('=') + 1));
-				}
-			}
-		}
-	}
-
 	public static String getMainHddRef(MachineConfiguration env) {
 		if (env == null)
 			return null;
@@ -389,7 +373,8 @@ public class EmulationEnvironmentHelper {
 	}
 
 	public static int addObjectArchiveBinding(MachineConfiguration env, ObjectArchiveBinding binding, FileCollection fc, int index) throws BWFLAException {
-		env.getAbstractDataResource().add(binding);
+		if(!env.getAbstractDataResource().stream().filter(b -> b.getId().equals(binding.getId())).findAny().isPresent())
+			env.getAbstractDataResource().add(binding);
 		FileCollectionEntry fce = fc.getDefaultEntry();
 		return EmulationEnvironmentHelper.registerDrive(env, binding.getId(), fce.getId(), index);
 	}

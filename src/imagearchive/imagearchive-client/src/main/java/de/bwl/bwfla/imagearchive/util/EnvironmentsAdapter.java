@@ -108,21 +108,9 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.getTemplates(EMULATOR_DEFAULT_ARCHIVE);
 	}
 
-	public List<GeneralizationPatch> getPatches() throws BWFLAException, JAXBException {
-		return this.getPatches(EMULATOR_DEFAULT_ARCHIVE);
-	}
-
-	public List<GeneralizationPatch> getPatches(String backend) throws BWFLAException, JAXBException {
+	public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches() throws BWFLAException {
 		connectArchive();
-		List<GeneralizationPatch> patches = new ArrayList<>();
-
-		List<String> patchList = archive.getEnvironments(backend, "patches");
-		for (String patch : patchList) {
-			GeneralizationPatch emuEnv = GeneralizationPatch.fromValue(patch);
-			if (emuEnv != null)
-				patches.add(emuEnv);
-		}
-		return patches;
+		return archive.getImageGeneralizationPatches();
 	}
 
 	public List<MachineConfigurationTemplate> getTemplates(String backend) throws BWFLAException {
@@ -260,14 +248,13 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return archive.importImageFromUrlAsync(backend, ref.toString(), iaMd);
 	}
 
-	public ImageArchiveBinding generalizedImport(String imageId, ImageType type, String patchId) throws BWFLAException {
-		return this.generalizedImport(this.getDefaultBackendName(), imageId, type, patchId);
+	public String createPatchedImage(String imageId, ImageType type, String patchId) throws BWFLAException {
+		return this.createPatchedImage(this.getDefaultBackendName(), imageId, type, patchId);
 	}
 
-	public ImageArchiveBinding generalizedImport(String backend, String imageId, ImageType type, String patchId) throws BWFLAException {
+	public String createPatchedImage(String backend, String imageId, ImageType type, String patchId) throws BWFLAException {
 		connectArchive();
-		String id = archive.generalizedImport(backend, imageId, type, patchId, EMULATOR_DEFAULT_ARCHIVE);
-		return new ImageArchiveBinding(backend, this.getExportPrefix(), id, type.value());
+		return archive.createPatchedImage(backend, imageId, type, patchId);
 	}
 
 	public List<DefaultEntry> getDefaultEnvironments(String backend) throws BWFLAException {

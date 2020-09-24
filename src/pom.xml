@@ -44,7 +44,6 @@
 		<resteasy.version>3.11.0.Final</resteasy.version>
 		<ejb3.version>2.3.0.Final</ejb3.version>
 		<cxf.version>3.3.6</cxf.version>
-		<opencsv.version>3.9</opencsv.version>
 
 		<!-- version definitions for maven plugins -->
 		<maven.plugin.surefire.version>3.0.0-M4</maven.plugin.surefire.version>
@@ -283,8 +282,6 @@
 		<module>softwarearchive/softwarearchive-client</module>
 		<module>eaas</module>
 		<module>emil</module>
-		<!-- <module>nbd-server</module> -->
-		<!-- <module>shibboleth</module> -->
 		<module>preservica-client</module>
 		<module>metadata-oaipmh</module>
 		<module>metadata-repository</module>
@@ -502,11 +499,6 @@
 				<version>${enunciate.version}</version>
 			</dependency>
 			<dependency>
-				<groupId>com.opencsv</groupId>
-				<artifactId>opencsv</artifactId>
-				<version>${opencsv.version}</version>
-			</dependency>
-			<dependency>
 				<groupId>com.auth0</groupId>
 				<artifactId>java-jwt</artifactId>
 				<version>3.3.0</version>
@@ -515,6 +507,11 @@
 				<groupId>com.auth0</groupId>
 				<artifactId>jwks-rsa</artifactId>
 				<version>0.11.0</version>
+			</dependency>
+			<dependency>
+				<groupId>io.pebbletemplates</groupId>
+				<artifactId>pebble</artifactId>
+				<version>3.1.4</version>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
@@ -600,14 +597,6 @@
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>
-			<!--
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>shibboleth</artifactId>
-				<version>${project.version}</version>
-				<type>ejb</type>
-			</dependency>
-			-->
 			<dependency>
 				<groupId>de.bwl.bwfla.eaas</groupId>
 				<artifactId>eaas-cluster-impl</artifactId>
@@ -668,33 +657,6 @@
 				<version>${project.version}</version>
 				<type>jar</type>
 			</dependency>
-			<!--
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>nbd-server-resource-api</artifactId>
-				<version>${project.version}</version>
-				<type>jar</type>
-				<scope>provided</scope>
-			</dependency>
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>nbd-server-resource-jar</artifactId>
-				<version>${project.version}</version>
-				<type>jar</type>
-			</dependency>
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>nbd-server-resource-rar</artifactId>
-				<version>${project.version}</version>
-				<type>rar</type>
-			</dependency>
-			<dependency>
-				<groupId>de.bwl.bwfla</groupId>
-				<artifactId>nbd-server-impl</artifactId>
-				<version>${project.version}</version>
-				<type>war</type>
-			</dependency>
-			-->
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>eaas-wikidata</artifactId>

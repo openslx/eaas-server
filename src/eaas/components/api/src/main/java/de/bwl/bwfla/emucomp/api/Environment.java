@@ -48,7 +48,6 @@ import java.util.logging.Logger;
 	MachineConfigurationTemplate.class,
     DockerContainerConfiguration.class,
     OciContainerConfiguration.class,
-	GeneralizationPatch.class
 //    NetworkEnvironment.class
 })
 public class Environment extends ComponentConfiguration {

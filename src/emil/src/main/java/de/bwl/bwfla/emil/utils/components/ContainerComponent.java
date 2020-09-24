@@ -184,23 +184,34 @@ public class ContainerComponent {
 
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
-                .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
+                .setUrlDataSource(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
                 .setName("metadata.json");
         description.addContentEntry(metadataEntry);
 
         if(inputMedia.size() > 0) {
             ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
             for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+                final URL url = new URL(extfile.getUrl());
                 final ImageContentDescription entry = new ImageContentDescription()
                         .setAction(extfile.getAction())
                         .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                        .setURL(new URL(extfile.getUrl()))
+                        .setUrlDataSource(url)
                         .setSubdir("container-input");
 
-                if (extfile.getName() == null || extfile.getName().isEmpty())
-                    entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-                else
+                if (extfile.hasName())
                     entry.setName(extfile.getName());
+                else entry.setName(Components.getFileName(url));
+
+                description.addContentEntry(entry);
+            }
+
+            for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+                final ImageContentDescription entry = new ImageContentDescription()
+                        .setAction(inlfile.getAction())
+                        .setArchiveFormat(inlfile.getCompressionFormat())
+                        .setName(inlfile.getName())
+                        .setByteArrayDataSource(inlfile.getData())
+                        .setSubdir("container-input");
 
                 description.addContentEntry(entry);
             }

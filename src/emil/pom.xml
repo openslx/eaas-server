@@ -90,11 +90,6 @@
 			<artifactId>resteasy-jaxrs</artifactId>
 			<scope>provided</scope>
 		</dependency>
-		<dependency>
-			<groupId>commons-io</groupId>
-			<artifactId>commons-io</artifactId>
-			<scope>provided</scope>
-		</dependency>
         <dependency>
             <groupId>de.bwl.bwfla</groupId>
             <artifactId>imagebuilder-client</artifactId>
@@ -111,6 +106,10 @@
 		<dependency>
 			<groupId>com.auth0</groupId>
 			<artifactId>java-jwt</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.pebbletemplates</groupId>
+			<artifactId>pebble</artifactId>
 		</dependency>
 	</dependencies>
 </project>

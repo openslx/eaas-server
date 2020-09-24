@@ -25,6 +25,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
+
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
@@ -88,6 +89,7 @@ public class ObjectArchiveFacadeWS
 
 	public @XmlMimeType("application/xml") DataHandler getObjectIds(String archive) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
+//		return a.getObjectList();
 		final Stream<String> ids = a.getObjectIds();
 		return this.toDataHandler(ids.map(GenericId::new), GenericId.class, JaxbNames.DIGITAL_OBJECT_IDS);
 	}

@@ -112,6 +112,10 @@ public class DefaultDriveMapper
 			driveType = Drive.DriveType.CDROM;
 			flist = mapFiles(flist, object.getId());
 			break;
+		case CART:
+			urlPrefix += "/" + "cart";
+			driveType = Drive.DriveType.CART;
+			break;
 		default:
 			return null;
 		}

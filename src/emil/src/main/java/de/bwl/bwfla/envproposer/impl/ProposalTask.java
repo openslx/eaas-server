@@ -252,7 +252,7 @@ public class ProposalTask extends BlockingTask<Object>
 			final ImageContentDescription entry = new ImageContentDescription()
 					.setAction(ImageContentDescription.Action.EXTRACT)
 					.setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-					.setURL(new URL(blob.toRestUrl(blobStoreAddress)))
+					.setUrlDataSource(new URL(blob.toRestUrl(blobStoreAddress)))
 					.setName("data");
 
 			imgdesc.addContentEntry(entry);

@@ -17,16 +17,44 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil.datatypes.rest;
+package de.bwl.bwfla.emil.datatypes;
 
-import javax.xml.bind.annotation.XmlSeeAlso;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import javax.xml.bind.annotation.XmlAccessType;
+import javax.xml.bind.annotation.XmlAccessorType;
+import javax.xml.bind.annotation.XmlElement;
+import javax.xml.bind.annotation.XmlRootElement;
 
-@XmlSeeAlso({MachineComponentRequest.class,
-        ContainerComponentRequest.class,
-        SlirpComponentRequest.class,
-        UviComponentRequest.class})
-@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "type")
-public abstract class ComponentRequest extends EmilRequestType {
+
+@XmlRootElement
+@XmlAccessorType(XmlAccessType.NONE)
+public class ImageGeneralizationPatchResponse extends JaxbType
+{
+	@XmlElement
+	private String status;
+
+	@XmlElement
+	private String imageId;
+
+
+	public void setImageId(String imageId)
+	{
+		this.imageId = imageId;
+	}
+
+	public String getImageId()
+	{
+		return imageId;
+	}
+
+	public void setStatus(String status)
+	{
+		this.status = status;
+	}
+
+	public String getStatus()
+	{
+		return status;
+	}
 }
