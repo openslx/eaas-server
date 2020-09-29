@@ -114,4 +114,44 @@ public class UserDataStorage extends EmilRest {
         }
     }
 
+    @GET
+    @Path("/sts-frontend")
+    @Secured(roles={Role.RESTRICTED})
+    @Produces("text/plain")
+    public Response getS3TokenFrontent() {
+
+        String userId = "shared";
+        if(authenticatedUser != null && authenticatedUser.getUserId() != null)
+            userId = authenticatedUser.getUserId();
+
+        String eaasBucketUrl = "https://au-demo.stabilize.app/user-data";
+
+        try {
+            final DeprecatedProcessRunner process = new DeprecatedProcessRunner("node")
+                    .addArgument("/libexec/get-s3-token/get-s3-token.js")
+                    .redirectStdErrToStdOut(false)
+
+                    .addEnvVariable("AWS_ACCESS_KEY_ID", access_key_id)
+                    .addEnvVariable("AWS_SECRET_ACCESS_KEY", access_key_secret)
+                    .addEnvVariable("AWS_DEFAULT_REGION", "us-east-1")
+                    .addEnvVariable("EAAS_S3_BUCKET_URL", eaasBucketUrl)
+                    .addArgument(userId) // username
+                    .setLogger(LOG);
+            final DeprecatedProcessRunner.Result result = process.executeWithResult()
+                    .orElseThrow(() -> new BWFLAException("Running get-s3-token failed!"));
+
+            if (!result.successful())
+                throw new BWFLAException("Creating STS token failed! " + result.stderr() + " " + result.stdout());
+
+            return Response.status(Response.Status.OK)
+                    .entity(result.stdout())
+                    .build();
+        }
+        catch(Exception e)
+        {
+            e.printStackTrace();
+            return UserDataStorage.internalErrorResponse(e);
+        }
+    }
+
 }
