@@ -27,7 +27,12 @@ emil:
   retain_session: 10
 
 storage:
-  s3_user_bucket_url: "http://minio:9000/user-data"
+  s3_default_user_data_host: 'minio'
+  s3_default_user_data_protocol: 'http'
+  s3_default_user_data_port: 9000
+  s3_default_user_data_bucket: 'user-data'
+
+  s3_user_bucket_url: ''
   access_key_id: ''
   access_key_secret: ''
 

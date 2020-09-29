@@ -17,6 +17,8 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 
 @ApplicationScoped
 @Path("/user-data-storage")
@@ -29,6 +31,22 @@ public class UserDataStorage extends EmilRest {
     @Inject
     @Config(value = "storage.s3_user_bucket_url")
     private String bucketUrl;
+
+    @Inject
+    @Config(value = "s3_default_user_data_host")
+    private String s3_default_user_data_host;
+
+    @Inject
+    @Config(value = "s3_default_user_data_protocol")
+    private String s3_default_user_data_protocol;
+
+    @Inject
+    @Config(value = "s3_default_user_data_port")
+    private String s3_default_user_data_port;
+
+    @Inject
+    @Config(value = "s3_default_user_data_bucket")
+    private String s3_default_user_data_bucket;
 
     @Inject
     @Config(value = "storage.user_access_key_id")
@@ -48,11 +66,27 @@ public class UserDataStorage extends EmilRest {
         if(authenticatedUser != null && authenticatedUser.getUserId() != null)
             userId = authenticatedUser.getUserId();
 
+        String eaasBucketUrl = null;
+
+        if(bucketUrl.isEmpty())
+        {
+            // the default host is a docker name
+            // we need to access this host via SLIRP,
+            // in case of a local/non public deployment we need the internal docker IP
+            String resolvedHost;
+            try {
+                resolvedHost = InetAddress.getByName(s3_default_user_data_host).getHostAddress();
+            } catch (UnknownHostException e) {
+                resolvedHost = s3_default_user_data_host;
+                e.printStackTrace();
+            }
+            eaasBucketUrl = s3_default_user_data_protocol + "://"
+                    + s3_default_user_data_host + ":" + s3_default_user_data_port + "/" + s3_default_user_data_bucket;
+         }
+        else
+            eaasBucketUrl = bucketUrl;
+
         try {
-            LOG.severe("AWS_ACCESS_KEY_ID " + access_key_id);
-            LOG.severe("AWS_SECRET_ACCESS_KEY " + access_key_secret);
-            LOG.severe("AWS_DEFAULT_REGION us-east-1");
-            LOG.severe("EAAS_S3_BUCKET_URL " + bucketUrl);
             final DeprecatedProcessRunner process = new DeprecatedProcessRunner("node")
                     .addArgument("/libexec/get-s3-token/get-s3-token.js")
                     .redirectStdErrToStdOut(false)
@@ -60,10 +94,8 @@ public class UserDataStorage extends EmilRest {
                     .addEnvVariable("AWS_ACCESS_KEY_ID", access_key_id)
                     .addEnvVariable("AWS_SECRET_ACCESS_KEY", access_key_secret)
                     .addEnvVariable("AWS_DEFAULT_REGION", "us-east-1")
-                    .addEnvVariable("EAAS_S3_BUCKET_URL", bucketUrl)
-
+                    .addEnvVariable("EAAS_S3_BUCKET_URL", eaasBucketUrl)
                     .addArgument(userId) // username
-
                     .setLogger(LOG);
             final DeprecatedProcessRunner.Result result = process.executeWithResult()
                     .orElseThrow(() -> new BWFLAException("Running get-s3-token failed!"));
