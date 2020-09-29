@@ -39,6 +39,9 @@ public class NetworkEnvironment extends JaxbType {
     private String dnsServiceEnvId;
 
     @XmlElement(required = false)
+    private String smbServiceEnvId;
+
+    @XmlElement(required = false)
     private String startupEnvId;
 
     @XmlElement(required = false)
@@ -130,5 +133,17 @@ public class NetworkEnvironment extends JaxbType {
 
     public String getStartupEnvId() {
         return startupEnvId;
+    }
+
+    public void setDnsServiceEnvId(String dnsServiceEnvId) {
+        this.dnsServiceEnvId = dnsServiceEnvId;
+    }
+
+    public String getSmbServiceEnvId() {
+        return smbServiceEnvId;
+    }
+
+    public void setSmbServiceEnvId(String smbServiceEnvId) {
+        this.smbServiceEnvId = smbServiceEnvId;
     }
 }

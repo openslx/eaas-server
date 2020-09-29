@@ -21,6 +21,9 @@ public class ImportContainerRequest extends EmilRequestType {
     @XmlElement(required = false)
     private String tag;
 
+    @XmlElement(required = false)
+    private String serviceContainerId;
+
     @XmlAttribute(required = false)
     private String digest;
 
@@ -160,6 +163,14 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public void setCustomSubdir(String customSubdir) {
         this.customSubdir = customSubdir;
+    }
+
+    public String getServiceContainerId() {
+        return serviceContainerId;
+    }
+
+    public void setServiceContainerId(String serviceContainerId) {
+        this.serviceContainerId = serviceContainerId;
     }
 
     @XmlEnum
