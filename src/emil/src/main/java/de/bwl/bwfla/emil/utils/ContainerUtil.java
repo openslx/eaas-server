@@ -290,10 +290,10 @@ public class ContainerUtil {
 
         if (containerRequest.getImageType() == ImportContainerRequest.ContainerImageType.DOCKERHUB) {
             process.setEnvironmentVariables(((DockerImport) result.getMetadata()).getEnvVariables());
-            process.setArguments(((DockerImport) result.getMetadata()).getEntryProcesses());
+            process.getArguments().addAll(((DockerImport) result.getMetadata()).getEntryProcesses());
             process.setWorkingDir(((DockerImport) result.getMetadata()).getWorkingDir());
         } else {
-            process.setArguments(containerRequest.getProcessArgs());
+            process.getArguments().addAll(containerRequest.getProcessArgs());
 
             if (containerRequest.getProcessEnvs() != null && containerRequest.getProcessEnvs().size() > 0)
                 process.setEnvironmentVariables(containerRequest.getProcessEnvs());
@@ -301,10 +301,16 @@ public class ContainerUtil {
 
         config.setProcess(process);
 
-        config.setId(containerRequest.getUrlString());
+        boolean preserveId = false;
+        if(containerRequest.getServiceContainerId() != null && !containerRequest.getServiceContainerId().isEmpty()) {
+            preserveId = true;
+            config.setId(containerRequest.getServiceContainerId());
+        }
+        else
+            config.setId(containerRequest.getUrlString());
 
         LOG.warning(config.toString());
         LOG.info("importing config: " + config.toString());
-        return envHelper.importMetadata("default", config, meta, false);
+        return envHelper.importMetadata("default", config, meta, preserveId);
     }
 }

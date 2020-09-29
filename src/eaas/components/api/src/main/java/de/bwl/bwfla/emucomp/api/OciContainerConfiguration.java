@@ -27,6 +27,7 @@ import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -125,18 +126,16 @@ public class OciContainerConfiguration extends ContainerConfiguration
 			this.envs = vars;
 		}
 
-		public List<String> getEnvironmentVariables()
-		{
+		public List<String> getEnvironmentVariables() {
+			if (envs == null)
+				envs = new ArrayList<>();
 			return envs;
-		}
-
-		public void setArguments(List<String> args)
-		{
-			this.args = args;
 		}
 
 		public List<String> getArguments()
 		{
+			if(args == null)
+				args = new ArrayList<>();
 			return args;
 		}
 

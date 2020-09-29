@@ -807,11 +807,14 @@ public class EmilEnvironmentRepository {
 	void saveImportedContainer(SaveImportedContainerRequest req) throws BWFLAException {
 		environmentsAdapter.commitTempEnvironmentWithCustomType("default", req.getId(), "containers");
 
+		/*
 		EmilEnvironment newEmilEnv = getEmilEnvironmentById(req.getId());
 		if (newEmilEnv != null)
 			throw new BWFLAException("import failed: environment with id: " + req.getId() + " exists.");
+		*/
 
-		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
+		OciContainerConfiguration containerConfiguration =
+				(OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
 
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
 		env.setEnvId(req.getId());
