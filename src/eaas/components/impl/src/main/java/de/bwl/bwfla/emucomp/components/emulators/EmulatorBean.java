@@ -861,6 +861,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
 						}
 					}
+
+					/*
 					// create containers output
 					if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
 						try {
@@ -869,6 +871,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 							e.printStackTrace();
 						}
 					}
+					 */
 				}
 		});
 
