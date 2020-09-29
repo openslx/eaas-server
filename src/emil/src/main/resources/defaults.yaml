@@ -33,8 +33,8 @@ storage:
   s3_default_user_data_bucket: 'user-data'
 
   s3_user_bucket_url: ''
-  access_key_id: ''
-  access_key_secret: ''
+  s3_user_access_key_id: ''
+  s3_user_access_key_secret: ''
 
 ws:
   blobstore: http://eaas:8080/

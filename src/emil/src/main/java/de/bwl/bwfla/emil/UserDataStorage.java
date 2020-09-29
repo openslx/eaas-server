@@ -33,27 +33,27 @@ public class UserDataStorage extends EmilRest {
     private String bucketUrl;
 
     @Inject
-    @Config(value = "s3_default_user_data_host")
+    @Config(value = "storage.s3_default_user_data_host")
     private String s3_default_user_data_host;
 
     @Inject
-    @Config(value = "s3_default_user_data_protocol")
+    @Config(value = "storage.s3_default_user_data_protocol")
     private String s3_default_user_data_protocol;
 
     @Inject
-    @Config(value = "s3_default_user_data_port")
+    @Config(value = "storage.s3_default_user_data_port")
     private String s3_default_user_data_port;
 
     @Inject
-    @Config(value = "s3_default_user_data_bucket")
+    @Config(value = "storage.s3_default_user_data_bucket")
     private String s3_default_user_data_bucket;
 
     @Inject
-    @Config(value = "storage.user_access_key_id")
+    @Config(value = "storage.s3_user_access_key_id")
     private String access_key_id;
 
     @Inject
-    @Config(value = "storage.user_access_key_secret")
+    @Config(value = "storage.s3_user_access_key_secret")
     private String access_key_secret;
 
     @GET
