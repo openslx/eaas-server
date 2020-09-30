@@ -81,7 +81,7 @@ public class UserDataStorage extends EmilRest {
                 e.printStackTrace();
             }
             eaasBucketUrl = s3_default_user_data_protocol + "://"
-                    + s3_default_user_data_host + ":" + s3_default_user_data_port + "/" + s3_default_user_data_bucket;
+                    + resolvedHost + ":" + s3_default_user_data_port + "/" + s3_default_user_data_bucket;
          }
         else
             eaasBucketUrl = bucketUrl;
@@ -118,7 +118,7 @@ public class UserDataStorage extends EmilRest {
     @Path("/sts-frontend")
     @Secured(roles={Role.RESTRICTED})
     @Produces("text/plain")
-    public Response getS3TokenFrontent() {
+    public Response getS3TokenFrontend() {
 
         String userId = "shared";
         if(authenticatedUser != null && authenticatedUser.getUserId() != null)
