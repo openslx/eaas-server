@@ -1644,7 +1644,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		emuConfig.setIoSocket(emusocket);
 
 		// HACK: Qemu uses a custom audio setup!
-		if (this instanceof QemuBean) {
+		if (this instanceof QemuBean && this.isPulseAudioEnabled()	) {
 			emuRunner.getEnvVariables()
 					.remove("SDL_AUDIODRIVER");
 		}
