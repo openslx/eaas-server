@@ -335,6 +335,8 @@ public class DeprecatedProcessRunner
 	public String getEnvString()
 	{
 		StringBuilder builder = new StringBuilder(1024);
+		if(environment.entrySet().isEmpty())
+			return "";
 
 		for (Map.Entry<String, String> entry : environment.entrySet()) {
 			final String key = entry.getKey();
