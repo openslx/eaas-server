@@ -845,6 +845,16 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				emuRunner.waitUntilFinished();
 
+				// upload emulator's output
+				if (this.isOutputAvailable()) {
+					try {
+						this.processEmulatorOutput();
+					}
+					catch (BWFLAException error) {
+						LOG.log(Level.WARNING, "Processing emulator's output failed!", error);
+					}
+				}
+
 				// cleanup will be performed later by EmulatorBean.destroy()
 
 				synchronized (emuBeanState) {
@@ -861,17 +871,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
 						}
 					}
-
-					/*
-					// create containers output
-					if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
-						try {
-							this.processOutput();
-						} catch (BWFLAException e) {
-							e.printStackTrace();
-						}
-					}
-					 */
 				}
 		});
 
@@ -939,7 +938,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Override
 	synchronized public String stop() throws BWFLAException
 	{
-		String result = null;
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -953,11 +951,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		this.stopInternal();
 
-		if (this.isOutputAvailable() && !emuEnvironment.isLinuxRuntime())
-				result = this.processOutput();
-
 		emuBeanState.update(EmuCompState.EMULATOR_STOPPED);
-		return result;
+		return this.getEmulatorOutputLocation();
 	}
 
 	private boolean isOutputAvailable()
@@ -965,7 +960,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return emuEnvironment.getOutputBindingId() != null;
 	}
 
-	private String processOutput() throws BWFLAException
+	private void processEmulatorOutput() throws BWFLAException
 	{
 		final String bindingId = emuEnvironment.getOutputBindingId();
 		final BlobStoreBinding binding = (BlobStoreBinding) bindings.get(bindingId);
@@ -1023,17 +1018,31 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			this.result.complete(handle);
-
-			String location;
-			if (blobStoreRestAddress.contains("http://eaas:8080"))
-				location = handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
-			else
-				location = handle.toRestUrl(blobStoreRestAddress);
-
-			return location;
 		}
-		catch (BWFLAException | IOException error) {
+		catch (BWFLAException | IOException cause) {
 			final String message = "Creation of output.zip failed!";
+			final BWFLAException error = new BWFLAException(message, cause)
+					.setId(this.getComponentId());
+
+			this.result.completeExceptionally(error);
+			throw error;
+		}
+	}
+
+	private String getEmulatorOutputLocation() throws BWFLAException
+	{
+		if (!this.isOutputAvailable())
+			return null;
+
+		try {
+			final BlobHandle handle = super.result.get(2, TimeUnit.MINUTES);
+			if (blobStoreRestAddress.contains("http://eaas:8080"))
+				return handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
+			else
+				return handle.toRestUrl(blobStoreRestAddress);
+		}
+		catch (Exception error) {
+			final String message = "Waiting for emulator's output failed!";
 			LOG.log(Level.WARNING, message, error);
 			throw new BWFLAException(message, error)
 					.setId(this.getComponentId());
