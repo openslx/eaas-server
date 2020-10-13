@@ -35,7 +35,7 @@
 		<guacamole.version>0.9.4</guacamole.version>
 		<snakeyaml.version>1.26</snakeyaml.version>
 		<jackson2.version>2.10.1</jackson2.version>
-		<junit.version>4.12</junit.version>
+		<junit.version>4.13.1</junit.version>
 		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
 		<slf4j.version>1.7.22</slf4j.version>
