@@ -127,6 +127,21 @@ public class MetsUtil {
         return type;
     }
 
+    static FileType updateFileEntry(FileType ft, String objUrl, String filename)
+    {
+        List<FileType.FLocat> locationList = ft.getFLocat();
+        locationList.clear();
+
+        FileType.FLocat fLocat = new FileType.FLocat();
+        fLocat.setLOCTYPE("URL");
+        fLocat.setHref(objUrl);
+
+        if(filename != null)
+            fLocat.setTitle(filename);
+
+        locationList.add(fLocat);
+        return ft;
+    }
 
     static FileType createFileEntry(String objUrl, String filename) {
 

@@ -1,30 +1,24 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.BwflaFileInputStream;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import gov.loc.mets.*;
-import org.apache.commons.io.FileUtils;
 import org.w3c.dom.Element;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
-import java.awt.*;
 import java.io.File;
 import java.io.StringReader;
 import java.math.BigInteger;
-import java.net.URLEncoder;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.UUID;
 import java.util.logging.Logger;
 
 public class MetsObject {
@@ -69,15 +63,7 @@ public class MetsObject {
     }
 
     public String toString() {
-        String out = "Yale METS data:\n";
-        for (Context ctxType : Context.values()) {
-            YaleMetsContext ctx = metsContextMap.get(ctxType);
-            if (ctx == null)
-                out += ctxType + " not configured.\n";
-            else
-                out += ctx.toString();
-        }
-        return out;
+        return metsRoot.toString();
     }
 
     private static boolean containsId(List <DivType.Fptr> fptrs, String fileId)
@@ -200,6 +186,16 @@ public class MetsObject {
         }
     }
 
+    /*
+    Example:
+
+    <mets:amdSec ID="Provenance-xxx">
+        <mets:sourceMD></mets:sourceMD>
+    </mets:amdSec>
+    <mets:amdSec ID="Format-xx">
+        <mets:techMD></mets:techMD>
+    </mets:amdSec>
+    */
     private void setTypeInfo(ObjectFile of, FileType file) throws MetsObjectMetadataException {
         final List<Object> amdIds = file.getADMID();
         for (Object amdIdObject : amdIds) {
@@ -225,16 +221,25 @@ public class MetsObject {
                 AmdSecType amdSecType = (AmdSecType) amdIdObject;
                 String id = amdSecType.getID();
                 if (id.startsWith("Provenance")) {
-                    of.mediumType = getMediumTyp(amdSecType);
+                    of.mediumType = getMediumType(amdSecType, true);
                 } else if (id.startsWith("Format")) {
-                    of.fileType = getFileType(amdSecType);
+                    of.fileType = getFileType(amdSecType, true);
                 } else
                     log.warning("unknown amdSec " + id);
             }
         }
+        if(of.fileType == null && of.mediumType == null)
+            throw new MetsObjectMetadataException("Unknown file format/mediaType...");
     }
 
-    private String getFileType(AmdSecType amdSecType) throws MetsObjectMetadataException {
+    /*
+    Example:
+
+    <mets:techMD ID="FileFormat-xxx">
+        <mets:mdRef ID="Q877050" LABEL="ISO image" LOCTYPE="URL" MDTYPE="OTHER" xlink:href="https://www.wikidata.org/wiki/Q877050"/>
+     </mets:techMD>
+    */
+    private String getFileType(AmdSecType amdSecType, boolean strictVerification) throws MetsObjectMetadataException {
         List<MdSecType> techMdList = amdSecType.getTechMD();
         for (MdSecType techMd : techMdList) {
             if (!techMd.getID().startsWith("FileFormat")) {
@@ -245,12 +250,27 @@ public class MetsObject {
             if (mdref == null)
                 throw new MetsObjectMetadataException("missing mdref");
 
-            return mdref.getID();
+            String id = mdref.getID();
+            if(id == null || id.isEmpty())
+                throw new MetsObjectMetadataException("device type id not set");
+            if(strictVerification)
+            {
+                if(!id.startsWith("Q") || !id.startsWith("q"))
+                    throw new MetsObjectMetadataException("strict verification requires wikidata QID for type FileFormat");
+            }
+            return id;
         }
         throw new MetsObjectMetadataException("invalid amdSecType for id Format");
     }
 
-    private String getMediumTyp(AmdSecType amdSecType) throws MetsObjectMetadataException {
+    /*
+    Example:
+
+    <mets:sourceMD ID="Device-xxx">
+        <mets:mdRef ID="Q495265" LABEL="Combo drive" LOCTYPE="URL" MDTYPE="OTHER" xlink:href="http://www.wikidata.org/wiki/Q495265"/>
+    </mets:sourceMD>
+     */
+    private String getMediumType(AmdSecType amdSecType, boolean strictVerification) throws MetsObjectMetadataException {
         List<MdSecType> sourceMdList = amdSecType.getSourceMD();
         for (MdSecType sourceMd : sourceMdList) {
             if (!sourceMd.getID().startsWith("Device"))
@@ -260,7 +280,15 @@ public class MetsObject {
             if (mdref == null)
                 throw new MetsObjectMetadataException("missing mdref");
 
-            return mdref.getID();
+            String id = mdref.getID();
+            if(id == null || id.isEmpty())
+                throw new MetsObjectMetadataException("device type id not set");
+            if(strictVerification)
+            {
+                if(!id.startsWith("Q") || !id.startsWith("q"))
+                    throw new MetsObjectMetadataException("strict verification requires wikidata QID for type Device");
+            }
+            return id;
         }
         throw new MetsObjectMetadataException("invalid amdSecType for id Provenance");
     }
