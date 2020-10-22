@@ -13,8 +13,11 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
@@ -272,7 +275,7 @@ public class EmulatorUtils {
 			process.addArgument(options.getSize());
 		}
 
-		if(options.getProxyUrl() != null && options.getProxyUrl() != null) {
+		if(options.getProxyUrl() != null) {
 			log.severe("using proxy " +  options.getProxyUrl());
 			// process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
 			// process.addEnvVariable("http_proxy", options.getProxyUrl());
@@ -329,9 +332,43 @@ public class EmulatorUtils {
 			throw new IOException("Given image path \"" + image
 					+ "\" is not writable but rw access was requested.");
 		}
+		return nbdMount(image.toAbsolutePath().toString(),
+				mountpoint);
+	}
 
-		return xmount(image.toAbsolutePath().toString(),
-				mountpoint, xmountOpts, log);
+	public static Path nbdMount(String imagePath, Path mountpoint) throws BWFLAException {
+
+		try {
+			// create mountpoint if necessary
+			Files.createDirectories(mountpoint);
+			log.info("created subdirectories up to " + mountpoint.toString());
+
+			String baseName = imagePath.substring(imagePath.lastIndexOf('/') + 1);
+			if (baseName.lastIndexOf('.') > 0)
+				baseName = baseName.substring(0, baseName.lastIndexOf('.'));
+
+			DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/qcow-runner/mount-qcow");
+			process.addArgument(imagePath);
+			process.addArgument(mountpoint.toAbsolutePath().toString() + "/" + baseName + ".dd");
+
+			if (!process.execute()) {
+				// if (!process.start()) {
+				try {
+					Files.deleteIfExists(mountpoint);
+				} catch (IOException e) {
+					log.severe(
+							"Created a temporary file but cannot delete it after error. This is bad.");
+				}
+				throw new BWFLAException("Error mounting " + imagePath
+						+ ". See log output for more information (maybe).");
+
+			}
+			return mountpoint.resolve(baseName + ".dd");
+
+		} catch (IOException e) {
+			throw new BWFLAException(
+					"Error mounting " + imagePath + ".", e);
+		}
 	}
 
 	public static Path xmount(String imagePath, Path mountpoint,
@@ -622,10 +659,42 @@ public class EmulatorUtils {
 		LoopDeviceManager.detachLoop(dev);
 	}
 
-	public static void unmountFuse(Path mntpoint, Logger log) throws BWFLAException, IOException {
-		if (mntpoint == null)
-			return;
+	public static boolean isMountpoint(Path mountpoint, Logger log)
+	{
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("mountpoint");
+		process.setLogger(log);
+		process.addArgument(mountpoint.toAbsolutePath().toString());
+		return process.execute();
+	}
 
+	private static void _umountNbd(String cowFile, Logger log)
+	{
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/qcow-runner/umount-qcow");
+		process.setLogger(log);
+		process.addArgument(cowFile);
+		if(!process.execute())
+			log.severe("failed to exec unmount");
+
+		String lockFile = cowFile + ".lock";
+		Path lockFilePath = Paths.get(lockFile);
+		log.severe("checking if " + lockFile + "is still present");
+		for (int i = 0; i < 20; ++i) {
+			if(!Files.exists(lockFilePath))
+				return;
+
+			try {
+				log.severe("waiting for " + lockFile + " to disappear");
+				Thread.sleep(1000L);
+			}
+			catch (Exception error) {
+				// Ignore it!
+			}
+		}
+		log.severe("failed to unmount. Lockfile " + lockFile + "still exists");
+	}
+
+	@Deprecated
+	private static void _unmount(Path mntpoint, Logger log) throws BWFLAException, IOException {
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 
@@ -687,6 +756,28 @@ public class EmulatorUtils {
 		}
 
 		FileUtils.deleteDirectory(mntpoint.toFile());
+	}
+
+	public static void unmountFuse(Path mntpoint, Logger log) throws BWFLAException, IOException {
+		if (mntpoint == null)
+			return;
+
+		String imagePathString = mntpoint.toAbsolutePath().toString().replace(".fuse", ".lock");
+		Path nbdMountPath = Paths.get(imagePathString);
+		if(Files.exists(nbdMountPath))
+		{
+			log.severe("using nbd unmount");
+			String cowPathString = imagePathString.replace(".lock", "");
+			_umountNbd(cowPathString, log);
+		}
+		else { // legacy unmount
+			log.severe("checking mountpoint... " + mntpoint);
+			if (!isMountpoint(mntpoint, log)) {
+				log.severe(mntpoint + " is not a mountpoint. abort");
+				return;
+			}
+			_unmount(mntpoint, log);
+		}
 	}
 
 	public static boolean padFile(File f, int blocksize) {
