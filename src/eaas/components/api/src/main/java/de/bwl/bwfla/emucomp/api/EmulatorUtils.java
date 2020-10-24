@@ -85,8 +85,7 @@ public class EmulatorUtils {
 		return result;
 	}
 
-	public static String connectBinding(Binding resource, Path resourceDir,
-										MountOptions xmountOpts)
+	public static String connectBinding(Binding resource, Path resourceDir, MountOptions xmountOpts)
 			throws BWFLAException, IllegalArgumentException {
 		String resUrl = resource.getUrl();
 
