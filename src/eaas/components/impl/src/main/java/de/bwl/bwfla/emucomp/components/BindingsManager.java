@@ -33,7 +33,7 @@ import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.ObjectArchiveBinding;
 import de.bwl.bwfla.emucomp.api.VolatileResource;
-import de.bwl.bwfla.emucomp.api.XmountOptions;
+import de.bwl.bwfla.emucomp.api.MountOptions;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -177,14 +177,11 @@ public class BindingsManager
 	 * @param binding  A binding location
 	 * @return The resolved path or null, if the binding cannot be found
 	 */
-	public String mount(String binding, Path outdir, EmulatorUtils.XmountOutputFormat outformat)
+	public String mount(String binding, Path outdir)
 			throws BWFLAException, IOException, IllegalArgumentException
 	{
 		if (binding == null || binding.isEmpty())
 			throw new IllegalArgumentException("Binding is null or empty!");
-
-		if (outformat == null)
-			throw new IllegalArgumentException("Output format is null!");
 
 		if (binding.startsWith("rom://"))
 			binding = "rom-" + binding.substring("rom://".length());
@@ -225,7 +222,7 @@ public class BindingsManager
 				resource.setAccess(Binding.AccessType.COPY);
 		}
 
-		final XmountOptions xmountOpts = new XmountOptions(outformat);
+		final MountOptions xmountOpts = new MountOptions();
 		if (resource instanceof VolatileResource) {
 			VolatileResource vResource = (VolatileResource) resource;
 			// The resource should be written to in-place, ignoring the

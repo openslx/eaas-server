@@ -95,7 +95,7 @@ public class ImportImageTask extends BlockingTask<String>
                 final Binding binding = new Binding();
                 try {
                     binding.setUrl(nexturl);
-                    EmulatorUtils.copyRemoteUrl(binding, layer, null, log);
+                    EmulatorUtils.copyRemoteUrl(binding, layer, log);
                 }
                 catch (BWFLAException error) {
                     log.log(Level.WARNING, "Downloading backing file failed!", error);
@@ -139,7 +139,7 @@ public class ImportImageTask extends BlockingTask<String>
             // EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
 
             if(!destImgFile.exists()) {
-                EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null, log);
+                EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), log);
             }
 
             log.info("Looking up image file format...");

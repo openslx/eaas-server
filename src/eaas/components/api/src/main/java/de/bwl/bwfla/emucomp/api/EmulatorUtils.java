@@ -13,11 +13,8 @@ import java.security.DigestInputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
@@ -89,11 +86,9 @@ public class EmulatorUtils {
 	}
 
 	public static String connectBinding(Binding resource, Path resourceDir,
-										XmountOptions xmountOpts)
+										MountOptions xmountOpts)
 			throws BWFLAException, IllegalArgumentException {
 		String resUrl = resource.getUrl();
-
-		// TODO handle.net resolution according to used transport
 
 		if (resource == null || resource.getId() == null
 				|| resource.getId().isEmpty()) {
@@ -141,7 +136,7 @@ public class EmulatorUtils {
 			case COPY:
 				// use qemu-imgs convert feature to create a new local raw copy
 				Path imgCopy = resourceDir.resolve(resource.getId() + ".copy");
-				copyRemoteUrl(resource, imgCopy, xmountOpts);
+				copyRemoteUrl(resource, imgCopy);
 				resFile = imgCopy.toString();
 				break;
 			default:
@@ -151,11 +146,11 @@ public class EmulatorUtils {
 		return resFile;
 	}
 
-	public static void copyRemoteUrl(Binding resource, Path dest, XmountOptions xmountOpts) throws BWFLAException {
-		EmulatorUtils.copyRemoteUrl(resource, dest, xmountOpts, log);
+	public static void copyRemoteUrl(Binding resource, Path dest) throws BWFLAException {
+		EmulatorUtils.copyRemoteUrl(resource, dest, log);
 	}
 
-	public static void copyRemoteUrl(Binding resource, Path dest, XmountOptions xmountOpts, Logger log) throws BWFLAException {
+	public static void copyRemoteUrl(Binding resource, Path dest, Logger log) throws BWFLAException {
 		String resUrl = resource.getUrl();
 		// hack until qemu-img is fixed
 		if (resUrl.startsWith("http") || resUrl.startsWith("https")) {
@@ -188,20 +183,7 @@ public class EmulatorUtils {
 				throw new BWFLAException(e);
 			}
 		}
-		else {
-			DeprecatedProcessRunner process = new DeprecatedProcessRunner("qemu-img");
-			process.setLogger(log);
-			process.addArgument("convert");
-			process.addArgument("-fraw");
-			if (xmountOpts != null)
-				process.addArgument("-O" + xmountOpts.getOutFmt().toString().toLowerCase());
-			process.addArgument(resUrl);
-			process.addArgument(dest.toString());
-			if (!process.execute()) {
-				throw new BWFLAException(
-						"Cannot create local copy of the binding's data, connecting binding cancelled.");
-			}
-		}
+		else throw new BWFLAException("unsupported operation " + resUrl);
 	}
 
 	public static Path prepareSoftwareCollection(String handle, Path tempPath) {
@@ -314,29 +296,27 @@ public class EmulatorUtils {
 	 * @throws IllegalArgumentException if the image cannot be used as a mount source
 	 * @throws IOException              If readonly is false and the image cannot be mounted read/write
 	 */
-	public static Path mountCowFile(Path image, Path mountpoint, XmountOptions xmountOpts) throws IllegalArgumentException,
+	public static Path mountCowFile(Path image, Path mountpoint, MountOptions xmountOpts) throws IllegalArgumentException,
 			IOException, BWFLAException {
 		return EmulatorUtils.mountCowFile(image, mountpoint, xmountOpts, log);
 	}
 
-	public static Path mountCowFile(Path image, Path mountpoint, XmountOptions xmountOpts, Logger log)
+	public static Path mountCowFile(Path image, Path mountpoint, MountOptions xmountOpts, Logger log)
 			throws IllegalArgumentException, IOException, BWFLAException {
+
 		if (image == null) {
 			throw new IllegalArgumentException("Given image path was null");
 		}
+
 		if (!Files.isRegularFile(image)) {
 			throw new IllegalArgumentException("Given image path \"" + image
 					+ "\" is not a regular file.");
 		}
-		if (xmountOpts != null && !xmountOpts.isReadonly() && !Files.isWritable(image)) {
-			throw new IOException("Given image path \"" + image
-					+ "\" is not writable but rw access was requested.");
-		}
-		return nbdMount(image.toAbsolutePath().toString(),
-				mountpoint);
+
+		return nbdMount(image.toAbsolutePath().toString(), mountpoint, xmountOpts, log);
 	}
 
-	public static Path nbdMount(String imagePath, Path mountpoint) throws BWFLAException {
+	public static Path nbdMount(String imagePath, Path mountpoint, MountOptions options, Logger log) throws BWFLAException {
 
 		try {
 			// create mountpoint if necessary
@@ -347,9 +327,12 @@ public class EmulatorUtils {
 			if (baseName.lastIndexOf('.') > 0)
 				baseName = baseName.substring(0, baseName.lastIndexOf('.'));
 
-			DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/qcow-runner/mount-qcow");
+			DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/fuseqemu/mount-qcow");
 			process.addArgument(imagePath);
 			process.addArgument(mountpoint.toAbsolutePath().toString() + "/" + baseName + ".dd");
+			process.addArguments(options.getArgs());
+			process.addArgument("--");
+			process.addArguments("-o", "allow_root");
 
 			if (!process.execute()) {
 				// if (!process.start()) {
@@ -371,6 +354,7 @@ public class EmulatorUtils {
 		}
 	}
 
+	/*
 	public static Path xmount(String imagePath, Path mountpoint,
 							  XmountOptions xmountOpts)
 			throws IllegalArgumentException, IOException, BWFLAException {
@@ -436,6 +420,7 @@ public class EmulatorUtils {
 					"Error mounting " + imagePath + ".", e);
 		}
 	}
+	 */
 
 	public static void lklMount(Path path, Path dest, String fsType) throws BWFLAException {
 		EmulatorUtils.lklMount(path, dest, fsType, log);
@@ -669,7 +654,7 @@ public class EmulatorUtils {
 
 	private static void _umountNbd(String cowFile, Logger log)
 	{
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/qcow-runner/umount-qcow");
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/fuseqemu/umount-qcow-lazy");
 		process.setLogger(log);
 		process.addArgument(cowFile);
 		if(!process.execute())

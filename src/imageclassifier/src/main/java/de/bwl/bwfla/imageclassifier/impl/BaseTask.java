@@ -107,7 +107,7 @@ public abstract class BaseTask extends BlockingTask<Object>
 		b.setUrl(url);
 
 		try {
-			EmulatorUtils.copyRemoteUrl(b, uploadPath, new XmountOptions(), log);
+			EmulatorUtils.copyRemoteUrl(b, uploadPath, log);
 
 			type = runDiskType(uploadPath, log);
 			if(type == null)
@@ -166,7 +166,7 @@ public abstract class BaseTask extends BlockingTask<Object>
 				subresFilePath = EmulatorUtils.mountCowFile(cowFilePath, cowMountpoint, log);
 			} else {
 				subresFilePath = basePath.resolve("object.img");
-				EmulatorUtils.copyRemoteUrl(fce, subresFilePath, new XmountOptions(), log);
+				EmulatorUtils.copyRemoteUrl(fce, subresFilePath, log);
 				log.info("Downloading object finished.");
 			}
 

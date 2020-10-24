@@ -57,8 +57,7 @@ public class RuncBean extends ContainerBean
 
 		// Resolve and mount runc-specific bindings
 		{
-			final EmulatorUtils.XmountOutputFormat format = EmulatorUtils.XmountOutputFormat.RAW;
-			bindings.mount(config.getRootFilesystem(), this.getBindingsDir(), format);
+			bindings.mount(config.getRootFilesystem(), this.getBindingsDir());
 		}
 
 		// Generate container's config

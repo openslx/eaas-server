@@ -67,7 +67,7 @@ public class ImageMounter implements AutoCloseable
 	/** Mount image at mountpoint. */
 	public Mount mount(Path image, Path mountpoint) throws BWFLAException, IllegalArgumentException
 	{
-		return this.mount(image, mountpoint, new XmountOptions());
+		return this.mount(image, mountpoint, new MountOptions());
 	}
 
 	/** Mount image, beginning at offset, at specified mountpoint. */
@@ -83,7 +83,7 @@ public class ImageMounter implements AutoCloseable
 		this.check(offset, OFFSET_MIN_BOUND, "offset");
 		this.check(size, SIZE_MIN_BOUND, "size");
 
-		final XmountOptions options = new XmountOptions();
+		final MountOptions options = new MountOptions();
 		options.setOffset(offset);
 		options.setSize(size);
 
@@ -91,12 +91,12 @@ public class ImageMounter implements AutoCloseable
 	}
 
 	/** Mount image at mountpoint with options. */
-	public Mount mount(Path image, Path mountpoint, XmountOptions options)
+	public Mount mount(Path image, Path mountpoint, MountOptions options)
 			throws BWFLAException, IllegalArgumentException
 	{
 		this.check(image);
 
-		final Path target = EmulatorUtils.xmount(image.toString(), mountpoint, options, log);
+		final Path target = EmulatorUtils.nbdMount(image.toString(), mountpoint, options, log);
 		final Mount mount = new Mount(image, target, mountpoint);
 		this.register(mount);
 		return mount;
@@ -145,7 +145,7 @@ public class ImageMounter implements AutoCloseable
 		this.check(offset, OFFSET_MIN_BOUND, "offset");
 		this.check(size, SIZE_MIN_BOUND, "size");
 
-		final XmountOptions options = new XmountOptions();
+		final MountOptions options = new MountOptions();
 		options.setOffset(offset);
 		options.setSize(size);
 
@@ -156,7 +156,7 @@ public class ImageMounter implements AutoCloseable
 	 * Re-mount an already mounted image, using provided options.
 	 * The previous mount will be unmounted and invalidated!
 	 */
-	public Mount remount(Mount mount, XmountOptions options) throws BWFLAException, IllegalArgumentException
+	public Mount remount(Mount mount, MountOptions options) throws BWFLAException, IllegalArgumentException
 	{
 		this.check(mount);
 
