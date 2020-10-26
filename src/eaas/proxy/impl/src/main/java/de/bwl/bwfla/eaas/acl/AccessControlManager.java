@@ -119,14 +119,14 @@ public class AccessControlManager
 		switch (type) {
 			case Controllers.OBJECT_LICENSE:
 			case Controllers.LEGACY_OBJECT_LICENSE:
-				return new ObjectLicenseController(priority);
+				return new ObjectLicenseController(priority, log);
 
 			case Controllers.SOFTWARE_LICENSE:
 			case Controllers.LEGACY_SOFTWARE_LICENSE:
-				return new SoftwareLicenseController(priority);
+				return new SoftwareLicenseController(priority, log);
 
 			case Controllers.ENVIRONMENT_LOCK:
-				return new EnvironmentLocker(priority);
+				return new EnvironmentLocker(priority, log);
 
 			default:
 				throw new BWFLAException("Invalid access-controller type: " + type);

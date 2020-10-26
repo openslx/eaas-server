@@ -19,85 +19,121 @@
 
 package de.bwl.bwfla.eaas.acl;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+
+import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.BiFunction;
 import java.util.logging.Logger;
-
-import javax.inject.Inject;
+import java.util.stream.Stream;
 
 
 public abstract class AbstractLicenseController extends AbstractAccessController
 {
-	@Inject
-	protected Logger log;
+	private final Map<String, SeatCounter> seats = new ConcurrentHashMap<>();
+	private final Map<UUID, List<String>> allocations = new ConcurrentHashMap<>();
 
-	protected final Map<String, SeatCounter> seats = new ConcurrentHashMap<>();
-	protected final Map<UUID, List<String>> allocations = new ConcurrentHashMap<>();
-
-	public AbstractLicenseController(int priority)
+	protected AbstractLicenseController(int priority, Logger log)
 	{
-		super(priority);
+		super(priority, log);
 	}
 
-	/**
-	 * Allocates a license seat for the given id or throws an
-	 * OutOfSeatsException if already allocated and the number of available seats is reached.
-	 *
-	 * If this method does not throw, it is guaranteed that there was one free
-	 * software license for the given softwareId and that the number of free
-	 * licenses was decremented successfully.
-	 *
-	 * @param id
-	 * @param max
-	 * @throws OutOfSeatsException
-	 */
-	protected void allocate(String id, int max) throws OutOfSeatsException
+	protected void allocate(UUID session, Stream<ResourceHandle> resources) throws BWFLAException
 	{
-		try {
-			SeatCounter counter = seats.computeIfAbsent(id, sid -> new SeatCounter(max));
-
-			if (!counter.increment()) {
-				throw new OutOfSeatsException("Maximum number of software licenses reached for software id \"" + id + "\"");
+		final List<String> ids = allocations.computeIfAbsent(session, unused -> new ArrayList<>());
+		try (resources) {
+			final Iterator<ResourceHandle> iter = resources.iterator();
+			while (iter.hasNext()) {
+				final ResourceHandle resource = iter.next();
+				this.allocate(resource.id(), resource.seats());
+				ids.add(resource.id());
 			}
-		} catch (RuntimeException e) {
-			if (e.getCause() instanceof OutOfSeatsException) {
-				throw (OutOfSeatsException)e.getCause();
-			}
-			log.severe("Internal runtime Error: " + e.getMessage());
-			throw e;
+		}
+		catch (Exception error) {
+			// Not all seats could be allocated, clean up!
+			this.release(session);
+			if (error instanceof BWFLAException)
+				throw error;
+			else throw new BWFLAException("Allocating license failed!", error);
 		}
 	}
 
-	protected void releaseSeat(String id)
+	protected void release(UUID session)
 	{
-		SeatCounter counter = seats.get(id);
-		if (counter == null)
-			return;
+		final List<String> ids = allocations.remove(session);
+		if (ids == null)
+			return;  // No allocations made for this session!
 
-		counter.decrement();
+		for (String id: ids)
+			this.release(id);
+
+		ids.clear();
+	}
+
+	private void allocate(String id, int maxseats) throws OutOfSeatsException
+	{
+		final SeatCounter counter = seats.computeIfAbsent(id, unused -> new SeatCounter());
+		if (!counter.increment(maxseats))
+			throw new OutOfSeatsException("Max. number of seats reached for resource '" + id + "'!");
+
+		log.info("License for resource '" + id + "' allocated");
+	}
+
+	private void release(String id)
+	{
+		final BiFunction<String, SeatCounter, SeatCounter> functor = (key, counter) -> {
+			// Remove counter, once the last seat has been released!
+			return (counter.decrement() > 0) ? counter : null;
+		};
+
+		seats.computeIfPresent(id, functor);
+		log.info("License for resource '" + id + "' released");
+	}
+
+
+	protected static class ResourceHandle
+	{
+		private final String id;
+		private final int seats;
+
+		public ResourceHandle(String id, int seats)
+		{
+			this.id = id;
+			this.seats = seats;
+		}
+
+		public String id()
+		{
+			return id;
+		}
+
+		public int seats()
+		{
+			return seats;
+		}
 	}
 }
 
 class SeatCounter
 {
-	private final AtomicInteger curNumSeats;
-	private final int maxNumSeats;
+	private final AtomicInteger counter;
 
-	public SeatCounter(int maxnum)
+	public SeatCounter()
 	{
-		this.curNumSeats = new AtomicInteger(0);
-		this.maxNumSeats = maxnum;
+		this.counter = new AtomicInteger(0);
 	}
 
-	public boolean increment()
+	public boolean increment(int maxnum)
 	{
-		int newnum = curNumSeats.incrementAndGet();
-		if (newnum > maxNumSeats) {
+		int newnum = counter.incrementAndGet();
+		if (newnum > maxnum) {
 			// Max number of seats reached!
-			curNumSeats.decrementAndGet();
+			counter.decrementAndGet();
 			return false;
 		}
 
@@ -106,6 +142,6 @@ class SeatCounter
 
 	public int decrement()
 	{
-		return curNumSeats.decrementAndGet();
+		return counter.decrementAndGet();
 	}
 }

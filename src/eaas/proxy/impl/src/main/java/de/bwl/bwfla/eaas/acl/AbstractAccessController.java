@@ -24,16 +24,19 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 
 import java.util.UUID;
+import java.util.logging.Logger;
 
 
 public abstract class AbstractAccessController
 {
+	protected final Logger log;
 	private final int priority;
 
 
-	protected AbstractAccessController(int priority)
+	protected AbstractAccessController(int priority, Logger log)
 	{
 		this.priority = priority;
+		this.log = log;
 	}
 
 	public int priority()

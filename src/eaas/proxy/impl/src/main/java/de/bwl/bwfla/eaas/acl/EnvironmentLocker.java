@@ -22,7 +22,6 @@ package de.bwl.bwfla.eaas.acl;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
-import javax.inject.Inject;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -30,18 +29,15 @@ import java.util.logging.Logger;
 
 public class EnvironmentLocker extends AbstractAccessController
 {
-	@Inject
-	private Logger log;
-
 	/** Mapping: environment ID -> session ID */
 	private final ConcurrentHashMap<String, UUID> environments = new ConcurrentHashMap<>();
 
 	/** Mapping: session ID -> environment ID */
 	private final ConcurrentHashMap<UUID, String> sessions = new ConcurrentHashMap<>();
 
-	public EnvironmentLocker(int priority)
+	public EnvironmentLocker(int priority, Logger log)
 	{
-		super(priority);
+		super(priority, log);
 	}
 
 	@Override

@@ -26,18 +26,18 @@ import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
+import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 
 public class SoftwareLicenseController extends AbstractLicenseController
 {
 	private final SoftwareArchiveHelper softwareArchiveHelper;
 
-	public SoftwareLicenseController(int priority) throws BWFLAException
+	public SoftwareLicenseController(int priority, Logger log) throws BWFLAException
     {
-        super(priority);
+        super(priority, log);
 
 		final Configuration config = ConfigurationProvider.getConfiguration();
 		final String softwareArchiveUrl = config.get("ws.softwarearchive");
@@ -53,38 +53,27 @@ public class SoftwareLicenseController extends AbstractLicenseController
 		if (!(config instanceof MachineConfiguration))
 			return;
 
-		final List<String> allocatedSoftwareIds = allocations.computeIfAbsent(session, ctx -> new ArrayList<String>());
-		final List<String> installedSoftwareIds = ((MachineConfiguration)config).getInstalledSoftwareIds();
-		// Allocate software seats...
-		try {
-			for (String softwareId : installedSoftwareIds) {
-				int max = softwareArchiveHelper.getNumSoftwareSeatsById(softwareId);
-				if(max < 0)
-					max = Integer.MAX_VALUE;
-				allocate(softwareId, max);
-				allocatedSoftwareIds.add(softwareId);
-			}
-		} catch (Throwable t) {
-			// TODO: implement some retry logic!
+		final Stream<ResourceHandle> resources = ((MachineConfiguration) config).getInstalledSoftwareIds()
+				.stream()
+				.map((id) -> new ResourceHandle(id, this.getMaxNumSeats(id)));
 
-			// Not all seats could be allocated, clean up
-			for (String softwareId : allocatedSoftwareIds)
-				releaseSeat(softwareId);
-			allocatedSoftwareIds.clear();
-
-			throw t;
-		}
+		super.allocate(session, resources);
 	}
 
 	@Override
 	public void drop(UUID session)
     {
-		final List<String> allocatedSoftwareIds = allocations.get(session);
-		if (allocatedSoftwareIds == null)
-			return;  // No allocations made for this UUID
+		super.release(session);
+	}
 
-		for (String softwareId : allocatedSoftwareIds)
-			releaseSeat(softwareId);
-		allocatedSoftwareIds.clear();
+	private int getMaxNumSeats(String id) throws RuntimeException
+	{
+		try {
+			final int numseats = softwareArchiveHelper.getNumSoftwareSeatsById(id);
+			return (numseats < 0) ? Integer.MAX_VALUE : numseats;
+		}
+		catch (Exception error) {
+			throw new RuntimeException(error);
+		}
 	}
 }
