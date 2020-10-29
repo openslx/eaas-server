@@ -29,6 +29,7 @@ import javax.annotation.Resource;
 import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Singleton;
+import javax.inject.Inject;
 import javax.jws.WebService;
 import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
@@ -36,6 +37,7 @@ import javax.xml.ws.soap.MTOM;
 import de.bwl.bwfla.common.datatypes.GenericId;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.interfaces.SoftwareArchiveWSRemote;
 import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionWriter;
 import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
@@ -52,6 +54,9 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 
 	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
 	private Executor executor = null;
+
+	@Inject
+	private SeatManager seatmgr;
 
 	@Override
 	public boolean hasSoftwarePackage(String id)
@@ -79,6 +84,30 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 	{
 		ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
 		return archive.getNumSoftwareSeatsById(id);
+	}
+
+	@Override
+	public int getNumSoftwareSeatsForTenant(String id, String tenant) throws BWFLAException
+	{
+		return seatmgr.getNumSeats(tenant, id);
+	}
+
+	@Override
+	public void setNumSoftwareSeatsForTenant(String id, String tenant, int seats) throws BWFLAException
+	{
+		seatmgr.setNumSeats(tenant, id, seats);
+	}
+
+	@Override
+	public void resetNumSoftwareSeatsForTenant(String id, String tenant)
+	{
+		seatmgr.resetNumSeats(tenant, id);
+	}
+
+	@Override
+	public void resetAllSoftwareSeatsForTenant(String tenant)
+	{
+		seatmgr.resetNumSeats(tenant);
 	}
 	
 	@Override
