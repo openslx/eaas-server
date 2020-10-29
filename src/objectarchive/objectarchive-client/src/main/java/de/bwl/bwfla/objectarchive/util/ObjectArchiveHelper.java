@@ -180,6 +180,26 @@ public class ObjectArchiveHelper {
 		return archive.getNumObjectSeats(_archive, objectId);
 	}
 
+	public int getNumObjectSeatsForTenant(String _archive, String object, String tenant) throws BWFLAException {
+		connectArchive();
+		return archive.getNumObjectSeatsForTenant(_archive, object, tenant);
+	}
+
+	public void setNumObjectSeatsForTenant(String _archive, String object, String tenant, int seats) throws BWFLAException {
+		connectArchive();
+		archive.setNumObjectSeatsForTenant(_archive, object, tenant, seats);
+	}
+
+	public void resetNumObjectSeatsForTenant(String _archive, String object, String tenant) throws BWFLAException {
+		connectArchive();
+		archive.resetNumObjectSeatsForTenant(_archive, object, tenant);
+	}
+
+	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException {
+		connectArchive();
+		archive.resetAllObjectSeatsForTenant(tenant);
+	}
+
 	public List<String> getArchives() throws BWFLAException {
 		connectArchive();
 		return archive.getArchives();
