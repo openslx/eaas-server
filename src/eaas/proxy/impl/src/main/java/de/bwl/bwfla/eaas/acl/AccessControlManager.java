@@ -56,7 +56,7 @@ public class AccessControlManager
 			if ((controller instanceof EnvironmentLocker) && !options.isLockEnvironment())
 				continue;  // Skip environment-locking, if not requested!
 
-			controller.gain(session, config);
+			controller.gain(session, options, config);
 		}
 	}
 

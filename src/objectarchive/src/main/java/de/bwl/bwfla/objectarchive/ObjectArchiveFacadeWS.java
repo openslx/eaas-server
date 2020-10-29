@@ -146,7 +146,17 @@ public class ObjectArchiveFacadeWS
 
 	public int getNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
 	{
-		return seatmgr.getNumSeats(tenant, archive, id);
+		int seats = -1;
+
+		if (tenant != null)
+			seats = seatmgr.getNumSeats(tenant, archive, id);
+
+		if (seats < 0) {
+			// No tenant specific limits defined!
+			seats = this.getNumObjectSeats(archive, id);
+		}
+
+		return seats;
 	}
 
 	public void setNumObjectSeatsForTenant(String archive, String id, String tenant, int seats) throws BWFLAException

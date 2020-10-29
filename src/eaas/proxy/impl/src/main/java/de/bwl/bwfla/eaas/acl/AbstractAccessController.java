@@ -21,6 +21,7 @@ package de.bwl.bwfla.eaas.acl;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.eaas.EaasWS;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 
 import java.util.UUID;
@@ -45,7 +46,7 @@ public abstract class AbstractAccessController
 	}
 
 	/** Try to gain access to resources associated with session. */
-	public abstract void gain(UUID session, ComponentConfiguration config) throws BWFLAException;
+	public abstract void gain(UUID session, EaasWS.SessionOptions options, ComponentConfiguration config) throws BWFLAException;
 
 	/** Drop access to resources associated with session. */
 	public abstract void drop(UUID session);

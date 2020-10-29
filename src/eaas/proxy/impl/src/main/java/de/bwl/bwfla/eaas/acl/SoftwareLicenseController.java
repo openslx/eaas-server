@@ -20,6 +20,7 @@
 package de.bwl.bwfla.eaas.acl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.eaas.EaasWS;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
@@ -48,14 +49,15 @@ public class SoftwareLicenseController extends AbstractLicenseController
 	}
 
 	@Override
-	public void gain(UUID session, ComponentConfiguration config) throws BWFLAException
+	public void gain(UUID session, EaasWS.SessionOptions options, ComponentConfiguration config)
+			throws BWFLAException
     {
 		if (!(config instanceof MachineConfiguration))
 			return;
 
 		final Stream<ResourceHandle> resources = ((MachineConfiguration) config).getInstalledSoftwareIds()
 				.stream()
-				.map((id) -> new ResourceHandle(id, this.getMaxNumSeats(id)));
+				.map((id) -> new ResourceHandle(id, this.getMaxNumSeats(id, options.getTenantId())));
 
 		super.allocate(session, resources);
 	}
@@ -66,10 +68,10 @@ public class SoftwareLicenseController extends AbstractLicenseController
 		super.release(session);
 	}
 
-	private int getMaxNumSeats(String id) throws RuntimeException
+	private int getMaxNumSeats(String id, String tenant) throws RuntimeException
 	{
 		try {
-			final int numseats = softwareArchiveHelper.getNumSoftwareSeatsById(id);
+			final int numseats = softwareArchiveHelper.getNumSoftwareSeatsForTenant(id, tenant);
 			return (numseats < 0) ? Integer.MAX_VALUE : numseats;
 		}
 		catch (Exception error) {

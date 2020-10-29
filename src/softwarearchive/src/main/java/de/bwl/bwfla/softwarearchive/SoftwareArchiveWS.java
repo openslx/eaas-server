@@ -89,7 +89,17 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 	@Override
 	public int getNumSoftwareSeatsForTenant(String id, String tenant) throws BWFLAException
 	{
-		return seatmgr.getNumSeats(tenant, id);
+		int seats = -1;
+
+		if (tenant != null)
+			seats = seatmgr.getNumSeats(tenant, id);
+
+		if (seats < 0) {
+			// No tenant specific limits defined!
+			seats = this.getNumSoftwareSeatsById(id);
+		}
+
+		return seats;
 	}
 
 	@Override

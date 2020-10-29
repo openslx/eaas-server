@@ -20,6 +20,7 @@
 package de.bwl.bwfla.eaas.acl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.eaas.EaasWS;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.api.EmulationEnvironmentHelper;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
@@ -49,7 +50,8 @@ public class ObjectLicenseController extends AbstractLicenseController
 	}
 
 	@Override
-	public void gain(UUID session, ComponentConfiguration config) throws BWFLAException
+	public void gain(UUID session, EaasWS.SessionOptions options, ComponentConfiguration config)
+			throws BWFLAException
 	{
 		if (!(config instanceof MachineConfiguration))
 			return;
@@ -58,7 +60,7 @@ public class ObjectLicenseController extends AbstractLicenseController
 				.stream()
 				.map((object) -> {
 					final String id = object.getArchive() + "/" + object.getObjectId();
-					final int seats = this.getMaxNumSeats(object.getArchive(), object.getObjectId());
+					final int seats = this.getMaxNumSeats(object.getArchive(), object.getObjectId(), options.getTenantId());
 					return new ResourceHandle(id, seats);
 				});
 
@@ -71,10 +73,10 @@ public class ObjectLicenseController extends AbstractLicenseController
 		super.release(session);
 	}
 
-	private int getMaxNumSeats(String archive, String id) throws RuntimeException
+	private int getMaxNumSeats(String archive, String id, String tenant) throws RuntimeException
 	{
 		try {
-			final int numseats = objectArchiveHelper.getNumObjectSeats(archive, id);
+			final int numseats = objectArchiveHelper.getNumObjectSeatsForTenant(archive, id, tenant);
 			return (numseats < 0) ? Integer.MAX_VALUE : numseats;
 		}
 		catch (Exception error) {

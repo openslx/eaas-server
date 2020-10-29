@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.eaas.acl;
 
+import de.bwl.bwfla.eaas.EaasWS;
 import de.bwl.bwfla.emucomp.api.ComponentConfiguration;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
@@ -41,7 +42,8 @@ public class EnvironmentLocker extends AbstractAccessController
 	}
 
 	@Override
-	public void gain(UUID session, ComponentConfiguration config) throws AccessDeniedException
+	public void gain(UUID session, EaasWS.SessionOptions options, ComponentConfiguration config)
+			throws AccessDeniedException
 	{
 		final String envId = ((MachineConfiguration) config).getId();
 		if (environments.putIfAbsent(envId, session) != null)
