@@ -21,11 +21,11 @@ package de.bwl.bwfla.common.database;
 
 import com.fasterxml.jackson.databind.exc.UnrecognizedPropertyException;
 
-import com.mongodb.BasicDBObject;
 import com.mongodb.Function;
 import com.mongodb.MongoException;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
+import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.Projections;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.result.DeleteResult;
@@ -34,20 +34,16 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
-import org.bson.BSON;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.xml.bind.JAXBException;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.net.UnknownHostException;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executor;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -85,6 +81,11 @@ public class MongodbEaasConnector {
 			this.db = mongoClient.getDatabase(dbname);
 		}
 
+		public <T extends JaxbType> DocumentCollection<T> getCollection(String cname, Class<T> clazz)
+		{
+			return new DocumentCollection<>(cname, clazz, this);
+		}
+
 		/**
 		 * Load Json from database and cast it to given Jaxb object
 		 *
@@ -96,13 +97,20 @@ public class MongodbEaasConnector {
 		 * @return
 		 * @throws JAXBException
 		 */
+		@Deprecated
 		public <T extends JaxbType> T getJaxbObject(String collectionName, String fvalue, String fkey, Class<T> klass) throws BWFLAException {
+			final String[] filter = { fkey, fvalue };
+			return this.lookup(collectionName, filter, klass);
+		}
 
-			final MongoCollection<Document> collection = db.getCollection(collectionName);
-			final Bson filter = Filters.eq(fkey, fvalue);
+		/** Look up document using specified filter-kv */
+		public <T extends JaxbType> T lookup(String cname, String[] filter, Class<T> klass)
+				throws BWFLAException, NoSuchElementException, IllegalArgumentException
+		{
+			final MongoCollection<Document> collection = db.getCollection(cname);
 
 			// Remove internal _id field in json (internal unremovable key in database, next step might be to store envId as _id)
-			final Document result = collection.find(filter)
+			final Document result = collection.find(MongodbEaasConnector.toFilter(filter))
 					.projection(Projections.excludeId())
 					.first();
 
@@ -241,6 +249,7 @@ public class MongodbEaasConnector {
 		 * @param fvalue
 		 * @param fkey
 		 */
+		@Deprecated
 		public void deleteDoc(String collectionName, String fvalue, String fkey) {
 			deleteDoc(collectionName, fvalue, fkey, true);
 		}
@@ -252,15 +261,25 @@ public class MongodbEaasConnector {
 		 * @param fvalue
 		 * @param fkey
 		 */
+		@Deprecated
 		public void deleteDoc(String collectionName, String fvalue, String fkey, boolean mustExist) {
-			final MongoCollection<Document> collection = db.getCollection(collectionName);
-			final Bson filter = Filters.eq(fkey, fvalue);
+			final String[] filter = { fkey, fvalue };
+			this.delete(collectionName, filter, mustExist);
+		}
 
-			final DeleteResult result = collection.deleteOne(filter);
+		/** Delete single document matching specified filter */
+		public void delete(String cname, String[] filter) throws NoSuchElementException
+		{
+			this.delete(cname, filter, true);
+		}
 
-			if (mustExist)
-				if (result.getDeletedCount() <= 0)
-					throw new NoSuchElementException();
+		/** Delete single document matching specified filter */
+		public void delete(String cname, String[] filter, boolean mustExist) throws NoSuchElementException
+		{
+			final MongoCollection<Document> collection = db.getCollection(cname);
+			final DeleteResult result = collection.deleteOne(MongodbEaasConnector.toFilter(filter));
+			if (mustExist && result.getDeletedCount() <= 0)
+				throw new NoSuchElementException();
 		}
 
 
@@ -358,16 +377,14 @@ public class MongodbEaasConnector {
 			return objects;
 		}
 
-		public void createIndex(String collectionName, String key) throws BWFLAException {
-			if (key == null || key.isEmpty())
-				throw new BWFLAException("Invalid ObjectId");
-
-			MongoCollection<Document> collection = db.getCollection(collectionName);
+		public void createIndex(String cname, String... fields) throws BWFLAException
+		{
 			try {
-				collection.createIndex(new BasicDBObject(key, 1));
-			} catch (Exception e)
-			{
-				e.printStackTrace();
+				db.getCollection(cname)
+						.createIndex(Indexes.ascending(fields));
+			}
+			catch (Exception error) {
+				throw new BWFLAException("Creating index failed!", error);
 			}
 		}
 
@@ -383,17 +400,24 @@ public class MongodbEaasConnector {
 		 * @throws UnknownHostException
 		 * @throws BWFLAException
 		 */
+		@Deprecated
 		public void saveDoc(String collectionName, String fvalue, String fkey, String newJson) throws BWFLAException {
 			if (fvalue.equals(""))
 				throw new BWFLAException("Invalid ObjectId");
 
-			final MongoCollection<Document> collection = db.getCollection(collectionName);
-			final Bson filter = Filters.eq(fkey, fvalue);
-			final Document replacement = Document.parse(newJson);
+			final String[] filter = { fkey, fvalue };
+			this.save(collectionName, filter, newJson);
+		}
+
+		public void save(String cname, String[] filter, String json) throws BWFLAException
+		{
+			final MongoCollection<Document> collection = db.getCollection(cname);
+			final Document replacement = Document.parse(json);
 			final ReplaceOptions options = new ReplaceOptions()
 					.upsert(true);
 
-			final UpdateResult result = collection.replaceOne(filter, replacement, options);
+			final Document fd = MongodbEaasConnector.toFilter(filter);
+			final UpdateResult result = collection.replaceOne(fd, replacement, options);
 			if (!result.isModifiedCountAvailable() && result.getUpsertedId() == null)
 				throw new BWFLAException("Upsert failed!");
 		}
@@ -542,6 +566,17 @@ public class MongodbEaasConnector {
 		}
 	}
 
+	private static Document toFilter(String[] kvs)
+	{
+		if (kvs.length % 2 != 0)
+			throw new IllegalArgumentException("Filter's KV-pairs are invalid!");
+
+		final Document filter = new Document();
+		for (int i = 0; i < kvs.length; i += 2)
+			filter.append(kvs[i], kvs[i+1]);
+
+		return filter;
+	}
 
 	public static class FilterBuilder
 	{
