@@ -21,11 +21,21 @@ package de.bwl.bwfla.blobstore;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import io.minio.BucketExistsArgs;
+import io.minio.GetObjectArgs;
+import io.minio.GetPresignedObjectUrlArgs;
+import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
+import io.minio.RemoveBucketArgs;
+import io.minio.RemoveObjectArgs;
+import io.minio.RemoveObjectsArgs;
 import io.minio.Result;
+import io.minio.StatObjectArgs;
 import io.minio.UploadObjectArgs;
+import io.minio.http.Method;
 import io.minio.messages.Bucket;
+import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
@@ -58,19 +68,40 @@ public class BlobStoreClient
 
 	public boolean exists(String bucket) throws BWFLAException
 	{
-		final SupplierTask<Boolean> op = () -> minio.bucketExists(bucket);
+		final SupplierTask<Boolean> op = () -> {
+			final BucketExistsArgs args = BucketExistsArgs.builder()
+					.bucket(bucket)
+					.build();
+
+			return minio.bucketExists(args);
+		};
+
 		return this.execute(op, "Checking bucket existence failed!");
 	}
 
 	public BlobStoreClient make(String bucket) throws BWFLAException
 	{
-		final RunnableTask op = () -> minio.makeBucket(bucket);
+		final RunnableTask op = () -> {
+			final MakeBucketArgs args = MakeBucketArgs.builder()
+					.bucket(bucket)
+					.build();
+
+			minio.makeBucket(args);
+		};
+
 		return this.execute(op, "Creating bucket failed!");
 	}
 
 	public BlobStoreClient delete(String bucket) throws BWFLAException
 	{
-		final RunnableTask op = () -> minio.removeBucket(bucket);
+		final RunnableTask op = () -> {
+			final RemoveBucketArgs args = RemoveBucketArgs.builder()
+					.bucket(bucket)
+					.build();
+
+			minio.removeBucket(args);
+		};
+
 		return this.execute(op, "Deleting bucket failed!");
 	}
 
@@ -97,7 +128,15 @@ public class BlobStoreClient
 
 	public BlobStoreClient delete(String bucket, String blob) throws BWFLAException
 	{
-		final RunnableTask op = () -> minio.removeObject(bucket, blob);
+		final RunnableTask op = () -> {
+			final RemoveObjectArgs args = RemoveObjectArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.build();
+
+			minio.removeObject(args);
+		};
+
 		return this.execute(op, "Deleting blob failed!");
 	}
 
@@ -108,13 +147,32 @@ public class BlobStoreClient
 
 	public BlobStoreClient delete(String bucket, Iterable<String> blobs) throws BWFLAException
 	{
-		final RunnableTask op = () -> minio.removeObjects(bucket, blobs);
+		final RunnableTask op = () -> {
+			final Stream<DeleteObject> objects = StreamSupport.stream(blobs.spliterator(), false)
+					.map(DeleteObject::new);
+
+			final RemoveObjectsArgs args = RemoveObjectsArgs.builder()
+					.bucket(bucket)
+					.objects(objects::iterator)
+					.build();
+
+			minio.removeObjects(args);
+		};
+
 		return this.execute(op, "Deleting blob failed!");
 	}
 
 	public InputStream get(String bucket, String blob) throws BWFLAException
 	{
-		final SupplierTask<InputStream> op = () -> minio.getObject(bucket, blob);
+		final SupplierTask<InputStream> op = () -> {
+			final GetObjectArgs args = GetObjectArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.build();
+
+			return minio.getObject(args);
+		};
+
 		return this.execute(op, "Downloading blob failed!");
 	}
 
@@ -125,7 +183,16 @@ public class BlobStoreClient
 
 	public InputStream get(String bucket, String blob, long offset) throws BWFLAException
 	{
-		final SupplierTask<InputStream> op = () -> minio.getObject(bucket, blob, offset);
+		final SupplierTask<InputStream> op = () -> {
+			final GetObjectArgs args = GetObjectArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.offset(offset)
+					.build();
+
+			return minio.getObject(args);
+		};
+
 		return this.execute(op, "Downloading blob failed!");
 	}
 
@@ -136,7 +203,17 @@ public class BlobStoreClient
 
 	public InputStream get(String bucket, String blob, long offset, long length) throws BWFLAException
 	{
-		final SupplierTask<InputStream> op = () -> minio.getObject(bucket, blob, offset, length);
+		final SupplierTask<InputStream> op = () -> {
+			final GetObjectArgs args = GetObjectArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.offset(offset)
+					.length(length)
+					.build();
+
+			return minio.getObject(args);
+		};
+
 		return this.execute(op, "Downloading blob failed!");
 	}
 
@@ -210,7 +287,15 @@ public class BlobStoreClient
 
 	public BlobInfo stat(String bucket, String blob) throws BWFLAException
 	{
-		final SupplierTask<BlobInfo> op = () -> new BlobInfo(minio.statObject(bucket, blob));
+		final SupplierTask<BlobInfo> op = () -> {
+			final StatObjectArgs args = StatObjectArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.build();
+
+			return new BlobInfo(minio.statObject(args));
+		};
+
 		return this.execute(op, "Stating blob failed!");
 	}
 
@@ -257,6 +342,17 @@ public class BlobStoreClient
 		return this.execute(op, "Listing blobs failed!");
 	}
 
+	public String getBlobUrl(String bucket, String blob) throws BWFLAException
+	{
+		final SupplierTask<String> op = () -> minio.getObjectUrl(bucket, blob);
+		return this.execute(op, "Generating URL for downloading failed!");
+	}
+
+	public String getBlobUrl(BlobHandle handle) throws BWFLAException
+	{
+		return this.getBlobUrl(handle.bucket(), handle.name());
+	}
+
 	public String newPreSignedGet(String bucket, String blob) throws BWFLAException
 	{
 		return this.newPreSignedGet(bucket, blob, 7, TimeUnit.DAYS);
@@ -269,7 +365,17 @@ public class BlobStoreClient
 
 	public String newPreSignedGet(String bucket, String blob, int expiry, TimeUnit unit) throws BWFLAException
 	{
-		final SupplierTask<String> op = () -> minio.presignedGetObject(bucket, blob, (int) unit.toSeconds(expiry));
+		final SupplierTask<String> op = () -> {
+			final GetPresignedObjectUrlArgs args = GetPresignedObjectUrlArgs.builder()
+					.method(Method.GET)
+					.bucket(bucket)
+					.object(blob)
+					.expiry(expiry, unit)
+					.build();
+
+			return minio.getPresignedObjectUrl(args);
+		};
+
 		return this.execute(op, "Generating pre-signed URL for downloading failed!");
 	}
 
@@ -290,7 +396,17 @@ public class BlobStoreClient
 
 	public String newPreSignedPut(String bucket, String blob, int expiry, TimeUnit unit) throws BWFLAException
 	{
-		final SupplierTask<String> op = () -> minio.presignedPutObject(bucket, blob, (int) unit.toSeconds(expiry));
+		final SupplierTask<String> op = () -> {
+			final GetPresignedObjectUrlArgs args = GetPresignedObjectUrlArgs.builder()
+					.method(Method.PUT)
+					.bucket(bucket)
+					.object(blob)
+					.expiry(expiry, unit)
+					.build();
+
+			return minio.getPresignedObjectUrl(args);
+		};
+
 		return this.execute(op, "Generating pre-signed URL for uploading failed!");
 	}
 
