@@ -22,6 +22,8 @@ package de.bwl.bwfla.blobstore;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import io.minio.BucketExistsArgs;
+import io.minio.DeleteBucketPolicyArgs;
+import io.minio.GetBucketPolicyArgs;
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
@@ -31,6 +33,7 @@ import io.minio.RemoveBucketArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.RemoveObjectsArgs;
 import io.minio.Result;
+import io.minio.SetBucketPolicyArgs;
 import io.minio.StatObjectArgs;
 import io.minio.UploadObjectArgs;
 import io.minio.http.Method;
@@ -413,6 +416,42 @@ public class BlobStoreClient
 	public String newPreSignedPut(BlobHandle handle, int expiry, TimeUnit unit) throws BWFLAException
 	{
 		return this.newPreSignedPut(handle.bucket(), handle.name(), expiry, unit);
+	}
+
+	public String policy(String bucket) throws BWFLAException
+	{
+		final SupplierTask<String> op = () -> {
+			final GetBucketPolicyArgs args = GetBucketPolicyArgs.builder()
+					.bucket(bucket)
+					.build();
+
+			return minio.getBucketPolicy(args);
+		};
+
+		return this.execute(op, "Looking up bucket-policy failed!");
+	}
+
+	public BlobStoreClient setPolicy(String bucket, String policy) throws BWFLAException
+	{
+		final RunnableTask op = () -> {
+			if (policy != null) {
+				final SetBucketPolicyArgs args = SetBucketPolicyArgs.builder()
+						.bucket(bucket)
+						.config(policy)
+						.build();
+
+				minio.setBucketPolicy(args);
+			}
+			else {
+				final DeleteBucketPolicyArgs args = DeleteBucketPolicyArgs.builder()
+						.bucket(bucket)
+						.build();
+
+				minio.deleteBucketPolicy(args);
+			}
+		};
+
+		return this.execute(op, "Updating bucket-policy failed!");
 	}
 
 
