@@ -74,7 +74,7 @@ public class ImageHandler
 		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
 		cleanTmpFiles();
-		resolveLocalBackingFiles();
+		// resolveLocalBackingFiles();
 	}
 
 	public ImageNameIndex getNameIndexes(){
