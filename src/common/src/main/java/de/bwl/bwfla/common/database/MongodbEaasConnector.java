@@ -418,7 +418,7 @@ public class MongodbEaasConnector {
 
 			final Document fd = MongodbEaasConnector.toFilter(filter);
 			final UpdateResult result = collection.replaceOne(fd, replacement, options);
-			if (!result.isModifiedCountAvailable() && result.getUpsertedId() == null)
+			if (result.getModifiedCount() < 1 && result.getUpsertedId() == null)
 				throw new BWFLAException("Upsert failed!");
 		}
 
