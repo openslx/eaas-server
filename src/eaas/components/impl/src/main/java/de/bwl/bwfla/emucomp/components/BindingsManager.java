@@ -22,6 +22,7 @@ package de.bwl.bwfla.emucomp.components;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.Binding;
@@ -208,10 +209,20 @@ public class BindingsManager
 
 		log.info("Mounting binding '" + binding + "'...");
 
+
+
+		// TODO: we need to resolve the full path here or earlier to
+		// ensure that all access options use the same path:
 		if(binding.startsWith("rom-")) // old rom bindings do not have COPY access by default
 		{
-			log.info("guessing resource is a ROM. force COPY access");
-			resource.setAccess(Binding.AccessType.COPY);
+			log.info("guessing resource is a ROM. force COPY access if not QCOW");
+
+			// check the file type first.
+			ImageInformation inf = new ImageInformation(resource.getUrl(), log);
+			ImageInformation.QemuImageFormat fmt = inf.getFileFormat();
+			log.severe("got: " + fmt);
+			if(fmt != ImageInformation.QemuImageFormat.QCOW2)
+				resource.setAccess(Binding.AccessType.COPY);
 		}
 
 		final XmountOptions xmountOpts = new XmountOptions(outformat);

@@ -563,6 +563,7 @@ public class Components {
 
         for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
             final ImageContentDescription entry = new ImageContentDescription()
+                    .disableStrictNameChecks()
                     .setAction(extfile.getAction())
                     .setArchiveFormat(extfile.getCompressionFormat());
 

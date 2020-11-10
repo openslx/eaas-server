@@ -49,6 +49,8 @@ public class NetworkSwitchProxy implements NetworkSwitch
 
     protected NetworkSwitch getNetworkSwitch(String componentId) throws BWFLAException {
         final SessionRegistry.Entry session = sessions.lookup(componentId);
+        if(session == null)
+            throw new BWFLAException("Network session for switch: " + componentId + " not found");
         final ResourceHandle resource = session.getResourceHandle();
         return componentClient.getNetworkSwitchPort(resource.getNodeID());
     }
