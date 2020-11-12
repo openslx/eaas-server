@@ -77,8 +77,14 @@ public class NetworkEnvironmentElement {
         this.serverIp = serverIp;
     }
 
+    @Deprecated
     public String getFqdn() {
-        return fqdn;
+        if(fqdn == null)
+            return null;
+        String[] fqdns = fqdn.split(":");
+        if(fqdns.length == 0)
+            return null;
+        return fqdns[0];
     }
 
     public void setFqdn(String fqdn) {
@@ -99,5 +105,14 @@ public class NetworkEnvironmentElement {
 
     public void setTitle(String title) {
         this.title = title;
+    }
+
+    public String[] getFqdnList() {
+        if(fqdn == null)
+            return null;
+        String[] fqdns = fqdn.split(":");
+        if(fqdns.length == 0)
+            return null;
+        return fqdns;
     }
 }

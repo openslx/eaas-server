@@ -28,6 +28,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Path("network-environments")
@@ -135,8 +136,8 @@ public class NetworkEnvironments extends EmilRest {
                     ec.setMac(_env.getMacAddress());
                     ec.setIp(_env.getServerIp());
                     ec.setWildcard(_env.isWildcard());
-                    if (_env.getFqdn() != null)
-                        ec.getHostnames().add(_env.getFqdn());
+                    if (_env.getFqdnList() != null)
+                        ec.getHostnames().addAll(Arrays.asList(_env.getFqdnList()));
                     ecs.add(ec);
                 }
                 config.setEnvironments(ecs);
