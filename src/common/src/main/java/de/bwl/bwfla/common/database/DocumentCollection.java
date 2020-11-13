@@ -26,6 +26,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import java.util.NoSuchElementException;
 
 
+@Deprecated
 public class DocumentCollection<T extends JaxbType>
 {
 	private final String cname;

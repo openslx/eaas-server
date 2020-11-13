@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 
+@Deprecated
 @ApplicationScoped
 public class MongodbEaasConnector {
 
@@ -73,6 +74,7 @@ public class MongodbEaasConnector {
 	}
 
 
+	@Deprecated
 	public class DatabaseInstance {
 
 		private final MongoDatabase db;
