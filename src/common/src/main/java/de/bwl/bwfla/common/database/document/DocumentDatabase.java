@@ -20,6 +20,7 @@
 package de.bwl.bwfla.common.database.document;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.MongoDatabase;
 import org.bson.UuidRepresentation;
@@ -42,8 +43,9 @@ public class DocumentDatabase
 	/** Get or create a document-collection */
 	public <T> DocumentCollection<T> collection(String cname, Class<T> clazz)
 	{
-		// Configure object-mapper to use MongoJack module
-		final ObjectMapper mapper = MongoJackModule.configure(new ObjectMapper());
+		// Configure object-mapper to use MongoJack module (with JAX-B support)
+		final ObjectMapper mapper = MongoJackModule.configure(new ObjectMapper())
+				.registerModule(new JaxbAnnotationModule());
 
 		final MongoCollection<T> collection = JacksonMongoCollection.builder()
 				.withObjectMapper(mapper)
