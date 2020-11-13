@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 
+@Deprecated
 @ApplicationScoped
 public class MongodbEaasConnector {
 
@@ -73,6 +74,7 @@ public class MongodbEaasConnector {
 	}
 
 
+	@Deprecated
 	public class DatabaseInstance {
 
 		private final MongoDatabase db;
@@ -418,7 +420,7 @@ public class MongodbEaasConnector {
 
 			final Document fd = MongodbEaasConnector.toFilter(filter);
 			final UpdateResult result = collection.replaceOne(fd, replacement, options);
-			if (!result.isModifiedCountAvailable() && result.getUpsertedId() == null)
+			if (result.getModifiedCount() < 1 && result.getUpsertedId() == null)
 				throw new BWFLAException("Upsert failed!");
 		}
 
