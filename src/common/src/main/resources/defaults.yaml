@@ -33,3 +33,11 @@ handle:
 
 imagemounter:
     basedir: /tmp-storage/image-mounts
+
+authentication:
+    userRoleLabel: ''
+    adminRoleLabel: 'eaas-admin'
+    keycloakAdminUser: 'eaas-admin'
+    authJwksUri: ''
+    authEnabled: false
+    authAudience: ''

@@ -12,13 +12,6 @@ emil:
     imagebuilder:
       timeout: 30 mins
       delay: 3 secs
-  authEnabled: false
-  authSecret: ''
-  authAudience: ''
-  authJwksUri: ''
-  adminRoleLabel: 'eaas-admin'
-  keycloakAdminUser: 'eaas-admin'
-  userRoleLabel: ''
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification
@@ -34,8 +27,6 @@ ws:
   embedgw: http://eaas:8080/
   objectarchive: http://eaas:8080/
   softwarearchive: http://eaas:8080/
-  apikey:
-  apiSecret:
 
 rest:
   blobstore: http://eaas:8080/blobstore/api/v1/blobs

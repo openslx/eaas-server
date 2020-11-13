@@ -20,15 +20,15 @@ public class AuthenticatedUserProducer {
     protected static final Logger LOG = Logger.getLogger("Authentication");
 
     @Inject
-    @Config(value = "emil.adminRoleLabel")
+    @Config(value = "authentication.adminRoleLabel")
     private String adminRoleLabel;
 
     @Inject
-    @Config(value = "emil.userRoleLabel")
+    @Config(value = "authentication.userRoleLabel")
     private String userRoleLabel;
 
     @Inject
-    @Config(value = "emil.keycloakAdminUser")
+    @Config(value = "authentication.keycloakAdminUser")
     private String keycloakAdminUser;
 
     public AuthenticatedUserProducer() {}

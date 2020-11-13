@@ -18,11 +18,11 @@ import org.apache.tamaya.inject.api.Config;
 public class AuthenticationFilter extends AbstractAuthenticationFilter {
 
     @Inject
-    @Config(value = "emil.authEnabled")
+    @Config(value = "authentication.authEnabled")
     private boolean authEnabled;
 
     @Inject
-    @Config(value = "emil.authAudience")
+    @Config(value = "authentication.authAudience")
     private String authAudience;
 
     @Inject
