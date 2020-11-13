@@ -109,13 +109,13 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 	}
 
 	@Override
-	public void resetNumSoftwareSeatsForTenant(String id, String tenant)
+	public void resetNumSoftwareSeatsForTenant(String id, String tenant) throws BWFLAException
 	{
 		seatmgr.resetNumSeats(tenant, id);
 	}
 
 	@Override
-	public void resetAllSoftwareSeatsForTenant(String tenant)
+	public void resetAllSoftwareSeatsForTenant(String tenant) throws BWFLAException
 	{
 		seatmgr.resetNumSeats(tenant);
 	}
