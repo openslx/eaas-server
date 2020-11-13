@@ -164,12 +164,12 @@ public class ObjectArchiveFacadeWS
 		seatmgr.setNumSeats(tenant, archive, id, seats);
 	}
 
-	public void resetNumObjectSeatsForTenant(String archive, String id, String tenant)
+	public void resetNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
 	{
 		seatmgr.resetNumSeats(tenant, archive, id);
 	}
 
-	public void resetAllObjectSeatsForTenant(String tenant)
+	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException
 	{
 		seatmgr.resetNumSeats(tenant);
 	}

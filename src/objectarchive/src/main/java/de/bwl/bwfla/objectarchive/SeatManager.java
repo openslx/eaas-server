@@ -20,16 +20,14 @@
 package de.bwl.bwfla.objectarchive;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import de.bwl.bwfla.common.database.DocumentCollection;
-import de.bwl.bwfla.common.database.MongodbEaasConnector;
+import de.bwl.bwfla.common.database.document.DocumentCollection;
+import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import org.apache.tamaya.ConfigurationProvider;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.inject.spi.CDI;
-import java.util.NoSuchElementException;
 import java.util.logging.Logger;
 
 
@@ -42,32 +40,30 @@ public class SeatManager
 
 	public int getNumSeats(String tenant, String archive, String resource) throws BWFLAException
 	{
-		final String[] filter = SeatRecord.filter(tenant, archive, resource);
-		try {
-			return entries.lookup(filter)
-				.getNumSeats();
-		}
-		catch (NoSuchElementException error) {
+		final var filter = SeatRecord.filter(tenant, archive, resource);
+		final SeatRecord record = entries.lookup(filter);
+		if (record == null)
 			return -1;
-		}
+
+		return record.getNumSeats();
 	}
 
 	public void setNumSeats(String tenant, String archive, String resource, int seats) throws BWFLAException
 	{
 		LOG.info("Storing " + seats + " object seat(s) for '" + archive + "/" + resource + " (" + tenant + ")'...");
 
-		final String[] filter = SeatRecord.filter(tenant, archive, resource);
-		entries.save(new SeatRecord(tenant, archive, resource, seats), filter);
+		final var filter = SeatRecord.filter(tenant, archive, resource);
+		entries.replace(filter, new SeatRecord(tenant, archive, resource, seats));
 	}
 
-	public void resetNumSeats(String tenant, String archive, String resource)
+	public void resetNumSeats(String tenant, String archive, String resource) throws BWFLAException
 	{
 		LOG.info("Resetting object seats for '" + archive + "/" + resource + " (" + tenant + ")'...");
 
 		entries.delete(SeatRecord.filter(tenant, archive, resource));
 	}
 
-	public void resetNumSeats(String tenant)
+	public void resetNumSeats(String tenant) throws BWFLAException
 	{
 		LOG.info("Resetting object seats for tenant '" + tenant + "'...");
 
@@ -92,12 +88,9 @@ public class SeatManager
 
 		LOG.info("Initializing collection: " + cname + " (" + dbname + ")");
 		try {
-			final MongodbEaasConnector dbcon = CDI.current()
-					.select(MongodbEaasConnector.class)
-					.get();
-
-			final DocumentCollection<SeatRecord> entries = dbcon.getInstance(dbname)
-					.getCollection(cname, SeatRecord.class);
+			final DocumentCollection<SeatRecord> entries = DocumentDatabaseConnector.instance()
+					.database(dbname)
+					.collection(cname, SeatRecord.class);
 
 			entries.index(SeatRecord.getIndexFields());
 			return entries;
@@ -151,20 +144,18 @@ public class SeatManager
 			return seats;
 		}
 
-		public static String[] filter(String tenant, String archive, String resource)
+		public static DocumentCollection.Filter filter(String tenant, String archive, String resource)
 		{
-			return new String[] {
-					Fields.TENANT, tenant,
-					Fields.ARCHIVE, archive,
-					Fields.RESOURCE, resource
-				};
+			return DocumentCollection.filter()
+					.eq(Fields.TENANT, tenant)
+					.eq(Fields.ARCHIVE, archive)
+					.eq(Fields.RESOURCE, resource);
 		}
 
-		public static String[] filter(String tenant)
+		public static DocumentCollection.Filter filter(String tenant)
 		{
-			return new String[] {
-					Fields.TENANT, tenant
-				};
+			return DocumentCollection.filter()
+					.eq(Fields.TENANT, tenant);
 		}
 
 		public static String[] getIndexFields()
