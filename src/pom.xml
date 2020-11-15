@@ -267,6 +267,7 @@
 		<module>common/eaas-configuration</module>
 		<module>common/eaas-wikidata</module>
 		<module>blobstore</module>
+		<module>dig-pub-sharing</module>
 		<module>environment-proposer</module>
 		<module>imagearchive</module>
 		<module>imagearchive/imagearchive-client</module>
@@ -726,6 +727,12 @@
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>metadata-oaipmh</artifactId>
+				<version>${project.version}</version>
+				<type>war</type>
+			</dependency>
+			<dependency>
+				<groupId>de.bwl.bwfla</groupId>
+				<artifactId>dig-pub-sharing</artifactId>
 				<version>${project.version}</version>
 				<type>war</type>
 			</dependency>
