@@ -31,6 +31,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
@@ -46,8 +47,11 @@ import com.webcohesion.enunciate.metadata.rs.ResourceLabel;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.digpubsharing.api.DigitalPublication;
+import de.bwl.bwfla.digpubsharing.api.Settings;
+import de.bwl.bwfla.digpubsharing.impl.PersistentSettings;
 import org.apache.tamaya.ConfigurationProvider;
 
 
@@ -60,6 +64,7 @@ public class ServiceAPI
 	private static final Logger LOG = Logger.getLogger("DIG-PUB-SHARING");
 
 	private DocumentCollection<DigitalPublication> inventory;
+	private DocumentCollection<PersistentSettings> settings;
 
 
 	// ===== Inventory API ====================
@@ -154,6 +159,62 @@ public class ServiceAPI
 	}
 
 
+	// ===== Settings API ====================
+
+	/** Update tenant's site-settings */
+	@PUT
+	@SecuredInternal
+	@Path("/settings")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void updateSiteSettings(Settings config)
+	{
+		final String tenant = this.getTenantId();
+
+		try {
+			final var filter = PersistentSettings.filter(tenant);
+			final var data = new PersistentSettings()
+					.setTenantId(tenant)
+					.setSettings(config);
+
+			settings.replace(filter, data);
+
+			LOG.info("Settings for tenant '" + tenant + "' updated");
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Updating site-settings failed!", error);
+			throw new InternalServerErrorException(error);
+		}
+	}
+
+	/** Look up tenant's site-settings */
+	@GET
+	@SecuredInternal
+	@Path("/settings")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(Settings.class)
+	public Response getSiteSettings()
+	{
+		final String tenant = this.getTenantId();
+
+		try {
+			final var filter = PersistentSettings.filter(tenant);
+			final PersistentSettings data = settings.lookup(filter);
+			if (data == null)
+				throw new NotFoundException();
+
+			LOG.info("Settings for tenant '" + tenant + "' read");
+
+			return Response.ok()
+					.entity(data.getSettings())
+					.build();
+		}
+		catch (BWFLAException error) {
+			LOG.log(Level.WARNING, "Looking up site-settings failed!", error);
+			throw new InternalServerErrorException(error);
+		}
+	}
+
+
 	// ===== Internal Helpers ====================
 
 	@PostConstruct
@@ -162,10 +223,19 @@ public class ServiceAPI
 		try {
 			this.inventory = ServiceAPI.getDbCollection("inventory", DigitalPublication.class);
 			DigitalPublication.index(inventory);
+
+			this.settings = ServiceAPI.getDbCollection("settings", PersistentSettings.class);
+			PersistentSettings.index(settings);
 		}
 		catch (Exception error) {
 			throw new RuntimeException("Initializing dig-pub-sharing service failed!", error);
 		}
+	}
+
+	private String getTenantId()
+	{
+		// TODO: get tenant from user-context!
+		return "dummy";
 	}
 
 	private static <T> DocumentCollection<T> getDbCollection(String cname, Class<T> clazz)
