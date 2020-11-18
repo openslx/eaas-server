@@ -301,6 +301,80 @@ public class ServiceAPI
 				.build();
 	}
 
+	/** List all digital-publication records */
+	@GET
+	@SecuredInternal
+	@Path("/records")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(DigPubRecord[].class)
+	public Response listPublicationRecords()
+	{
+		final String tenant = this.getTenantId();
+
+		LOG.info("Listing publications for tenant '" + tenant + "'...");
+
+		final StreamingOutput streamer = (OutputStream ostream) -> {
+			final SequenceWriter writer = new ObjectMapper()
+					.writerFor(DigPubRecord.class)
+					.withDefaultPrettyPrinter()
+					.writeValuesAsArray(ostream);
+
+			int counter = 0;
+
+			try (writer; var entries = records.find(PersistentDigPubRecord.filter(tenant))) {
+				for (PersistentDigPubRecord entry : entries) {
+					// TODO: construct valid access-link!
+					final String link = "https://localhost/dig-pub-sharing/viewer?extid=" + entry.getExternalId();
+
+					final var record = new DigPubRecord()
+							.setExternalId(entry.getExternalId())
+							.setStatus(entry.getStatus())
+							.setLink(link);
+
+					writer.write(record);
+					++counter;
+				}
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Listing publications failed!", error);
+				throw new InternalServerErrorException(error);
+			}
+
+			LOG.info(counter + " publication(s) read");
+		};
+
+		return Response.ok()
+				.entity(streamer)
+				.build();
+	}
+
+	/**
+	 * Remove digital-publication records matching specified external IDs
+	 *
+	 * @requestExample application/json ["id-1", "id-2", "id-5"]
+	 */
+	@DELETE
+	@SecuredInternal
+	@Path("/records")
+	@Consumes(MediaType.APPLICATION_JSON)
+	public void removePublicationRecords(@TypeHint(String[].class) List<String> ids)
+	{
+		final String tenant = this.getTenantId();
+
+		LOG.info("Removing publications for tenant '" + tenant + "'...");
+		try {
+			for (String id : ids)
+				this.removePublicationRecord(tenant, id);
+
+			LOG.info(ids.size() + " publication(s) removed");
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Removing publication(s) failed!", error);
+			throw new InternalServerErrorException(error);
+		}
+	}
+
+
 	// ===== Settings API ====================
 
 	/** Update tenant's site-settings */
@@ -425,6 +499,15 @@ public class ServiceAPI
 		// make all changes persistent...
 		records.replace(filter, record);
 		return (publication != null);
+	}
+
+	private void removePublicationRecord(String tenant, String extid)
+			throws BWFLAException
+	{
+		records.delete(PersistentDigPubRecord.filter(tenant, extid));
+
+		// remove corresponding entry in object-archive
+		objects.resetNumObjectSeatsForTenant(objectArchiveId, extid, tenant);
 	}
 
 	private void setupObjectArchiveClient()
