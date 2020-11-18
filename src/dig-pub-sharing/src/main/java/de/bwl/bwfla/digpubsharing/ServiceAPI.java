@@ -23,6 +23,7 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
+import java.io.OutputStreamWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -255,6 +256,50 @@ public class ServiceAPI
 		}
 	}
 
+	/** Export digital-publication records as .csv */
+	@POST
+	@SecuredInternal
+	@Path("/export")
+	@Produces(MEDIATYPE_CSV)
+	@TypeHint(String.class)
+	public Response exportPublicationRecords()
+	{
+		final String tenant = this.getTenantId();
+
+		LOG.info("Exporting publications for tenant '" + tenant + "'...");
+
+		final StreamingOutput streamer = (OutputStream ostream) -> {
+			int counter = 0;
+
+			try (var writer = new OutputStreamWriter(ostream); var entries = records.find(PersistentDigPubRecord.filter(tenant))) {
+				for (PersistentDigPubRecord record : entries) {
+					final var extid = record.getExternalId();
+
+					// write record as csv...
+					writer.write(extid);
+					writer.write("\n");
+					++counter;
+
+					// update record's status
+					final var status = record.getStatus();
+					if (status.isNew()) {
+						status.setNewFlag(false);
+						records.replace(PersistentDigPubRecord.filter(tenant, extid), record);
+					}
+				}
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Exporting publications failed!", error);
+				throw new InternalServerErrorException(error);
+			}
+
+			LOG.info(counter + " publication(s) exported");
+		};
+
+		return Response.ok()
+				.entity(streamer)
+				.build();
+	}
 
 	// ===== Settings API ====================
 
