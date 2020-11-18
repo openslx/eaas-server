@@ -38,6 +38,10 @@
 			<scope>provided</scope>
 		</dependency>
 		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>objectarchive-client</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.webcohesion.enunciate</groupId>
 			<artifactId>enunciate-core-annotations</artifactId>
 		</dependency>
