@@ -35,6 +35,7 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
+import javax.ws.rs.DefaultValue;
 import javax.ws.rs.GET;
 import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.NotFoundException;
@@ -42,6 +43,7 @@ import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
@@ -301,13 +303,41 @@ public class ServiceAPI
 				.build();
 	}
 
-	/** List all digital-publication records */
+	/** Count all digital-publication records */
+	@POST
+	@SecuredInternal
+	@Path("/count-records")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(Integer.class)
+	public Response countPublicationRecords()
+	{
+		final String tenant = this.getTenantId();
+
+		try {
+			final var filter = PersistentDigPubRecord.filter(tenant);
+			return Response.ok()
+					.entity(records.count(filter))
+					.build();
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Counting publications failed!", error);
+			throw new InternalServerErrorException(error);
+		}
+	}
+
+	/**
+	 * List all digital-publication records
+	 *
+	 * @param skip Skip given number of records from listing (server-side pagination)
+	 * @param limit Max. number of records to return (server-side pagination)
+	 */
 	@GET
 	@SecuredInternal
 	@Path("/records")
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(DigPubRecord[].class)
-	public Response listPublicationRecords()
+	public Response listPublicationRecords(@QueryParam("skip") @DefaultValue("0") int skip,
+										   @QueryParam("limit") @DefaultValue("-1") int limit)
 	{
 		final String tenant = this.getTenantId();
 
@@ -322,6 +352,12 @@ public class ServiceAPI
 			int counter = 0;
 
 			try (writer; var entries = records.find(PersistentDigPubRecord.filter(tenant))) {
+				// apply server-side pagination
+				entries.skip(skip);
+				if (limit > 0)
+					entries.limit(limit);
+
+				// write records...
 				for (PersistentDigPubRecord entry : entries) {
 					// TODO: construct valid access-link!
 					final String link = "https://localhost/dig-pub-sharing/viewer?extid=" + entry.getExternalId();
