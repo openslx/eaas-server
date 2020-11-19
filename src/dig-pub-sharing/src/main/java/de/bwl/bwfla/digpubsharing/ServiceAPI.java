@@ -222,7 +222,7 @@ public class ServiceAPI
 			// parse remaining lines...
 			while ((line = reader.readLine()) != null) {
 				// skip comments
-				if (line.startsWith("#"))
+				if (line.startsWith("#") || line.isEmpty())
 					continue;
 
 				++numRecordsImported;
