@@ -57,6 +57,7 @@ import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.guacplay.util.StopWatch;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.digpubsharing.api.DigitalPublication;
 import de.bwl.bwfla.digpubsharing.api.ImportSummary;
@@ -103,6 +104,7 @@ public class ServiceAPI
 
 		LOG.info("Adding publication(s) to inventory...");
 		try (istream; MappingIterator<DigitalPublication> iter = reader.readValues(istream)) {
+			final StopWatch stopwatch = new StopWatch();
 			while (iter.hasNext()) {
 				final DigitalPublication entry = iter.next();
 				final var filter = DigitalPublication.filter(entry.getExternalId());
@@ -110,7 +112,7 @@ public class ServiceAPI
 				++counter;
 			}
 
-			LOG.info(counter + " publication(s) added to inventory");
+			LOG.info(counter + " publication(s) added to inventory (took " + stopwatch.timems() + " msecs)");
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Adding publication(s) failed!", error);
@@ -130,10 +132,13 @@ public class ServiceAPI
 	public void removeDigitalPublications(@TypeHint(String[].class) List<String> ids)
 	{
 		try {
-			for (String id : ids) {
+			LOG.info("Removing publication(s) from inventory...");
+
+			final StopWatch stopwatch = new StopWatch();
+			for (String id : ids)
 				inventory.delete(DigitalPublication.filter(id));
-				LOG.info("Publication with ID '" + id + "' removed from inventory");
-			}
+
+			LOG.info(ids.size() + " publication(s) removed (took " + stopwatch.timems() + " msecs)");
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Removing publication(s) failed!", error);
@@ -152,6 +157,7 @@ public class ServiceAPI
 		LOG.info("Listing publication inventory...");
 
 		final StreamingOutput streamer = (OutputStream ostream) -> {
+			final StopWatch stopwatch = new StopWatch();
 			final SequenceWriter writer = new ObjectMapper()
 					.writerFor(DigitalPublication.class)
 					.withDefaultPrettyPrinter()
@@ -170,7 +176,7 @@ public class ServiceAPI
 				throw new InternalServerErrorException(error);
 			}
 
-			LOG.info(counter + " publication(s) read");
+			LOG.info(counter + " publication(s) read (took " + stopwatch.timems() + " msecs)");
 		};
 
 		return Response.ok()
@@ -220,6 +226,7 @@ public class ServiceAPI
 
 		try (istream; BufferedReader reader = new BufferedReader(new InputStreamReader(istream))) {
 			// parse remaining lines...
+			final StopWatch stopwatch = new StopWatch();
 			while ((line = reader.readLine()) != null) {
 				// skip comments
 				if (line.startsWith("#") || line.isEmpty())
@@ -241,7 +248,7 @@ public class ServiceAPI
 					++numRecordsMatched;
 			}
 
-			LOG.info(numRecordsImported + " publication(s) imported");
+			LOG.info(numRecordsImported + " publication(s) imported (took " + stopwatch.timems() + " msecs)");
 
 			final var summary = new ImportSummary()
 					.setNumRecordsIndexed((int) inventory.count())
@@ -272,7 +279,7 @@ public class ServiceAPI
 
 		final StreamingOutput streamer = (OutputStream ostream) -> {
 			int counter = 0;
-
+			final StopWatch stopwatch = new StopWatch();
 			try (var writer = new OutputStreamWriter(ostream); var entries = records.find(PersistentDigPubRecord.filter(tenant))) {
 				for (PersistentDigPubRecord record : entries) {
 					final var extid = record.getExternalId();
@@ -295,7 +302,7 @@ public class ServiceAPI
 				throw new InternalServerErrorException(error);
 			}
 
-			LOG.info(counter + " publication(s) exported");
+			LOG.info(counter + " publication(s) exported (took " + stopwatch.timems() + " msecs)");
 		};
 
 		return Response.ok()
@@ -344,6 +351,7 @@ public class ServiceAPI
 		LOG.info("Listing publications for tenant '" + tenant + "'...");
 
 		final StreamingOutput streamer = (OutputStream ostream) -> {
+			final StopWatch stopwatch = new StopWatch();
 			final SequenceWriter writer = new ObjectMapper()
 					.writerFor(DigPubRecord.class)
 					.withDefaultPrettyPrinter()
@@ -376,7 +384,7 @@ public class ServiceAPI
 				throw new InternalServerErrorException(error);
 			}
 
-			LOG.info(counter + " publication(s) read");
+			LOG.info(counter + " publication(s) read (took " + stopwatch.timems() + " msecs)");
 		};
 
 		return Response.ok()
@@ -399,10 +407,11 @@ public class ServiceAPI
 
 		LOG.info("Removing publications for tenant '" + tenant + "'...");
 		try {
+			final StopWatch stopwatch = new StopWatch();
 			for (String id : ids)
 				this.removePublicationRecord(tenant, id);
 
-			LOG.info(ids.size() + " publication(s) removed");
+			LOG.info(ids.size() + " publication(s) removed (took " + stopwatch.timems() + " msecs)");
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Removing publication(s) failed!", error);
