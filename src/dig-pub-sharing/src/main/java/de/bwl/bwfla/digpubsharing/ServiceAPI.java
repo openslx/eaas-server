@@ -26,7 +26,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -66,6 +68,7 @@ import de.bwl.bwfla.digpubsharing.api.DigPubStatus;
 import de.bwl.bwfla.digpubsharing.api.Settings;
 import de.bwl.bwfla.digpubsharing.impl.PersistentDigPubRecord;
 import de.bwl.bwfla.digpubsharing.impl.PersistentSettings;
+import de.bwl.bwfla.objectarchive.api.SeatDescription;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -97,6 +100,8 @@ public class ServiceAPI
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void addDigitalPublications(@TypeHint(DigitalPublication[].class) InputStream istream)
 	{
+		final int BATCH_SIZE = 512;
+
 		final ObjectReader reader = new ObjectMapper()
 				.readerFor(DigitalPublication.class);
 
@@ -105,12 +110,20 @@ public class ServiceAPI
 		LOG.info("Adding publication(s) to inventory...");
 		try (istream; MappingIterator<DigitalPublication> iter = reader.readValues(istream)) {
 			final StopWatch stopwatch = new StopWatch();
+			final var batch = inventory.batch(BATCH_SIZE);
 			while (iter.hasNext()) {
 				final DigitalPublication entry = iter.next();
 				final var filter = DigitalPublication.filter(entry.getExternalId());
-				inventory.replace(filter, entry);
+				batch.replace(filter, entry);
+				if (batch.size() == BATCH_SIZE)
+					batch.execute(false);
+
 				++counter;
 			}
+
+			// execute last batch
+			if (batch.size() > 0)
+				batch.execute(false);
 
 			LOG.info(counter + " publication(s) added to inventory (took " + stopwatch.timems() + " msecs)");
 		}
@@ -129,16 +142,32 @@ public class ServiceAPI
 	@SecuredInternal
 	@Path("/inventory")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public void removeDigitalPublications(@TypeHint(String[].class) List<String> ids)
+	public void removeDigitalPublications(@TypeHint(String[].class) InputStream istream)
 	{
-		try {
-			LOG.info("Removing publication(s) from inventory...");
+		final int BATCH_SIZE = 1024;
 
+		final ObjectReader reader = new ObjectMapper()
+				.readerFor(String.class);
+
+		int counter = 0;
+
+		LOG.info("Removing publication(s) from inventory...");
+		try (istream; MappingIterator<String> ids = reader.readValues(istream)) {
 			final StopWatch stopwatch = new StopWatch();
-			for (String id : ids)
-				inventory.delete(DigitalPublication.filter(id));
+			final var batch = inventory.batch();
+			while (ids.hasNext()) {
+				batch.delete(DigitalPublication.filter(ids.next()));
+				if (batch.size() == BATCH_SIZE)
+					batch.execute(false);
 
-			LOG.info(ids.size() + " publication(s) removed (took " + stopwatch.timems() + " msecs)");
+				++counter;
+			}
+
+			// execute last batch
+			if (batch.size() > 0)
+				batch.execute(false);
+
+			LOG.info(counter + " publication(s) removed (took " + stopwatch.timems() + " msecs)");
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Removing publication(s) failed!", error);
@@ -218,42 +247,20 @@ public class ServiceAPI
 		final String tenant = this.getTenantId();
 		final String date = this.date();
 
-		int numRecordsImported = 0;
-		int numRecordsMatched = 0;
-		String line = null;
-
 		LOG.info("Importing publication(s) for tenant '" + tenant + "'...");
 
 		try (istream; BufferedReader reader = new BufferedReader(new InputStreamReader(istream))) {
-			// parse remaining lines...
 			final StopWatch stopwatch = new StopWatch();
-			while ((line = reader.readLine()) != null) {
-				// skip comments
-				if (line.startsWith("#") || line.isEmpty())
-					continue;
+			final var importer = new DigPubRecordImporter(tenant, date);
+			reader.lines().forEach(importer);
+			importer.finish();
 
-				++numRecordsImported;
-
-				// parse current line...
-				final String[] fields = line.split(",");
-				if (fields.length != 2) {
-					LOG.warning("Invalid input submitted for import!");
-					throw new BadRequestException();
-				}
-
-				final String extid = fields[0].strip();
-				final int numseats = Integer.parseInt(fields[1].strip());
-
-				if (this.addPublicationRecord(tenant, extid, numseats, date))
-					++numRecordsMatched;
-			}
-
-			LOG.info(numRecordsImported + " publication(s) imported (took " + stopwatch.timems() + " msecs)");
+			LOG.info(importer.getNumRecordsImported() + " publication(s) imported (took " + stopwatch.timems() + " msecs)");
 
 			final var summary = new ImportSummary()
 					.setNumRecordsIndexed((int) inventory.count())
-					.setNumRecordsImported(numRecordsImported)
-					.setNumRecordsMatched(numRecordsMatched);
+					.setNumRecordsImported(importer.getNumRecordsImported())
+					.setNumRecordsMatched(importer.getNumRecordsMatched());
 
 			return Response.ok()
 					.entity(summary)
@@ -273,6 +280,8 @@ public class ServiceAPI
 	@TypeHint(String.class)
 	public Response exportPublicationRecords()
 	{
+		final int BATCH_SIZE = 512;
+
 		final String tenant = this.getTenantId();
 
 		LOG.info("Exporting publications for tenant '" + tenant + "'...");
@@ -280,6 +289,7 @@ public class ServiceAPI
 		final StreamingOutput streamer = (OutputStream ostream) -> {
 			int counter = 0;
 			final StopWatch stopwatch = new StopWatch();
+			final var batch = records.batch(BATCH_SIZE);
 			try (var writer = new OutputStreamWriter(ostream); var entries = records.find(PersistentDigPubRecord.filter(tenant))) {
 				for (PersistentDigPubRecord record : entries) {
 					final var extid = record.getExternalId();
@@ -293,9 +303,15 @@ public class ServiceAPI
 					final var status = record.getStatus();
 					if (status.isNew()) {
 						status.setNewFlag(false);
-						records.replace(PersistentDigPubRecord.filter(tenant, extid), record);
+						batch.replace(PersistentDigPubRecord.filter(tenant, extid), record);
+						if (batch.size() == BATCH_SIZE)
+							batch.execute(false);
 					}
 				}
+
+				// execute last batch
+				if (batch.size() > 0)
+					batch.execute(false);
 			}
 			catch (Exception error) {
 				LOG.log(Level.WARNING, "Exporting publications failed!", error);
@@ -401,17 +417,20 @@ public class ServiceAPI
 	@SecuredInternal
 	@Path("/records")
 	@Consumes(MediaType.APPLICATION_JSON)
-	public void removePublicationRecords(@TypeHint(String[].class) List<String> ids)
+	public void removePublicationRecords(@TypeHint(String[].class) InputStream istream)
 	{
 		final String tenant = this.getTenantId();
+		final ObjectReader reader = new ObjectMapper()
+				.readerFor(String.class);
 
 		LOG.info("Removing publications for tenant '" + tenant + "'...");
-		try {
+		try (istream; MappingIterator<String> ids = reader.readValues(istream)) {
 			final StopWatch stopwatch = new StopWatch();
-			for (String id : ids)
-				this.removePublicationRecord(tenant, id);
+			final var deleter = new DigPubRecordDeleter(tenant);
+			ids.forEachRemaining(deleter);
+			deleter.finish();
 
-			LOG.info(ids.size() + " publication(s) removed (took " + stopwatch.timems() + " msecs)");
+			LOG.info(deleter.getNumRecordsDeleted() + " publication(s) removed (took " + stopwatch.timems() + " msecs)");
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Removing publication(s) failed!", error);
@@ -510,51 +529,6 @@ public class ServiceAPI
 				.format(DateTimeFormatter.ISO_LOCAL_DATE);
 	}
 
-	private boolean addPublicationRecord(String tenant, String extid, int numseats, String date)
-			throws BWFLAException
-	{
-		// look up matching publication...
-		final DigitalPublication publication = inventory.lookup(DigitalPublication.filter(extid));
-
-		// look up matching record...
-		final var filter = PersistentDigPubRecord.filter(tenant, extid);
-		PersistentDigPubRecord record = records.lookup(filter);
-		if (record == null) {
-			// not found, initialize new record
-			record = new PersistentDigPubRecord()
-					.setTenantId(tenant)
-					.setExternalId(extid);
-		}
-
-		// update record's fields...
-		record.setNumSeats(numseats);
-		if (publication != null) {
-			// matching publication exists!
-			final DigPubStatus status = record.getStatus();
-			if (!status.isMatched()) {
-				status.setMatchedOnDate(date)
-						.setNewFlag(true);
-			}
-
-			// update corresponding entry in object-archive
-			final String oid = publication.getObjectId();
-			objects.setNumObjectSeatsForTenant(objectArchiveId, oid, tenant, numseats);
-		}
-
-		// make all changes persistent...
-		records.replace(filter, record);
-		return (publication != null);
-	}
-
-	private void removePublicationRecord(String tenant, String extid)
-			throws BWFLAException
-	{
-		records.delete(PersistentDigPubRecord.filter(tenant, extid));
-
-		// remove corresponding entry in object-archive
-		objects.resetNumObjectSeatsForTenant(objectArchiveId, extid, tenant);
-	}
-
 	private void setupObjectArchiveClient()
 	{
 		final var config = ConfigurationProvider.getConfiguration();
@@ -571,5 +545,190 @@ public class ServiceAPI
 		return DocumentDatabaseConnector.instance()
 				.database(dbname)
 				.collection(cname, clazz);
+	}
+
+
+	private abstract class DigPubRecordProcessor<I,O> implements Consumer<I>
+	{
+		protected final DocumentCollection<PersistentDigPubRecord>.Batch rbatch;
+		protected final List<O> obatch;
+		protected final String tenant;
+
+		protected static final int RECORDS_BATCH_SIZE = 512;
+		protected static final int OBJECTS_BATCH_SIZE = 512;
+
+		protected DigPubRecordProcessor(String tenant)
+		{
+			this.rbatch = records.batch(RECORDS_BATCH_SIZE);
+			this.obatch = new ArrayList<>(OBJECTS_BATCH_SIZE);
+			this.tenant = tenant;
+		}
+
+		public void finish() throws BWFLAException
+		{
+			this.rflush(1);
+			this.oflush(1);
+		}
+
+		protected void rflush(int minsize) throws BWFLAException
+		{
+			if (rbatch.size() >= minsize)
+				rbatch.execute(false);
+		}
+
+		protected abstract void oflush(int minsize) throws BWFLAException;
+	}
+
+	private class DigPubRecordImporter extends DigPubRecordProcessor<String, SeatDescription>
+	{
+		private final String date;
+		private int numRecordsImported;
+		private int numRecordsMatched;
+
+		public DigPubRecordImporter(String tenant, String date)
+		{
+			super(tenant);
+
+			this.date = date;
+			this.numRecordsImported = 0;
+			this.numRecordsMatched = 0;
+		}
+
+		public int getNumRecordsImported()
+		{
+			return numRecordsImported;
+		}
+
+		public int getNumRecordsMatched()
+		{
+			return numRecordsMatched;
+		}
+
+		@Override
+		public void accept(String line)
+		{
+			// skip comments
+			if (line.startsWith("#") || line.isEmpty())
+				return;
+
+			// parse current line...
+			final String[] fields = line.split(",");
+			if (fields.length != 2) {
+				LOG.warning("Invalid input submitted for import!");
+				throw new BadRequestException();
+			}
+
+			final String extid = fields[0].strip();
+			final int numseats = Integer.parseInt(fields[1].strip());
+			try {
+				this.process(extid, numseats);
+			}
+			catch (Exception error) {
+				throw new RuntimeException(error);
+			}
+		}
+
+		@Override
+		protected void oflush(int minsize) throws BWFLAException
+		{
+			if (obatch.size() >= minsize) {
+				objects.setNumObjectSeatsForTenant(objectArchiveId, obatch, tenant);
+				obatch.clear();
+			}
+		}
+
+		private void process(String extid, int numseats) throws BWFLAException
+		{
+			// look up matching publication...
+			final DigitalPublication publication = inventory.lookup(DigitalPublication.filter(extid));
+
+			// look up matching record...
+			final var filter = PersistentDigPubRecord.filter(tenant, extid);
+			PersistentDigPubRecord record = records.lookup(filter);
+			if (record == null) {
+				// not found, initialize new record
+				record = new PersistentDigPubRecord()
+						.setTenantId(tenant)
+						.setExternalId(extid);
+			}
+
+			// update record's fields...
+			record.setNumSeats(numseats);
+			if (publication != null) {
+				// matching publication exists!
+				final DigPubStatus status = record.getStatus();
+				if (!status.isMatched()) {
+					status.setMatchedOnDate(date)
+							.setNewFlag(true);
+				}
+
+				// update corresponding entry in object-archive
+				final String oid = publication.getObjectId();
+				obatch.add(new SeatDescription(oid, numseats));
+				this.oflush(OBJECTS_BATCH_SIZE);
+
+				++numRecordsMatched;
+			}
+
+			// make all changes persistent...
+			rbatch.replace(filter, record);
+			this.rflush(RECORDS_BATCH_SIZE);
+
+			++numRecordsImported;
+		}
+	}
+
+	private class DigPubRecordDeleter extends DigPubRecordProcessor<String, String>
+	{
+		private int numRecordsDeleted;
+
+		public DigPubRecordDeleter(String tenant)
+		{
+			super(tenant);
+
+			this.numRecordsDeleted = 0;
+		}
+
+		public int getNumRecordsDeleted()
+		{
+			return numRecordsDeleted;
+		}
+
+		@Override
+		public void accept(String extid)
+		{
+			try {
+				this.process(extid);
+			}
+			catch (Exception error) {
+				throw new RuntimeException(error);
+			}
+		}
+
+		@Override
+		protected void oflush(int minsize) throws BWFLAException
+		{
+			if (obatch.size() >= minsize) {
+				objects.resetNumObjectSeatsForTenant(objectArchiveId, obatch, tenant);
+				obatch.clear();
+			}
+		}
+
+		private void process(String extid) throws BWFLAException
+		{
+			// delete records in batches...
+			rbatch.delete(PersistentDigPubRecord.filter(tenant, extid));
+			this.rflush(RECORDS_BATCH_SIZE);
+
+			// look up matching publication's object-id...
+			final DigitalPublication publication = inventory.lookup(DigitalPublication.filter(extid));
+			if (publication != null) {
+				// remove corresponding entries from object-archive
+				obatch.add(publication.getObjectId());
+				this.oflush(OBJECTS_BATCH_SIZE);
+			}
+
+			++numRecordsDeleted;
+		}
 	}
 }
