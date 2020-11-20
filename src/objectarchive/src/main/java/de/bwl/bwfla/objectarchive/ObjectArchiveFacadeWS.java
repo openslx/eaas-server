@@ -23,6 +23,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionWriter;
 import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.emucomp.api.FileCollection;
+import de.bwl.bwfla.objectarchive.api.SeatDescription;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 
@@ -164,9 +165,19 @@ public class ObjectArchiveFacadeWS
 		seatmgr.setNumSeats(tenant, archive, id, seats);
 	}
 
+	public void setNumObjectSeatsForTenantBatched(String archive, List<SeatDescription> resources, String tenant) throws BWFLAException
+	{
+		seatmgr.setNumSeats(tenant, archive, resources);
+	}
+
 	public void resetNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
 	{
 		seatmgr.resetNumSeats(tenant, archive, id);
+	}
+
+	public void resetNumObjectSeatsForTenantBatched(String archive, List<String> ids, String tenant) throws BWFLAException
+	{
+		seatmgr.resetNumSeats(tenant, archive, ids);
 	}
 
 	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException

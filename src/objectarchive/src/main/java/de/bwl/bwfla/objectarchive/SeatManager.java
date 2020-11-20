@@ -23,11 +23,12 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
+import de.bwl.bwfla.objectarchive.api.SeatDescription;
 import org.apache.tamaya.ConfigurationProvider;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
+import java.util.List;
 import java.util.logging.Logger;
 
 
@@ -58,12 +59,51 @@ public class SeatManager
 		entries.replace(filter, new SeatRecord(tenant, archive, resource, seats));
 	}
 
+	public void setNumSeats(String tenant, String archive, List<SeatDescription> resources) throws BWFLAException
+	{
+		final int BATCH_SIZE = 256;
+
+		final var batch = entries.batch(BATCH_SIZE);
+		for (SeatDescription description : resources) {
+			final var resource = description.getResource();
+			final var seats = description.getNumSeats();
+			if (verbose)
+				LOG.info("Storing " + seats + " object seat(s) for '" + archive + "/" + resource + " (" + tenant + ")'...");
+
+			final var filter = SeatRecord.filter(tenant, archive, resource);
+			batch.replace(filter, new SeatRecord(tenant, archive, resource, seats));
+			if (batch.size() == BATCH_SIZE)
+				batch.execute(false);
+		}
+
+		if (batch.size() > 0)
+			batch.execute(false);
+	}
+
 	public void resetNumSeats(String tenant, String archive, String resource) throws BWFLAException
 	{
 		if (verbose)
 			LOG.info("Resetting object seats for '" + archive + "/" + resource + " (" + tenant + ")'...");
 
 		entries.delete(SeatRecord.filter(tenant, archive, resource));
+	}
+
+	public void resetNumSeats(String tenant, String archive, List<String> resources) throws BWFLAException
+	{
+		final int BATCH_SIZE = 512;
+
+		final var batch = entries.batch(BATCH_SIZE);
+		for (String resource : resources) {
+			if (verbose)
+				LOG.info("Resetting object seats for '" + archive + "/" + resource + " (" + tenant + ")'...");
+
+			batch.delete(SeatRecord.filter(tenant, archive, resource));
+			if (batch.size() == BATCH_SIZE)
+				batch.execute(false);
+		}
+
+		if (batch.size() > 0)
+			batch.execute(false);
 	}
 
 	public void resetNumSeats(String tenant) throws BWFLAException
@@ -107,7 +147,7 @@ public class SeatManager
 		}
 	}
 
-	private static class SeatRecord extends JaxbType
+	private static class SeatRecord
 	{
 		private String tenant;
 		private String archive;

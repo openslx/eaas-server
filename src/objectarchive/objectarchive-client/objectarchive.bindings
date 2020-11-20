@@ -4,15 +4,17 @@
 	xmlns:jaxws="http://java.sun.com/xml/ns/jaxws"
 	xmlns:wsdl="http://schemas.xmlsoap.org/wsdl/"
 	version="2.1">
-
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/objectarchive']">
+		<jaxb:bindings node="//xsd:complexType[@name='seatDescription']">
+			<jaxb:class ref="de.bwl.bwfla.objectarchive.api.SeatDescription" />
+		</jaxb:bindings>
+	</jaxws:bindings>
 	<jaxws:bindings node=".//wsdl:fault[@name='BWFLAException']">
 		<jaxws:class name="de.bwl.bwfla.common.exceptions.BWFLAException" />
 	</jaxws:bindings>
-
-    <jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/objectarchive']">
+	<jaxws:bindings node=".//xsd:schema[@targetNamespace='http://bwfla.bwl.de/api/objectarchive']">
 		<jaxb:bindings node="//xsd:complexType[@name='BWFLAException']">
 			<jaxb:class ref="de.bwl.bwfla.common.exceptions.BWFLAException" />
 		</jaxb:bindings>
-    </jaxws:bindings>
-
+	</jaxws:bindings>
 </jaxws:bindings>
