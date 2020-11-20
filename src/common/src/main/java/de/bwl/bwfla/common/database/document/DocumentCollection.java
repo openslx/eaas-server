@@ -22,11 +22,19 @@ package de.bwl.bwfla.common.database.document;
 import com.mongodb.MongoException;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.model.BulkWriteOptions;
+import com.mongodb.client.model.DeleteManyModel;
+import com.mongodb.client.model.DeleteOneModel;
 import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Indexes;
+import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.Projections;
+import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
+import com.mongodb.client.model.UpdateManyModel;
+import com.mongodb.client.model.UpdateOneModel;
 import com.mongodb.client.model.Updates;
+import com.mongodb.client.model.WriteModel;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.InsertOneResult;
 import com.mongodb.client.result.UpdateResult;
@@ -108,42 +116,45 @@ public class DocumentCollection<T>
 	}
 
 	/** Insert multiple documents */
-	public void insert(Iterable<? extends T> documents) throws BWFLAException
+	public void insert(Iterable<? extends T> documents, int batchsize) throws BWFLAException
 	{
-		this.insert(documents.iterator());
+		this.insert(documents.iterator(), batchsize);
 	}
 
 	/** Insert multiple documents */
-	public void insert(Iterator<? extends T> documents) throws BWFLAException
+	public void insert(Iterator<? extends T> documents, int batchsize) throws BWFLAException
 	{
-		final int INSERT_BATCH_SIZE = 16;
-
 		try {
-			int numtotal = 0;
-			int numdone = 0;
-
-			final List<T> batch = new ArrayList<>(INSERT_BATCH_SIZE);
+			final List<T> batch = new ArrayList<>(batchsize);
 
 			// insert all docs in batches...
 			while (documents.hasNext()) {
-				batch.clear();
-
-				// prepare next batch...
-				while (documents.hasNext()) {
-					batch.add(documents.next());
-					if (batch.size() == INSERT_BATCH_SIZE)
-						break;
+				batch.add(documents.next());
+				if (batch.size() == batchsize) {
+					this.insert(batch);
+					batch.clear();
 				}
-
-				numtotal += batch.size();
-
-				// insert current batch...
-				numdone += collection.insertMany(batch)
-						.getInsertedIds()
-						.size();
 			}
 
-			if (numdone != numtotal)
+			// insert last batch
+			if (batch.size() > 0)
+				this.insert(batch);
+		}
+		catch (MongoException error) {
+			throw new BWFLAException("Inserting documents failed!", error);
+		}
+	}
+
+	/** Insert multiple documents */
+	public void insert(List<? extends T> documents) throws BWFLAException
+	{
+		try {
+			// insert all docs as a batch...
+			final int count = collection.insertMany(documents)
+						.getInsertedIds()
+						.size();
+
+			if (count != documents.size())
 				throw new BWFLAException("Inserting documents failed!");
 		}
 		catch (MongoException error) {
@@ -236,6 +247,18 @@ public class DocumentCollection<T>
 		collection.drop();
 	}
 
+	/** Create a new batch to add operations to */
+	public Batch batch()
+	{
+		return this.batch(16);
+	}
+
+	/** Create a new batch to add operations to, with specified capacity */
+	public Batch batch(int capacity)
+	{
+		return new Batch(capacity);
+	}
+
 	/** Return a new document filter */
 	public static Filter filter()
 	{
@@ -290,6 +313,104 @@ public class DocumentCollection<T>
 		public void close() throws Exception
 		{
 			result.cursor().close();
+		}
+	}
+
+
+	/** Simple wrapper for a collection of batched operations */
+	public class Batch
+	{
+		private final List<WriteModel<T>> ops;
+
+		private Batch(int size)
+		{
+			this.ops = new ArrayList<>(size);
+		}
+
+		/** Insert a single document */
+		public Batch insert(T document)
+		{
+			ops.add(new InsertOneModel<>(document));
+			return this;
+		}
+
+		/** Replace or insert document matching filter */
+		public Batch replace(Filter filter, T document)
+		{
+			return this.replace(filter, document, true);
+		}
+
+		/** Replace or insert document matching filter */
+		public Batch replace(Filter filter, T document, boolean upsert)
+		{
+			final ReplaceOptions options = new ReplaceOptions()
+					.upsert(upsert);
+
+			ops.add(new ReplaceOneModel<>(filter.expression(), document, options));
+			return this;
+		}
+
+		/** Update single document matching filter */
+		public Batch update(Filter filter, Update update)
+		{
+			return this.update(filter, update, false);
+		}
+
+		/** Update (optionally many) document(s) matching filter */
+		public Batch update(Filter filter, Update update, boolean many)
+		{
+			final BiFunction<Bson, Bson, WriteModel<T>> fn = (many) ? UpdateManyModel::new : UpdateOneModel::new;
+			ops.add(fn.apply(filter.expression(), update.expression()));
+			return this;
+		}
+
+		/** Delete single document matching filter */
+		public Batch delete(Filter filter)
+		{
+			return this.delete(filter, false);
+		}
+
+		/** Delete (optionally many) document(s) matching filter */
+		public Batch delete(Filter filter, boolean many)
+		{
+			final Function<Bson, WriteModel<T>> fn = (many) ? DeleteManyModel::new : DeleteOneModel::new;
+			ops.add(fn.apply(filter.expression()));
+			return this;
+		}
+
+		/** Execute batched operations */
+		public Batch execute(boolean ordered) throws BWFLAException
+		{
+			try {
+				final var options = new BulkWriteOptions()
+						.ordered(ordered);
+
+				collection.bulkWrite(ops, options);
+			}
+			catch (MongoException error) {
+				throw new BWFLAException("Executing batch failed!", error);
+			}
+
+			return this.clear();
+		}
+
+		/** Execute batched operations in-order */
+		public Batch execute() throws BWFLAException
+		{
+			return this.execute(true);
+		}
+
+		/** Discard pending operations */
+		public Batch clear()
+		{
+			ops.clear();
+			return this;
+		}
+
+		/** Current batch size (number of pending operations) */
+		public int size()
+		{
+			return ops.size();
 		}
 	}
 
