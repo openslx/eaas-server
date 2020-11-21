@@ -83,10 +83,10 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		try {
 			if(Files.exists(dst))
 			{
-				log.warning("METS object with id " + o.getId() + " exists. skipping...");
-				return;
+				log.warning("METS object with id " + o.getId() + " exists. overwriting...");
+				// return;
 			}
-			Files.write( dst, metsdata.getBytes("UTF-8"), StandardOpenOption.CREATE);
+			Files.write( dst, metsdata.getBytes("UTF-8"));
 		} catch (IOException e) {
 			throw new BWFLAException(e);
 		}
