@@ -79,12 +79,7 @@ public class NetworkEnvironmentElement {
 
     @Deprecated
     public String getFqdn() {
-        if(fqdn == null)
-            return null;
-        String[] fqdns = fqdn.split(":");
-        if(fqdns.length == 0)
-            return null;
-        return fqdns[0];
+        return fqdn;
     }
 
     public void setFqdn(String fqdn) {
