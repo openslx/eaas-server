@@ -51,6 +51,9 @@ public class ObjectArchiveFacadeWS
 	@Inject
 	@Config(value="objectarchive.user_archive_prefix")
 	private String USERARCHIVEPRIFIX;
+
+	@Inject
+	private SeatManager seatmgr;
 	
 	@PostConstruct
 	private void initialize()
@@ -139,7 +142,36 @@ public class ObjectArchiveFacadeWS
 	public int getNumObjectSeats(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		return a.getNumObjectSeats(id);
+	}
 
+	public int getNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
+	{
+		int seats = -1;
+
+		if (tenant != null)
+			seats = seatmgr.getNumSeats(tenant, archive, id);
+
+		if (seats < 0) {
+			// No tenant specific limits defined!
+			seats = this.getNumObjectSeats(archive, id);
+		}
+
+		return seats;
+	}
+
+	public void setNumObjectSeatsForTenant(String archive, String id, String tenant, int seats) throws BWFLAException
+	{
+		seatmgr.setNumSeats(tenant, archive, id, seats);
+	}
+
+	public void resetNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
+	{
+		seatmgr.resetNumSeats(tenant, archive, id);
+	}
+
+	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException
+	{
+		seatmgr.resetNumSeats(tenant);
 	}
 
 	public TaskState getTaskState(String id)
