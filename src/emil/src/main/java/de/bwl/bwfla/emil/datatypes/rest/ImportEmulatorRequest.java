@@ -1,11 +1,16 @@
 package de.bwl.bwfla.emil.datatypes.rest;
 
-import javax.xml.bind.annotation.XmlElement;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import javax.xml.bind.annotation.XmlElement;
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ImportEmulatorRequest extends ImportContainerRequest {
 
     @XmlElement(required = true)
     private String version;
+
+    @XmlElement(required = false)
+    private String emulatorVersion;
 
     @XmlElement(required = true)
     private String fstype;
@@ -46,5 +51,13 @@ public class ImportEmulatorRequest extends ImportContainerRequest {
 
     public void setEmulatorType(String emulatorType) {
         this.emulatorType = emulatorType;
+    }
+
+    public String getEmulatorVersion() {
+        return emulatorVersion;
+    }
+
+    public void setEmulatorVersion(String emulatorVersion) {
+        this.emulatorVersion = emulatorVersion;
     }
 }
