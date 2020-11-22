@@ -143,28 +143,28 @@ public class ContainerUtil {
         return result;
     }
 
-    public void importEmulator(ImportEmulatorRequest emulatorRequest) throws BWFLAException, MalformedURLException {
-
+    private ContainerImage createImage(ImportContainerRequest req) throws BWFLAException, MalformedURLException {
         ImageBuilderResult result = null;
         URL imageUrl = null;
+        ContainerImage containerImage = new ContainerImage();
 
-        switch(emulatorRequest.getImageType())
+        switch(req.getImageType())
         {
             case ROOTFS:
-                result = createImageFromArchiveFile(emulatorRequest.getUrlString());
+                result = createImageFromArchiveFile(req.getUrlString());
                 break;
             case SIMG:
-                result = createImageFromSingularityImg(emulatorRequest.getUrlString());
+                result = createImageFromSingularityImg(req.getUrlString());
                 break;
             case DOCKERHUB:
-                result = createImageFromDockerHub(emulatorRequest.getUrlString(), emulatorRequest.getTag(), emulatorRequest.getDigest());
+                result = createImageFromDockerHub(req.getUrlString(), req.getTag(), req.getDigest());
                 break;
             case READYMADE:
-                imageUrl = new URL(emulatorRequest.getUrlString());
+                imageUrl = new URL(req.getUrlString());
                 break;
 
             default:
-                throw new BWFLAException("unknown imageType " + emulatorRequest.getImageType());
+                throw new BWFLAException("unknown imageType " + req.getImageType());
         }
         if (imageUrl == null) {
             if (result.getBlobHandle() == null)
@@ -175,21 +175,32 @@ public class ContainerUtil {
                 throw new BWFLAException(e);
             }
         }
+        containerImage.imageUrl = imageUrl;
+        containerImage.imageBuilderResult = result;
 
-        if(result.getMetadata() == null)
+        return containerImage;
+    }
+
+
+        public void importEmulator(ImportEmulatorRequest emulatorRequest) throws BWFLAException, MalformedURLException {
+
+        ContainerImage containerImage = createImage(emulatorRequest);
+
+        /*
+        if(containerImage.imageBuilderResult == null || containerImage.imageBuilderResult.getMetadata() == null)
             throw new BWFLAException("no metadata available");
-
+        */
         ImageArchiveMetadata meta = new ImageArchiveMetadata();
         meta.setType(ImageType.BASE);
 
         EnvironmentsAdapter.ImportImageHandle importState = null;
         ImageArchiveBinding binding;
-        importState = envHelper.importImage(getEmulatorArchive(), imageUrl, meta, true);
+        importState = envHelper.importImage(getEmulatorArchive(), containerImage.imageUrl, meta, true);
         binding = importState.getBinding(60 * 60 * 60); //wait an hour
 
 
         de.bwl.bwfla.api.imagearchive.ImageDescription iD = new de.bwl.bwfla.api.imagearchive.ImageDescription();
-        envHelper.extractMetadata(binding.getImageId());
+        EmulatorMetadata emulatorMetadata = envHelper.extractMetadata(binding.getImageId());
         iD.setType(meta.getType().value());
         iD.setId(binding.getImageId());
         iD.setFstype(FileSystemType.EXT4.toString());
@@ -199,27 +210,47 @@ public class ContainerUtil {
 
         entry.setImage(iD);
 
-        ImageBuilderMetadata md = result.getMetadata();
-        if(md instanceof DockerImport)
-        {
+        if(containerImage.imageBuilderResult != null) {
+            ImageBuilderMetadata md = containerImage.imageBuilderResult.getMetadata();
+            if (md instanceof DockerImport) {
 
-            DockerImport dockerMd = (DockerImport)md;
+                DockerImport dockerMd = (DockerImport) md;
+                Provenance pMd = new Provenance();
+                pMd.getLayers().addAll(dockerMd.getLayers());
+                pMd.setOciSourceUrl(dockerMd.getImageRef());
+                pMd.setVersionTag(dockerMd.getTag());
+                entry.setProvenance(pMd);
+
+                entry.setName("emucon-rootfs/" + dockerMd.getEmulatorType());
+                entry.setVersion(dockerMd.getEmulatorVersion());
+                entry.setDigest(dockerMd.getDigest());
+
+                alias.setName("emucon-rootfs/" + dockerMd.getEmulatorType());
+                alias.setVersion(dockerMd.getEmulatorVersion());
+                if (emulatorRequest.getAlias() != null && !emulatorRequest.getAlias().isEmpty())
+                    alias.setAlias(emulatorRequest.getAlias());
+                else
+                    alias.setAlias(dockerMd.getEmulatorVersion());
+            }
+        }
+        else if(emulatorMetadata != null)
+        {
             Provenance pMd = new Provenance();
-            pMd.getLayers().addAll(dockerMd.getLayers());
-            pMd.setOciSourceUrl(dockerMd.getImageRef());
-            pMd.setVersionTag(dockerMd.getTag());
+
+            pMd.setOciSourceUrl(emulatorMetadata.getOciSourceUrl());
+            pMd.setVersionTag(emulatorMetadata.getEmulatorVersion());
             entry.setProvenance(pMd);
 
-            entry.setName("emucon-rootfs/" + dockerMd.getEmulatorType());
-            entry.setVersion(dockerMd.getEmulatorVersion());
-            entry.setDigest(dockerMd.getDigest());
+            entry.setName("emucon-rootfs/" + emulatorMetadata.getEmulatorType());
+            entry.setVersion(emulatorMetadata.getEmulatorVersion());
+            entry.setDigest(emulatorMetadata.getContainerDigest());
 
-            alias.setName("emucon-rootfs/" + dockerMd.getEmulatorType());
-            alias.setVersion(dockerMd.getEmulatorVersion());
+            alias.setName("emucon-rootfs/" + emulatorMetadata.getEmulatorType());
+            alias.setVersion(emulatorMetadata.getEmulatorVersion());
             if(emulatorRequest.getAlias() != null && !emulatorRequest.getAlias().isEmpty())
                 alias.setAlias(emulatorRequest.getAlias());
             else
-                alias.setAlias(dockerMd.getEmulatorVersion());
+                alias.setAlias(emulatorMetadata.getEmulatorVersion());
         }
         else
         {
@@ -229,43 +260,15 @@ public class ContainerUtil {
     }
 
     public String importContainer(ImportContainerRequest containerRequest) throws BWFLAException, MalformedURLException {
-        ImageBuilderResult result = null;
-        URL imageUrl = null;
 
-        switch(containerRequest.getImageType())
-        {
-            case ROOTFS:
-                result = createImageFromArchiveFile(containerRequest.getUrlString());
-                break;
-            case SIMG:
-                result = createImageFromSingularityImg(containerRequest.getUrlString());
-                break;
-            case DOCKERHUB:
-                result = createImageFromDockerHub(containerRequest.getUrlString(), containerRequest.getTag(), containerRequest.getDigest());
-                break;
-            case READYMADE:
-                imageUrl = new URL(containerRequest.getUrlString());
-                break;
-
-            default:
-                throw new BWFLAException("unknown imageType " + containerRequest.getImageType());
-        }
-
-        if (imageUrl == null)
-            if(result.getBlobHandle() == null)
-                throw new BWFLAException("Image blob unavailable");
-        try {
-            imageUrl = new URL(result.getBlobHandle().toRestUrl(blobStoreRestAddress, false));
-        } catch (MalformedURLException e) {
-            throw  new BWFLAException(e);
-        }
+        ContainerImage containerImage = createImage(containerRequest);
 
         ImageArchiveMetadata meta = new ImageArchiveMetadata();
         meta.setType(ImageType.TMP);
 
         EnvironmentsAdapter.ImportImageHandle importState = null;
         ImageArchiveBinding binding;
-        importState = envHelper.importImage("default", imageUrl, meta, true);
+        importState = envHelper.importImage("default", containerImage.imageUrl, meta, true);
         binding = importState.getBinding(60 * 60 * 60); //wait an hour
 
         binding.setId("rootfs");
@@ -289,9 +292,11 @@ public class ContainerUtil {
         // Derive docker variables and processes from image
 
         if (containerRequest.getImageType() == ImportContainerRequest.ContainerImageType.DOCKERHUB) {
-            process.setEnvironmentVariables(((DockerImport) result.getMetadata()).getEnvVariables());
-            process.setArguments(((DockerImport) result.getMetadata()).getEntryProcesses());
-            process.setWorkingDir(((DockerImport) result.getMetadata()).getWorkingDir());
+            if(containerImage.imageBuilderResult == null)
+                throw new BWFLAException("ImageBuilder returned empty result for DOCKERHUB container type");
+            process.setEnvironmentVariables(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getEnvVariables());
+            process.setArguments(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getEntryProcesses());
+            process.setWorkingDir(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getWorkingDir());
         } else {
             process.setArguments(containerRequest.getProcessArgs());
 
@@ -300,11 +305,12 @@ public class ContainerUtil {
         }
 
         config.setProcess(process);
-
         config.setId(containerRequest.getUrlString());
-
-        LOG.warning(config.toString());
-        LOG.info("importing config: " + config.toString());
         return envHelper.importMetadata("default", config, meta, false);
+    }
+
+    private static class ContainerImage {
+        public URL imageUrl;
+        public ImageBuilderResult imageBuilderResult;
     }
 }

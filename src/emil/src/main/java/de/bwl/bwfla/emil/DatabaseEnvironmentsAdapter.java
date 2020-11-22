@@ -64,10 +64,12 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.getTemplate(id);
     }
 
+    @Deprecated
     public EnvironmentsAdapter.ImportImageHandle importImage(String archive, URL url, ImageArchiveMetadata iaMd, boolean b) throws BWFLAException {
         return environmentsAdapter.importImage(archive, url, iaMd, b);
     }
 
+    @Deprecated
     public EnvironmentsAdapter.ImportImageHandle importImage(String archive, DataHandler handler, ImageArchiveMetadata iaMd) throws BWFLAException {
         return environmentsAdapter.importImage(archive, handler, iaMd);
     }
@@ -267,8 +269,8 @@ public class DatabaseEnvironmentsAdapter {
         return imageArchive;
     }
 
-    public void extractMetadata(String imageId) throws BWFLAException {
-        environmentsAdapter.extractMetadata(imageId);
+    public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
+        return environmentsAdapter.extractMetadata(imageId);
     }
 
     public List<DefaultEntry> getDefaultEnvironments() throws BWFLAException {
