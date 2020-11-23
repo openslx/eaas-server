@@ -750,7 +750,7 @@ public class EmulatorUtils {
 
 		String imagePathString = mntpoint.toAbsolutePath().toString().replace(".fuse", ".lock");
 		Path nbdMountPath = Paths.get(imagePathString);
-		if(nbdMountPath.endsWith("lock") && Files.exists(nbdMountPath))
+		if(imagePathString.endsWith("lock") && Files.exists(nbdMountPath))
 		{
 			log.severe("using nbd unmount");
 			String cowPathString = imagePathString.replace(".lock", "");
