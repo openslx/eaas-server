@@ -743,12 +743,14 @@ public class EmulatorUtils {
 	}
 
 	public static void unmountFuse(Path mntpoint, Logger log) throws BWFLAException, IOException {
+
+		log.severe("unmounting " + mntpoint);
 		if (mntpoint == null)
 			return;
 
 		String imagePathString = mntpoint.toAbsolutePath().toString().replace(".fuse", ".lock");
 		Path nbdMountPath = Paths.get(imagePathString);
-		if(Files.exists(nbdMountPath))
+		if(nbdMountPath.endsWith("lock") && Files.exists(nbdMountPath))
 		{
 			log.severe("using nbd unmount");
 			String cowPathString = imagePathString.replace(".lock", "");
