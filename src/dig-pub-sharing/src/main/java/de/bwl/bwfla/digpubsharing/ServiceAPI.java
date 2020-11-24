@@ -334,12 +334,12 @@ public class ServiceAPI
 	@Path("/count-records")
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(Integer.class)
-	public Response countPublicationRecords()
+	public Response countPublicationRecords(@QueryParam("include") List<DigPubState> includes)
 	{
 		final String tenant = this.getTenantId();
 
 		try {
-			final var filter = PersistentDigPubRecord.filter(tenant);
+			final var filter = PersistentDigPubRecord.filter(tenant, includes);
 			return Response.ok()
 					.entity(records.count(filter))
 					.build();
