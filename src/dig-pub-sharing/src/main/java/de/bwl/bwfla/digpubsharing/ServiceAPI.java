@@ -61,6 +61,7 @@ import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.guacplay.util.StopWatch;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
+import de.bwl.bwfla.digpubsharing.api.DigPubState;
 import de.bwl.bwfla.digpubsharing.api.DigitalPublication;
 import de.bwl.bwfla.digpubsharing.api.ImportSummary;
 import de.bwl.bwfla.digpubsharing.api.DigPubRecord;
@@ -278,7 +279,7 @@ public class ServiceAPI
 	@Path("/export")
 	@Produces(MEDIATYPE_CSV)
 	@TypeHint(String.class)
-	public Response exportPublicationRecords()
+	public Response exportPublicationRecords(@QueryParam("include") List<DigPubState> includes)
 	{
 		final int BATCH_SIZE = 512;
 
@@ -290,7 +291,8 @@ public class ServiceAPI
 			int counter = 0;
 			final StopWatch stopwatch = new StopWatch();
 			final var batch = records.batch(BATCH_SIZE);
-			try (var writer = new OutputStreamWriter(ostream); var entries = records.find(PersistentDigPubRecord.filter(tenant))) {
+			final var filter = PersistentDigPubRecord.filter(tenant, includes);
+			try (var writer = new OutputStreamWriter(ostream); var entries = records.find(filter)) {
 				for (PersistentDigPubRecord record : entries) {
 					final var extid = record.getExternalId();
 

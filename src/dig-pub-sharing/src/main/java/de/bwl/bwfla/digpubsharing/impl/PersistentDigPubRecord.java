@@ -23,7 +23,10 @@ import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.digpubsharing.api.DigPubState;
 import de.bwl.bwfla.digpubsharing.api.DigPubStatus;
+
+import java.util.List;
 
 
 public class PersistentDigPubRecord
@@ -106,6 +109,33 @@ public class PersistentDigPubRecord
 				.eq(Fields.EXTERNAL_ID, extid);
 	}
 
+	public static DocumentCollection.Filter filter(String tenant, List<DigPubState> includes)
+	{
+		final var lhs = PersistentDigPubRecord.filter(tenant);
+		final var rhs = includes.stream()
+				.map((state) -> {
+					switch (state) {
+						case missing:
+							return DocumentCollection.filter()
+									.eq(Fields.STATUS_MATCHED_ON, null);
+
+						case matched:
+							return DocumentCollection.filter()
+									.ne(Fields.STATUS_MATCHED_ON, null);
+
+						case recent:
+							return DocumentCollection.filter()
+								.eq(Fields.STATUS_IS_NEW, true);
+
+						default:
+							throw new IllegalArgumentException();
+					}
+				})
+				.reduce(DocumentCollection.Filter::or);
+
+		return (rhs.isPresent()) ? lhs.and(rhs.get()) : lhs;
+	}
+
 	public static void index(DocumentCollection<PersistentDigPubRecord> collection) throws BWFLAException
 	{
 		collection.index(Fields.TENANT_ID, Fields.EXTERNAL_ID);
@@ -117,5 +147,8 @@ public class PersistentDigPubRecord
 		public static final String EXTERNAL_ID = "ext_id";
 		public static final String NUM_SEATS   = "num_seats";
 		public static final String STATUS      = "status";
+
+		public static final String STATUS_MATCHED_ON = Fields.STATUS + "." + DigPubStatus.Fields.MATCHED_ON;
+		public static final String STATUS_IS_NEW = Fields.STATUS + "." + DigPubStatus.Fields.IS_NEW;
 	}
 }
