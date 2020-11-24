@@ -481,6 +481,12 @@ public class DocumentCollection<T>
 			return this.and(Filters::gte, key, value);
 		}
 
+		public Filter and(Filter filter)
+		{
+			expression = Filters.and(expression, filter.expression());
+			return this;
+		}
+
 		public static Filter or(Filter... filters)
 		{
 			final ArrayList<Bson> expressions = new ArrayList<>(filters.length);
