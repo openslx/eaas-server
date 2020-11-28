@@ -301,21 +301,8 @@ public class BindingsManager
 	/** Unmounts all registered bindings */
 	public void cleanup()
 	{
-		final String fuseSuffix = ".fuse";
-
 		log.info("Unmounting bindings...");
 		{
-			// Finds the real FUSE-mountpoint in paths of the form:
-			//     /some/path/binding-name.fuse/subresource...
-			//     --> /some/path/binding-name.fuse
-			final Function<String, String> toFuseMountpoint = (path) -> {
-				final int index = path.indexOf(fuseSuffix);
-				if (index < 0)
-					return null;
-
-				return path.substring(0, index + fuseSuffix.length());
-			};
-
 			final Set<String> idsToRemove = new HashSet<String>();
 			final List<Pair<String, String>> entriesToUnmount = new ArrayList<Pair<String, String>>();
 
@@ -329,18 +316,10 @@ public class BindingsManager
 					if (!id.endsWith(suffix))
 						continue;  // Not a FUSE-mount!
 
-					final String mountpoint = toFuseMountpoint.apply(path);
-					if (mountpoint != null) {
-						entriesToUnmount.add(new Pair<String, String>(id, mountpoint));
-					}
-					else {
-						// Should never happen!
-						log.warning("Expected a suffix '" + fuseSuffix + "' in path: " + path);
-					}
+					entriesToUnmount.add(new Pair<String, String>(id, path));
 
 					final int end = id.length() - suffix.length();
 					idsToRemove.add(id.substring(0, end));
-
 				}
 			});
 

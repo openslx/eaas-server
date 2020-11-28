@@ -62,49 +62,21 @@ public class EmulatorUtils {
 		}
 	}
 
-	public static String computeMd5(File file) {
-		String result = new String();
-
-		try {
-			OutputStream out = new NullOutputStream();
-			MessageDigest md = MessageDigest.getInstance("MD5");
-			InputStream is = new DigestInputStream(new FileInputStream(file), md);
-			IOUtils.copy(is, out);
-			out.flush();
-			out.close();
-			is.close();
-			byte[] digest = md.digest();
-			for (int i = 0; i < digest.length; i++) {
-				result += Integer.toString((digest[i] & 0xff) + 0x100, 16)
-						.substring(1);
-			}
-		} catch (NoSuchAlgorithmException | IOException e) {
-			log.warning(e.getMessage());
-		}
-
-		return result;
-	}
-
-	public static String connectBinding(Binding resource, Path resourceDir, MountOptions xmountOpts)
+	public static String connectBinding(Binding resource, Path resourceDir, MountOptions mountOpts)
 			throws BWFLAException, IllegalArgumentException {
-		String resUrl = resource.getUrl();
 
-		if (resource == null || resource.getId() == null
-				|| resource.getId().isEmpty()) {
+		if (resource == null
+				|| resource.getId() == null
+				|| resource.getId().isEmpty()
+				|| resource.getUrl() == null
+				|| resource.getUrl().isEmpty()) {
 			throw new IllegalArgumentException(
-					"Given resource is null or has invalid id.");
+					"Given resource is null, has invalid id or empty url.");
 		}
 
 		if (resource.getAccess() == null)
 			resource.setAccess(Binding.AccessType.COW);
 
-		if (resource.getId() == null || resUrl == null
-				|| resource.getId().isEmpty() || resUrl.isEmpty()) {
-			throw new IllegalArgumentException(
-					"Given id is null or has invalid id.");
-		}
-
-		String resFile = null;
 		switch (resource.getAccess()) {
 			case COW:
 				// create cow container
@@ -114,7 +86,7 @@ public class EmulatorUtils {
 				Path cowPath = resourceDir.resolve(resource.getId() + ".cow");
 
 				QcowOptions qcowOptions = new QcowOptions();
-				qcowOptions.setBackingFile(resUrl);
+				qcowOptions.setBackingFile(resource.getUrl());
 
 				if(MachineTokenProvider.getAuthenticationProxy() != null)
 					qcowOptions.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
@@ -123,26 +95,23 @@ public class EmulatorUtils {
 
 				EmulatorUtils.createCowFile(cowPath, qcowOptions);
 
-				Path fuseMountpoint = cowPath
-						.resolveSibling(cowPath.getFileName() + ".fuse");
+				Path imageMount = cowPath
+						.resolveSibling(cowPath.getFileName() + ".dd");
 				try {
-					resFile = mountCowFile(cowPath, fuseMountpoint, xmountOpts)
+					return mountCowFile(cowPath, imageMount, mountOpts)
 							.toString();
 				} catch (IOException e) {
 					throw new BWFLAException("Could not fuse-mount image file.", e);
 				}
-				break;
 			case COPY:
 				// use qemu-imgs convert feature to create a new local raw copy
 				Path imgCopy = resourceDir.resolve(resource.getId() + ".copy");
-				copyRemoteUrl(resource, imgCopy);
-				resFile = imgCopy.toString();
-				break;
+				copyRemoteUrl(resource, imgCopy, log);
+				return imgCopy.toString();
 			default:
 				log.severe("This should never happen!");
+				throw new BWFLAException("cannot connect COW transport not defined.");
 		}
-
-		return resFile;
 	}
 
 	public static void copyRemoteUrl(Binding resource, Path dest) throws BWFLAException {
@@ -183,53 +152,6 @@ public class EmulatorUtils {
 			}
 		}
 		else throw new BWFLAException("unsupported operation " + resUrl);
-	}
-
-	public static Path prepareSoftwareCollection(String handle, Path tempPath) {
-		try {
-
-			Path image = handleToPath(handle, tempPath);
-
-			Path mountpoint = java.nio.file.Files.createTempDirectory(tempPath, "fuse-");
-			DeprecatedProcessRunner process = new DeprecatedProcessRunner("fuseiso");
-			process.addArgument(image.toString());
-			process.addArgument(mountpoint.toString());
-			if (!process.execute())
-				return null;
-
-			return mountpoint;
-
-		} catch (Exception e) {
-			log.severe("Temporary mountpoint cannot be created: " + e.getMessage());
-		}
-		return null;
-	}
-
-	private static Path handleToPath(String handle, Path tempPath) throws Exception {
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-
-		// creating local cow image file
-		Path cowFile = java.nio.file.Files.createTempFile(tempPath, "cow-", ".qcow2");
-		process.setCommand("qemu-img");
-		process.addArguments("create", "-f", "qcow2", "-o");
-		process.addArgument("backing_file=", handle, ",backing_fmt=raw");
-		process.addArgument(cowFile.toString());
-		process.execute();
-
-		// loop-mounting cow image to produce raw block stream
-		// representation
-		Path mountpoint = Files.createTempDirectory(tempPath, "fuse-");
-		process.setCommand("qemu-fuse");
-		process.addArguments("-o", "kernel_cache",
-				"-o", "noforget",
-				"-o", "large_read",
-				"-o", "max_readahead=131072",
-				"-o", "allow_root");
-		process.addArgument(cowFile.toString());
-		process.addArgument(mountpoint.toString());
-		process.execute();
-
-		return mountpoint.resolve(cowFile.getFileName());
 	}
 
 	/**
@@ -274,11 +196,6 @@ public class EmulatorUtils {
 		}
 	}
 
-	public static Path mountCowFile(Path image, Path mountpoint)
-			throws IllegalArgumentException, IOException, BWFLAException {
-		return mountCowFile(image, mountpoint, null, log);
-	}
-
 	public static Path mountCowFile(Path image, Path mountpoint, Logger log)
 			throws IllegalArgumentException, IOException, BWFLAException {
 		return mountCowFile(image, mountpoint, null, log);
@@ -295,13 +212,13 @@ public class EmulatorUtils {
 	 * @throws IllegalArgumentException if the image cannot be used as a mount source
 	 * @throws IOException              If readonly is false and the image cannot be mounted read/write
 	 */
-	public static Path mountCowFile(Path image, Path mountpoint, MountOptions xmountOpts) throws IllegalArgumentException,
+	public static Path mountCowFile(Path image, Path mountpoint, MountOptions mountOpts) throws IllegalArgumentException,
 			IOException, BWFLAException {
-		return EmulatorUtils.mountCowFile(image, mountpoint, xmountOpts, log);
+		return EmulatorUtils.mountCowFile(image, mountpoint, mountOpts, log);
 	}
 
-	public static Path mountCowFile(Path image, Path mountpoint, MountOptions xmountOpts, Logger log)
-			throws IllegalArgumentException, IOException, BWFLAException {
+	public static Path mountCowFile(Path image, Path mountpoint, MountOptions mountOpts, Logger log)
+			throws IllegalArgumentException, BWFLAException {
 
 		if (image == null) {
 			throw new IllegalArgumentException("Given image path was null");
@@ -312,114 +229,23 @@ public class EmulatorUtils {
 					+ "\" is not a regular file.");
 		}
 
-		return nbdMount(image.toAbsolutePath().toString(), mountpoint, xmountOpts, log);
+		return nbdMount(image.toAbsolutePath().toString(), mountpoint, mountOpts, log);
 	}
 
 	public static Path nbdMount(String imagePath, Path mountpoint, MountOptions options, Logger log) throws BWFLAException {
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/fuseqemu/mount-qcow");
+		process.addArgument(imagePath);
+		process.addArgument(mountpoint.toAbsolutePath().toString());
+		process.addArguments(options.getArgs());
+		process.addArgument("--");
+		process.addArguments("-o", "allow_root");
 
-		try {
-			// create mountpoint if necessary
-			Files.createDirectories(mountpoint);
-			log.info("created subdirectories up to " + mountpoint.toString());
-
-			String baseName = imagePath.substring(imagePath.lastIndexOf('/') + 1);
-			if (baseName.lastIndexOf('.') > 0)
-				baseName = baseName.substring(0, baseName.lastIndexOf('.'));
-
-			DeprecatedProcessRunner process = new DeprecatedProcessRunner("/libexec/fuseqemu/mount-qcow");
-			process.addArgument(imagePath);
-			process.addArgument(mountpoint.toAbsolutePath().toString() + "/" + baseName + ".dd");
-			process.addArguments(options.getArgs());
-			process.addArgument("--");
-			process.addArguments("-o", "allow_root");
-
-			if (!process.execute()) {
-				// if (!process.start()) {
-				try {
-					Files.deleteIfExists(mountpoint);
-				} catch (IOException e) {
-					log.severe(
-							"Created a temporary file but cannot delete it after error. This is bad.");
-				}
-				throw new BWFLAException("Error mounting " + imagePath
-						+ ". See log output for more information (maybe).");
-
-			}
-			return mountpoint.resolve(baseName + ".dd");
-
-		} catch (IOException e) {
-			throw new BWFLAException(
-					"Error mounting " + imagePath + ".", e);
+		if (!process.execute()) {
+			throw new BWFLAException("Error mounting " + imagePath
+					+ ". See log output for more information (maybe).");
 		}
+		return mountpoint;
 	}
-
-	/*
-	public static Path xmount(String imagePath, Path mountpoint,
-							  XmountOptions xmountOpts)
-			throws IllegalArgumentException, IOException, BWFLAException {
-		return EmulatorUtils.xmount(imagePath, mountpoint, xmountOpts, log);
-	}
-
-	public static Path xmount(String imagePath, Path mountpoint, XmountOptions xmountOpts, Logger log)
-			throws IllegalArgumentException, BWFLAException {
-		if (xmountOpts == null)
-			xmountOpts = new XmountOptions();
-
-		// This mimicks the behavior of xmount which looks for the
-		// last slash in the string and takes everything up until
-		// the last dot in the string as the base name for the image
-		String baseName = imagePath.substring(imagePath.lastIndexOf('/') + 1);
-		if (baseName.lastIndexOf('.') > 0)
-			baseName = baseName.substring(0, baseName.lastIndexOf('.'));
-
-		try {
-			// create mountpoint if necessary
-			Files.createDirectories(mountpoint);
-			log.info("created subdirectories up to " + mountpoint.toString());
-
-			DeprecatedProcessRunner process = new DeprecatedProcessRunner("xmount");
-			process.setLogger(log);
-			// process.addArgument("-d");
-			process.addArguments("--in" , xmountOpts.getInFmt().toString(),
-					imagePath);
-
-			xmountOpts.setXmountOptions(process);
-			process.addArguments(mountpoint.toAbsolutePath().toString());
-
-			if (!process.execute()) {
-			// if (!process.start()) {
-				try {
-					Files.deleteIfExists(mountpoint);
-				} catch (IOException e) {
-					log.severe(
-							"Created a temporary file but cannot delete it after error. This is bad.");
-				}
-				throw new BWFLAException("Error mounting " + imagePath
-						+ ". See log output for more information (maybe).");
-			}
-
-//			try {
-//				Thread.sleep(5000);
-//			} catch (InterruptedException e) {
-//				e.printStackTrace();
-//			}
-			switch (xmountOpts.getOutFmt()) {
-				case RAW:
-					return mountpoint.resolve(baseName + ".dd");
-				case VDI:
-				case VHD:
-				case VMDK:
-					return mountpoint.resolve(baseName + "."
-							+ xmountOpts.getOutFmt().toString().toLowerCase());
-				default:
-					return null;
-			}
-		} catch (IOException e) {
-			throw new BWFLAException(
-					"Error mounting " + imagePath + ".", e);
-		}
-	}
-	 */
 
 	public static void lklMount(Path path, Path dest, String fsType) throws BWFLAException {
 		EmulatorUtils.lklMount(path, dest, fsType, log);
@@ -553,35 +379,6 @@ public class EmulatorUtils {
 		}
 	}
 
-	@Deprecated
-	public static ImageInformation.QemuImageFormat getImageFormat(Path inFile, Logger log) throws BWFLAException, IOException {
-		ImageInformation info = new ImageInformation(inFile.toString(), log);
-		return info.getFileFormat();
-
-//		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-//		process.setLogger(log);
-//		process.setCommand("qemu-img");
-//		process.addArguments("info");
-//		process.addArgument(inFile.toString());
-//
-//		try {
-//			if (!process.execute(false, false)) {
-//				throw new BWFLAException("qemu-img info " + inFile.toString() + " failed");
-//			}
-//
-//			String output = process.getStdOutString();
-//			for (ImageInformation.QemuImageFormat fmt : ImageInformation.QemuImageFormat.values()) {
-//				if (output.contains("file format: " + fmt.toString()))
-//					return fmt;
-//			}
-//			return null;
-//		} finally {
-//			process.cleanup();
-//		}
-	}
-
-
-
 	public static void convertImage(Path inFile, Path outFile, ImageInformation.QemuImageFormat fmt, Logger log) throws BWFLAException {
 		// NOTE: our patched qemu-img is relatively old and seems to silently produce
 		//       images with incorrect size when applied to some newer VHD files!
@@ -598,49 +395,6 @@ public class EmulatorUtils {
 		if (!process.execute()) {
 			throw new BWFLAException("converting " + inFile.toString() + " failed");
 		}
-	}
-
-	public static String getLoopDev(Logger log) throws BWFLAException, IOException {
-		return LoopDeviceManager.getLoopDevice();
-	}
-
-	public void  createNewImg(java.nio.file.Path destFile, String bs, long sizeMb) throws BWFLAException {
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-		runner.setCommand("dd");
-		runner.addArgument("if=/dev/zero");
-		runner.addArgument("of=" + destFile);
-		runner.addArgument("bs=" + bs);
-		runner.addArgument("count=" + sizeMb);
-		if (!runner.execute())
-			throw new BWFLAException("dd file creation failed!");
-	}
-
-	public static void connectLoop(String dev, File img, long offset, long sizelimit, Logger log) throws BWFLAException, IOException {
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-		process.setLogger(log);
-		process.setCommand("losetup");
-		process.addArguments("-o", offset + "");
-		process.addArguments("--sizelimit", sizelimit + "");
-		process.addArgument(dev);
-		process.addArgument(img.getAbsolutePath());
-		process.redirectStdErrToStdOut(false);
-		if (!process.execute())
-			throw new BWFLAException("Attaching loop-device failed!");
-	}
-
-	public static void connectLoop(String dev, File img, Logger log) throws BWFLAException, IOException {
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-		process.setLogger(log);
-		process.setCommand("/sbin/losetup");
-		process.addArgument(dev);
-		process.addArgument(img.getAbsolutePath());
-		process.redirectStdErrToStdOut(false);
-		if (!process.execute())
-			throw new BWFLAException("Attaching loop-device failed!");
-	}
-
-	public static void detachLoop(String dev) throws BWFLAException, IOException {
-		LoopDeviceManager.detachLoop(dev);
 	}
 
 	public static boolean isMountpoint(Path mountpoint, Logger log)
@@ -748,9 +502,10 @@ public class EmulatorUtils {
 		if (mntpoint == null)
 			return;
 
-		String imagePathString = mntpoint.toAbsolutePath().toString().replace(".fuse", ".lock");
+		String imagePathString = mntpoint.toAbsolutePath().toString() + ".lock";
 		Path nbdMountPath = Paths.get(imagePathString);
-		if(imagePathString.endsWith("lock") && Files.exists(nbdMountPath))
+		log.severe(imagePathString + " " + Files.exists(nbdMountPath));
+		if(Files.exists(nbdMountPath))
 		{
 			log.severe("using nbd unmount");
 			String cowPathString = imagePathString.replace(".lock", "");
@@ -764,32 +519,6 @@ public class EmulatorUtils {
 			}
 			_unmount(mntpoint, log);
 		}
-	}
-
-	public static boolean padFile(File f, int blocksize) {
-		if (!f.exists())
-			return false;
-
-		long fileSize = f.length();
-		if (fileSize == 0 || fileSize % blocksize == 0)
-			return false;
-
-		int padding = (int) (blocksize - (fileSize % blocksize)) % blocksize;
-		log.info("Warn: padding file: " + f.getName());
-
-		byte[] bytes = new byte[padding];
-		Arrays.fill(bytes, (byte) 0);
-		try {
-			FileOutputStream output = new FileOutputStream(f, true);
-			output.write(bytes);
-			output.close();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			log.log(Level.SEVERE, e.getMessage(), e);
-			return false;
-		}
-
-		return true;
 	}
 
 	public static void checkAndUnmount(Path... paths) throws BWFLAException, IOException {
@@ -830,89 +559,4 @@ public class EmulatorUtils {
 				break;
 		}
 	}
-
-	public static void stopXpraServer(DeprecatedProcessRunner runner) throws BWFLAException {
-		final int xpraProcessId = runner.getProcessId();
-		log.info("Stopping Xpra server " + xpraProcessId + "...");
-
-		// We need to send INT signal to gracefully stop Xpra server
-		DeprecatedProcessRunner xpraKiller = new DeprecatedProcessRunner();
-		xpraKiller.setCommand("kill");
-		xpraKiller.addArgument("-SIGINT");
-		xpraKiller.addArgument("" + xpraProcessId);
-		xpraKiller.execute();
-
-		try {
-			// Give Xpra server a chance to shutdown cleanly
-			for (int i = 0; i < 10; ++i) {
-				if (runner.isProcessFinished()) {
-					log.info("Xpra server " + xpraProcessId + " stopped.");
-					return;
-				}
-				Thread.sleep(500);
-			}
-		}
-		catch (Exception exception) {
-			throw new BWFLAException(exception.getMessage());
-		}
-
-		log.warning("Xpra server " + xpraProcessId + " failed to shutdown cleanly! Zomby processes may be left.");
-	}
-
-	public static void makeFs(String device, String type, Integer partitionNumber ) {
-		DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-
-		runner.setCommand("mkfs" + "." + type);
-		if(type.equals("ntfs") && partitionNumber == -1)
-			runner.addArgument("-F");
-		if (partitionNumber > 0)
-			runner.addArguments(device + "p" + partitionNumber);
-		else
-			runner.addArguments(device);
-		runner.execute();
-	}
-	public static void makeFs(String loopDev, String type ) {
-		makeFs(loopDev, type, -1);
-	}
-
-	public static void cleanUpMount(File tempMountDir, String loopDev, Logger log) throws BWFLAException, IOException {
-		if (tempMountDir != null)
-			if (tempMountDir.exists())
-				EmulatorUtils.unmountFuse(tempMountDir.toPath());
-
-		if (loopDev != null) {
-			detachLoop(loopDev);
-		}
-	}
-
-	public static Path createWorkingDir(String basedir) throws BWFLAException
-	{
-		try {
-			return EmulatorUtils.createWorkingDir(Paths.get(basedir));
-		}
-		catch (Exception error) {
-			throw new BWFLAException("Creating working directory failed!\n", error);
-		}
-	}
-	public static Path createWorkingDir(Path basedir) throws BWFLAException
-	{
-		try {
-			return EaasFileUtils.createTempDirectory(basedir, "build-");
-		}
-		catch (Exception error) {
-			throw new BWFLAException("Creating working directory failed!\n", error);
-		}
-	}
-
-    public static void tarDirectory(Path directoryToTar, Path outputTar) throws BWFLAException {
-        DeprecatedProcessRunner tarRunner = new DeprecatedProcessRunner();
-        tarRunner.setCommand("tar");
-        tarRunner.addArgument("-C");
-        tarRunner.addArgument(directoryToTar.toAbsolutePath().toString());
-        tarRunner.addArgument("-zcvf");
-        tarRunner.addArgument(outputTar.toAbsolutePath().toString());
-        tarRunner.addArgument(".");
-        if(!tarRunner.execute())
-        	throw new BWFLAException("Tar failed!");
-    }
 }

@@ -989,7 +989,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				type = ".zip";
 
 				// Mount partition's filesystem
-				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow), workdir.resolve("raw"), binding.getPartitionOffset());
+				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow),
+						workdir.resolve(Path.of(qcow).getFileName() + ".dd"), binding.getPartitionOffset());
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
 				final Path srcdir = fsmnt.getMountPoint();
 				if (emuEnvironment.isLinuxRuntime())

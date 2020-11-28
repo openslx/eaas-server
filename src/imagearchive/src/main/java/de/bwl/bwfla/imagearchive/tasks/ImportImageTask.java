@@ -143,7 +143,8 @@ public class ImportImageTask extends BlockingTask<String>
             }
 
             log.info("Looking up image file format...");
-            ImageInformation.QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
+            ImageInformation info = new ImageInformation(destImgFile.toPath().toString(), log);
+            ImageInformation.QemuImageFormat fmt = info.getFileFormat();
             if (fmt == null) {
                 destImgFile.delete();
                 throw new BWFLAException("could not determine file fmt");

@@ -976,7 +976,7 @@ public class ImageHandler
 			final Path workdir = ImageMounter.createWorkingDirectory();
 			mounter.addWorkingDirectory(workdir);
 
-			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve("raw"));
+			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve(imgFile.toPath().getFileName() + ".dd"));
 			// todo: read from metadata
 			ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4);
 
@@ -1301,7 +1301,8 @@ public class ImageHandler
 				if(!destImgFile.exists()) {
 					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
 				}
-				ImageInformation.QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
+				ImageInformation info = new ImageInformation(destImgFile.toPath().toString(), log);
+				ImageInformation.QemuImageFormat fmt = info.getFileFormat();
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");
 				}
