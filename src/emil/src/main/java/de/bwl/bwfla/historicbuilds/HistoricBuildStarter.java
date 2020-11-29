@@ -3,8 +3,10 @@ package de.bwl.bwfla.historicbuilds;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.envproposer.api.ProposalRequest;
+import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
+import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageRequest;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -38,8 +40,8 @@ public class HistoricBuildStarter {
     @Produces(MediaType.APPLICATION_JSON)
     public Response postProposal(HistoricRequest request) {
 
-        HistoricRequest.SoftwareHeritageRequest swhRequest = request.getSwhRequest();
-        HistoricRequest.BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
+        SoftwareHeritageRequest swhRequest = request.getSwhRequest();
+        BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
 
         LOG.info("Someone sent a build request to the historic build API: returning incoming json!");
         LOG.info("Revision ID:" + swhRequest.getRevisionId());
