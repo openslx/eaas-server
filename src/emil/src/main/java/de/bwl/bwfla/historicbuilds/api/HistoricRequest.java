@@ -1,16 +1,14 @@
 package de.bwl.bwfla.historicbuilds.api;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
-import javax.json.bind.annotation.JsonbProperty;
-import javax.xml.bind.annotation.XmlRootElement;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@JsonIgnoreProperties(ignoreUnknown = true) //TODO remove after testing
+
 public class HistoricRequest {
 
-    @JsonbProperty("softwareHeritage")
+    @JsonProperty("softwareHeritage")
     private SoftwareHeritageRequest swhRequest;
-    @JsonbProperty("buildToolchain")
+    @JsonProperty("buildToolchain")
     private BuildToolchainRequest buildToolchainRequest;
 
     public HistoricRequest() {

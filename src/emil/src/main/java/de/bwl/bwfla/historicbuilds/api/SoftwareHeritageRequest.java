@@ -1,13 +1,15 @@
 package de.bwl.bwfla.historicbuilds.api;
 
-import javax.json.bind.annotation.JsonbProperty;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+
 
 public class SoftwareHeritageRequest {
-    @JsonbProperty(value = "revisionId", nillable = true)
+    @JsonProperty("revisionId")
     private String revisionId;
-    @JsonbProperty(value = "directoryId", nillable = true)
+    @JsonProperty("directoryId")
     private String directoryId;
-    @JsonbProperty("extract")
+    @JsonProperty("extract")
     private boolean extract;
 
     public SoftwareHeritageRequest() {

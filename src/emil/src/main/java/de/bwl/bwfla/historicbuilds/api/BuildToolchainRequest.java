@@ -1,21 +1,22 @@
 package de.bwl.bwfla.historicbuilds.api;
 
-import javax.json.bind.annotation.JsonbProperty;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 
 public class BuildToolchainRequest {
-    @JsonbProperty("emulatorID")
+    @JsonProperty("emulatorID")
     private String emulatorID;
-    @JsonbProperty("inputDirectory")
+    @JsonProperty("inputDirectory")
     private String inputDirectory;
-    @JsonbProperty("outputDirectory")
+    @JsonProperty("outputDirectory")
     private String outputDirectory;
-    @JsonbProperty("execFile")
+    @JsonProperty("execFile")
     private String execFile;
-    @JsonbProperty("prerequisites")
+    @JsonProperty("prerequisites")
     private String[] prerequisites;
-    @JsonbProperty("mail")
+    @JsonProperty("mail")
     private String mail;
-    @JsonbProperty("mode")
+    @JsonProperty("mode")
     private String mode;
 
     public BuildToolchainRequest() {
