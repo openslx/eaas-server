@@ -38,8 +38,12 @@ public class HistoricBuildStarter {
     @Produces(MediaType.APPLICATION_JSON)
     public Response postProposal(HistoricRequest request) {
 
+        HistoricRequest.SoftwareHeritageRequest swhRequest = request.getSwhRequest();
+        HistoricRequest.BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
+
         LOG.info("Someone sent a build request to the historic build API: returning incoming json!");
-        //LOG.info("Revision ID:" + request.getSwhRequest().getRevisionId());
+        LOG.info("Revision ID:" + swhRequest.getRevisionId());
+        LOG.info("Mail:" + buildToolchainRequest.getMail());
 
         return ResponseUtils.createResponse(Status.OK, request);
     }

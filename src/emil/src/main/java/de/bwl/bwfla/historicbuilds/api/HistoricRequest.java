@@ -38,7 +38,7 @@ public class HistoricRequest {
         this.buildToolchainRequest = buildToolchainRequest;
     }
 
-    private class SoftwareHeritageRequest {
+    public class SoftwareHeritageRequest {
         @JsonbProperty(value = "revisionId", nillable = true)
         private String revisionId;
         @JsonbProperty(value = "directoryId", nillable = true)
@@ -80,7 +80,7 @@ public class HistoricRequest {
         }
     }
 
-    private class BuildToolchainRequest {
+    public class BuildToolchainRequest {
         @JsonbProperty("emulatorID")
         private String emulatorID;
         @JsonbProperty("inputDirectory")
