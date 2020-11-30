@@ -35,6 +35,7 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
 
             ArrayList<String> arguments = new ArrayList<String>();
             arguments.add("/usr/bin/python3"); //TODO make configurable?
+            arguments.add("/home/ubuntu/swh-downloader/main.py");
             String idToBeUsed;
 
             if (revisionId == null && directoryId == null) {
