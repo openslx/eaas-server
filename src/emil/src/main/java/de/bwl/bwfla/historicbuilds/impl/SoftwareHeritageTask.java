@@ -29,7 +29,7 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
         try {
 
             ArrayList<String> arguments = new ArrayList<String>();
-            arguments.add("/home/ubuntu/swh-downloader/venv/bin/python3 "); //TODO make configurable?
+            arguments.add("/home/ubuntu/swh-downloader/venv/bin/python3"); //TODO make configurable?
             String idToBeUsed;
 
             if (revisionId == null && directoryId == null) {
