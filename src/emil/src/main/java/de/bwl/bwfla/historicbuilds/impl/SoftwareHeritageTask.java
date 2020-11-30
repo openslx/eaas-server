@@ -6,15 +6,20 @@ import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
 import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageRequest;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class SoftwareHeritageTask extends BlockingTask<Object> {
 
     private final String revisionId;
     private final String directoryId;
     private final Boolean shouldExtract;
+
+    private static final Logger LOG = Logger.getLogger("SWH-TASK");
 
     public SoftwareHeritageTask(SoftwareHeritageRequest request) {
         this.revisionId = request.getRevisionId();
@@ -50,7 +55,28 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
             ProcessBuilder processBuilder = new ProcessBuilder(arguments.toArray(String[]::new));
             Process process = processBuilder.start();
 
-            process.waitFor();
+            //process.waitFor();
+
+            String s;
+
+            BufferedReader stdInput = new BufferedReader(new
+                    InputStreamReader(process.getInputStream()));
+
+            BufferedReader stdError = new BufferedReader(new
+                    InputStreamReader(process.getErrorStream()));
+
+            // TODO REMOVE
+            System.out.println("Here is the standard output of the command:\n");
+            while ((s = stdInput.readLine()) != null) {
+                LOG.info(s);
+            }
+
+            // TODO REMOVE
+            System.out.println("Here is the standard error of the command (if any):\n");
+            while ((s = stdError.readLine()) != null) {
+                LOG.info(s);
+            }
+
             if (process.exitValue() == 0) { //TODO create temp work dir for this
 
                 return new ProposalResponse()
