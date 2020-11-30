@@ -5,11 +5,13 @@ import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
+import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskManager;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.envproposer.EnvironmentProposer;
-import de.bwl.bwfla.envproposer.api.ProposalRequest;
+import de.bwl.bwfla.envproposer.api.ProposalResponse;
+import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
@@ -28,6 +30,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 @ApplicationScoped
@@ -43,7 +46,7 @@ public class HistoricBuilds {
     @Inject
     private EmilEnvironmentRepository emilEnvRepo = null;
 
-    //TODO is this needed?
+    //TODO is this needed here?
     @Inject
     @AuthenticatedUser
     private UserContext userCtx;
@@ -70,23 +73,97 @@ public class HistoricBuilds {
     @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response postBuild(HistoricRequest request) {
+    public Response postBuild(HistoricRequest request, @Context UriInfo uri) {
+
+        LOG.info("Someone sent a build request to the historic build API.");
 
         SoftwareHeritageRequest swhRequest = request.getSwhRequest();
         BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
 
+        final String swhTaskID = taskmgr.submit(new SoftwareHeritageTask(swhRequest));
 
-        //final String swhTaskID = taskmgr.submit(new SoftwareHeritageTask(swhRequest));
+        final String waitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", swhTaskID);
+        final String resultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", swhTaskID);
+        final TaskInfo<Object> info = taskmgr.lookup(swhTaskID);
+        info.setUserData(new UserData(waitLocation, resultLocation)); //TODO is there a nicer way to do this?
+        final ProposalResponse response = new ProposalResponse() //TODO use HistoricResponse here
+                .setMessage("Proposal task was submitted.")
+                .setId(swhTaskID);
+
+        //TODO: use one Task for everything? buildToolchain needs to wait until SWH is done anyway
         //final String buildTCTaskID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, userCtx.getUserId()));
 
-        LOG.info("Someone sent a build request to the historic build API: returning incoming json!");
-        if (swhRequest != null) {
-            LOG.info("Revision ID:" + swhRequest.getRevisionId());
+        // works!
+        //EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEmulatorID());
+
+        return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
+    }
+
+    @GET
+    @Path("/waitqueue/{id}")
+    @Secured(roles = {Role.PUBLIC})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response poll(@PathParam("id") String id) {
+        try {
+            final TaskInfo<Object> info = taskmgr.lookup(id);
+            if (info == null) {
+                String message = "Passed ID is invalid: " + id;
+                return ResponseUtils.createMessageResponse(Status.NOT_FOUND, message);
+            }
+
+            Status status = null;
+            String location = null;
+
+            final UserData userdata = info.userdata(UserData.class);
+            if (info.result().isDone()) {
+                // Result is available!
+                status = Status.SEE_OTHER;
+                location = userdata.getResultLocation();
+            } else {
+                // Result is not yet available!
+                status = Status.OK;
+                location = userdata.getWaitLocation();
+            }
+
+            return ResponseUtils.createLocationResponse(status, location, null);
+        } catch (Throwable throwable) {
+            return ResponseUtils.createInternalErrorResponse(throwable);
         }
+    }
 
-        EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEmulatorID());
+    @GET
+    @Path("/buildresult/{id}")
+    @Secured(roles = {Role.PUBLIC})
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response getBuildResult(@PathParam("id") String id) {
+        try {
+            if (id == null || id.isEmpty()) {
+                String message = "ID was not specified or is invalid!";
+                return ResponseUtils.createMessageResponse(Status.BAD_REQUEST, message);
+            }
 
-        return ResponseUtils.createResponse(Status.OK, emilEnv);
+            final TaskInfo<Object> info = taskmgr.lookup(id);
+            if (info == null || !info.result().isDone()) {
+                String message = "Passed ID is invalid: " + id;
+                return ResponseUtils.createMessageResponse(Status.NOT_FOUND, message);
+            }
+
+            try {
+                // Result is available!
+                final Future<Object> future = info.result();
+                return ResponseUtils.createResponse(Status.OK, future.get());
+            } finally {
+                taskmgr.remove(id);
+            }
+        } catch (Throwable throwable) {
+            return ResponseUtils.createInternalErrorResponse(throwable);
+        }
+    }
+
+    // ========== Internal Helpers ====================
+
+    private static String getLocationUrl(UriInfo uri, String subres, String id) {
+        return ResponseUtils.getLocationUrl(HistoricBuilds.class, uri, subres, id);
     }
 
     private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
