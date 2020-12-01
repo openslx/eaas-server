@@ -1287,16 +1287,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				return containerId;
 			}
 
-			//            Resource res = new VolatileResource();
-			//            res.setUrl(objReference);
-			//            res.setId("attached_container_" + containerId);
-			//            this.prepareResource(res);
-			//            this.emuEnvironment.getBinding().add(res);
-
-
 			drive.setData(objReference);
-			//            this.emuEnvironment.getDrive().add(drive);
-
 			boolean attachOk = (emuBeanState.fetch() == EmuCompState.EMULATOR_RUNNING) ? connectDrive(drive, true) : addDrive(drive);
 
 			if (!attachOk) {
@@ -1312,8 +1303,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	}
 
 	@Override
+	@Deprecated
 	public int attachMedium(DataHandler data, String mediumType) throws BWFLAException
 	{
+		/*
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -1381,11 +1374,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			return id;
 		}
+		 */
+		return -1;
 	}
 
 	@Override
 	public DataHandler detachMedium(int containerId) throws BWFLAException
 	{
+		/*
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -1430,6 +1426,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		throw new BWFLAException("could not find container by this container id: " + containerId)
 				.setId(this.getComponentId());
+
+		 */
+		return null;
 	}
 
 
