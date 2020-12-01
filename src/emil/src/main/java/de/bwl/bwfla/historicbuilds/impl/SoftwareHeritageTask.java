@@ -37,8 +37,8 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
         try {
 
             ArrayList<String> arguments = new ArrayList<String>();
-            arguments.add("/usr/bin/python3"); //TODO make configurable?
-            arguments.add(scriptLocation);
+            arguments.add("/usr/bin/python3");
+            arguments.add(scriptLocation); //TODO check if this needs to be configurable or hardcoded location
             String idToBeUsed;
 
             if (revisionId == null && directoryId == null) {
@@ -58,33 +58,14 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
 
             String[] pythonCmds = arguments.toArray(String[]::new);
 
-            LOG.info("Starting python script with:" + Arrays.toString(pythonCmds) + " in" + Paths.get("").toAbsolutePath().normalize().toString());
+            LOG.info("Starting python script.");
+            //TODO create temp work dir for this?
             ProcessBuilder processBuilder = new ProcessBuilder(pythonCmds);
             Process process = processBuilder.start();
 
-            //process.waitFor();
+            process.waitFor();
 
-            String s;
-
-            BufferedReader stdInput = new BufferedReader(new
-                    InputStreamReader(process.getInputStream()));
-
-            BufferedReader stdError = new BufferedReader(new
-                    InputStreamReader(process.getErrorStream()));
-
-            // TODO REMOVE
-            System.out.println("Here is the standard output of the command:\n");
-            while ((s = stdInput.readLine()) != null) {
-                LOG.info(s);
-            }
-
-            // TODO REMOVE
-            System.out.println("Here is the standard error of the command (if any):\n");
-            while ((s = stdError.readLine()) != null) {
-                LOG.info(s);
-            }
-
-            if (process.exitValue() == 0) { //TODO create temp work dir for this
+            if (process.exitValue() == 0) {
 
                 return new ProposalResponse()
                         .setMessage("Download was successful! File can be found at:" + Paths.get("").toAbsolutePath().normalize().toString() + "/" + idToBeUsed + ".tar.gz")
