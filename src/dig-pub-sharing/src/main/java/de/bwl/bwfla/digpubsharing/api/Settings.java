@@ -34,7 +34,7 @@ public class Settings
 
 	public Settings()
 	{
-		// Empty!
+		this.extIdLabel = "ID";
 	}
 
 	@JsonSetter(Fields.SITE_NAME)
