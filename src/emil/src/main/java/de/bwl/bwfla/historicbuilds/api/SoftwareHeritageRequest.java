@@ -3,7 +3,6 @@ package de.bwl.bwfla.historicbuilds.api;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 
-
 public class SoftwareHeritageRequest {
     @JsonProperty("revisionId")
     private String revisionId;
@@ -11,8 +10,19 @@ public class SoftwareHeritageRequest {
     private String directoryId;
     @JsonProperty("extract")
     private boolean extract;
+    @JsonProperty("scriptLocation")
+    private String scriptLocation;
+
 
     public SoftwareHeritageRequest() {
+    }
+
+    public String getScriptLocation() {
+        return scriptLocation;
+    }
+
+    public void setScriptLocation(String scriptLocation) {
+        this.scriptLocation = scriptLocation;
     }
 
     public String getRevisionId() {

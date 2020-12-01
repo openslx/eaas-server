@@ -19,6 +19,7 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
     private final String revisionId;
     private final String directoryId;
     private final Boolean shouldExtract;
+    private final String scriptLocation;
 
     private static final Logger LOG = Logger.getLogger("SWH-TASK");
 
@@ -26,6 +27,7 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
         this.revisionId = request.getRevisionId();
         this.directoryId = request.getDirectoryId();
         this.shouldExtract = request.isExtract(); //TODO change getter for extract
+        this.scriptLocation = request.getScriptLocation();
 
     }
 
@@ -36,7 +38,7 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
 
             ArrayList<String> arguments = new ArrayList<String>();
             arguments.add("/usr/bin/python3"); //TODO make configurable?
-            arguments.add("/home/ubuntu/swh-downloader/main.py");
+            arguments.add(scriptLocation);
             String idToBeUsed;
 
             if (revisionId == null && directoryId == null) {
