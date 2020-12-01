@@ -10,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -53,7 +54,10 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
                 arguments.add("--extract");
             }
 
-            ProcessBuilder processBuilder = new ProcessBuilder(arguments.toArray(String[]::new));
+            String[] pythonCmds = arguments.toArray(String[]::new);
+
+            LOG.info("Starting python script with:" + Arrays.toString(pythonCmds) + " in" + Paths.get("").toAbsolutePath().normalize().toString());
+            ProcessBuilder processBuilder = new ProcessBuilder(pythonCmds);
             Process process = processBuilder.start();
 
             //process.waitFor();
