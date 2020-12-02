@@ -977,7 +977,6 @@ public class ImageHandler
 			mounter.addWorkingDirectory(workdir);
 
 			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve(imgFile.toPath().getFileName() + ".dd"));
-			// todo: read from metadata
 			ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4);
 
 			Path fsDir = fsmnt.getMountPoint();

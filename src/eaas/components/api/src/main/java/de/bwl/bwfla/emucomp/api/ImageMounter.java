@@ -101,6 +101,9 @@ public class ImageMounter implements AutoCloseable
 		this.check(image);
 
 		final DeprecatedProcessRunner process = nbdMount(image.toString(), mountpoint, options, log);
+
+
+
 		final Mount mount = new Mount(image, mountpoint, mountpoint, process);
 		this.register(mount);
 		return mount;
@@ -455,25 +458,14 @@ public class ImageMounter implements AutoCloseable
 			return true;
 
 		// TODO: find a more elegant way for flushing caches!
-		// ImageMounter.sync(mountpoint, log);
-
-		log.severe("trying to umount " + mountpoint);
-
-		DeprecatedProcessRunner p = new DeprecatedProcessRunner();
-		p.setCommand("ls");
-		p.addArgument(mountpoint.toString());
-		p.execute();
-		p.cleanup();
-
+		ImageMounter.sync(mountpoint, log);
 		ImageMounter.unmountFuse(mountpoint, log);
 		boolean unmounted = false;
 		for(int i = 0; i < 60; i++) {
 			if (processRunner.waitUntilFinished(1, TimeUnit.SECONDS)){
 				unmounted = true;
-				log.severe("unmounted");
 				break;
 			}
-			log.severe("retrying");
 		}
 		if(!unmounted)
 		{
@@ -506,7 +498,15 @@ public class ImageMounter implements AutoCloseable
 					+ ". See log output for more information (maybe).");
 		}
 
-		return process;
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(mountpoint, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+
+		throw new BWFLAException("mount failed");
 	}
 
 	private static DeprecatedProcessRunner mountFileSystem(Path device, Path dest, FileSystemType fsType, Logger log)
@@ -623,7 +623,15 @@ public class ImageMounter implements AutoCloseable
 		if (!process.start()) {
 			throw new BWFLAException("mount failed");
 		}
-		return process;
+
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(dest, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+		throw new BWFLAException("mount failed");
 	}
 
 	private static void unmountFuse(Path mntpoint, Logger log)  {
@@ -631,12 +639,10 @@ public class ImageMounter implements AutoCloseable
 		if (mntpoint == null)
 			return;
 
-		/*
-			if (!isMountpoint(mntpoint, log)) {
-				log.severe(mntpoint + " is not a mountpoint. abort");
-				return;
-			}
-		*/
+		if (!isMountpoint(mntpoint, log)) {
+			log.severe(mntpoint + " is not a mountpoint. abort");
+			return;
+		}
 
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo");
 		process.setLogger(log);
@@ -647,5 +653,13 @@ public class ImageMounter implements AutoCloseable
 		if (!process.execute()) {
 			throw new IllegalArgumentException("Unmounting " + mntpoint.toString() + " failed!");
 		}
+	}
+
+	private static boolean isMountpoint(Path mountpoint, Logger log)
+	{
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("mountpoint");
+		process.setLogger(log);
+		process.addArgument(mountpoint.toAbsolutePath().toString());
+		return process.execute();
 	}
 }

@@ -180,12 +180,6 @@ public class EmulatorUtils {
 		}
 	}
 
-	public static boolean isMountpoint(Path mountpoint, Logger log)
-	{
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner("mountpoint");
-		process.setLogger(log);
-		process.addArgument(mountpoint.toAbsolutePath().toString());
-		return process.execute();
-	}
+
 
 }
