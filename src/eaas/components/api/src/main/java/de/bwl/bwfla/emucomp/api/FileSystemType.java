@@ -52,7 +52,7 @@ public enum FileSystemType
 	@XmlEnumValue("ext4")
 	EXT4,
 
-	@XmlEnumValue("ext4")
+	@XmlEnumValue("hfs")
 	HFS,
 
 	@XmlEnumValue("iso9660")
