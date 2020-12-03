@@ -19,6 +19,7 @@ import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
 
+import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
@@ -30,6 +31,7 @@ import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
+import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
@@ -968,7 +970,7 @@ public class ImageHandler
 		}
 	}
 
-	public void extractMetadata(String imageId) throws BWFLAException {
+	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
 		File srcDir = getImageTargetPath("base");
 		File imgFile = new File(srcDir, imageId);
 		if(!imgFile.exists())
@@ -981,21 +983,46 @@ public class ImageHandler
 			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve("raw"));
 			// todo: read from metadata
 			ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4);
-
+			log.info("after fsmount");
 			Path fsDir = fsmnt.getMountPoint();
 			if (!Files.exists(fsDir)) {
-				throw new BWFLAException("can't find filesystem");
+				throw new BWFLAException("can't find filesystem - not a valid emulator image.");
 			}
 
 			Path metadata = fsDir.resolve("metadata");
 			if (!Files.exists(metadata)) {
 				log.severe("no metadata directory found");
-				return;
+				return null;
+			}
+			try {
+				copyTemplates(metadata, "templates", ImageType.template.name());
+				copyEnvironments(metadata, ImageType.base);
+			}
+			catch (BWFLAException e)
+			{
+				e.printStackTrace();
 			}
 
-			copyTemplates(metadata, "templates", ImageType.template.name());
-			copyEnvironments(metadata, ImageType.base);
+			EmulatorMetadata md;
+			Path metadataFilePath = metadata.resolve("metadata.json");
+			try {
+				md = EmulatorMetadata.fromJsonValueWithoutRoot(new String(Files.readAllBytes(metadataFilePath)), EmulatorMetadata.class);
+			} catch (IOException e) {
+				log.info("metadata ref not available");
+				return null;
+			}
+
+			Path hashRefPath = metadata.resolve("repo-digest");
+			String hashRef = null;
+			try {
+				md.setContainerDigest(new String(Files.readAllBytes(hashRefPath)));
+			} catch (IOException e) {
+				log.info("container ref not available");
+				return null;
+			}
+
 			log.info("completing unmount");
+			return md;
 		}
 	}
 

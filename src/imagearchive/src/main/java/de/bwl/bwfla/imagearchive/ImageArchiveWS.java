@@ -32,6 +32,7 @@ import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatchDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
@@ -265,8 +266,8 @@ public class ImageArchiveWS
 			return backends.listBackendNames();
 	}
 
-	public void extractMetadata(String backend, String imageId) throws BWFLAException {
-		this.lookup(backend).extractMetadata(imageId);
+	public EmulatorMetadata extractMetadata(String backend, String imageId) throws BWFLAException {
+		return this.lookup(backend).extractMetadata(imageId);
 	}
 
 	/* ========================= Internal Helpers ========================= */

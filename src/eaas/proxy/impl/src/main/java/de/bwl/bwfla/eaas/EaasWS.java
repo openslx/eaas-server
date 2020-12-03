@@ -29,7 +29,6 @@ import javax.annotation.PostConstruct;
 import javax.ejb.ConcurrencyManagement;
 import javax.ejb.ConcurrencyManagementType;
 import javax.ejb.Singleton;
-import javax.enterprise.inject.Instance;
 import javax.inject.Inject;
 import javax.jws.WebMethod;
 import javax.jws.WebService;
@@ -41,8 +40,7 @@ import de.bwl.bwfla.api.emucomp.ComponentService;
 import de.bwl.bwfla.api.emucomp.Machine;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
-import de.bwl.bwfla.eaas.acl.EnvironmentLock;
-import de.bwl.bwfla.eaas.acl.IAccessControlList;
+import de.bwl.bwfla.eaas.acl.AccessControlManager;
 import de.bwl.bwfla.eaas.cluster.IClusterManager;
 import de.bwl.bwfla.eaas.cluster.ResourceHandle;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
@@ -80,9 +78,7 @@ public class EaasWS
 	protected String eaasGw;
 
     @Inject
-    Instance<IAccessControlList> acls;
-
-    final private List<IAccessControlList> sortedAcls = new ArrayList<>();
+    private AccessControlManager accessControlManager;
 
     @Inject
     PrefixLogger log;
@@ -116,18 +112,6 @@ public class EaasWS
 		catch(Exception exception) {
 			LOG.log(Level.SEVERE, exception.getMessage(), exception);
 		}
-
-		for (IAccessControlList acl : acls)
-		{
-			sortedAcls.add(acl);
-		}
-		Collections.sort(sortedAcls, new Comparator<IAccessControlList>() {
-			@Override
-			public int compare(IAccessControlList o1, IAccessControlList o2) {
-				return o1.getOrder() - o2.getOrder();
-			}
-		});
-
 	}
 
 	@WebMethod
@@ -163,16 +147,7 @@ public class EaasWS
 		final String componentId = allocationId.toString();
 		final String tenantId = options.getTenantId();
 	    try {
-            for (IAccessControlList acl : sortedAcls) {
-            	if(acl instanceof EnvironmentLock) {
-					if(options.lockEnvironment)
-						acl.checkPermission(allocationId, options.userId, config);
-				}
-				else acl.checkPermission(allocationId, options.userId, config);
-            }
-            
             final List<LabelSelector> labelSelectors = this.parseLabelSelectors(selectors);
-
             ResourceSpec spec = options.getResourceSpec();
             if (spec == null) {
 				// Resources not specified, use defaults...
@@ -182,6 +157,8 @@ public class EaasWS
 				else
 					spec = ResourceSpec.create(1, CpuUnit.MILLICORES, 1, MemoryUnit.MEGABYTES);
 			}
+
+            accessControlManager.gain(allocationId, options, config);
 
 	        final ResourceHandle resource = clusterManager.allocate(tenantId, labelSelectors, allocationId, spec, Duration.ofMinutes(2));
 			try {
@@ -198,10 +175,7 @@ public class EaasWS
         }
         catch (Exception error) {
             LOG.log(Level.WARNING, "Creating new session failed!\n", error);
-            LOG.info("Rolling back all ACL allocations...");
-            for (IAccessControlList acl : sortedAcls) {
-                acl.release(allocationId, null);
-            }
+            accessControlManager.drop(allocationId);
 
             // Rethrow the error, using its original type...
 
@@ -236,10 +210,8 @@ public class EaasWS
         } catch (BWFLAException e) {
             log.log(Level.SEVERE, "Could not connect to the web service to properly release the component", e);
         } finally {
+            accessControlManager.drop(resource.getAllocationID());
             this.clusterManager.release(resource);
-            for (IAccessControlList acl : sortedAcls) {
-                acl.release(resource.getAllocationID(), null);
-            }
         }
 	}
 

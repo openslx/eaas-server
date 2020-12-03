@@ -224,10 +224,12 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return archive.deleteImage(backend, imageId, type);
 	}
 
+	@Deprecated
 	public ImportImageHandle importImage(URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
 		return this.importImage(this.getDefaultBackendName(), ref, iaMd, deleteIfExists);
 	}
 
+	@Deprecated
 	public ImportImageHandle importImage(String backend, URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
 		connectArchive();
 		if (ref == null)
@@ -381,7 +383,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		try {
 			emuEnv = Environment.fromValue(conf);
 		} catch (Throwable t) {
-			log.info("loadTemplates4: failed to parse environment: " + t.getMessage());
+			log.info("loadTemplates: failed to parse environment: " + t.getMessage());
 			log.info(conf);
 			throw new BWFLAException(t);
 		}
@@ -492,9 +494,9 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 	}
 
-	public void extractMetadata(String imageId) throws BWFLAException {
+	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
 		connectArchive();
-		archive.extractMetadata(EMULATOR_DEFAULT_ARCHIVE, imageId);
+		return archive.extractMetadata(EMULATOR_DEFAULT_ARCHIVE, imageId);
 	}
 
 	public ImageImportResult getImageImportResult(String sessionId) throws BWFLAException {

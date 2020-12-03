@@ -110,15 +110,15 @@ public class WebRtcSignallingServlet extends HttpServlet
 				throw new WebRtcSignallingException(HttpServletResponse.SC_NOT_FOUND, message);
 			}
 
+			response.setContentType("application/json");
+			response.addHeader("Access-Control-Allow-Origin", "*");
+			response.setHeader("Cache-Control", "no-cache");
+
 			final String message = streamer.pollServerControlMessage(30, TimeUnit.SECONDS);
 			if (message == null) {
 				response.sendError(HttpServletResponse.SC_SERVICE_UNAVAILABLE);
 				return;
 			}
-
-			response.setContentType("application/json");
-			response.addHeader("Access-Control-Allow-Origin", "*");
-			response.setHeader("Cache-Control", "no-cache");
 			response.getWriter().write(message);
 		}
 		catch (Exception error) {

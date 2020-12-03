@@ -31,6 +31,7 @@ import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
+import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
@@ -232,8 +233,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
-	public void extractMetadata(String imageId) throws BWFLAException {
-		imageHandler.extractMetadata(imageId);
+	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
+		return imageHandler.extractMetadata(imageId);
 	}
 
 	public String createImage(String size, String type) throws BWFLAException
