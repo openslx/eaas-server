@@ -20,94 +20,142 @@
 package de.bwl.bwfla.eaas.cluster.tenant;
 
 import com.fasterxml.jackson.core.type.TypeReference;
+import de.bwl.bwfla.common.database.document.DocumentCollection;
+import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.JsonUtils;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 import de.bwl.bwfla.eaas.cluster.exception.AllocationFailureException;
 import org.apache.tamaya.ConfigurationProvider;
 
 import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
+import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Collectors;
 
 
 @ApplicationScoped
 public class TenantManager
 {
-	private final Logger log = Logger.getLogger(TenantManager.class.getName());
+	private final Logger log = Logger.getLogger("TENANT-MANAGER");
 
-	private final Map<String, Tenant> tenants;
+	private DocumentCollection<TenantConfig> collection;
+	private Map<String, Tenant> tenants;
 
 
-	public TenantManager()
+	public Collection<String> list() throws BWFLAException
 	{
-		this.tenants = new ConcurrentHashMap<>();
+		final List<String> names = new ArrayList<>((int) collection.count());
+		try (var entries = collection.list()) {
+			for (var entry : entries)
+				names.add(entry.getName());
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Listing tenants failed!", error);
+			throw new BWFLAException(error);
+		}
+
+		return names;
 	}
 
-	public Collection<String> list()
+	public TenantManager add(TenantConfig config) throws BWFLAException
 	{
-		return tenants.keySet();
-	}
-
-	public TenantManager add(TenantConfig config)
-	{
-		final String tid = config.getName();
-		log.info("Adding new tenant: " + tid);
-		tenants.put(tid, new Tenant(config));
+		log.info("Adding new tenant: " + config.getName());
+		this.store(config);
 		return this;
 	}
 
-	public TenantManager update(String tid, ResourceSpec limits) throws AllocationFailureException
+	public boolean update(String tid, ResourceSpec limits) throws BWFLAException
 	{
 		log.info("Updating tenant: " + tid);
 
-		final Tenant tenant = this.lookup(tid);
-		synchronized (tenant) {
-			tenant.getQuota()
-					.setLimits(limits);
-		}
+		final TenantConfig config = this.load(tid);
+		if (config == null)
+			return false;
 
-		return this;
+		config.setQuotaLimits(limits);
+		this.store(config);
+		return true;
 	}
 
-	public Tenant.Quota quota(String tid) throws AllocationFailureException
+	public Tenant.Quota quota(String tid) throws BWFLAException
 	{
-		final Tenant tenant = this.lookup(tid);
-		synchronized (tenant) {
-			return tenant.getQuota();
-		}
+		final Wrapper<Tenant.Quota> result = new Wrapper<>(null);
+
+		final BiFunction<String, Tenant, Tenant> functor = (name, tenant) -> {
+			if (tenant != null) {
+				// atomically copy cached quota...
+				result.set(new Tenant.Quota(tenant.getQuota()));
+			}
+			else {
+				// load quota from DB (skip caching)...
+				final TenantConfig config = this.load(name);
+				if (config != null)
+					result.set(new Tenant.Quota(config.getQuotaLimits()));
+			}
+
+			return tenant;
+		};
+
+		this.apply(tid, functor);
+		return result.get();
 	}
 
-	public boolean remove(String tid)
+	public boolean remove(String tid) throws BWFLAException
 	{
 		log.info("Removing tenant: " + tid);
-		return tenants.remove(tid) != null;
+
+		final var ok = collection.delete(TenantConfig.filter(tid));
+		tenants.remove(tid);
+		return ok;
 	}
 
 	public boolean allocate(String tid, ResourceSpec spec) throws AllocationFailureException
 	{
-		final Tenant tenant = this.lookup(tid);
-		synchronized (tenant) {
-			return tenant.getQuota()
+		final Wrapper<Boolean> result = new Wrapper<>(false);
+
+		final BiFunction<String, Tenant, Tenant> functor = (name, tenant) -> {
+			if (tenant == null) {
+				// tenant's config is not yet cached, try to load it from DB!
+				final var config = this.load(name);
+				if (config == null)
+					throw new IllegalArgumentException();
+
+				tenant = new Tenant(config);
+			}
+
+			final var allocated = tenant.getQuota()
 					.allocate(spec);
-		}
+
+			result.set(allocated);
+			return tenant;
+		};
+
+		this.apply(tid, functor);
+		return result.get();
 	}
 
 	public void free(String tid, ResourceSpec spec) throws AllocationFailureException
 	{
-		final Tenant tenant = this.lookup(tid);
-		synchronized (tenant) {
-			tenant.getQuota()
-					.free(spec);
-		}
+		final BiFunction<String, Tenant, Tenant> functor = (name, tenant) -> {
+			if (tenant != null) {
+				final var quota = tenant.getQuota();
+				quota.free(spec);
+			}
+
+			return tenant;
+		};
+
+		this.apply(tid, functor);
 	}
 
 
@@ -116,34 +164,11 @@ public class TenantManager
 	@PostConstruct
 	private void initialize()
 	{
-		this.restore();
+		this.collection = TenantManager.getTenantCollection(log);
+		this.tenants = new ConcurrentHashMap<>();
 	}
 
-	@PreDestroy
-	private void terminate()
-	{
-		this.save();
-	}
-
-	private void save()
-	{
-		final Path statepath = this.getStateDumpPath();
-
-		log.info("Saving tenants to file...");
-		try {
-			final Collection<TenantConfig> entries = tenants.values().stream()
-					.map(Tenant::getConfig)
-					.collect(Collectors.toList());
-
-			JsonUtils.store(statepath, entries, log);
-		}
-		catch (Exception error) {
-			throw new IllegalStateException("Saving tenants failed!", error);
-		}
-
-		log.info(tenants.size() + " tenant(s) saved to: " + statepath.toString());
-	}
-
+	/*
 	private void restore()
 	{
 		final Path statepath = this.getStateDumpPath();
@@ -169,13 +194,88 @@ public class TenantManager
 
 		return Paths.get(datadir, "tenants.json");
 	}
+	 */
 
-	private Tenant lookup(String tid) throws AllocationFailureException
+	private void store(TenantConfig config) throws BWFLAException
 	{
-		final Tenant tenant = tenants.get(tid);
-		if (tenant == null)
-			throw new AllocationFailureException("Unknown tenant ID: " + tid);
+		final var name = config.getName();
+		final var filter = TenantConfig.filter(name);
+		collection.replace(filter, config);
 
-		return tenant;
+		// update cached entry...
+		final BiFunction<String, Tenant, Tenant> updater = (unused, current) -> {
+			current.getQuota()
+					.setLimits(config.getQuotaLimits());
+
+			return current;
+		};
+
+		tenants.computeIfPresent(name, updater);
+	}
+
+	private TenantConfig load(String tid)
+	{
+		try {
+			return collection.lookup(TenantConfig.filter(tid));
+		}
+		catch (BWFLAException error) {
+			log.log(Level.WARNING, "Loading tenant-config failed!", error);
+			return null;
+		}
+	}
+
+	private void apply(String tid, BiFunction<String, Tenant, Tenant> functor) throws AllocationFailureException
+	{
+		try {
+			// atomically apply functor
+			tenants.compute(tid, functor);
+		}
+		catch (Exception error) {
+			final String message = (error instanceof IllegalArgumentException) ?
+					"Unknown tenant ID: " + tid : "Updating tenant-config failed!";
+
+			throw new AllocationFailureException(message, error);
+		}
+	}
+
+	private static DocumentCollection<TenantConfig> getTenantCollection(Logger log)
+	{
+		final String dbname = ConfigurationProvider.getConfiguration()
+				.get("commonconf.mongodb.dbname");
+
+		final String cname = "tenants";
+
+		log.info("Initializing collection: " + cname + " (" + dbname + ")");
+		try {
+			final DocumentCollection<TenantConfig> entries = DocumentDatabaseConnector.instance()
+					.database(dbname)
+					.collection(cname, TenantConfig.class);
+
+			entries.index(TenantConfig.Fields.NAME);
+			return entries;
+		}
+		catch (Exception error) {
+			throw new RuntimeException(error);
+		}
+	}
+
+	private static class Wrapper<T>
+	{
+		private T value;
+
+		public Wrapper(T value)
+		{
+			this.value = value;
+		}
+
+		public void set(T value)
+		{
+			this.value = value;
+		}
+
+		public T get()
+		{
+			return value;
+		}
 	}
 }
