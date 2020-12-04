@@ -150,6 +150,10 @@ public class TenantManager
 			if (tenant != null) {
 				final var quota = tenant.getQuota();
 				quota.free(spec);
+
+				// remove cached entry if no allocations left!
+				if (!quota.isAllocated())
+					tenant = null;
 			}
 
 			return tenant;

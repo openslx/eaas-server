@@ -106,5 +106,10 @@ public class Tenant
 		{
 			allocated.sub(spec);
 		}
+
+		public boolean isAllocated()
+		{
+			return allocated.cpu() > 0;
+		}
 	}
 }
