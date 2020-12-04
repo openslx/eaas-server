@@ -166,9 +166,11 @@ public class TenantManager
 	{
 		this.collection = TenantManager.getTenantCollection(log);
 		this.tenants = new ConcurrentHashMap<>();
+
+		this.restore();  // TODO: remove once not needed anymore!
 	}
 
-	/*
+	@Deprecated
 	private void restore()
 	{
 		final Path statepath = this.getStateDumpPath();
@@ -178,15 +180,35 @@ public class TenantManager
 		log.info("Restoring tenants from: " + statepath.toString());
 		try {
 			final List<TenantConfig> configs = JsonUtils.restore(statepath, new TypeReference<List<TenantConfig>>(){}, log);
-			configs.forEach((config) -> this.add(config));
+			configs.forEach((config) -> {
+				try {
+					this.add(config);
+				}
+				catch (Exception error) {
+					throw new IllegalStateException("Adding tenant failed!", error);
+				}
+			});
+
+			log.info(configs.size() + " tenant(s) restored successfully");
 		}
 		catch (Exception error) {
 			throw new IllegalStateException("Restoring tenants failed!", error);
 		}
 
-		log.info(tenants.size() + " tenant(s) restored successfully");
+		try {
+			Files.delete(statepath);
+			log.info("Deprecated file deleted: " + statepath.toString());
+
+			final Path bakpath = JsonUtils.toBackupPath(statepath);
+			if (Files.deleteIfExists(bakpath))
+				log.info("Deprecated file deleted: " + bakpath.toString());
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Deleting deprecated file(s) failed!", error);
+		}
 	}
 
+	@Deprecated
 	private Path getStateDumpPath()
 	{
 		final String datadir = ConfigurationProvider.getConfiguration()
@@ -194,7 +216,6 @@ public class TenantManager
 
 		return Paths.get(datadir, "tenants.json");
 	}
-	 */
 
 	private void store(TenantConfig config) throws BWFLAException
 	{
