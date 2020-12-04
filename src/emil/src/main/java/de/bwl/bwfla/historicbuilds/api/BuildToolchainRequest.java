@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 
 public class BuildToolchainRequest {
-    @JsonProperty("emulatorID")
-    private String emulatorID;
+    @JsonProperty("environmentID")
+    private String environmentID;
     @JsonProperty("inputDirectory")
     private String inputDirectory;
     @JsonProperty("outputDirectory")
@@ -22,12 +22,12 @@ public class BuildToolchainRequest {
     public BuildToolchainRequest() {
     }
 
-    public String getEmulatorID() {
-        return emulatorID;
+    public String getEnvironmentID() {
+        return environmentID;
     }
 
-    public void setEmulatorID(String emulatorID) {
-        this.emulatorID = emulatorID;
+    public void setEnvironmentID(String environmentID) {
+        this.environmentID = environmentID;
     }
 
     public String getInputDirectory() {

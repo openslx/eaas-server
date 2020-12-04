@@ -7,6 +7,7 @@ import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskManager;
+import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.envproposer.EnvironmentProposer;
@@ -31,6 +32,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import java.util.concurrent.Future;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @ApplicationScoped
@@ -42,6 +44,8 @@ public class HistoricBuilds {
     //TODO inject TaskManager?
     private final TaskManager taskmgr;
 
+    @Inject
+    private Components components = null;
 
     @Inject
     private EmilEnvironmentRepository emilEnvRepo = null;
@@ -80,7 +84,17 @@ public class HistoricBuilds {
         SoftwareHeritageRequest swhRequest = request.getSwhRequest();
         BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
 
-        final String swhTaskID = taskmgr.submit(new SoftwareHeritageTask(swhRequest));
+        final String swhTaskID;
+        final String buildToolchainID;
+        try {
+            swhTaskID = taskmgr.submit(new SoftwareHeritageTask(swhRequest));
+            buildToolchainID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, components));
+
+        } catch (Throwable throwable) {
+            LOG.log(Level.WARNING, "Starting a Task failed!", throwable);
+            return ResponseUtils.createInternalErrorResponse(throwable);
+        }
+
 
         final String waitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", swhTaskID);
         final String resultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", swhTaskID);
@@ -94,7 +108,7 @@ public class HistoricBuilds {
         //final String buildTCTaskID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, userCtx.getUserId()));
 
         // works!
-        //EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEmulatorID());
+        //EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEnvironmentID());
 
         return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
     }

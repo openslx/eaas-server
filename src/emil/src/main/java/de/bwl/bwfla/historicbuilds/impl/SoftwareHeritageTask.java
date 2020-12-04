@@ -2,12 +2,16 @@ package de.bwl.bwfla.historicbuilds.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
+import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
 import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageRequest;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -20,14 +24,16 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
     private final String directoryId;
     private final Boolean shouldExtract;
     private final String scriptLocation;
+    private final Path workingDir;
 
     private static final Logger LOG = Logger.getLogger("SWH-TASK");
 
-    public SoftwareHeritageTask(SoftwareHeritageRequest request) {
+    public SoftwareHeritageTask(SoftwareHeritageRequest request) throws BWFLAException {
         this.revisionId = request.getRevisionId();
         this.directoryId = request.getDirectoryId();
         this.shouldExtract = request.isExtract(); //TODO change getter for extract
         this.scriptLocation = request.getScriptLocation();
+        this.workingDir = createWorkingDir();
 
     }
 
@@ -56,10 +62,14 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
                 arguments.add("--extract");
             }
 
+            final Path outputFolder = workingDir.resolve("pythonOutput");
+            Files.createDirectory(outputFolder);
+
+            arguments.add("-o " + outputFolder.toString());
+
             String[] pythonCmds = arguments.toArray(String[]::new);
 
             LOG.info("Starting python script.");
-            //TODO create temp work dir for this?
             ProcessBuilder processBuilder = new ProcessBuilder(pythonCmds);
             Process process = processBuilder.start();
 
@@ -78,6 +88,16 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
         } catch (Exception error) {
             log.log(Level.WARNING, "Downloading Software from SWH failed!", error);
             throw error;
+        }
+    }
+
+    private static Path createWorkingDir() throws BWFLAException
+    {
+        try {
+            return EaasFileUtils.createTempDirectory(Paths.get("/tmp-storage"), "historic-");
+        }
+        catch (Exception error) {
+            throw new BWFLAException("Creating working directory failed!", error);
         }
     }
 }
