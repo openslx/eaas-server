@@ -208,7 +208,6 @@ public class BindingsManager
 			// check the file type first.
 			ImageInformation inf = new ImageInformation(resource.getUrl(), log);
 			ImageInformation.QemuImageFormat fmt = inf.getFileFormat();
-			log.severe("got: " + fmt);
 			if(fmt != ImageInformation.QemuImageFormat.QCOW2)
 				resource.setAccess(Binding.AccessType.COPY);
 		}
