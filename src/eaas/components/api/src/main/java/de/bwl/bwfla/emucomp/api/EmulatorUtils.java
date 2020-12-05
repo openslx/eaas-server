@@ -116,6 +116,18 @@ public class EmulatorUtils {
 	}
 
 	public static void createCowFile(Path cowPath, QcowOptions options, Logger log) throws BWFLAException {
+
+		// we need to check if the subpath is there
+		Path parent = cowPath.getParent();
+		log.severe("checking if " + parent.toString() + " path exists.");
+		if(!Files.exists(parent)) {
+			try {
+				Files.createDirectories(parent);
+			} catch (IOException e) {
+				throw new BWFLAException(e);
+			}
+		}
+
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("qemu-img");
