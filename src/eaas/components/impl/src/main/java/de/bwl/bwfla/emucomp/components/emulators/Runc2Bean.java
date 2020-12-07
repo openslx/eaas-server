@@ -31,7 +31,18 @@ public class Runc2Bean extends EmulatorBean
 	@Override
 	protected String getEmuContainerName(MachineConfiguration machineConfiguration)
 	{
-		return "runc2";
+		// currently metadata contains a emucon-rootfs/ prefix.
+		// this is deprecated, add compat
+
+		String containerName = machineConfiguration.getEmulator().getContainerName();
+		if(containerName == null)
+			throw new IllegalArgumentException();
+
+		int lastIndex = containerName.lastIndexOf('/');
+		if(lastIndex > 0)
+			containerName = containerName.substring(lastIndex + 1);
+
+		return containerName;
 	}
 
 	@Override
