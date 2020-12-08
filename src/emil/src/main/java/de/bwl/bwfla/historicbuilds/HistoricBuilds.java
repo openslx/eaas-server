@@ -9,7 +9,9 @@ import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskManager;
 import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
+import de.bwl.bwfla.emil.EnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
+import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
 import de.bwl.bwfla.envproposer.EnvironmentProposer;
 import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.envproposer.impl.UserData;
@@ -50,6 +52,9 @@ public class HistoricBuilds {
     @Inject
     private EmilEnvironmentRepository emilEnvRepo = null;
 
+    @Inject
+    EnvironmentRepository environmentRepo = null;
+
     //TODO is this needed here?
     @Inject
     @AuthenticatedUser
@@ -84,33 +89,42 @@ public class HistoricBuilds {
         SoftwareHeritageRequest swhRequest = request.getSwhRequest();
         BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
 
+        EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEnvironmentID());
+        String envType;
+        try {
+            EnvironmentDetails envDetails = environmentRepo.environments().addEnvironmentDetails(emilEnv);
+            envType = envDetails.getEnvType();
+        } catch (BWFLAException e) {
+            return ResponseUtils.createInternalErrorResponse(e);
+        }
+
         final String swhTaskID;
-        final String buildToolchainID;
+        final String btcTaskID;
         try {
             swhTaskID = taskmgr.submit(new SoftwareHeritageTask(swhRequest));
-            buildToolchainID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, components));
-
+            btcTaskID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, components, swhTaskID, taskmgr, envType));
+            //TODO nicht beide Tasks gleichzeitig starten, sondern swhTask started btc, wenn fertig?
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting a Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);
         }
 
+        final String swhWaitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", swhTaskID);
+        final String swhResultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", swhTaskID);
+        final TaskInfo<Object> swhInfo = taskmgr.lookup(swhTaskID);
+        swhInfo.setUserData(new UserData(swhWaitLocation, swhResultLocation));
 
-        final String waitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", swhTaskID);
-        final String resultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", swhTaskID);
-        final TaskInfo<Object> info = taskmgr.lookup(swhTaskID);
-        info.setUserData(new UserData(waitLocation, resultLocation)); //TODO is there a nicer way to do this?
-        final ProposalResponse response = new ProposalResponse() //TODO use HistoricResponse here
-                .setMessage("Proposal task was submitted.")
-                .setId(swhTaskID);
+        final String btcWaitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", btcTaskID);
+        final String btcResultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", btcTaskID);
+        final TaskInfo<Object> btcInfo = taskmgr.lookup(btcTaskID);
+        btcInfo.setUserData(new UserData(btcWaitLocation, btcResultLocation));
 
-        //TODO: use one Task for everything? buildToolchain needs to wait until SWH is done anyway
-        //final String buildTCTaskID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, userCtx.getUserId()));
+        final HistoricResponse response = new HistoricResponse();
+        response.setMessage("Started 2 Tasks successfully.");
+        response.setSwhTaskId(swhTaskID);
+        response.setBuildToolchainTaskId(btcTaskID);
 
-        // works!
-        //EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEnvironmentID());
-
-        return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
+        return ResponseUtils.createLocationResponse(Status.ACCEPTED, btcWaitLocation, response);
     }
 
     @GET

@@ -711,7 +711,7 @@ public class EnvironmentRepository extends EmilRest
 			return new Revisions(envId);
 		}
 
-		private EnvironmentDetails addEnvironmentDetails(EmilEnvironment emilenv) throws BWFLAException
+		public EnvironmentDetails addEnvironmentDetails(EmilEnvironment emilenv) throws BWFLAException
 		{
 			Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
 			MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;

@@ -6,6 +6,7 @@ import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
 import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageRequest;
+import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageTaskResponse;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -39,7 +40,7 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
 
     //FIXME Use other class or make response class common
     @Override
-    protected ProposalResponse execute() throws Exception {
+    protected SoftwareHeritageTaskResponse execute() throws Exception {
         try {
 
             ArrayList<String> arguments = new ArrayList<String>();
@@ -65,11 +66,13 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
             final Path outputFolder = workingDir.resolve("pythonOutput");
             Files.createDirectory(outputFolder);
 
-            arguments.add("-o " + outputFolder.toString());
+            arguments.add("-o");
+            arguments.add(outputFolder.toString());
 
             String[] pythonCmds = arguments.toArray(String[]::new);
 
-            LOG.info("Starting python script.");
+            LOG.info("Starting python script with args:");
+            LOG.info(Arrays.toString(pythonCmds));
             ProcessBuilder processBuilder = new ProcessBuilder(pythonCmds);
             Process process = processBuilder.start();
 
@@ -77,9 +80,17 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
 
             if (process.exitValue() == 0) {
 
-                return new ProposalResponse()
-                        .setMessage("Download was successful! File can be found at:" + Paths.get("").toAbsolutePath().normalize().toString() + "/" + idToBeUsed + ".tar.gz")
-                        .setId("NO ID HERE, this class is just being used for testing purposes right now!");
+                SoftwareHeritageTaskResponse response = new SoftwareHeritageTaskResponse();
+                if (shouldExtract) {
+                    response.setExtracted(true);
+                    response.setPath(outputFolder.toString());
+                } else {
+                    response.setExtracted(false);
+                    response.setPath(outputFolder.toString() + "/" + idToBeUsed + ".tar.gz");
+                }
+
+                return response;
+
 
             } else { //TODO give better information (access python script output?)
                 throw new BWFLAException("Could not download from SWH, exitValue was not 0.");
@@ -91,12 +102,10 @@ public class SoftwareHeritageTask extends BlockingTask<Object> {
         }
     }
 
-    private static Path createWorkingDir() throws BWFLAException
-    {
+    private static Path createWorkingDir() throws BWFLAException {
         try {
             return EaasFileUtils.createTempDirectory(Paths.get("/tmp-storage"), "historic-");
-        }
-        catch (Exception error) {
+        } catch (Exception error) {
             throw new BWFLAException("Creating working directory failed!", error);
         }
     }

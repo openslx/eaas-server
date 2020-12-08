@@ -1,33 +1,47 @@
 package de.bwl.bwfla.historicbuilds.impl;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
+import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.common.taskmanager.TaskManager;
 import de.bwl.bwfla.emil.Components;
+import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ContainerComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emil.utils.components.ContainerComponent;
+import de.bwl.bwfla.historicbuilds.HistoricBuilds;
 import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
+import de.bwl.bwfla.historicbuilds.api.BuildToolchainTaskResponse;
+import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageTaskResponse;
+import de.bwl.bwfla.restutils.ResponseUtils;
 
+import javax.ws.rs.core.Response;
 import java.nio.file.Path;
+import java.util.concurrent.Future;
 import java.util.logging.Logger;
 
 public class BuildToolchainTask extends BlockingTask<Object> {
 
 
-    final private String environmentID;
-    final private String inputDirectory;
-    final private String outputDirectory;
-    final private String execFile;
-    final private String[] prerequisites;
-    final private String mail;
-    final private String mode;
-    final private Components components;
+    private final String environmentID;
+    private final String inputDirectory;
+    private final String outputDirectory;
+    private final String execFile;
+    private final String[] prerequisites;
+    private final String mail;
+    private final String mode;
+
+    private final Components components;
+    private final String softwareHeritageTaskId;
+    private final TaskManager taskManager;
+    private final String envType;
 
     private static final Logger LOG = Logger.getLogger("BUILD-TOOLCHAIN-TASK");
 
-    public BuildToolchainTask(BuildToolchainRequest request, Components components) {
+    public BuildToolchainTask(BuildToolchainRequest request, Components components, String softwareHeritageTaskId, TaskManager taskManager, String envType) {
 
         this.environmentID = request.getEnvironmentID();
         this.inputDirectory = request.getInputDirectory();
@@ -38,33 +52,63 @@ public class BuildToolchainTask extends BlockingTask<Object> {
         this.mode = request.getMode(); // TODO probably use 2 classes that inherit from this class for the different modes
 
         this.components = components;
-
+        this.softwareHeritageTaskId = softwareHeritageTaskId;
+        this.taskManager = taskManager;
+        this.envType = envType;
 
     }
 
 
     @Override
-    protected Object execute() throws Exception {
+    protected BuildToolchainTaskResponse execute() throws Exception {
 
-        String type = "machine"; //TODO get actual type from envID, could be container
+        boolean isSoftwareHeritageTaskDone = false;
+        TaskInfo info = null;
 
-        if (type.equals("machine")) {
-            MachineComponentRequest componentRequest = new MachineComponentRequest();
-            componentRequest.setEnvironment("environmentID");
-            ComponentResponse componentResponse =  components.createComponent(componentRequest);
+        while (!isSoftwareHeritageTaskDone) {
 
-        } else if (type.equals("container")) {
-
-            ContainerComponentRequest componentRequest = new ContainerComponentRequest();
-
-            ComponentResponse componentResponse =  components.createComponent(componentRequest);
-        } else {
-            LOG.warning("Unsupported environment type specified."); //TODO throw exception
+            info = taskManager.lookup(softwareHeritageTaskId);
+            if (info.result().isDone()) {
+                isSoftwareHeritageTaskDone = true;
+            } else {
+                Thread.sleep(10000);
+            }
         }
 
+        LOG.info("SoftwareHeritageTask is done, resuming with the build process.");
 
+        SoftwareHeritageTaskResponse swhData = (SoftwareHeritageTaskResponse) info.result().get();
+        //TODO remove id from taskmgr?
 
-        return null;
+        String swhPath = swhData.getPath();
+        LOG.info("Will use Data present at" + swhPath);
+        boolean isExtracted = swhData.isExtracted();
+        ComponentResponse componentResponse = null;
+
+        if (envType.equals("base")) {
+            MachineComponentRequest componentRequest = new MachineComponentRequest();
+            componentRequest.setEnvironment(environmentID);
+            //TODO inject Data, by using swhPath to access SWH Data
+            //TODO check if error should be thrown when extract is true and envType is machine
+            componentResponse = components.createComponent(componentRequest);
+
+        } else if (envType.equals("container")) {
+
+            ContainerComponentRequest componentRequest = new ContainerComponentRequest();
+            //TODO create mapping from swhPath -> inputFolder
+            componentResponse = components.createComponent(componentRequest);
+        } else {
+            LOG.warning("Got unsupported environment type."); //TODO throw exception
+            throw new BWFLAException("Got unsupported environment type.");
+        }
+
+        String startedMachineId = componentResponse.getId();
+
+        BuildToolchainTaskResponse response = new BuildToolchainTaskResponse();
+        response.setId(startedMachineId);
+        response.setEnvType(envType);
+
+        return response;
     }
 
 }
