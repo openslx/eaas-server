@@ -3,6 +3,7 @@ package de.bwl.bwfla.imagearchive;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
@@ -13,12 +14,16 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
 
+import de.bwl.bwfla.blobstore.api.BlobDescription;
+import de.bwl.bwfla.blobstore.api.BlobHandle;
+import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
@@ -39,6 +44,7 @@ import org.apache.commons.io.FileUtils;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
+import org.apache.tamaya.ConfigurationProvider;
 
 
 public class ImageHandler
@@ -1205,6 +1211,126 @@ public class ImageHandler
 		if(handleClient == null)
 			return null;
 		return "http://hdl.handle.net/" + handleClient.toHandle(id);
+	}
+
+	private static boolean _check(Path mountpoint, ImageGeneralizationPatch.Condition condition)
+	{
+		if(condition == null)
+			return true;
+		
+		final Predicate<Path> predicate = (subpath) -> {
+			// Construct path relative to partition's mountpoint
+			final Path target = mountpoint.resolve(subpath)
+					.normalize();
+
+			if (!target.startsWith(mountpoint))
+				throw new IllegalArgumentException("Required subpath is invalid: " + subpath);
+
+			return Files.exists(target);
+		};
+
+		return condition.getRequiredPaths()
+				.stream()
+				.allMatch(predicate);
+	}
+
+	public static boolean _check(DiskDescription.Partition partition, ImageGeneralizationPatch.Condition condition)
+	{
+		if(condition == null)
+			return true;
+
+		return Objects.equals(partition.getPartitionName(), condition.getPartitionName())
+				&& Objects.equals(partition.getFileSystemType(), condition.getFileSystemType());
+	}
+
+	private static URL publishImage(Path image) throws MalformedURLException, BWFLAException {
+		BlobHandle handle = null;
+
+		String blobStoreAddressSoap = ConfigurationProvider.getConfiguration().get("emucomp.blobstore_soap");
+		String blobStoreRestAddress = ConfigurationProvider.getConfiguration().get("rest.blobstore");
+
+		final BlobDescription blob = new BlobDescription()
+				.setDescription("Generalized QCOW")
+				.setNamespace("emulator-snapshots")
+				.setDataFromFile(image)
+				.setType(".qcow")
+				.setName(image.getFileName().toString());
+		handle = BlobStoreClient.get().getBlobStorePort(blobStoreAddressSoap).put(blob);
+		return new URL(handle.toRestUrl(blobStoreRestAddress));
+	}
+
+	public String injectData(String backingFile, ImageGeneralizationPatch.Condition condition, String dataUrl, Logger log) throws BWFLAException
+	{
+		log.info("Modifying image: " + backingFile);
+		try (final ImageMounter mounter = new ImageMounter(log)) {
+			final Path workdir = ImageMounter.createWorkingDirectory();
+			mounter.addWorkingDirectory(workdir);
+
+			String filename = UUID.randomUUID().toString() + ".cow";
+			QcowOptions options = new QcowOptions();
+			options.setBackingFile(backingFile);
+
+			Path destImgFile = workdir.resolve(filename);
+			EmulatorUtils.createCowFile(destImgFile, options);
+
+			// Mount image and try to find available partitions...
+			ImageMounter.Mount rawmnt = mounter.mount(destImgFile, workdir.resolve(destImgFile.getFileName() + ".dd"));
+			final DiskDescription disk = DiskDescription.read(rawmnt.getTargetImage(), log);
+			if (!disk.hasPartitions())
+				throw new BWFLAException("Disk seems to be not partitioned!");
+
+			// Check each partition and each script...
+			for (DiskDescription.Partition partition : disk.getPartitions()) {
+				if (!partition.hasFileSystemType()) {
+					log.info("Partition " + partition.getIndex() + " is unformatted, skip");
+					continue;
+				}
+
+				// Mount partition's filesystem and check...
+				rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
+				final FileSystemType fstype = FileSystemType.fromString(partition.getFileSystemType());
+				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
+
+				if (!_check(partition, condition) || !_check(fsmnt.getMountPoint(), condition)) {
+					fsmnt.unmount(false);
+					continue;  // ...not applicable, try next one
+				}
+
+				log.info("Partition " + partition.getIndex() + " matches selectors! Applying patch...");
+				DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
+				pr.addArguments("-L", "-o", workdir.toString() + "/out.tgz");
+				pr.addArgument(dataUrl);
+				pr.execute();
+
+				pr = new DeprecatedProcessRunner("sudo");
+				pr.setWorkingDirectory(fsmnt.getMountPoint());
+				pr.addArguments("tar", "xvf", workdir.toString() + "/out.tgz");
+				pr.execute();
+
+				log.info("Data inject was successful!");
+				URL image =  publishImage(destImgFile);
+
+				ImageArchiveMetadata md = new ImageArchiveMetadata(ImageType.tmp);
+				TaskState state = importImageUrlAsync(image, md, false);
+				state = ImageArchiveRegistry.getState(state.getTaskId());
+				while(!state.isDone()) {
+					try {
+						Thread.sleep(500);
+					} catch (InterruptedException ignore) { }
+					state = ImageArchiveRegistry.getState(state.getTaskId());
+				}
+				if(state.isFailed())
+					throw new BWFLAException("failed to modify");
+
+				log.info("finished patching. new image id " + state.getResult());
+				return state.getResult();
+			}
+
+			throw new BWFLAException("Patching image failed! No matching partition was found!");
+		}
+		catch (IOException error) {
+			throw new BWFLAException("Patching image failed!", error);
+		}
 	}
 
 	private static class ImageLoaderResult

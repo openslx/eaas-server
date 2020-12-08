@@ -272,7 +272,7 @@ public class ImageGeneralizationPatch {
 		}
 	}
 
-	private static class Condition
+	public static class Condition
 	{
 		private String partname;
 		private String fstype;
