@@ -46,8 +46,6 @@ public class ImageDescription extends JaxbType
         return url;
     }
 
-
-
     public String id()
     {
         return id;

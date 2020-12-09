@@ -6,10 +6,12 @@ import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
+import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ContainerComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.historicbuilds.api.*;
+import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.jena.atlas.logging.Log;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -46,10 +48,11 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final String mode;
 
     private final String envType;
+    private final DatabaseEnvironmentsAdapter environmentsAdapter;
 
     private static final Logger LOG = Logger.getLogger("SWH-TASK");
 
-    public HistoricBuildTask(HistoricRequest request, String envType) throws BWFLAException {
+    public HistoricBuildTask(HistoricRequest request, String envType, DatabaseEnvironmentsAdapter environmentsAdapter) throws BWFLAException {
 
         SoftwareHeritageRequest swhRequest = request.getSwhRequest();
         BuildToolchainRequest btcRequest = request.getBuildToolchainRequest();
@@ -63,6 +66,8 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.mode = btcRequest.getMode();
 
         this.envType = envType;
+
+        this.environmentsAdapter = environmentsAdapter;
 
 
         this.revisionId = swhRequest.getRevisionId();
@@ -85,10 +90,12 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         if (envType.equals("base")) {
             MachineComponentRequest componentRequest = new MachineComponentRequest();
 
-            // inject here
-            //TODO inject Data, by using swhPath to access SWH Data
+
             //TODO check if error should be thrown when extract is true and envType is machine
-            String environmentWithInjectID = environmentID; //use Injected ID here!
+
+            //TODO create Condition and pass it to injectData
+
+            String environmentWithInjectID = environmentsAdapter.injectData(environmentID, null, swhDataLocation.toString());
             componentRequest.setEnvironment(environmentWithInjectID);
             return componentRequest;
 

@@ -62,6 +62,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	public MachineConfigurationTemplate getTemplate(String backend, String id) throws BWFLAException {
 		List<MachineConfigurationTemplate> envs = this.getTemplates(backend);
 		for (MachineConfigurationTemplate e : envs) {
+			log.severe("template : " + e.getId());
 			if (e.getId().equals(id))
 				return e;
 		}
@@ -254,6 +255,16 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.createPatchedImage(this.getDefaultBackendName(), imageId, type, patchId);
 	}
 
+	public String injectData(String imageId, ImageModificationCondition condition, String dataUrl) throws BWFLAException {
+		return injectData(this.getDefaultBackendName(), imageId, condition, dataUrl);
+	}
+
+	public String injectData(String backend, String imageId, ImageModificationCondition condition, String dataUrl) throws BWFLAException {
+		connectArchive();
+		return archive.injectData(backend, imageId, condition, dataUrl);
+	}
+
+
 	public String createPatchedImage(String backend, String imageId, ImageType type, String patchId) throws BWFLAException {
 		connectArchive();
 		return archive.createPatchedImage(backend, imageId, type, patchId);
@@ -358,7 +369,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 				EmulationEnvironmentHelper.replace(env, binding, iaMd.getType().equals(ImageType.CHECKPOINTS));
 			}
 		}
-
 		return this.importMetadata(backend, env.toString(), iaMd, false);
 	}
 

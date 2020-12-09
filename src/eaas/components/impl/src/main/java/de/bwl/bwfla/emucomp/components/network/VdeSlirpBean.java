@@ -107,7 +107,7 @@ public class VdeSlirpBean extends EaasComponentBean {
             }
             else {
                 // we assume the full range from 15.
-                String dhcpStart = network.substring(0, network.length() - 2) + "15";
+                String dhcpStart = network.substring(0, network.length() - 1) + "15";
                 runner.addArguments("--dhcp-start", dhcpStart);
             }
 

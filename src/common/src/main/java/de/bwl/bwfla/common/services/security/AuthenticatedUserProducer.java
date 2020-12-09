@@ -17,6 +17,10 @@ public class AuthenticatedUserProducer {
     @AuthenticatedUser
     private UserContext authenticatedUser = new UserContext();
 
+    @Inject
+    @Config(value = "emil.singleUserMode", defaultValue = "false")
+    private boolean singleUserMode;
+
     protected static final Logger LOG = Logger.getLogger("Authentication");
 
     @Inject
@@ -36,16 +40,20 @@ public class AuthenticatedUserProducer {
     public void handleAuthenticationEvent(@Observes @AuthenticatedUser AuthenticationFilter.JwtLoginEvent event) {
 
         DecodedJWT jwt = event.getJwt();
+        authenticatedUser.setUserId(null);
         if(jwt == null || jwt.getClaim("sub") == null)
         {
             authenticatedUser.setRole(Role.PUBLIC);
             authenticatedUser.setUsername("anonymous");
-            authenticatedUser.setUserId("anonymous");
+            if(!singleUserMode)
+                authenticatedUser.setUserId("anonymous");
             return;
         }
 
         Claim userIdC = jwt.getClaim("sub");
-        authenticatedUser.setUserId(userIdC.asString());
+        if(!singleUserMode)
+            authenticatedUser.setUserId(userIdC.asString());
+
         authenticatedUser.setRole(Role.RESTRICTED);
 
         Claim usernameC = jwt.getClaim("preferred_username");

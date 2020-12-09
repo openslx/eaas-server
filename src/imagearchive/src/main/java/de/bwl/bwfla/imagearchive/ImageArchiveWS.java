@@ -32,20 +32,18 @@ import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
 import de.bwl.bwfla.common.taskmanager.TaskState;
-import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
+import de.bwl.bwfla.imagearchive.datatypes.*;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatchDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
-import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
-import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatches;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.guacplay.replay.IWDMetaData;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
-import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 
 
 @Stateless
@@ -146,6 +144,17 @@ public class ImageArchiveWS
 
 		return this.lookup(backend)
 				.createPatchedImage(imageId, type, patches.lookup(patchId));
+	}
+
+	public String injectData(String backend, String imageId, ImageModificationCondition condition, String dataUrl) throws BWFLAException
+	{
+		ImageGeneralizationPatch.Condition c = new ImageGeneralizationPatch.Condition();
+		// ugly hack. ImageGeneralizationPatch.Condition cannot be serialized to wsdl as it contains Path
+		c.setFileSystemType(condition.getFstype());
+		c.setRequiredPaths(condition.getPaths());
+		c.setPartitionName(condition.getPartname());
+		return this.lookup(backend)
+				.injectData(imageId, c, dataUrl);
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException

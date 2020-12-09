@@ -295,18 +295,28 @@ public class ContainerUtil {
             if(containerImage.imageBuilderResult == null)
                 throw new BWFLAException("ImageBuilder returned empty result for DOCKERHUB container type");
             process.setEnvironmentVariables(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getEnvVariables());
-            process.setArguments(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getEntryProcesses());
+            process.getArguments().addAll(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getEntryProcesses());
             process.setWorkingDir(((DockerImport) containerImage.imageBuilderResult.getMetadata()).getWorkingDir());
         } else {
-            process.setArguments(containerRequest.getProcessArgs());
+            process.getArguments().addAll(containerRequest.getProcessArgs());
 
             if (containerRequest.getProcessEnvs() != null && containerRequest.getProcessEnvs().size() > 0)
                 process.setEnvironmentVariables(containerRequest.getProcessEnvs());
         }
 
         config.setProcess(process);
-        config.setId(containerRequest.getUrlString());
-        return envHelper.importMetadata("default", config, meta, false);
+
+        boolean preserveId = false;
+        if(containerRequest.getServiceContainerId() != null && !containerRequest.getServiceContainerId().isEmpty()) {
+            preserveId = true;
+            config.setId(containerRequest.getServiceContainerId());
+        }
+        else
+            config.setId(containerRequest.getUrlString());
+
+        LOG.warning(config.toString());
+        LOG.info("importing config: " + config.toString());
+        return envHelper.importMetadata("default", config, meta, preserveId);
     }
 
     private static class ContainerImage {

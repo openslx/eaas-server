@@ -224,13 +224,12 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		if (patch == null)
 			throw new BWFLAException("Requested patch was not found!");
 
-		try {
-			final String cowId = UUID.randomUUID().toString();
-			return imageHandler.createPatchedImage(imageId, cowId, type.name(), patch);
-		}
-		catch (IOException e) {
-			throw new BWFLAException(e);
-		}
+		return imageHandler.createPatchedImage(imageId, type.name(), patch);
+	}
+
+	public String injectData(String imageId, ImageGeneralizationPatch.Condition condition, String dataUrl) throws BWFLAException
+	{
+		return imageHandler.injectData(imageId, condition, dataUrl, log);
 	}
 
 	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {

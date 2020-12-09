@@ -39,10 +39,13 @@ import de.bwl.bwfla.common.services.container.types.Container.Filesystem;
 import de.bwl.bwfla.common.utils.Pair;
 import de.bwl.bwfla.emucomp.api.Binding.AccessType;
 import de.bwl.bwfla.emucomp.api.Drive.DriveType;
+import org.apache.tamaya.ConfigurationProvider;
 
 
 public class EmulationEnvironmentHelper {
 	protected final static Logger log = Logger.getLogger(EmulationEnvironmentHelper.class.getName());
+
+	private static final String wsObjectArchive = ConfigurationProvider.getConfiguration().get("ws.objectarchive");
 
 	/** List of beans, that support media-changing. */
 	private static final Set<String> BEANS_WITH_MEDIACHANGE_SUPPORT = new HashSet<String>();
@@ -308,9 +311,17 @@ public class EmulationEnvironmentHelper {
 				current.setId(replacement.getImageId());
 			}
 			current.update(replacement);
+			break;
+		}
+
+		if (current == null) {
+			// env did not contain a binding
+			replacement.setId(replacement.getImageId());
+			env.getAbstractDataResource()
+					.add(replacement);
+
 			return;
 		}
-		throw new BWFLAException("replace binding failed. could not find " + replacement.getId());
 	}
 
 	public static boolean beanSupportsMediaChange(String bean, DriveType type) {
@@ -598,6 +609,8 @@ public class EmulationEnvironmentHelper {
 		log.severe("no suitable drive found");
 		return null;
 	}
+
+
 
 
 

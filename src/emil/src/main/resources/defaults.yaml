@@ -13,18 +13,27 @@ emil:
       timeout: 30 mins
       delay: 3 secs
   authEnabled: false
-  authSecret: ''
   authAudience: ''
   authJwksUri: ''
-  adminRoleLabel: 'eaas-admin'
-  keycloakAdminUser: 'eaas-admin'
-  userRoleLabel: ''
+  adminRoleLabel: 'stabilize-admin'
+  keycloakAdminUser: 'admin'
+  userRoleLabel: 'stabilize-user'
   imagesDatabase: images
   emilDatabase: emil
   classificationDatabase: classification
   max_session_duration: 0 sec
   autorun_scripts_dir: /home/bwfla/server-data/autorun-scripts
   retain_session: 10
+
+storage:
+  s3_default_user_data_host: 'minio'
+  s3_default_user_data_protocol: 'http'
+  s3_default_user_data_port: 9000
+  s3_default_user_data_bucket: 'user-data'
+
+  s3_user_bucket_url: ''
+  s3_user_access_key_id: ''
+  s3_user_access_key_secret: ''
 
 ws:
   blobstore: http://eaas:8080/

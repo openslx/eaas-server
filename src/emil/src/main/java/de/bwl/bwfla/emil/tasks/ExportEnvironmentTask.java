@@ -279,6 +279,7 @@ public class ExportEnvironmentTask extends BlockingTask<Object>
 //        }
     }
 
+    /*
     private static void exportCowFile(String ref, File imageDir) throws IOException, BWFLAException
     {
         Set<PosixFilePermission> permissions = new HashSet<>();
@@ -298,13 +299,15 @@ public class ExportEnvironmentTask extends BlockingTask<Object>
         java.nio.file.Path fuseMountpoint = cowPath
                 .resolveSibling(cowPath.getFileName() + ".fuse");
 
-        File exportFile = EmulatorUtils.mountCowFile(cowPath, fuseMountpoint).toFile();
+        File exportFile = EmulatorUtils.mountCowFile(cowPath, fuseMountpoint, LOG).toFile();
 
         File dest = new File(imageDir, ImageInformation.getBackingImageId(ref));
         // java.nio.file.Files.copy(exportFile.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         EmulatorUtils.convertImage(exportFile.toPath(), dest.toPath(), ImageInformation.QemuImageFormat.QCOW2, LOG);
         tempDir.delete();
     }
+    */
+
 
 //    private void sync()
 //    {

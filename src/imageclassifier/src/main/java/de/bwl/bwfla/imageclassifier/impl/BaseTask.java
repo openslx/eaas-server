@@ -69,6 +69,7 @@ public abstract class BaseTask extends BlockingTask<Object>
 	protected final IdentificationRequest request;
 	protected final ExecutorService executor;
 	protected Configuration cfg = ConfigurationProvider.getConfiguration();
+	private final ImageMounter imageMounter;
 
 	private static final FileAttribute<?> BASEDIR_ATTRIBUTES;
 	static {
@@ -86,6 +87,7 @@ public abstract class BaseTask extends BlockingTask<Object>
 	{
 		this.request = request;
 		this.executor = executor;
+		imageMounter = new ImageMounter(log);
 	}
 
 	private IdentificationData<?> identifyFile(String url, String fileName)
@@ -107,7 +109,7 @@ public abstract class BaseTask extends BlockingTask<Object>
 		b.setUrl(url);
 
 		try {
-			EmulatorUtils.copyRemoteUrl(b, uploadPath, new XmountOptions(), log);
+			EmulatorUtils.copyRemoteUrl(b, uploadPath, log);
 
 			type = runDiskType(uploadPath, log);
 			if(type == null)
@@ -163,10 +165,11 @@ public abstract class BaseTask extends BlockingTask<Object>
 				QcowOptions options = new QcowOptions();
 				options.setBackingFile(fce.getUrl());
 				EmulatorUtils.createCowFile(cowFilePath, options, log);
-				subresFilePath = EmulatorUtils.mountCowFile(cowFilePath, cowMountpoint, log);
+				ImageMounter.Mount mount = imageMounter.mount(cowFilePath, cowMountpoint);
+				subresFilePath = mount.getMountPoint();
 			} else {
 				subresFilePath = basePath.resolve("object.img");
-				EmulatorUtils.copyRemoteUrl(fce, subresFilePath, new XmountOptions(), log);
+				EmulatorUtils.copyRemoteUrl(fce, subresFilePath, log);
 				log.info("Downloading object finished.");
 			}
 
@@ -176,9 +179,9 @@ public abstract class BaseTask extends BlockingTask<Object>
 			type.setLocalAlias(fce.getLocalAlias());
 
 			if (type.hasContentType("Q55336682"))
-				isoMountpoint = BaseTask.mountAsIso(subresFilePath, log);
+				isoMountpoint = mountAsIso(subresFilePath, log);
 			if (type.hasContentType("Q375944"))
-				hfsMountpoint = BaseTask.mountAsHfs(subresFilePath, log);
+				hfsMountpoint = mountAsHfs(subresFilePath, log);
 
 			log.info("Begin identification...");
 			String tool = cfg.get("imageclassifier.identification_tool");
@@ -200,14 +203,7 @@ public abstract class BaseTask extends BlockingTask<Object>
 		} finally {
 			log.info("Cleaning up...");
 
-			if (isoMountpoint != null && Files.exists(isoMountpoint))
-				BaseTask.unmount(isoMountpoint, log);
-
-			if (hfsMountpoint != null && Files.exists(hfsMountpoint))
-				BaseTask.unmount(hfsMountpoint, log);
-
-			if (cowMountpoint != null && Files.exists(cowMountpoint))
-				BaseTask.unmount(cowMountpoint, log);
+			imageMounter.unmount();
 
 			try {
 				FileUtils.deleteDirectory(baseDir);
@@ -350,26 +346,23 @@ public abstract class BaseTask extends BlockingTask<Object>
 		}
 	}
 
-	private static Path mountAsIso(Path iso, Logger log)
-	{
-		Path dest = null;
+	private Path mountAsIso(Path iso, Logger log) throws BWFLAException {
+		Path dest = ImageMounter.createWorkingDirectory();
 		try {
-			dest = EmulatorUtils.lklMount(iso, "iso9660", log);
+			imageMounter.mount(iso, dest, FileSystemType.ISO9660);
 			log.info("ISO file mounted to: " + dest.toString());
 		}
 		catch (Exception exception) {
 			log.warning("Mounting '" + iso.toString() + "' as ISO failed!");
 			log.log(Level.WARNING, exception.getMessage(), exception);
 		}
-		
 		return dest;
 	}
 	
-	private static Path mountAsHfs(Path iso, Logger log)
-	{
-		Path dest = null;
+	private Path mountAsHfs(Path iso, Logger log) throws BWFLAException {
+		Path dest = ImageMounter.createWorkingDirectory();;
 		try {
-			dest = EmulatorUtils.lklMount(iso, "hfs", log);
+			imageMounter.mount(iso, dest, FileSystemType.HFS);
 			log.info("HFS file mounted to: " + dest.toString());
 		}
 		catch (Exception exception) {
@@ -378,17 +371,6 @@ public abstract class BaseTask extends BlockingTask<Object>
 		}
 		
 		return dest;
-	}
-	
-	private static void unmount(Path mountpoint, Logger log)
-	{
-		try {
-			EmulatorUtils.unmountFuse(mountpoint, log);
-		}
-		catch (BWFLAException | IOException exception) {
-			log.warning("Unmounting '" + mountpoint.toString() + "' failed!");
-			log.log(Level.WARNING, exception.getMessage(), exception);
-		}
 	}
 
 	private boolean readPolicyFile(String url, Map<String, String> policy)

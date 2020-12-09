@@ -22,51 +22,83 @@ package de.bwl.bwfla.imagearchive.generalization;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import de.bwl.bwfla.blobstore.api.BlobDescription;
+import de.bwl.bwfla.blobstore.api.BlobHandle;
+import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.DiskDescription;
+import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.ImageMounter;
+import de.bwl.bwfla.emucomp.api.QcowOptions;
+import org.apache.tamaya.ConfigurationProvider;
 
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.nio.file.Paths;
+import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 
-public class ImageGeneralizationPatch
-{
+public class ImageGeneralizationPatch {
 	private Path location;
 	private String name;
 	private String description;
 	private List<Script> scripts;
+	private String blobStoreAddressSoap;
+	private String blobStoreRestAddress;
 
-	ImageGeneralizationPatch()
-	{
-		// Empty!
+	ImageGeneralizationPatch() {
+		blobStoreAddressSoap = ConfigurationProvider.getConfiguration().get("emucomp.blobstore_soap");
+		blobStoreRestAddress = ConfigurationProvider.getConfiguration().get("rest.blobstore");
 	}
 
-	public void applyto(Path image, Logger log) throws BWFLAException
+	private static Path prepareCow(Path dir, String backingFile) throws BWFLAException {
+		String filename = UUID.randomUUID().toString() + ".cow";
+		QcowOptions options = new QcowOptions();
+		options.setBackingFile(backingFile);
+
+		Path destImgFile = dir.resolve(filename);
+		EmulatorUtils.createCowFile(destImgFile, options);
+		return destImgFile;
+	}
+
+	private URL publishImage(Path image) throws MalformedURLException, BWFLAException {
+		BlobHandle handle = null;
+
+		final BlobDescription blob = new BlobDescription()
+				.setDescription("Generalized QCOW")
+				.setNamespace("emulator-snapshots")
+				.setDataFromFile(image)
+				.setType(".qcow")
+				.setName(image.getFileName().toString());
+		handle = BlobStoreClient.get().getBlobStorePort(blobStoreAddressSoap).put(blob);
+		return new URL(handle.toRestUrl(blobStoreRestAddress));
+	}
+
+	public URL applyto(String backingFile, Logger log) throws BWFLAException
 	{
-		log.info("Patching image: " + image);
+		log.info("Patching image: " + backingFile);
 		try (final ImageMounter mounter = new ImageMounter(log)) {
 			final Path workdir = ImageMounter.createWorkingDirectory();
 			mounter.addWorkingDirectory(workdir);
 
+			Path image = prepareCow(workdir, backingFile);
+
 			// Mount image and try to find available partitions...
-			ImageMounter.Mount rawmnt = mounter.mount(image, workdir.resolve("raw"));
+			ImageMounter.Mount rawmnt = mounter.mount(image, workdir.resolve(image.getFileName() + ".fuse"));
 			final DiskDescription disk = DiskDescription.read(rawmnt.getTargetImage(), log);
 			if (!disk.hasPartitions())
-				throw new BWFLAException("Disk seems to be unpartitioned!");
+				throw new BWFLAException("Disk seems to be not partitioned!");
 
-			log.info("Sarching partition to be patched...");
+			log.info("Searching partition to be patched...");
 
 			// Check each partition and each script...
 			for (DiskDescription.Partition partition : disk.getPartitions()) {
@@ -78,7 +110,7 @@ public class ImageGeneralizationPatch
 				// Mount partition's filesystem and check...
 				rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
 				final FileSystemType fstype = FileSystemType.fromString(partition.getFileSystemType());
-				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fstype);
+				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
 				for (Script script : scripts) {
 					if (!script.check(partition) || !script.check(fsmnt.getMountPoint()))
 						continue;  // ...not applicable, try next one
@@ -88,7 +120,7 @@ public class ImageGeneralizationPatch
 						throw new BWFLAException("Applying patch failed!");
 
 					log.info("Patching was successful!");
-					return;
+					return publishImage(image);
 				}
 
 				log.info("Partition " + partition.getIndex() + " does not match selectors, skip");
@@ -240,7 +272,7 @@ public class ImageGeneralizationPatch
 		}
 	}
 
-	private static class Condition
+	public static class Condition
 	{
 		private String partname;
 		private String fstype;

@@ -1,6 +1,5 @@
 package de.bwl.bwfla.historicbuilds;
 
-import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
@@ -20,8 +19,6 @@ import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
-import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageRequest;
-import de.bwl.bwfla.historicbuilds.impl.BuildToolchainTask;
 import de.bwl.bwfla.historicbuilds.impl.HistoricBuildTask;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
@@ -126,7 +123,7 @@ public class HistoricBuilds {
 
         final String taskID;
         try {
-            taskID = taskmgr.submit(new HistoricBuildTask(request, envType));
+            taskID = taskmgr.submit(new HistoricBuildTask(request, envType, environmentsAdapter));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);

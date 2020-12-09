@@ -60,6 +60,14 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.createPatchedImage(archive, id, imageType, patchId);
     }
 
+    public String injectData(String imageId, ImageModificationCondition condition, String dataUrl) throws BWFLAException {
+        return environmentsAdapter.injectData(imageId, condition, dataUrl);
+    }
+
+    public String injectData(String archive, String imageId, ImageModificationCondition condition, String dataUrl) throws BWFLAException {
+        return environmentsAdapter.injectData(archive, imageId, condition, dataUrl);
+    }
+
     public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
         return environmentsAdapter.getTemplate(id);
     }

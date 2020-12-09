@@ -94,14 +94,20 @@ public abstract class IPCWebsocketProxy {
     public void message(Session session, byte[] message, boolean last) throws IOException
     {
         // Forward message from client to iosocket
-        iosock.send(message, true);
+        try {
+            iosock.send(message, true);
+        }
+        catch (Throwable e)
+        {
+            e.printStackTrace();
+        }
     }
 
     @OnClose
     public void close(Session session, CloseReason closeReason)
     {
         final String reason = closeReason.getCloseCode().toString();
-        log.info("Websocket session for component '" + componentId + "' closed. Reason: " + reason);
+        log.info("Websocket session for component '" + componentId + "' closed. " + closeReason.toString());
         this.stop(session);
     }
 

@@ -123,7 +123,6 @@ public class EnvironmentRepository extends EmilRest
 		try {
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
-
 		}
 		catch (IllegalArgumentException error) {
 			LOG.log(Level.WARNING, "Initializing image-proposer failed!", error);
