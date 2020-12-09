@@ -107,7 +107,7 @@ public class HistoricBuilds {
         // 3. import temp. environment
         // 4. call components with newEnvId
         // TODO: delete tmp environment if necessary
-        // Ideally split this into a separate function / task 
+        // Ideally split this into a separate function / task
         String archive = null; // todo: request.getArchive();
         try {
             Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, buildToolchainRequest.getEnvironmentID());
