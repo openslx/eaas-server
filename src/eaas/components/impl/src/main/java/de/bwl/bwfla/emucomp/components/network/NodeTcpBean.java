@@ -79,7 +79,6 @@ public class NodeTcpBean extends EaasComponentBean {
             runner.addArgument("");
             runner.addArgument(this.getWorkingDir().resolve(switchName).toString());
             runner.addArgument("");
-
             runner.addArgument(nodeConfig.getDhcpNetworkAddress() + "/" + nodeConfig.getDhcpNetworkMask());
             runner.addArgument("dhcpd");
         }

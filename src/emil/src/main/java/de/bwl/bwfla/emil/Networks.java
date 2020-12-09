@@ -45,6 +45,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.utils.NetworkUtils;
@@ -142,6 +143,7 @@ public class Networks {
                 String slirpUrl = controlUrls.get("ws+ethernet+" + slirpMac).toString();
 
                 componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, slirpUrl);
+
             }
 
 
@@ -307,7 +309,7 @@ public class Networks {
                     .build());
         }
     }
-
+    
     private void addComponent(Session session, String switchId, NetworkRequest.ComponentSpec component) {
         addComponent(session, switchId, component, true);
     }

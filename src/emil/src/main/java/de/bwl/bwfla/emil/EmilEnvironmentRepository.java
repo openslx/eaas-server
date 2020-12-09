@@ -338,6 +338,7 @@ public class EmilEnvironmentRepository {
 			return null;
 
 		try {
+			LOG.severe("collection: " +getCollectionCtx(userCtx));
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(userCtx), "type", envid, "envId");
 
 			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
@@ -345,6 +346,7 @@ public class EmilEnvironmentRepository {
 
 			return env;
 		} catch (BWFLAException | NoSuchElementException e) {
+			LOG.severe("not found " + e.getMessage());
 			return getSharedEmilEnvironmentById(envid);
 		}
 	}
@@ -548,9 +550,9 @@ public class EmilEnvironmentRepository {
 		Collection<String> archives = environmentsAdapter.listBackendNames();
 		for(String a : archives) {
 			List<Environment> envs;
-			if(a.equals("default"))
-				continue;
-			else
+			//if(a.equals("default"))
+			//	continue;
+			//else
 				envs = environmentsAdapter.getEnvironments(a);
 
 			for (Environment env : envs) {
@@ -807,11 +809,14 @@ public class EmilEnvironmentRepository {
 	void saveImportedContainer(SaveImportedContainerRequest req) throws BWFLAException {
 		environmentsAdapter.commitTempEnvironmentWithCustomType("default", req.getId(), "containers");
 
+		/*
 		EmilEnvironment newEmilEnv = getEmilEnvironmentById(req.getId());
 		if (newEmilEnv != null)
 			throw new BWFLAException("import failed: environment with id: " + req.getId() + " exists.");
+		*/
 
-		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
+		OciContainerConfiguration containerConfiguration =
+				(OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
 
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
 		env.setEnvId(req.getId());

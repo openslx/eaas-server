@@ -21,19 +21,11 @@ package de.bwl.bwfla.emucomp.components;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.Pair;
-import de.bwl.bwfla.emucomp.api.AbstractDataResource;
-import de.bwl.bwfla.emucomp.api.Binding;
-import de.bwl.bwfla.emucomp.api.BlobStoreBinding;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
-import de.bwl.bwfla.emucomp.api.FileCollection;
-import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
-import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
-import de.bwl.bwfla.emucomp.api.ObjectArchiveBinding;
-import de.bwl.bwfla.emucomp.api.VolatileResource;
-import de.bwl.bwfla.emucomp.api.XmountOptions;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -50,7 +42,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -62,7 +53,8 @@ public class BindingsManager
 
 	private final Map<String, Binding> bindings;
 	private final Map<String, String> paths;
-	private final String obejctArchiveAddress;
+	private final String objectArchiveAddress;
+	private final ImageMounter imageMounter;
 
 	public enum EntryType
 	{
@@ -91,7 +83,8 @@ public class BindingsManager
 		this.bindings = new HashMap<String, Binding>();
 		this.paths = new LinkedHashMap<String, String>();
 		this.log = log;
-		this.obejctArchiveAddress = ConfigurationProvider.getConfiguration().get("ws.objectarchive");
+		this.objectArchiveAddress = ConfigurationProvider.getConfiguration().get("ws.objectarchive");
+		this.imageMounter = new ImageMounter(log);
 	}
 
 	/** Returns all registered bindings: binding's ID -> binding object */
@@ -133,7 +126,7 @@ public class BindingsManager
 			// If the resource is an ArchiveBinding, query the archive
 			// and add all entries from the file collection
 			final ObjectArchiveBinding object = (ObjectArchiveBinding) resource;
-			final ObjectArchiveHelper helper = new ObjectArchiveHelper(this.obejctArchiveAddress);
+			final ObjectArchiveHelper helper = new ObjectArchiveHelper(this.objectArchiveAddress);
 			final FileCollection fc = helper.getObjectReference(object.getArchive(), object.getId());
 			if (fc == null || fc.id == null || fc.id.isEmpty())
 				throw new BWFLAException("Retrieving object meta data failed!");
@@ -177,14 +170,11 @@ public class BindingsManager
 	 * @param binding  A binding location
 	 * @return The resolved path or null, if the binding cannot be found
 	 */
-	public String mount(String binding, Path outdir, EmulatorUtils.XmountOutputFormat outformat)
+	public String mount(String binding, Path outdir)
 			throws BWFLAException, IOException, IllegalArgumentException
 	{
 		if (binding == null || binding.isEmpty())
 			throw new IllegalArgumentException("Binding is null or empty!");
-
-		if (outformat == null)
-			throw new IllegalArgumentException("Output format is null!");
 
 		if (binding.startsWith("rom://"))
 			binding = "rom-" + binding.substring("rom://".length());
@@ -209,8 +199,6 @@ public class BindingsManager
 
 		log.info("Mounting binding '" + binding + "'...");
 
-
-
 		// TODO: we need to resolve the full path here or earlier to
 		// ensure that all access options use the same path:
 		if(binding.startsWith("rom-")) // old rom bindings do not have COPY access by default
@@ -220,67 +208,68 @@ public class BindingsManager
 			// check the file type first.
 			ImageInformation inf = new ImageInformation(resource.getUrl(), log);
 			ImageInformation.QemuImageFormat fmt = inf.getFileFormat();
-			log.severe("got: " + fmt);
 			if(fmt != ImageInformation.QemuImageFormat.QCOW2)
 				resource.setAccess(Binding.AccessType.COPY);
 		}
 
-		final XmountOptions xmountOpts = new XmountOptions(outformat);
-		if (resource instanceof VolatileResource) {
-			VolatileResource vResource = (VolatileResource) resource;
-			// The resource should be written to in-place, ignoring the
-			// value of getAccess(), as it is a temporary copy of user-data
+		final MountOptions mountOpts = new MountOptions();
+		if (resource.getFileSize() > 0)
+			mountOpts.setSize(resource.getFileSize());
 
-			// (TODO) Currently only file: transport is allowed here
-			if (!vResource.getUrl().startsWith("file:"))
-				throw new IllegalArgumentException("Only 'file:' transport is allowed for injected objects/VolatileDrives.");
+		if (resource.getAccess() == null)
+			resource.setAccess(Binding.AccessType.COW);
 
-			resourcePath = EmulatorUtils.connectBinding(vResource, outdir, xmountOpts);
-			vResource.setResourcePath(resourcePath);
-			if (resourcePath == null || !(new File(resourcePath).canRead())) {
-				final String message = "Binding target at location "
-						+ vResource.getUrl() + " cannot be accessed!";
+		if (resource == null
+				|| resource.getId() == null
+				|| resource.getId().isEmpty()
+				|| resource.getUrl() == null
+				|| resource.getUrl().isEmpty())
+			throw new IllegalArgumentException(
+					"Given resource is null, has invalid id or empty url.");
 
-				throw new BWFLAException(message);
-			}
+		Path imgPath = null;
+		ImageMounter.Mount mount = null;
+		switch (resource.getAccess()) {
+			case COW:
+				imgPath = outdir.resolve(realBindingId + ".cow");
+
+				QcowOptions qcowOptions = new QcowOptions();
+				qcowOptions.setBackingFile(resource.getUrl());
+
+				if(MachineTokenProvider.getAuthenticationProxy() != null)
+					qcowOptions.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
+				else
+					qcowOptions.setProxyUrl(MachineTokenProvider.getProxy());
+
+				EmulatorUtils.createCowFile(imgPath, qcowOptions);
+
+				Path rawImagePath = outdir.resolve(realBindingId + ".dd");
+				mount = imageMounter.mount(imgPath, rawImagePath, mountOpts);
+
+				this.put(realBindingId, EntryType.RAW_MOUNT, resourcePath);
+				resourcePath = mount.getMountPoint().toAbsolutePath().toString();
+				break;
+			case COPY:
+				imgPath = outdir.resolve(realBindingId + ".copy");
+				EmulatorUtils.copyRemoteUrl(resource, imgPath, log);
+				resourcePath =imgPath.toString();
+				break;
 		}
-		else {
-			if (resource.getFileSize() > 0)
-				xmountOpts.setSize(resource.getFileSize());
+		this.put(realBindingId, EntryType.IMAGE, imgPath.toAbsolutePath().toString());
 
-			resourcePath = EmulatorUtils.connectBinding(resource, outdir, xmountOpts);
+		// resourcePath is now the base path for the binding we want to find
+		if (resourcePath == null || !(new File(resourcePath).canRead())) {
+			final String message = "Binding target at location "
+					+ resource.getUrl() + " cannot be accessed!";
 
-			// resourcePath is now the base path for the binding we want to find
-			if (resourcePath == null || !(new File(resourcePath).canRead())) {
-				final String message = "Binding target at location "
-						+ resource.getUrl() + " cannot be accessed!";
-
-				throw new BWFLAException(message);
-			}
-		}
-
-		{
-			// HACK: recreate the path to the image, as defined in
-			//       EmulatorUtils.connectBinding()!
-			String imgpath = outdir.resolve(realBindingId).toString();
-			switch (resource.getAccess()) {
-				case COW:
-					this.put(realBindingId, EntryType.RAW_MOUNT, resourcePath);
-					imgpath += ".cow";
-					break;
-				case COPY:
-					imgpath += ".copy";
-					break;
-			}
-
-			this.put(realBindingId, EntryType.IMAGE, imgpath);
+			throw new BWFLAException(message);
 		}
 
 		// Is the raw file a block device with a filesystem?
 		final String fsType = this.getImageFileSystem(resource);
-		if (fsType != null && !fsType.isEmpty()) {
+		if (mount != null && fsType != null && !fsType.isEmpty()) {
 			final Path mountpoint = outdir.resolve(realBindingId + "." + fsType.replace(',', '.') + ".fuse");
-			EmulatorUtils.lklMount(Paths.get(resourcePath), mountpoint, fsType, log, false);
+			imageMounter.mount(mount, mountpoint, FileSystemType.fromString(fsType));
 			resourcePath = mountpoint.toString();
 			this.put(realBindingId, EntryType.FS_MOUNT, resourcePath);
 		}
@@ -297,28 +286,14 @@ public class BindingsManager
 		}
 
 		this.add(realBindingId, resourcePath);
-
 		return resourcePath;
 	}
 
 	/** Unmounts all registered bindings */
 	public void cleanup()
 	{
-		final String fuseSuffix = ".fuse";
-
 		log.info("Unmounting bindings...");
 		{
-			// Finds the real FUSE-mountpoint in paths of the form:
-			//     /some/path/binding-name.fuse/subresource...
-			//     --> /some/path/binding-name.fuse
-			final Function<String, String> toFuseMountpoint = (path) -> {
-				final int index = path.indexOf(fuseSuffix);
-				if (index < 0)
-					return null;
-
-				return path.substring(0, index + fuseSuffix.length());
-			};
-
 			final Set<String> idsToRemove = new HashSet<String>();
 			final List<Pair<String, String>> entriesToUnmount = new ArrayList<Pair<String, String>>();
 
@@ -332,44 +307,15 @@ public class BindingsManager
 					if (!id.endsWith(suffix))
 						continue;  // Not a FUSE-mount!
 
-					final String mountpoint = toFuseMountpoint.apply(path);
-					if (mountpoint != null) {
-						entriesToUnmount.add(new Pair<String, String>(id, mountpoint));
-					}
-					else {
-						// Should never happen!
-						log.warning("Expected a suffix '" + fuseSuffix + "' in path: " + path);
-					}
+					entriesToUnmount.add(new Pair<String, String>(id, path));
 
 					final int end = id.length() - suffix.length();
 					idsToRemove.add(id.substring(0, end));
-
 				}
 			});
 
-			// Unmount in reverse order
-			final DeprecatedProcessRunner process = new DeprecatedProcessRunner();
-			process.setLogger(log);
-			for (int i = entriesToUnmount.size() - 1; i >= 0; --i) {
-				final Pair<String, String> entry = entriesToUnmount.get(i);
-				final String id = entry.getA();
-				final String mountpoint = entry.getB();
-
-				// Sync cached buffers first!
-				process.setCommand("sync");
-				process.execute();
-
-				// Now it should be safe to unmount
-				try {
-					EmulatorUtils.unmountFuse(Paths.get(mountpoint), log);
-				}
-				catch (Exception error) {
-					log.log(Level.WARNING, "Unmounting binding failed: " + mountpoint, error);
-				}
-			}
-
+			imageMounter.unmount();
 			entriesToUnmount.clear();
-
 			idsToRemove.forEach((id) -> this.remove(id));
 			idsToRemove.clear();
 		}

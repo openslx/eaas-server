@@ -19,6 +19,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MultivaluedMap;
 import javax.ws.rs.core.Response;
+import java.lang.reflect.Method;
 import java.net.URL;
 import java.security.interfaces.RSAPublicKey;
 import java.util.concurrent.TimeUnit;
@@ -40,6 +41,9 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
         Class<?> resourceClass = resourceInfo.getResourceClass();
         LOG.severe("Debug: class context:  " + resourceClass.getName());
 
+        Method resourceMethod = resourceInfo.getResourceMethod();
+        LOG.severe("Debug: method context " + resourceMethod.getName());
+
         String authorizationHeader =
                 requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
         LOG.severe("auth header: " + authorizationHeader);
@@ -47,6 +51,7 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
 
     protected String extractToken(ContainerRequestContext requestContext)
     {
+        // debug(requestContext);
         String authorizationHeader =
                 requestContext.getHeaderString(HttpHeaders.AUTHORIZATION);
 
@@ -86,6 +91,7 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
         final DecodedJWT jwt = JWT.decode(token);
         final String keyId = jwt.getKeyId();
         final Jwk jwk = provider.get(keyId);
+        // LOG.severe(jwk.getPublicKey().getAlgorithm() + " " + jwk.getPublicKey().toString());
         return this.verify(token, Algorithm.RSA256((RSAPublicKey) jwk.getPublicKey()));
     }
 
@@ -128,7 +134,7 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
 
         try {
             return new JwkProviderBuilder(new URL(authJwksUri))
-                    .cached(10, 24, TimeUnit.HOURS)
+                    .cached(10, 1, TimeUnit.HOURS)
                     .rateLimited(10, 1, TimeUnit.MINUTES)
                     .build();
         }

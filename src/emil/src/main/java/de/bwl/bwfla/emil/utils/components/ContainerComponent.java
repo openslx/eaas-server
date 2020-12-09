@@ -164,6 +164,9 @@ public class ContainerComponent {
 
         final FileSystemType fileSystemType = FileSystemType.EXT4;
 
+        if(linuxRuntime.getUserEnvironment() != null && linuxRuntime.getUserEnvironment().size() > 0)
+            config.getProcess().getEnvironmentVariables().addAll(linuxRuntime.getUserEnvironment());
+
         int sizeInMb = 1024;
         if(inputMedia.size() > 0 && inputMedia.get(0).getSizeInMb() >= 0)
             sizeInMb = inputMedia.get(0).getSizeInMb();

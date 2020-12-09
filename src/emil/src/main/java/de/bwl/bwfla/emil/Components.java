@@ -59,6 +59,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 import de.bwl.bwfla.api.blobstore.BlobStore;
+
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
 import de.bwl.bwfla.api.eaas.SessionOptions;
@@ -1404,6 +1405,7 @@ public class Components {
             message = "INTERNAL-SERVER-ERROR: " + error.getMessage();
         }
 
+        error.printStackTrace();
         final Response response = Response.status(status)
                 .entity(new ErrorInformation(message))
                 .build();
@@ -1433,7 +1435,7 @@ public class Components {
 
             LOG.info("Saving checkpointed environment in image-archive...");
 
-            final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
+                final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
             binding.setId("checkpoint");
             binding.setLocalAlias("checkpoint.tar.gz");
             binding.setAccess(Binding.AccessType.COPY);

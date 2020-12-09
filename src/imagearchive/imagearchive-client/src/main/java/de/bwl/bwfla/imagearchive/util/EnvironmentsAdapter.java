@@ -62,6 +62,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	public MachineConfigurationTemplate getTemplate(String backend, String id) throws BWFLAException {
 		List<MachineConfigurationTemplate> envs = this.getTemplates(backend);
 		for (MachineConfigurationTemplate e : envs) {
+			log.severe("template : " + e.getId());
 			if (e.getId().equals(id))
 				return e;
 		}
@@ -358,7 +359,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 				EmulationEnvironmentHelper.replace(env, binding, iaMd.getType().equals(ImageType.CHECKPOINTS));
 			}
 		}
-
 		return this.importMetadata(backend, env.toString(), iaMd, false);
 	}
 

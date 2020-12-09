@@ -33,6 +33,7 @@ import javax.xml.ws.soap.MTOM;
 
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatchDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
@@ -146,6 +147,12 @@ public class ImageArchiveWS
 
 		return this.lookup(backend)
 				.createPatchedImage(imageId, type, patches.lookup(patchId));
+	}
+
+	public String injectData(String backend, String imageId, String dataUrl) throws BWFLAException
+	{
+		return this.lookup(backend)
+				.injectData(imageId, null, dataUrl);
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException
