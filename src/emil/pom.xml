@@ -111,5 +111,9 @@
 			<groupId>io.pebbletemplates</groupId>
 			<artifactId>pebble</artifactId>
 		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>imagearchive</artifactId>
+		</dependency>
 	</dependencies>
 </project>
