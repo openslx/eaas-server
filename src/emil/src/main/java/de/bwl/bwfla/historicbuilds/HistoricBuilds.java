@@ -1,5 +1,7 @@
 package de.bwl.bwfla.historicbuilds;
 
+import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
+import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
@@ -99,6 +101,13 @@ public class HistoricBuilds {
             return ResponseUtils.createInternalErrorResponse(e);
         }
 
+        // in case we want to inject data into the file system
+        // 1. we need to find the image (-> boot drive)
+        // 2. modify the image
+        // 3. import temp. environment
+        // 4. call components with newEnvId
+        // TODO: delete tmp environment if necessary
+        // Ideally split this into a separate function / task 
         String archive = null; // todo: request.getArchive();
         try {
             Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, buildToolchainRequest.getEnvironmentID());
@@ -114,7 +123,9 @@ public class HistoricBuilds {
 
             // ((ImageArchiveBinding)r).setImageId(newImageId);
 
-
+            ImageArchiveMetadata md = new ImageArchiveMetadata();
+            md.setType(ImageType.TMP);
+            String newEnvId = environmentsAdapter.importMetadata(archive, chosenEnv, md, false);
         } catch (BWFLAException e) {
             e.printStackTrace();
         }
