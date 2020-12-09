@@ -8,12 +8,14 @@ import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emil.Components;
+import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.EnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
@@ -55,6 +57,9 @@ public class HistoricBuilds {
     @Inject
     EnvironmentRepository environmentRepo = null;
 
+    @Inject
+    private DatabaseEnvironmentsAdapter environmentsAdapter;
+
     //TODO is this needed here?
     @Inject
     @AuthenticatedUser
@@ -95,6 +100,26 @@ public class HistoricBuilds {
             envType = envDetails.getEnvType();
         } catch (BWFLAException e) {
             return ResponseUtils.createInternalErrorResponse(e);
+        }
+
+        String archive = null; // todo: request.getArchive();
+        try {
+            Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, buildToolchainRequest.getEnvironmentID());
+            AbstractDataResource r = EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration)chosenEnv);
+            if(! (r instanceof ImageArchiveBinding) )
+            {
+                // throw
+            }
+
+            String imageId = ((ImageArchiveBinding)r).getImageId();
+
+            // newImageId = injectData();
+
+            // ((ImageArchiveBinding)r).setImageId(newImageId);
+
+
+        } catch (BWFLAException e) {
+            e.printStackTrace();
         }
 
         //TODO create Component hier im Context aufrufen neue API

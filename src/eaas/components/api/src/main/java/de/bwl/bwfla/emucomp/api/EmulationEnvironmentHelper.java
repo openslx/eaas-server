@@ -568,6 +568,37 @@ public class EmulationEnvironmentHelper {
 		chosenEnv.getUiOptions().setHtml5(html);
     }
 
+    public static AbstractDataResource getBootDriveResource(MachineConfiguration config)
+	{
+		if(config == null)
+			return null;
+
+		for(Drive d : config.getDrive())
+		{
+			if(d.boot)
+			{
+				String resourceId = d.getData();
+				if(resourceId == null || resourceId.isEmpty()) {
+					log.severe("invalid resource id");
+					return null;
+				}
+				if(!resourceId.startsWith("binding://")) {
+					log.severe("invalid resource id " + resourceId);
+					return null;
+				}
+				resourceId = resourceId.substring("binding://".length());
+
+				for(AbstractDataResource resource : config.getAbstractDataResource())
+				{
+					if(resource.id.equals(resourceId))
+						return resource;
+				}
+			}
+		}
+		log.severe("no suitable drive found");
+		return null;
+	}
+
 
 
 	/*
