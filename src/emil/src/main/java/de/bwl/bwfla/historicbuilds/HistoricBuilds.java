@@ -1,26 +1,26 @@
 package de.bwl.bwfla.historicbuilds;
 
+import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.common.taskmanager.TaskManager;
 import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.EnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
+import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
+import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
-import de.bwl.bwfla.envproposer.EnvironmentProposer;
-import de.bwl.bwfla.envproposer.api.ProposalResponse;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
 import de.bwl.bwfla.historicbuilds.api.SoftwareHeritageRequest;
 import de.bwl.bwfla.historicbuilds.impl.BuildToolchainTask;
-import de.bwl.bwfla.historicbuilds.impl.SoftwareHeritageTask;
+import de.bwl.bwfla.historicbuilds.impl.HistoricBuildTask;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -86,7 +86,6 @@ public class HistoricBuilds {
 
         LOG.info("Someone sent a build request to the historic build API.");
 
-        SoftwareHeritageRequest swhRequest = request.getSwhRequest();
         BuildToolchainRequest buildToolchainRequest = request.getBuildToolchainRequest();
 
         EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(buildToolchainRequest.getEnvironmentID());
@@ -98,33 +97,25 @@ public class HistoricBuilds {
             return ResponseUtils.createInternalErrorResponse(e);
         }
 
-        final String swhTaskID;
-        final String btcTaskID;
+        //TODO create Component hier im Context aufrufen neue API
+
+        final String taskID;
         try {
-            swhTaskID = taskmgr.submit(new SoftwareHeritageTask(swhRequest));
-            btcTaskID = taskmgr.submit(new BuildToolchainTask(buildToolchainRequest, components, swhTaskID, taskmgr, envType));
-            //TODO nicht beide Tasks gleichzeitig starten, sondern swhTask started btc, wenn fertig?
+            taskID = taskmgr.submit(new HistoricBuildTask(request, envType));
         } catch (Throwable throwable) {
-            LOG.log(Level.WARNING, "Starting a Task failed!", throwable);
+            LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);
         }
 
-        final String swhWaitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", swhTaskID);
-        final String swhResultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", swhTaskID);
-        final TaskInfo<Object> swhInfo = taskmgr.lookup(swhTaskID);
-        swhInfo.setUserData(new UserData(swhWaitLocation, swhResultLocation));
-
-        final String btcWaitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", btcTaskID);
-        final String btcResultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", btcTaskID);
-        final TaskInfo<Object> btcInfo = taskmgr.lookup(btcTaskID);
-        btcInfo.setUserData(new UserData(btcWaitLocation, btcResultLocation));
+        final String waitLocation = HistoricBuilds.getLocationUrl(uri, "waitqueue", taskID);
+        final String resultLocation = HistoricBuilds.getLocationUrl(uri, "buildresult", taskID);
+        final TaskInfo<Object> swhInfo = taskmgr.lookup(taskID);
+        swhInfo.setUserData(new UserData(waitLocation, resultLocation));
 
         final HistoricResponse response = new HistoricResponse();
-        response.setMessage("Started 2 Tasks successfully.");
-        response.setSwhTaskId(swhTaskID);
-        response.setBuildToolchainTaskId(btcTaskID);
+        response.setMessage("Started the Historic Task successfully.");
 
-        return ResponseUtils.createLocationResponse(Status.ACCEPTED, btcWaitLocation, response);
+        return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
     }
 
     @GET
@@ -179,7 +170,10 @@ public class HistoricBuilds {
             try {
                 // Result is available!
                 final Future<Object> future = info.result();
-                return ResponseUtils.createResponse(Status.OK, future.get());
+
+                ComponentRequest componentRequest = (ComponentRequest) future.get();
+                ComponentResponse componentResponse = components.createComponent(componentRequest);
+                return ResponseUtils.createResponse(Status.OK, componentResponse);
             } finally {
                 taskmgr.remove(id);
             }
