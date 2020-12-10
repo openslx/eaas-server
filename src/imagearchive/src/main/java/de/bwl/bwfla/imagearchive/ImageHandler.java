@@ -1303,7 +1303,8 @@ public class ImageHandler
 				}
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
 
-				if (!_check(partition, condition) || !_check(fsmnt.getMountPoint(), condition)) {
+				// !_check(partition, condition) ||
+				if (!_check(fsmnt.getMountPoint(), condition)) {
 					log.severe("partition not valid");
 					fsmnt.unmount(false);
 					continue;  // ...not applicable, try next one
