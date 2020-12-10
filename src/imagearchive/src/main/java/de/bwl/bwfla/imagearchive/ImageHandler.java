@@ -226,8 +226,11 @@ public class ImageHandler
 				log.info("Backing file is temporary, committing it first...");
 
 				MachineConfiguration mc = getEnvByImageId(ImageType.tmp, id);
-				id = commitTempEnvironment(mc.getId());
-				log.info("Backing file committed as: " + id);
+				if(mc != null)
+				{
+					id = commitTempEnvironment(mc.getId());
+					log.info("Backing file committed as: " + id);
+				}
 			}
 
 			boolean hasLocalBackingfile = false;
