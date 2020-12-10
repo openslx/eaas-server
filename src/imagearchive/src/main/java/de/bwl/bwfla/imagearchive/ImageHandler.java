@@ -11,6 +11,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.rmi.server.ExportException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
@@ -1290,10 +1291,18 @@ public class ImageHandler
 
 				// Mount partition's filesystem and check...
 				rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
-				final FileSystemType fstype = FileSystemType.fromString(partition.getFileSystemType());
+				FileSystemType fstype = null;
+				try {
+					fstype = FileSystemType.fromString(partition.getFileSystemType());
+				}
+				catch (Exception e)
+				{
+					continue;
+				}
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
 
 				if (!_check(partition, condition) || !_check(fsmnt.getMountPoint(), condition)) {
+					log.severe("partition not valid");
 					fsmnt.unmount(false);
 					continue;  // ...not applicable, try next one
 				}
