@@ -1,5 +1,7 @@
 package de.bwl.bwfla.historicbuilds.impl;
 
+import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
+import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -10,6 +12,7 @@ import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ContainerComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
+import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.historicbuilds.api.*;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.jena.atlas.logging.Log;
@@ -78,7 +81,6 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
     }
 
-    //FIXME Use other class or make response class common
     @Override
     protected ComponentRequest execute() throws Exception {
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
@@ -95,8 +97,35 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
             //TODO create Condition and pass it to injectData
 
-            String environmentWithInjectID = environmentsAdapter.injectData(environmentID, null, swhDataLocation.toString());
-            componentRequest.setEnvironment(environmentWithInjectID);
+            // in case we want to inject data into the file system
+            // 1. we need to find the image (-> boot drive)
+            // 2. modify the image
+            // 3. import temp. environment
+            // 4. call components with newEnvId
+            // TODO: delete tmp environment if necessary
+            // Ideally split this into a separate function / task
+            String archive = "default"; // todo: request.getArchive();
+
+            //Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, environmentID);
+            // is this enough or is the archive needed? How do I get the archive?
+            Environment chosenEnv = environmentsAdapter.getEnvironmentById(environmentID);
+            AbstractDataResource r = EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration)chosenEnv);
+            if(! (r instanceof ImageArchiveBinding) )
+            {
+                throw new BWFLAException("Resource was not of type ImageArchiveBinding, can't inject data.");
+            }
+
+            String imageId = ((ImageArchiveBinding)r).getImageId();
+
+            String newImageId =  environmentsAdapter.injectData(imageId, null, swhDataLocation.toString());
+
+            ((ImageArchiveBinding)r).setImageId(newImageId);
+
+            ImageArchiveMetadata md = new ImageArchiveMetadata();
+            md.setType(ImageType.TMP);
+            String newEnvId = environmentsAdapter.importMetadata(archive, chosenEnv, md, false);
+
+            componentRequest.setEnvironment(newEnvId);
             return componentRequest;
 
         } else if (envType.equals("container")) {
