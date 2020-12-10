@@ -61,7 +61,7 @@ public class ImageGeneralizationPatch {
 	}
 
 	private static Path prepareCow(Path dir, String backingFile) throws BWFLAException {
-		String filename = UUID.randomUUID().toString() + ".cow";
+		String filename = UUID.randomUUID().toString();
 		QcowOptions options = new QcowOptions();
 		options.setBackingFile(backingFile);
 

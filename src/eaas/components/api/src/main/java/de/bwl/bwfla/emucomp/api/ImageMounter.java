@@ -540,11 +540,20 @@ public class ImageMounter implements AutoCloseable
 
 		process.addArgument(src.toString());
 		process.addArgument(dst.toString());
-		process.redirectStdErrToStdOut(false);
+
+		// process.redirectStdErrToStdOut(false);
 		if (!process.start()) {
 			throw new BWFLAException("Mounting NTFS-filesystem failed!");
 		}
-		return process;
+
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(dst, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+		throw new BWFLAException("mount failed");
 	}
 
 	private static void sysMount(Path src, Path dst, String fs, String options, Logger log) throws BWFLAException, IOException {
