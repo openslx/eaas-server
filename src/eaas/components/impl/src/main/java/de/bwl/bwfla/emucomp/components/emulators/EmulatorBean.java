@@ -277,6 +277,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return "machine";
 	}
 
+	boolean isBeanReady() {
+		return false; // this is the default, if the bean has no internal state
+	}
 
 	@Override
 	public ComponentState getState() throws BWFLAException
@@ -289,6 +292,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return ComponentState.STOPPED;
 		if (emulatorBeanState.equals(EmuCompState.EMULATOR_FAILED.value()))
 			return ComponentState.FAILED;
+		if (isBeanReady())
+			return ComponentState.READY;
 		return ComponentState.OK;
 	}
 
@@ -931,6 +936,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			final Path pulsesock = this.getPulseAudioSocketPath();
 			this.addControlConnector(new AudioConnector(() -> new PulseAudioStreamer(cid, pulsesock)));
 		}
+
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
 	}

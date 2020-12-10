@@ -1004,7 +1004,7 @@ public class Components {
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
         try {
             String state = this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class).getState(componentId);
-            if (state.equals(ComponentState.OK.toString()) || state.equals(ComponentState.INACTIVE.toString())) {
+            if (state.equals(ComponentState.OK.toString()) || state.equals(ComponentState.INACTIVE.toString()) || state.equals(ComponentState.READY.toString())) {
                 return new ComponentStateResponse(componentId, state);
             } else if (state.equals(ComponentState.STOPPED.toString()) || state.equals(ComponentState.FAILED.toString())) {
                 LOG.fine("emulator is " + state + "!");

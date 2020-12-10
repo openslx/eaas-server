@@ -14,8 +14,15 @@ public class BrowserBean extends EmulatorBean {
     private String nic;
 
     @Override
-    protected void prepareEmulatorRunner() throws BWFLAException {
+    boolean isBeanReady()
+    {
+        DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
+        pr.addArguments("runc", "exec", "stat", "/tmp/eaas-proxy.run/run");
+        return pr.execute();
+    }
 
+    @Override
+    protected void prepareEmulatorRunner() throws BWFLAException {
 
         // disable fake clock, otherwise it will cause rendering issues
         this.disableFakeClock = true;

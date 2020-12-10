@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emucomp.api;
 
+import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlType;
@@ -33,5 +34,7 @@ public enum ComponentState {
     @XmlEnumValue("stopped")
     STOPPED,
     @XmlEnumValue("failed")
-    FAILED
+    FAILED,
+    @XmlEnumValue("ready")
+    READY;
 }
