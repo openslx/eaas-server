@@ -85,7 +85,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private HistoricResponse prepareEnvironment(URL swhDataLocation) throws BWFLAException {
 
         if (envType.equals("base")) {
-            MachineComponentRequest componentRequest = new MachineComponentRequest();
+            //MachineComponentRequest componentRequest = new MachineComponentRequest();
 
 
             //TODO check if error should be thrown when extract is true and envType is machine
