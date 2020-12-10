@@ -113,7 +113,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
             ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
             imageModificationCondition.getPaths().add(inputDirectory);
-            imageModificationCondition.setFstype("ext4");
+            //imageModificationCondition.setFstype("ext4");
 
             String newImageId = environmentsAdapter.injectData(imageId, imageModificationCondition, swhDataLocation.toString());
 

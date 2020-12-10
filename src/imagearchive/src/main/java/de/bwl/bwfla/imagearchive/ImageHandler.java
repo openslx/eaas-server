@@ -1293,6 +1293,7 @@ public class ImageHandler
 				rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
 				FileSystemType fstype = null;
 				try {
+					log.info("Got following type from partition:" + partition.getFileSystemType());
 					fstype = FileSystemType.fromString(partition.getFileSystemType());
 				}
 				catch (Exception e)
