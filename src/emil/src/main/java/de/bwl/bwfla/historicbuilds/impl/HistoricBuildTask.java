@@ -1,6 +1,7 @@
 package de.bwl.bwfla.historicbuilds.impl;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
+import de.bwl.bwfla.api.imagearchive.ImageModificationCondition;
 import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
@@ -14,13 +15,8 @@ import de.bwl.bwfla.emil.datatypes.rest.ContainerComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.historicbuilds.api.*;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
-import org.apache.jena.atlas.logging.Log;
 import org.apache.tamaya.ConfigurationProvider;
 
-import java.io.File;
-import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -30,7 +26,6 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-import java.util.stream.Stream;
 
 public class HistoricBuildTask extends BlockingTask<Object> {
 
@@ -82,12 +77,12 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     }
 
     @Override
-    protected ComponentRequest execute() throws Exception {
+    protected HistoricResponse execute() throws Exception {
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
         return prepareEnvironment(swhDataLocation);
     }
 
-    private ComponentRequest prepareEnvironment(URL swhDataLocation) throws BWFLAException {
+    private HistoricResponse prepareEnvironment(URL swhDataLocation) throws BWFLAException {
 
         if (envType.equals("base")) {
             MachineComponentRequest componentRequest = new MachineComponentRequest();
@@ -109,31 +104,35 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             //Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, environmentID);
             // is this enough or is the archive needed? How do I get the archive?
             Environment chosenEnv = environmentsAdapter.getEnvironmentById(environmentID);
-            AbstractDataResource r = EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration)chosenEnv);
-            if(! (r instanceof ImageArchiveBinding) )
-            {
+            AbstractDataResource r = EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
+            if (!(r instanceof ImageArchiveBinding)) {
                 throw new BWFLAException("Resource was not of type ImageArchiveBinding, can't inject data.");
             }
 
-            String imageId = ((ImageArchiveBinding)r).getImageId();
+            String imageId = ((ImageArchiveBinding) r).getImageId();
 
-            String newImageId =  environmentsAdapter.injectData(imageId, null, swhDataLocation.toString());
+            ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
+            imageModificationCondition.getPaths().add(inputDirectory);
 
-            ((ImageArchiveBinding)r).setImageId(newImageId);
+            String newImageId = environmentsAdapter.injectData(imageId, imageModificationCondition, swhDataLocation.toString());
+
+            ((ImageArchiveBinding) r).setImageId(newImageId);
 
             ImageArchiveMetadata md = new ImageArchiveMetadata();
             md.setType(ImageType.TMP);
             String newEnvId = environmentsAdapter.importMetadata(archive, chosenEnv, md, false);
 
-            componentRequest.setEnvironment(newEnvId);
-            return componentRequest;
+            //componentRequest.setEnvironment(newEnvId);
+            HistoricResponse response = new HistoricResponse();
+            response.setId(newEnvId);
+            return response;
 
         } else if (envType.equals("container")) {
 
             ContainerComponentRequest componentRequest = new ContainerComponentRequest();
             componentRequest.setEnvironment(environmentID);
             //TODO create mapping from swhPath -> inputFolder
-            return componentRequest;
+            return null;
         } else {
             LOG.warning("Got unsupported environment type."); //TODO throw exception
             throw new BWFLAException("Got unsupported environment type.");

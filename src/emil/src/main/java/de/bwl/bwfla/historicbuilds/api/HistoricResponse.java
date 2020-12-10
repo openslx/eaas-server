@@ -4,37 +4,18 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class HistoricResponse {
 
-    @JsonProperty("message")
-    private String message;
-    @JsonProperty("swhTaskId")
-    private String swhTaskId;
+    @JsonProperty("newEnvId")
+    private String newEnvId;
+
 
     public String getMessage() {
-        return message;
+        return newEnvId;
     }
 
-    public void setMessage(String message) {
-        this.message = message;
+    public void setId(String message) {
+        this.newEnvId = message;
     }
 
-    public String getSwhTaskId() {
-        return swhTaskId;
-    }
-
-    public void setSwhTaskId(String swhTaskId) {
-        this.swhTaskId = swhTaskId;
-    }
-
-    public String getBuildToolchainTaskId() {
-        return buildToolchainTaskId;
-    }
-
-    public void setBuildToolchainTaskId(String buildToolchainTaskId) {
-        this.buildToolchainTaskId = buildToolchainTaskId;
-    }
-
-    @JsonProperty("buildToolchainTaskId")
-    private String buildToolchainTaskId;
 
     public HistoricResponse() {
     }

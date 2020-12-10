@@ -1,7 +1,5 @@
 package de.bwl.bwfla.historicbuilds;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
@@ -16,7 +14,6 @@ import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
-import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
 import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
@@ -59,7 +56,6 @@ public class HistoricBuilds {
     @Inject
     private DatabaseEnvironmentsAdapter environmentsAdapter;
 
-    //TODO is this needed here?
     @Inject
     @AuthenticatedUser
     private UserContext userCtx;
@@ -101,10 +97,6 @@ public class HistoricBuilds {
             return ResponseUtils.createInternalErrorResponse(e);
         }
 
-
-
-        //TODO create Component hier im Context aufrufen neue API
-
         final String taskID;
         try {
             taskID = taskmgr.submit(new HistoricBuildTask(request, envType, environmentsAdapter));
@@ -119,7 +111,7 @@ public class HistoricBuilds {
         swhInfo.setUserData(new UserData(waitLocation, resultLocation));
 
         final HistoricResponse response = new HistoricResponse();
-        response.setMessage("Started the Historic Task successfully.");
+        response.setId("Started the Historic Task successfully.");
 
         return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
     }
@@ -177,9 +169,9 @@ public class HistoricBuilds {
                 // Result is available!
                 final Future<Object> future = info.result();
 
-                ComponentRequest componentRequest = (ComponentRequest) future.get();
-                ComponentResponse componentResponse = components.createComponent(componentRequest);
-                return ResponseUtils.createResponse(Status.OK, componentResponse);
+                //ComponentRequest componentRequest = (ComponentRequest) future.get();
+                //ComponentResponse componentResponse = components.createComponent(componentRequest);
+                return ResponseUtils.createResponse(Status.OK, future.get());
             } finally {
                 taskmgr.remove(id);
             }
