@@ -1259,14 +1259,16 @@ public class ImageHandler
 		return new URL(handle.toRestUrl(blobStoreRestAddress));
 	}
 
-	public String injectData(String backingFile, ImageGeneralizationPatch.Condition condition, String dataUrl, Logger log) throws BWFLAException
+	public String injectData(String imageId, ImageGeneralizationPatch.Condition condition, String dataUrl, Logger log) throws BWFLAException
 	{
-		log.info("Modifying image: " + backingFile);
+
 		try (final ImageMounter mounter = new ImageMounter(log)) {
 			final Path workdir = ImageMounter.createWorkingDirectory();
 			mounter.addWorkingDirectory(workdir);
 
-			String filename = UUID.randomUUID().toString() + ".cow";
+			String backingFile = getArchivePrefix() + imageId;
+			log.info("Modifying image: " + backingFile);
+			String filename = UUID.randomUUID().toString();
 			QcowOptions options = new QcowOptions();
 			options.setBackingFile(backingFile);
 
