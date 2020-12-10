@@ -111,7 +111,7 @@ public class HistoricBuilds {
         swhInfo.setUserData(new UserData(waitLocation, resultLocation));
 
         final HistoricResponse response = new HistoricResponse();
-        response.setId("Started the Historic Task successfully.");
+        response.setId(taskID);
 
         return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
     }

@@ -4,16 +4,16 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class HistoricResponse {
 
-    @JsonProperty("newEnvId")
-    private String newEnvId;
+    @JsonProperty("id")
+    private String id;
 
 
     public String getMessage() {
-        return newEnvId;
+        return id;
     }
 
     public void setId(String message) {
-        this.newEnvId = message;
+        this.id = message;
     }
 
 
