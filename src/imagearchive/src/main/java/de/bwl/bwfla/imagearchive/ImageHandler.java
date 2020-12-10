@@ -1297,6 +1297,7 @@ public class ImageHandler
 				}
 				catch (Exception e)
 				{
+					e.printStackTrace();
 					continue;
 				}
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
