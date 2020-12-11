@@ -521,6 +521,9 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
+            if (authenticatedUser.getTenantId() != null)
+                options.setTenantId(authenticatedUser.getTenantId());
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -780,6 +783,9 @@ public class Components {
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
             }
+
+            if (authenticatedUser.getTenantId() != null)
+                options.setTenantId(authenticatedUser.getTenantId());
 
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
