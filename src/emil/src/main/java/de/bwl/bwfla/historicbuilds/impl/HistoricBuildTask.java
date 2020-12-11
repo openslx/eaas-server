@@ -101,6 +101,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             //TODO check if error should be thrown when extract is true and envType is machine
             //TODO create Condition and pass it to injectData
 
+            //TODO right now inject tries to unzip the data everytime, only do that if file is in tar/zip format
             String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, dataLocation);
             String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, recipeLocation);
             String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation);
