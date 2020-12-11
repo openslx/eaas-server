@@ -120,7 +120,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             ((ImageArchiveBinding) r).setImageId(newImageId);
 
             ImageArchiveMetadata md = new ImageArchiveMetadata();
-            md.setType(ImageType.TMP);
+            md.setType(ImageType.USER);
             String newEnvId = environmentsAdapter.importMetadata(archive, chosenEnv, md, false);
 
             //componentRequest.setEnvironment(newEnvId);
