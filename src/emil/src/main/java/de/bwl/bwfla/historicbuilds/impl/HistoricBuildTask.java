@@ -17,6 +17,9 @@ import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.historicbuilds.api.*;
 import org.apache.tamaya.ConfigurationProvider;
 
+import java.io.File;
+import java.io.FileWriter;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -48,6 +51,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final String envType;
     private final DatabaseEnvironmentsAdapter environmentsAdapter;
 
+    private static final String blobStoreAddressSoap = ConfigurationProvider.getConfiguration().get("emucomp.blobstore_soap");
+    private static final String blobStoreRestAddress = ConfigurationProvider.getConfiguration().get("rest.blobstore");
+
     private static final Logger LOG = Logger.getLogger("SWH-TASK");
 
     public HistoricBuildTask(HistoricRequest request, String envType, DatabaseEnvironmentsAdapter environmentsAdapter) throws BWFLAException {
@@ -78,54 +84,29 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
     @Override
     protected HistoricResponse execute() throws Exception {
+
+
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
-        return prepareEnvironment(swhDataLocation);
+        URL recipeLocation = publishRecipeData(execFile);
+        URL cronLocation = publishCronTab(inputDirectory + "recipe.sh");
+
+        return prepareEnvironment(swhDataLocation, recipeLocation, cronLocation);
     }
 
-    private HistoricResponse prepareEnvironment(URL swhDataLocation) throws BWFLAException {
+
+    private HistoricResponse prepareEnvironment(URL dataLocation, URL recipeLocation, URL cronLocation) throws BWFLAException {
 
         if (envType.equals("base")) {
-            //MachineComponentRequest componentRequest = new MachineComponentRequest();
-
 
             //TODO check if error should be thrown when extract is true and envType is machine
-
             //TODO create Condition and pass it to injectData
 
-            // in case we want to inject data into the file system
-            // 1. we need to find the image (-> boot drive)
-            // 2. modify the image
-            // 3. import temp. environment
-            // 4. call components with newEnvId
-            // TODO: delete tmp environment if necessary
-            // Ideally split this into a separate function / task
-            String archive = "default"; // todo: request.getArchive();
+            String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, dataLocation);
+            String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, recipeLocation);
+            String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation);
 
-            //Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, environmentID);
-            // is this enough or is the archive needed? How do I get the archive?
-            Environment chosenEnv = environmentsAdapter.getEnvironmentById(environmentID);
-            AbstractDataResource r = EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
-            if (!(r instanceof ImageArchiveBinding)) {
-                throw new BWFLAException("Resource was not of type ImageArchiveBinding, can't inject data.");
-            }
-
-            String imageId = ((ImageArchiveBinding) r).getImageId();
-
-            ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
-            imageModificationCondition.getPaths().add(inputDirectory);
-            //imageModificationCondition.setFstype("ext4");
-
-            String newImageId = environmentsAdapter.injectData(imageId, imageModificationCondition, swhDataLocation.toString());
-
-            ((ImageArchiveBinding) r).setImageId(newImageId);
-
-            ImageArchiveMetadata md = new ImageArchiveMetadata();
-            md.setType(ImageType.TMP);
-            String newEnvId = environmentsAdapter.importMetadata(archive, chosenEnv, md, false);
-
-            //componentRequest.setEnvironment(newEnvId);
             HistoricResponse response = new HistoricResponse();
-            response.setId(newEnvId);
+            response.setId(finalEnvId);
             return response;
 
         } else if (envType.equals("container")) {
@@ -138,6 +119,36 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             LOG.warning("Got unsupported environment type."); //TODO throw exception
             throw new BWFLAException("Got unsupported environment type.");
         }
+    }
+
+    private String injectDataIntoImage(String environmentId, String path, URL dataLocation) throws BWFLAException {
+        // in case we want to inject data into the file system
+        // 1. we need to find the image (-> boot drive)
+        // 2. modify the image
+        // 3. import temp. environment
+        // 4. call components with newEnvId
+        // TODO: delete tmp environment if necessary
+        // Ideally split this into a separate function / task
+        String archive = "default"; // todo: request.getArchive();
+
+        Environment chosenEnv = environmentsAdapter.getEnvironmentById(archive, environmentId);
+        AbstractDataResource r = EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
+        if (!(r instanceof ImageArchiveBinding)) {
+            throw new BWFLAException("Resource was not of type ImageArchiveBinding, can't inject data.");
+        }
+
+        String imageId = ((ImageArchiveBinding) r).getImageId();
+
+        ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
+        imageModificationCondition.getPaths().add(path);
+
+        String newImageId = environmentsAdapter.injectData(imageId, imageModificationCondition, dataLocation.toString());
+
+        ((ImageArchiveBinding) r).setImageId(newImageId);
+
+        ImageArchiveMetadata md = new ImageArchiveMetadata();
+        md.setType(ImageType.TMP);
+        return environmentsAdapter.importMetadata(archive, chosenEnv, md, false);
     }
 
     private URL downloadAndStoreFromSoftwareHeritage() throws Exception {
@@ -206,22 +217,59 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         LOG.info("Path" + swhDataFilePath);
         LOG.info("filename" + fileName);
 
-        BlobHandle handle = null;
-
-        String blobStoreAddressSoap = ConfigurationProvider.getConfiguration().get("emucomp.blobstore_soap");
-        String blobStoreRestAddress = ConfigurationProvider.getConfiguration().get("rest.blobstore");
-
         final BlobDescription blob = new BlobDescription()
                 .setDescription("Software Heritage Code Archive")
                 .setNamespace("swh-data")
                 .setDataFromFile(outputFolder.resolve(swhDataFilePath))
                 .setType(".tar.gz")
                 .setName(fileName);
-        //.setName(Paths.get(swhDataFilePath).getFileName().toString());
-        handle = BlobStoreClient.get().getBlobStorePort(blobStoreAddressSoap).put(blob);
-        URL blobURL = new URL(handle.toRestUrl(blobStoreRestAddress));
-        LOG.info("Stored SWH Data at:" + blobURL.toString());
+
+        URL blobURL = storeDataInBlobstore(blob);
+        LOG.info("Stored crontab at:" + blobURL.toString());
         return blobURL;
+    }
+
+    private URL publishRecipeData(String recipeContent) throws Exception {
+
+        File recipe = workingDir.resolve("recipe.sh").toFile();
+        FileWriter fileWriter = new FileWriter(recipe);
+        fileWriter.write(recipeContent);
+        fileWriter.close();
+
+        final BlobDescription blob = new BlobDescription()
+                .setDescription("Historic Builds Recipe")
+                .setNamespace("historic-recipe")
+                .setDataFromFile(workingDir.resolve("recipe.sh"))
+                .setType(".sh")
+                .setName("recipe");
+        URL blobURL = storeDataInBlobstore(blob);
+        LOG.info("Stored crontab at:" + blobURL.toString());
+        return blobURL;
+    }
+
+    private URL publishCronTab(String recipePath) throws Exception {
+
+        String user = "root"; //TODO make parameterized?
+
+        File crontab = workingDir.resolve("crontab").toFile();
+        FileWriter fileWriter = new FileWriter(crontab);
+        fileWriter.write("@reboot " + recipePath);
+        fileWriter.close();
+
+        final BlobDescription blob = new BlobDescription()
+                .setDescription("Historic Builds Crontab")
+                .setNamespace("historic-crontab")
+                .setDataFromFile(workingDir.resolve("crontab"))
+                .setName(user);
+
+        URL blobURL = storeDataInBlobstore(blob);
+        LOG.info("Stored crontab at:" + blobURL.toString());
+        return blobURL;
+    }
+
+    private static URL storeDataInBlobstore(BlobDescription blob) throws Exception {
+        BlobHandle handle = BlobStoreClient.get().getBlobStorePort(blobStoreAddressSoap).put(blob);
+        return new URL(handle.toRestUrl(blobStoreRestAddress));
     }
 
 
