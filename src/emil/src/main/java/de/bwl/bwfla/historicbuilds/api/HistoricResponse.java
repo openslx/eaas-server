@@ -7,13 +7,12 @@ public class HistoricResponse {
     @JsonProperty("id")
     private String id;
 
-
-    public String getMessage() {
+    public String getId() {
         return id;
     }
 
-    public void setId(String message) {
-        this.id = message;
+    public void setId(String id) {
+        this.id = id;
     }
 
 
