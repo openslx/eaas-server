@@ -460,13 +460,7 @@ public class ImageMounter implements AutoCloseable
 		// TODO: find a more elegant way for flushing caches!
 		ImageMounter.sync(mountpoint, log);
 		ImageMounter.unmountFuse(mountpoint, log);
-		boolean unmounted = false;
-		for(int i = 0; i < 60; i++) {
-			if (processRunner.waitUntilFinished(1, TimeUnit.SECONDS)){
-				unmounted = true;
-				break;
-			}
-		}
+		boolean unmounted = processRunner.waitUntilFinished(60, TimeUnit.SECONDS);
 		if(!unmounted)
 		{
 			processRunner.kill();
