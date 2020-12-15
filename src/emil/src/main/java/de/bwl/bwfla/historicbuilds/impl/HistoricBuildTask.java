@@ -10,16 +10,13 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
-import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ContainerComponentRequest;
-import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.historicbuilds.api.*;
 import org.apache.tamaya.ConfigurationProvider;
 
 import java.io.File;
 import java.io.FileWriter;
-import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,7 +40,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final String environmentID;
     private final String inputDirectory;
     private final String outputDirectory;
-    private final String execFile;
+    private final String recipe;
     private final String[] prerequisites;
     private final String mail;
     private final String mode;
@@ -64,7 +61,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.environmentID = btcRequest.getEnvironmentID();
         this.inputDirectory = btcRequest.getInputDirectory();
         this.outputDirectory = btcRequest.getOutputDirectory();
-        this.execFile = btcRequest.getExecFile();
+        this.recipe = btcRequest.getRecipe();
         this.prerequisites = btcRequest.getPrerequisites();
         this.mail = btcRequest.getMail();
         this.mode = btcRequest.getMode();
@@ -87,7 +84,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
 
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
-        URL recipeLocation = publishRecipeData(execFile);
+        URL recipeLocation = publishRecipeData(recipe);
         URL cronLocation = publishCronTab(inputDirectory + "recipe.sh");
 
         return prepareEnvironment(swhDataLocation, recipeLocation, cronLocation);
@@ -107,7 +104,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation);
 
             HistoricResponse response = new HistoricResponse();
-            response.setId(finalEnvId);
+            response.setEnvironmentId(finalEnvId);
             return response;
 
         } else if (envType.equals("container")) {

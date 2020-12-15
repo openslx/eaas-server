@@ -10,8 +10,8 @@ public class BuildToolchainRequest {
     private String inputDirectory;
     @JsonProperty("outputDirectory")
     private String outputDirectory;
-    @JsonProperty("execFile")
-    private String execFile;
+    @JsonProperty("recipe")
+    private String recipe;
     @JsonProperty("prerequisites")
     private String[] prerequisites;
     @JsonProperty("mail")
@@ -46,12 +46,12 @@ public class BuildToolchainRequest {
         this.outputDirectory = outputDirectory;
     }
 
-    public String getExecFile() {
-        return execFile;
+    public String getRecipe() {
+        return recipe;
     }
 
-    public void setExecFile(String execFile) {
-        this.execFile = execFile;
+    public void setRecipe(String recipe) {
+        this.recipe = recipe;
     }
 
     public String[] getPrerequisites() {

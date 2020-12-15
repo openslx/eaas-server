@@ -1,23 +1,16 @@
 package de.bwl.bwfla.historicbuilds;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
-import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.EnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
-import de.bwl.bwfla.emil.datatypes.rest.ComponentRequest;
-import de.bwl.bwfla.emil.datatypes.rest.ComponentResponse;
 import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
 import de.bwl.bwfla.envproposer.impl.UserData;
-import de.bwl.bwfla.historicbuilds.api.BuildToolchainRequest;
-import de.bwl.bwfla.historicbuilds.api.HistoricRequest;
-import de.bwl.bwfla.historicbuilds.api.HistoricResponse;
+import de.bwl.bwfla.historicbuilds.api.*;
 import de.bwl.bwfla.historicbuilds.impl.HistoricBuildTask;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
@@ -45,9 +38,6 @@ public class HistoricBuilds {
     private final TaskManager taskmgr;
 
     @Inject
-    private Components components = null;
-
-    @Inject
     private EmilEnvironmentRepository emilEnvRepo = null;
 
     @Inject
@@ -56,9 +46,6 @@ public class HistoricBuilds {
     @Inject
     private DatabaseEnvironmentsAdapter environmentsAdapter;
 
-    @Inject
-    @AuthenticatedUser
-    private UserContext userCtx;
 
     public HistoricBuilds() throws BWFLAException {
         try {
@@ -110,8 +97,9 @@ public class HistoricBuilds {
         final TaskInfo<Object> swhInfo = taskmgr.lookup(taskID);
         swhInfo.setUserData(new UserData(waitLocation, resultLocation));
 
-        final HistoricResponse response = new HistoricResponse();
-        response.setId(taskID);
+        final HistoricBuildStartedResponse response = new HistoricBuildStartedResponse();
+        response.setTaskId(taskID);
+        response.setWaitQueueUrl(waitLocation);
 
         return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
     }
@@ -128,21 +116,22 @@ public class HistoricBuilds {
                 return ResponseUtils.createMessageResponse(Status.NOT_FOUND, message);
             }
 
-            Status status = null;
-            String location = null;
-
+            Status status = Status.OK;
             final UserData userdata = info.userdata(UserData.class);
+
+            HistoricWaitqueueResponse response = new HistoricWaitqueueResponse();
+            response.setId(id);
+            response.setResultUrl(userdata.getResultLocation());
+
             if (info.result().isDone()) {
                 // Result is available!
-                status = Status.SEE_OTHER;
-                location = userdata.getResultLocation();
+                response.setStatus("Done");
             } else {
                 // Result is not yet available!
-                status = Status.OK;
-                location = userdata.getWaitLocation();
+                response.setStatus("Processing");
             }
 
-            return ResponseUtils.createLocationResponse(status, location, null);
+            return ResponseUtils.createResponse(status, response);
         } catch (Throwable throwable) {
             return ResponseUtils.createInternalErrorResponse(throwable);
         }
@@ -160,17 +149,19 @@ public class HistoricBuilds {
             }
 
             final TaskInfo<Object> info = taskmgr.lookup(id);
-            if (info == null || !info.result().isDone()) {
+            if (info == null) {
                 String message = "Passed ID is invalid: " + id;
                 return ResponseUtils.createMessageResponse(Status.NOT_FOUND, message);
+            }
+
+            if (!info.result().isDone()) {
+                String message = "This task with id " + id + " is still being processed.";
+                return ResponseUtils.createMessageResponse(Status.OK, message);
             }
 
             try {
                 // Result is available!
                 final Future<Object> future = info.result();
-
-                //ComponentRequest componentRequest = (ComponentRequest) future.get();
-                //ComponentResponse componentResponse = components.createComponent(componentRequest);
                 return ResponseUtils.createResponse(Status.OK, future.get());
             } finally {
                 taskmgr.remove(id);
@@ -188,7 +179,6 @@ public class HistoricBuilds {
 
     private static class TaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
         public TaskManager() throws NamingException {
-            //TODO is this fine?
             super("HISTORIC-BUILDS-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
         }
     }
