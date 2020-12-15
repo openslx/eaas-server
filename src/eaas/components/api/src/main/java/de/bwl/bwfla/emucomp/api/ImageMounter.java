@@ -474,6 +474,7 @@ public class ImageMounter implements AutoCloseable
 				log.severe("killed FUSE. we should throw instead!" + processRunner.getStdErrString() + "\n" + processRunner.getStdOutString());
 			} catch (IOException ignored) { }
 		}
+		processRunner.cleanup();
 
 		if (rmdirs && unmounted) {
 			// Skip mountpoint deletion, if unmount failed!
@@ -505,6 +506,8 @@ public class ImageMounter implements AutoCloseable
 				Thread.sleep(100);
 			} catch (InterruptedException ignore) { }
 		}
+		process.kill();
+		process.cleanup();
 
 		throw new BWFLAException("mount failed");
 	}
@@ -553,6 +556,8 @@ public class ImageMounter implements AutoCloseable
 				Thread.sleep(100);
 			} catch (InterruptedException ignore) { }
 		}
+		process.kill();
+		process.cleanup();
 		throw new BWFLAException("mount failed");
 	}
 
@@ -569,24 +574,8 @@ public class ImageMounter implements AutoCloseable
 		process.addArgument(dst.toString());
 		process.redirectStdErrToStdOut(false);
 		if (!process.execute()) {
+			process.cleanup();
 			throw new BWFLAException(process.getCommandString() + " failed: " + process.getStdErrString());
-		}
-	}
-
-	private static Path lklMount(Path path, String fsType, Logger log) throws BWFLAException {
-		File tempDir = null;
-		try {
-			tempDir = Files.createTempDirectory("mount-").toFile();
-			lklMount(path, tempDir.toPath(), fsType, log, false);
-			return tempDir.toPath();
-		} catch (Exception e) {
-			if (tempDir != null)
-				try {
-					FileUtils.deleteDirectory(tempDir);
-				} catch (IOException e1) {
-					// don't care
-				}
-			throw new BWFLAException(e);
 		}
 	}
 

@@ -295,7 +295,6 @@ public class BindingsManager
 		log.info("Unmounting bindings...");
 		{
 			final Set<String> idsToRemove = new HashSet<String>();
-			final List<Pair<String, String>> entriesToUnmount = new ArrayList<Pair<String, String>>();
 
 			final String[] fuseIdSuffixes = new String[] {
 					ID_SEPARATOR + EntryType.RAW_MOUNT.value,
@@ -307,15 +306,12 @@ public class BindingsManager
 					if (!id.endsWith(suffix))
 						continue;  // Not a FUSE-mount!
 
-					entriesToUnmount.add(new Pair<String, String>(id, path));
-
 					final int end = id.length() - suffix.length();
 					idsToRemove.add(id.substring(0, end));
 				}
 			});
 
 			imageMounter.unmount();
-			entriesToUnmount.clear();
 			idsToRemove.forEach((id) -> this.remove(id));
 			idsToRemove.clear();
 		}
