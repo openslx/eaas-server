@@ -12,14 +12,16 @@ public class BrowserBean extends EmulatorBean {
 
     private DeprecatedProcessRunner proxyRunner;
     private String nic;
+    private boolean isReady = false;
 
     @Override
     boolean isBeanReady()
     {
-        if(this.isContainerModeEnabled()) {
+        if(!isReady && this.isContainerModeEnabled()) {
             DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
             pr.addArguments("runc", "exec", this.getContainerId(), "stat", "/tmp/eaas-proxy.run/run");
-            return pr.execute();
+            isReady = pr.execute();
+            return isReady;
         }
         else return false;
     }
