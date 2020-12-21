@@ -37,7 +37,6 @@ import de.bwl.bwfla.common.services.guacplay.net.TunnelConfig;
 import de.bwl.bwfla.common.services.guacplay.protocol.InstructionBuilder;
 import de.bwl.bwfla.common.services.guacplay.record.SessionRecorder;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.common.utils.ProcessMonitor;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.emucomp.api.*;

@@ -30,7 +30,6 @@ import de.bwl.bwfla.emucomp.api.ComponentState;
 import de.bwl.bwfla.emucomp.api.ContainerComponent;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 import de.bwl.bwfla.emucomp.api.DockerContainerConfiguration;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
 import de.bwl.bwfla.emucomp.components.BindingsManager;
 import de.bwl.bwfla.emucomp.components.EaasComponentBean;

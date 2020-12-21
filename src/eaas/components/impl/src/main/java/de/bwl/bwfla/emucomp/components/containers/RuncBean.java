@@ -24,7 +24,6 @@ import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.net.ConfigKey;
 import de.bwl.bwfla.common.utils.net.PortRangeProvider;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
 
 import org.apache.tamaya.inject.api.Config;
