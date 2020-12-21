@@ -86,7 +86,7 @@ public class JsonUtils
 		}
 	}
 
-	private static Path toBackupPath(Path path)
+	public static Path toBackupPath(Path path)
 	{
 		final String backup = path.getFileName() + BACKUP_SUFFIX;
 		return path.getParent()

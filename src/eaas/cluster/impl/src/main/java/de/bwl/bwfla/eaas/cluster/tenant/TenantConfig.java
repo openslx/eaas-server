@@ -19,8 +19,9 @@
 
 package de.bwl.bwfla.eaas.cluster.tenant;
 
-import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonSetter;
+import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
 
@@ -33,7 +34,7 @@ public class TenantConfig
 
 	// ========== Getters and Setters ==============================
 
-	@JsonProperty(Fields.NAME)
+	@JsonGetter(Fields.NAME)
 	public String getName()
 	{
 		return name;
@@ -46,7 +47,7 @@ public class TenantConfig
 		this.name = name;
 	}
 
-	@JsonProperty(Fields.QUOTA)
+	@JsonGetter(Fields.QUOTA)
 	public ResourceSpec getQuotaLimits()
 	{
 		return quota;
@@ -59,12 +60,18 @@ public class TenantConfig
 		this.quota = quota;
 	}
 
+	public static DocumentCollection.Filter filter(String name)
+	{
+		return DocumentCollection.filter()
+				.eq(Fields.NAME, name);
+	}
+
 
 	// ========== Internal Helpers ==============================
 
-	private static class Fields
+	public static class Fields
 	{
-		private static final String NAME   = "name";
-		private static final String QUOTA  = "quota";
+		public static final String NAME   = "name";
+		public static final String QUOTA  = "quota";
 	}
 }
