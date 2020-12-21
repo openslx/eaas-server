@@ -207,9 +207,9 @@ public class DocumentCollection<T>
 	}
 
 	/** Delete single document matching filter */
-	public void delete(Filter filter) throws BWFLAException
+	public boolean delete(Filter filter) throws BWFLAException
 	{
-		this.delete(filter, false);
+		return this.delete(filter, false) > 0;
 	}
 
 	/** Count collection's documents */
