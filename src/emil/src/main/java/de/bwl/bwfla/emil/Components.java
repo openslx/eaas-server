@@ -664,7 +664,6 @@ public class Components {
         }
 
         try {
-            EmilEnvironment emilEnv = this.emilEnvRepo.getEmilEnvironmentById(machineDescription.getEnvironment());
             Environment chosenEnv = envHelper.getEnvironmentById(machineDescription.getArchive(), machineDescription.getEnvironment());
 
             if (chosenEnv == null) {
@@ -680,10 +679,11 @@ public class Components {
                     machineDescription.getKeyboardLayout(),
                     machineDescription.getKeyboardModel());
 
-            if(emilEnv != null && emilEnv.getTimeContext() != null)
-                EmulationEnvironmentHelper.setTimeContext(config, emilEnv.getTimeContext());
 
-            if(emilEnv != null && emilEnv.isEnableRelativeMouse())
+            if(machineDescription.getOptions().getTimeContext() != null)
+                EmulationEnvironmentHelper.setTimeContext(config, machineDescription.getOptions().getTimeContext());
+
+            if(machineDescription.getOptions().isEnableRelativeMouse())
                 EmulationEnvironmentHelper.enableRelativeMouse(config);
 
             int numInputImages = 1;
@@ -763,7 +763,7 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs())
+            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && machineDescription.getOptions().isNetworkEnabled())
                     || ((MachineConfiguration) chosenEnv).isLinuxRuntime()) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {

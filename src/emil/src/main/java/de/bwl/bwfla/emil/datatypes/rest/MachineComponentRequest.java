@@ -68,6 +68,9 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false)
     private LinuxRuntimeContainerReq linuxRuntimeData;
 
+    @XmlElement(required = false)
+    private SessionOptions options;
+
     @XmlElement
     private ArrayList<UserMedium> userMedia;
 
@@ -163,6 +166,39 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         if(userMedia == null)
             userMedia = new ArrayList<>();
         return userMedia;
+    }
+
+    public SessionOptions getOptions() {
+        if(options == null)
+            options = new SessionOptions();
+
+        return options;
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class SessionOptions extends JaxbType
+    {
+        @XmlElement(required = false)
+        private String timeContext;
+
+        @XmlElement(required = false)
+        private boolean enableRelativeMouse = false;
+
+        @XmlElement(required = true)
+        private boolean networkEnabled = false;
+
+        public String getTimeContext() {
+            return timeContext;
+        }
+
+        public boolean isEnableRelativeMouse() {
+            return enableRelativeMouse;
+        }
+
+        public boolean isNetworkEnabled() {
+            return networkEnabled;
+        }
     }
 
     @XmlRootElement
