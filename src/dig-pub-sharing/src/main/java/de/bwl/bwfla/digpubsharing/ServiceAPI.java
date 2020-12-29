@@ -34,6 +34,7 @@ import java.util.logging.Logger;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
+import javax.inject.Inject;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -60,7 +61,10 @@ import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.database.document.DocumentDatabaseConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.guacplay.util.StopWatch;
-import de.bwl.bwfla.common.services.security.SecuredInternal;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.digpubsharing.api.DigPubState;
 import de.bwl.bwfla.digpubsharing.api.DigitalPublication;
 import de.bwl.bwfla.digpubsharing.api.ImportSummary;
@@ -89,6 +93,10 @@ public class ServiceAPI
 	private ObjectArchiveHelper objects;
 	private String objectArchiveId;
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext userctx;
+
 	private static final String MEDIATYPE_CSV = "text/csv";
 
 
@@ -96,8 +104,8 @@ public class ServiceAPI
 
 	/** Add (or update) digital-publications to inventory (internal API) */
 	@PUT
-	@SecuredInternal
 	@Path("/inventory")
+	@Secured(roles = { Role.ADMIN })
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void addDigitalPublications(@TypeHint(DigitalPublication[].class) InputStream istream)
 	{
@@ -140,8 +148,8 @@ public class ServiceAPI
 	 * @requestExample application/json ["id-1", "id-2", "id-5"]
 	 */
 	@DELETE
-	@SecuredInternal
 	@Path("/inventory")
+	@Secured(roles = { Role.ADMIN })
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void removeDigitalPublications(@TypeHint(String[].class) InputStream istream)
 	{
@@ -178,8 +186,8 @@ public class ServiceAPI
 
 	/** List digital-publication inventory (internal API) */
 	@GET
-	@SecuredInternal
 	@Path("/inventory")
+	@Secured(roles = { Role.ADMIN })
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(DigitalPublication[].class)
 	public Response listDigitalPublications()
@@ -219,8 +227,8 @@ public class ServiceAPI
 
 	/** Download sample .csv in a form suitable for importing */
 	@GET
-	@SecuredInternal
 	@Path("/import-sample")
+	@Secured(roles = { Role.RESTRICTED })
 	@Produces(MEDIATYPE_CSV)
 	public Response getImportSample()
 	{
@@ -238,8 +246,8 @@ public class ServiceAPI
 
 	/** Import digital-publication records from .csv */
 	@POST
-	@SecuredInternal
 	@Path("/import")
+	@Secured(roles = { Role.RESTRICTED })
 	@Consumes(MEDIATYPE_CSV)
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(ImportSummary.class)
@@ -275,8 +283,8 @@ public class ServiceAPI
 
 	/** Export digital-publication records as .csv */
 	@POST
-	@SecuredInternal
 	@Path("/export")
+	@Secured(roles = { Role.RESTRICTED })
 	@Produces(MEDIATYPE_CSV)
 	@TypeHint(String.class)
 	public Response exportPublicationRecords(@QueryParam("include") List<DigPubState> includes)
@@ -330,8 +338,8 @@ public class ServiceAPI
 
 	/** Count all digital-publication records */
 	@POST
-	@SecuredInternal
 	@Path("/count-records")
+	@Secured(roles = { Role.RESTRICTED })
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(Integer.class)
 	public Response countPublicationRecords(@QueryParam("include") List<DigPubState> includes)
@@ -357,8 +365,8 @@ public class ServiceAPI
 	 * @param limit Max. number of records to return (server-side pagination)
 	 */
 	@GET
-	@SecuredInternal
 	@Path("/records")
+	@Secured(roles = { Role.RESTRICTED })
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(DigPubRecord[].class)
 	public Response listPublicationRecords(@QueryParam("skip") @DefaultValue("0") int skip,
@@ -416,8 +424,8 @@ public class ServiceAPI
 	 * @requestExample application/json ["id-1", "id-2", "id-5"]
 	 */
 	@DELETE
-	@SecuredInternal
 	@Path("/records")
+	@Secured(roles = { Role.RESTRICTED })
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void removePublicationRecords(@TypeHint(String[].class) InputStream istream)
 	{
@@ -445,8 +453,8 @@ public class ServiceAPI
 
 	/** Update tenant's site-settings */
 	@PUT
-	@SecuredInternal
 	@Path("/settings")
+	@Secured(roles = { Role.RESTRICTED })
 	@Consumes(MediaType.APPLICATION_JSON)
 	public void updateSiteSettings(Settings config)
 	{
@@ -470,8 +478,8 @@ public class ServiceAPI
 
 	/** Look up tenant's site-settings */
 	@GET
-	@SecuredInternal
 	@Path("/settings")
+	@Secured(roles = { Role.RESTRICTED })
 	@Produces(MediaType.APPLICATION_JSON)
 	@TypeHint(Settings.class)
 	public Response getSiteSettings()
@@ -522,7 +530,7 @@ public class ServiceAPI
 	private String getTenantId()
 	{
 		// TODO: get tenant from user-context!
-		return "dummy";
+		return userctx.getUsername();
 	}
 
 	private String date()
