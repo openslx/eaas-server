@@ -32,6 +32,8 @@ public class DigitalPublication
 	private String objid;
 	private String envid;
 
+	private String objectArchive;
+
 	public DigitalPublication()
 	{
 		// Empty!
@@ -79,6 +81,20 @@ public class DigitalPublication
 		return envid;
 	}
 
+	@JsonSetter(Fields.OBJECT_ARCHIVE)
+	public DigitalPublication setObjectArchive(String archive)
+	{
+		this.objectArchive = archive;
+		return this;
+	}
+
+	/** Publication's internal object archive */
+	@JsonGetter(Fields.OBJECT_ARCHIVE)
+	public String getObjectArchive()
+	{
+		return objectArchive;
+	}
+
 	public static DocumentCollection.Filter filter(String id)
 	{
 		return DigitalPublication.filter(id, true);
@@ -101,5 +117,6 @@ public class DigitalPublication
 		public static final String EXTERNAL_ID    = "ext_id";
 		public static final String OBJECT_ID      = "obj_id";
 		public static final String ENVIRONMENT_ID = "env_id";
+		public static final String OBJECT_ARCHIVE = "obj_archive";
 	}
 }

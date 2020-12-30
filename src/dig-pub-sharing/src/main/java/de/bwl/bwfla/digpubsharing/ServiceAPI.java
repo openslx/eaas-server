@@ -35,6 +35,8 @@ import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -45,6 +47,7 @@ import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.MediaType;
@@ -444,6 +447,35 @@ public class ServiceAPI
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Removing publication(s) failed!", error);
+			throw new InternalServerErrorException(error);
+		}
+	}
+
+	/** Resolve digital-publication record by external ID */
+	@POST
+	@Path("/records/{extid}/resolve")
+	@Secured(roles = { Role.RESTRICTED })
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response resolvePublicationRecord(@PathParam("extid") String extid)
+	{
+		try {
+			final var filter = DigitalPublication.filter(extid);
+			final DigitalPublication publication = inventory.lookup(filter);
+			if (publication == null)
+				throw new NotFoundException();
+
+			final JsonObject json = Json.createObjectBuilder()
+					.add("environment_id", publication.getEnvironmentId())
+					.add("object_id", publication.getObjectId())
+					.add("object_archive", publication.getObjectArchive())
+					.build();
+
+			return Response.ok()
+					.entity(json)
+					.build();
+		}
+		catch (BWFLAException error) {
+			LOG.log(Level.WARNING, "Resolving publication failed!", error);
 			throw new InternalServerErrorException(error);
 		}
 	}
