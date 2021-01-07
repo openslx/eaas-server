@@ -63,7 +63,7 @@ public class EnvironmentListItem {
         this.description = emilenv.getDescription();
 
         if (emilenv.getNetworking() != null)
-            this.networkEnabled = (emilenv.getNetworking().isConnectEnvs() || emilenv.getNetworking().isEnableInternet() || emilenv.getNetworking().isServerMode() || emilenv.getNetworking().isLocalServerMode());
+            this.networkEnabled = (emilenv.getNetworking().isConnectEnvs() || emilenv.getNetworking().isEnableInternet());
         else this.networkEnabled = false;
 
         if( emilenv.getOwner() != null)
