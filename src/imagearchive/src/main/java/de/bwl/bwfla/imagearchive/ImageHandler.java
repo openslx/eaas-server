@@ -1321,8 +1321,11 @@ public class ImageHandler
 
 				pr = new DeprecatedProcessRunner("sudo");
 				pr.setWorkingDirectory(fsmnt.getMountPoint());
+				log.severe("working dir " + fsmnt.getMountPoint());
 				pr.addArguments("tar", "xvf", workdir.toString() + "/out.tgz");
 				pr.execute();
+
+				mounter.unmount();
 
 				log.info("Data inject was successful!");
 				URL image =  publishImage(destImgFile);
