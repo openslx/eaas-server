@@ -65,6 +65,12 @@ public class Tenant
 			this.allocated = new MutableResourceSpec();
 		}
 
+		public Quota(Quota other)
+		{
+			this.limits = new MutableResourceSpec(other.getLimits());
+			this.allocated = new MutableResourceSpec(other.getAllocated());
+		}
+
 		public Quota setLimits(ResourceSpec limits)
 		{
 			this.limits.set(limits);
@@ -99,6 +105,11 @@ public class Tenant
 		public void free(ResourceSpec spec)
 		{
 			allocated.sub(spec);
+		}
+
+		public boolean isAllocated()
+		{
+			return allocated.cpu() > 0;
 		}
 	}
 }

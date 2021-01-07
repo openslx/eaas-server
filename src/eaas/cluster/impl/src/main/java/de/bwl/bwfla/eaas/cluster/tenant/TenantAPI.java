@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.eaas.cluster.tenant;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.eaas.cluster.ResourceSpec;
@@ -28,6 +29,7 @@ import javax.inject.Inject;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -36,12 +38,16 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.util.Collection;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
-@Path("/tenants")
+@Path("/api/v1/tenants")
 @ApplicationScoped
 public class TenantAPI
 {
+	private final Logger log = Logger.getLogger("TENANT-API");
+
 	@Inject
 	private TenantManager tenants = null;
 
@@ -53,9 +59,15 @@ public class TenantAPI
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response list()
 	{
-		final Collection<String> ids = tenants.list();
-		return Response.ok(ids, MediaType.APPLICATION_JSON_TYPE)
-				.build();
+		try {
+			final Collection<String> ids = tenants.list();
+			return Response.ok(ids, MediaType.APPLICATION_JSON_TYPE)
+					.build();
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Listing tenants failed!", error);
+			throw new InternalServerErrorException(error);
+		}
 	}
 
 	@POST
@@ -63,7 +75,14 @@ public class TenantAPI
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(TenantConfig config)
 	{
-		tenants.add(config);
+		try {
+			tenants.add(config);
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Adding tenant failed!", error);
+			throw new InternalServerErrorException(error);
+		}
+
 		return Response.ok()
 				.build();
 	}
@@ -73,8 +92,14 @@ public class TenantAPI
 	@Path("/{name}")
 	public Response unregister(@PathParam("name") String name)
 	{
-		if (!tenants.remove(name))
-			throw new NotFoundException("Tenant not found: " + name);
+		try {
+			if (!tenants.remove(name))
+				throw new NotFoundException("Tenant not found: " + name);
+		}
+		catch (BWFLAException error) {
+			log.log(Level.WARNING, "Removing tenant failed!", error);
+			throw new InternalServerErrorException(error);
+		}
 
 		return Response.ok()
 				.build();
@@ -88,11 +113,15 @@ public class TenantAPI
 	{
 		try {
 			final Tenant.Quota quota = tenants.quota(name);
+			if (quota == null)
+				throw new NotFoundException("Tenant not found: " + name);
+
 			return Response.ok(quota, MediaType.APPLICATION_JSON_TYPE)
 					.build();
 		}
-		catch (Exception error) {
-			throw new NotFoundException("Tenant not found: " + name);
+		catch (BWFLAException error) {
+			log.log(Level.WARNING, "Looking up tenant-quota failed!", error);
+			throw new InternalServerErrorException(error);
 		}
 	}
 
@@ -102,10 +131,12 @@ public class TenantAPI
 	public Response setQuota(@PathParam("name") String name, ResourceSpec quota)
 	{
 		try {
-			tenants.update(name, quota);
+			if (!tenants.update(name, quota))
+				throw new NotFoundException("Tenant not found: " + name);
 		}
-		catch (Exception error) {
-			throw new NotFoundException("Tenant not found: " + name);
+		catch (BWFLAException error) {
+			log.log(Level.WARNING, "Updating tenant-quota failed!", error);
+			throw new InternalServerErrorException(error);
 		}
 
 		return Response.ok()

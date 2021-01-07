@@ -56,6 +56,10 @@ public class AuthenticatedUserProducer {
 
         authenticatedUser.setRole(Role.RESTRICTED);
 
+        Claim tenantIdClaim = jwt.getClaim("tid");
+        if (tenantIdClaim != null)
+            authenticatedUser.setTenantId(tenantIdClaim.asString());
+
         Claim usernameC = jwt.getClaim("preferred_username");
         if(usernameC != null)
         {

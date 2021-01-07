@@ -143,7 +143,7 @@ public class ClusterManager implements IClusterManager
 			throw new QuotaExceededException("Quota exceeded for tenant " + tenant);
 
 		try {
-			return this.doAllocation(selectors, aid, spec, timeout, unit)
+			return this.doAllocation(tenant, selectors, aid, spec, timeout, unit)
 					.setTenantId(tenant);
 		}
 		catch (TimeoutException | AllocationFailureException error) {
@@ -351,12 +351,13 @@ public class ClusterManager implements IClusterManager
 		}
 	}
 	
-	private ResourceHandle doAllocation(IResourceProvider provider, UUID aid,
+	private ResourceHandle doAllocation(IResourceProvider provider, String tenant, UUID aid,
 			ResourceSpec spec, boolean scaleup, long timeout, TimeUnit unit)
 			throws TimeoutException, OutOfResourcesException, AllocationFailureException
 	{
 		final String aprefix = (scaleup) ? "scaleup-" : "";
-		log.info("Starting " + aprefix + "allocation " + aid + " using provider '" + provider.getName() + "'...");
+		final String tid = (tenant != null) ? " for tenant '" + tenant + "'" : "";
+		log.info("Starting " + aprefix + "allocation " + aid + tid + " using provider '" + provider.getName() + "'...");
 		
 		CompletableFuture<ResourceHandle> result = provider.allocate(aid, spec, scaleup, timeout, unit);
 		try {
@@ -380,14 +381,14 @@ public class ClusterManager implements IClusterManager
 		}
 	}
 	
-	private ResourceHandle doAllocation(Collection<IResourceProvider> candidates, 
-			UUID aid, ResourceSpec spec, boolean scaleup, long deadline)
+	private ResourceHandle doAllocation(Collection<IResourceProvider> candidates,
+			String tenant, UUID aid, ResourceSpec spec, boolean scaleup, long deadline)
 			throws TimeoutException, OutOfResourcesException
 	{
 		for (IResourceProvider provider : candidates) {
 			try {
 				final long timeout = deadline - ResourceProvider.getCurrentTime();
-				return this.doAllocation(provider, aid, spec, scaleup, timeout, TimeUnit.MILLISECONDS);
+				return this.doAllocation(provider, tenant, aid, spec, scaleup, timeout, TimeUnit.MILLISECONDS);
 			}
 			catch (TimeoutException error) {
 				// No time left to continue!
@@ -401,7 +402,7 @@ public class ClusterManager implements IClusterManager
 		throw new OutOfResourcesException();
 	}
 
-	private ResourceHandle doAllocation(Collection<LabelSelector> selectors,
+	private ResourceHandle doAllocation(String tenant, Collection<LabelSelector> selectors,
 			UUID aid, ResourceSpec spec, long timeout, TimeUnit unit)
 			throws TimeoutException, AllocationFailureException
 	{
@@ -441,7 +442,7 @@ public class ClusterManager implements IClusterManager
 			try {
 				// Multiple providers are available!
 				// Don't scale up the resources, before trying each provider...
-				return this.doAllocation(candidates, aid, spec, false, deadline);
+				return this.doAllocation(candidates, tenant, aid, spec, false, deadline);
 			}
 			catch (TimeoutException error) {
 				// No time left to continue!
@@ -453,7 +454,7 @@ public class ClusterManager implements IClusterManager
 		}
 
 		// Try to allocate and scale up the resources, when possible...
-		return this.doAllocation(candidates, aid, spec, true, deadline);
+		return this.doAllocation(candidates, tenant, aid, spec, true, deadline);
 	}
 
 	@PostConstruct
