@@ -1268,8 +1268,7 @@ public class ImageHandler
 		return new URL(handle.toRestUrl(blobStoreRestAddress));
 	}
 
-	private void extractTar(Path workdir, ImageMounter.Mount fsmnt, ImageModificationRequest request)
-	{
+	private void extractTar(Path workdir, ImageMounter.Mount fsmnt, ImageModificationRequest request) throws BWFLAException {
 		Path destination = Path.of(request.getDestination());
 		if (destination.isAbsolute())
 			destination = Path.of(destination.toString().substring(1));
@@ -1277,31 +1276,33 @@ public class ImageHandler
 		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
 		pr.addArguments("-L", "-o", workdir.toString() + "/out.tgz");
 		pr.addArgument(request.getDataUrl());
-		pr.execute();
+		if(!pr.execute())
+			throw new BWFLAException("failed to download " + request.getDataUrl());
 
 		pr = new DeprecatedProcessRunner("sudo");
 		pr.setWorkingDirectory(fsmnt.getMountPoint().resolve(destination));
 		log.severe("working dir " + fsmnt.getMountPoint().resolve(destination));
 		pr.addArguments("tar", "xvf", workdir.toString() + "/out.tgz");
-		pr.execute();
+		if(!pr.execute())
+			throw new BWFLAException("failed to extract tar");
 	}
 
-	private void copy(ImageMounter.Mount fsmnt, ImageModificationRequest request)
-	{
+	private void copy(ImageMounter.Mount fsmnt, ImageModificationRequest request) throws BWFLAException {
 		Path destination = Path.of(request.getDestination());
 		if (destination.isAbsolute())
 			destination = Path.of(destination.toString().substring(1));
 
 		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
-		pr.setWorkingDirectory(fsmnt.getMountPoint().resolve(destination));
+
 		log.severe("destination " + fsmnt.getMountPoint().resolve(destination));
 		pr.addArguments("curl");
 		pr.addArguments("-L", "-o", fsmnt.getMountPoint().resolve(destination).toString());
 		pr.addArgument(request.getDataUrl());
-		pr.execute();
+		if(!pr.execute())
+			throw new BWFLAException("failed to copy " + fsmnt.getMountPoint().resolve(destination).toString());
 	}
 
-	public String injectData(String imageId, ImageModificationRequest request, Logger log) throws BWFLAException
+	public String injectData(String imageId, List<ImageModificationRequest> requests, Logger log) throws BWFLAException
 	{
 
 		try (final ImageMounter mounter = new ImageMounter(log)) {
@@ -1344,24 +1345,25 @@ public class ImageHandler
 				}
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
 
-				// !_check(partition, condition) ||
-				if (!_check(fsmnt.getMountPoint(), request.getCondition())) {
-					log.severe("partition not valid");
-					fsmnt.unmount(false);
-					continue;  // ...not applicable, try next one
-				}
+				for(ImageModificationRequest request : requests) {
+					// !_check(partition, condition) ||
+					if (!_check(fsmnt.getMountPoint(), request.getCondition())) {
+						log.severe("partition not valid");
+						fsmnt.unmount(false);
+						continue;  // ...not applicable, try next one
+					}
 
-				log.info("Partition " + partition.getIndex() + " matches selectors! Applying patch...");
-				switch(request.getAction())
-				{
-					case COPY:
-						copy(fsmnt, request);
-						break;
-					case EXTRACT_TAR:
-						extractTar(workdir, fsmnt, request);
-						break;
-					default:
-						throw new BWFLAException("requested action " + request.getAction() + "not implemented");
+					log.info("Partition " + partition.getIndex() + " matches selectors! Applying patch...");
+					switch (request.getAction()) {
+						case COPY:
+							copy(fsmnt, request);
+							break;
+						case EXTRACT_TAR:
+							extractTar(workdir, fsmnt, request);
+							break;
+						default:
+							throw new BWFLAException("requested action " + request.getAction() + "not implemented");
+					}
 				}
 				mounter.unmount();
 				log.info("Data inject was successful!");

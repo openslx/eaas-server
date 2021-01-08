@@ -255,13 +255,13 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return this.createPatchedImage(this.getDefaultBackendName(), imageId, type, patchId);
 	}
 
-	public String injectData(String imageId, ImageModificationRequest request) throws BWFLAException {
+	public String injectData(String imageId, List<ImageModificationRequest> request) throws BWFLAException {
 		return injectData(this.getDefaultBackendName(), imageId, request);
 	}
 
-	public String injectData(String backend, String imageId, ImageModificationRequest request) throws BWFLAException {
+	public String injectData(String backend, String imageId, List<ImageModificationRequest> requests) throws BWFLAException {
 		connectArchive();
-		return archive.injectData(backend, imageId, request);
+		return archive.injectData(backend, imageId, requests);
 	}
 
 

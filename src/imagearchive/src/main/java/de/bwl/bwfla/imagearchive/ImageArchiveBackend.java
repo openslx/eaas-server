@@ -224,9 +224,9 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.createPatchedImage(imageId, type.name(), patch);
 	}
 
-	public String injectData(String imageId, ImageModificationRequest request) throws BWFLAException
+	public String injectData(String imageId, List<ImageModificationRequest> requests) throws BWFLAException
 	{
-		return imageHandler.injectData(imageId, request, log);
+		return imageHandler.injectData(imageId, requests, log);
 	}
 
 	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {

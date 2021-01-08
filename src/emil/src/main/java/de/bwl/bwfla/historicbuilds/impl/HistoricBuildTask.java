@@ -21,6 +21,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -83,7 +84,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
         URL recipeLocation = publishRecipeData(recipe);
-        URL cronLocation = publishCronTab(inputDirectory + "recipe.sh");
+        URL cronLocation = publishCronTab(inputDirectory + "/recipe.sh");
 
         return prepareEnvironment(swhDataLocation, recipeLocation, cronLocation);
     }
@@ -96,13 +97,40 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             //TODO check if error should be thrown when extract is true and envType is machine
             //TODO create Condition and pass it to injectData
 
-            //TODO right now inject tries to unzip the data everytime, only do that if file is in tar/zip format
-            String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, dataLocation, ImageModificationAction.EXTRACT_TAR);
-            String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, recipeLocation, ImageModificationAction.COPY);
-            String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation, ImageModificationAction.COPY);
+            List<ImageModificationRequest> requestList = new ArrayList<>();
+
+            ImageModificationRequest request = new ImageModificationRequest();
+            ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
+            imageModificationCondition.getPaths().add(inputDirectory);
+            request.setCondition(imageModificationCondition);
+            request.setDataUrl(dataLocation.toString());
+            request.setAction(ImageModificationAction.EXTRACT_TAR);
+            request.setDestination(inputDirectory);
+
+            requestList.add(request);
+
+            request = new ImageModificationRequest();
+            request.setCondition(imageModificationCondition);
+            request.setDataUrl(recipeLocation.toString());
+            request.setAction(ImageModificationAction.COPY);
+            request.setDestination(inputDirectory + "/recipe.sh");
+
+            requestList.add(request);
+
+            request = new ImageModificationRequest();
+            imageModificationCondition = new ImageModificationCondition();
+            imageModificationCondition.getPaths().add("/var/spool/cron/crontabs/");
+            request.setCondition(imageModificationCondition);
+            request.setDataUrl(cronLocation.toString());
+            request.setAction(ImageModificationAction.COPY);
+            request.setDestination("/var/spool/cron/crontabs/user");
+
+            requestList.add(request);
+
+            String envId = injectDataIntoImage(environmentID, requestList);
 
             HistoricResponse response = new HistoricResponse();
-            response.setEnvironmentId(finalEnvId);
+            response.setEnvironmentId(envId);
             return response;
 
         } else if (envType.equals("container")) {
@@ -117,9 +145,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         }
     }
 
-    private String injectDataIntoImage(String environmentId,
-                                       String path, URL dataLocation,
-                                       ImageModificationAction action) throws BWFLAException {
+    private String injectDataIntoImage(String environmentId, List<ImageModificationRequest> requestList) throws BWFLAException {
         // in case we want to inject data into the file system
         // 1. we need to find the image (-> boot drive)
         // 2. modify the image
@@ -136,19 +162,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         }
 
         String imageId = ((ImageArchiveBinding) r).getImageId();
-
-        ImageModificationRequest request = new ImageModificationRequest();
-
-        ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
-        imageModificationCondition.getPaths().add(path);
-
-        request.setCondition(imageModificationCondition);
-        request.setDataUrl(dataLocation.toString());
-        request.setAction(action);
-        request.setDestination(path);
-
-        String newImageId = environmentsAdapter.injectData(imageId, request);
-
+        String newImageId = environmentsAdapter.injectData(imageId, requestList);
         ((ImageArchiveBinding) r).setImageId(newImageId);
 
         ImageArchiveMetadata md = new ImageArchiveMetadata();
@@ -258,7 +272,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
         File crontab = workingDir.resolve("crontab").toFile();
         FileWriter fileWriter = new FileWriter(crontab);
-        fileWriter.write("@reboot " + recipePath);
+        fileWriter.write("@reboot /bin/sh " + recipePath);
         fileWriter.close();
 
         final BlobDescription blob = new BlobDescription()

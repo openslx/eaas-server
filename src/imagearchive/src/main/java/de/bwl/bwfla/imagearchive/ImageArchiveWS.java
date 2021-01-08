@@ -146,9 +146,9 @@ public class ImageArchiveWS
 				.createPatchedImage(imageId, type, patches.lookup(patchId));
 	}
 
-	public String injectData(String backend, String imageId, ImageModificationRequest request) throws BWFLAException
+	public String injectData(String backend, String imageId, List<ImageModificationRequest> requests) throws BWFLAException
 	{
-		return this.lookup(backend).injectData(imageId, request);
+		return this.lookup(backend).injectData(imageId, requests);
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException
