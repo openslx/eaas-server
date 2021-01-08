@@ -151,11 +151,11 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         if (!path.endsWith("/")) {
             path = path + "/";
         }
-        path = path + filename;
 
         // when extract tar is called, it is important that the path stays untouched
-        if (action == ImageModificationAction.EXTRACT_TAR) {
-            path = "";
+        // for other operations (namely copy), the filename should be appended to the destination path
+        if (action != ImageModificationAction.EXTRACT_TAR) {
+            path = path + filename;
         }
 
         request.setDestination(path);
