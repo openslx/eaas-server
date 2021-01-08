@@ -1,8 +1,6 @@
 package de.bwl.bwfla.historicbuilds.impl;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageModificationCondition;
-import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -99,9 +97,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             //TODO create Condition and pass it to injectData
 
             //TODO right now inject tries to unzip the data everytime, only do that if file is in tar/zip format
-            String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, dataLocation);
-            String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, recipeLocation);
-            String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation);
+            String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, dataLocation, ImageModificationAction.EXTRACT_TAR);
+            String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, recipeLocation, ImageModificationAction.COPY);
+            String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation, ImageModificationAction.COPY);
 
             HistoricResponse response = new HistoricResponse();
             response.setEnvironmentId(finalEnvId);
@@ -119,7 +117,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         }
     }
 
-    private String injectDataIntoImage(String environmentId, String path, URL dataLocation) throws BWFLAException {
+    private String injectDataIntoImage(String environmentId,
+                                       String path, URL dataLocation,
+                                       ImageModificationAction action) throws BWFLAException {
         // in case we want to inject data into the file system
         // 1. we need to find the image (-> boot drive)
         // 2. modify the image
@@ -137,10 +137,17 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
         String imageId = ((ImageArchiveBinding) r).getImageId();
 
+        ImageModificationRequest request = new ImageModificationRequest();
+
         ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
         imageModificationCondition.getPaths().add(path);
 
-        String newImageId = environmentsAdapter.injectData(imageId, imageModificationCondition, dataLocation.toString());
+        request.setCondition(imageModificationCondition);
+        request.setDataUrl(dataLocation.toString());
+        request.setAction(action);
+        request.setDestination(path);
+
+        String newImageId = environmentsAdapter.injectData(imageId, request);
 
         ((ImageArchiveBinding) r).setImageId(newImageId);
 

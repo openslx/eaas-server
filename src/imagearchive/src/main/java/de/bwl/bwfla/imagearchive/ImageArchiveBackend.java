@@ -30,11 +30,8 @@ import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
-import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
-import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
-import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
+import de.bwl.bwfla.imagearchive.datatypes.*;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
-import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.tasks.CreateImageTask;
 
@@ -227,9 +224,9 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.createPatchedImage(imageId, type.name(), patch);
 	}
 
-	public String injectData(String imageId, ImageGeneralizationPatch.Condition condition, String dataUrl) throws BWFLAException
+	public String injectData(String imageId, ImageModificationRequest request) throws BWFLAException
 	{
-		return imageHandler.injectData(imageId, condition, dataUrl, log);
+		return imageHandler.injectData(imageId, request, log);
 	}
 
 	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {

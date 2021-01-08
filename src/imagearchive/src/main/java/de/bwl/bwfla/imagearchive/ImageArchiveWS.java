@@ -146,15 +146,9 @@ public class ImageArchiveWS
 				.createPatchedImage(imageId, type, patches.lookup(patchId));
 	}
 
-	public String injectData(String backend, String imageId, ImageModificationCondition condition, String dataUrl) throws BWFLAException
+	public String injectData(String backend, String imageId, ImageModificationRequest request) throws BWFLAException
 	{
-		ImageGeneralizationPatch.Condition c = new ImageGeneralizationPatch.Condition();
-		// ugly hack. ImageGeneralizationPatch.Condition cannot be serialized to wsdl as it contains Path
-		c.setFileSystemType(condition.getFstype());
-		c.setRequiredPaths(condition.getPaths());
-		c.setPartitionName(condition.getPartname());
-		return this.lookup(backend)
-				.injectData(imageId, c, dataUrl);
+		return this.lookup(backend).injectData(imageId, request);
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException

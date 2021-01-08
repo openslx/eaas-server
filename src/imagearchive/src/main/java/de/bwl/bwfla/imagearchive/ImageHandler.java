@@ -15,9 +15,11 @@ import java.rmi.server.ExportException;
 import java.util.*;
 import java.util.concurrent.*;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
@@ -36,9 +38,7 @@ import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
-import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
-import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
-import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
+import de.bwl.bwfla.imagearchive.datatypes.*;
 import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.tasks.ImportImageTask;
 import org.apache.commons.io.FileUtils;
@@ -1217,7 +1217,7 @@ public class ImageHandler
 		return "http://hdl.handle.net/" + handleClient.toHandle(id);
 	}
 
-	private static boolean _check(Path mountpoint, ImageGeneralizationPatch.Condition condition)
+	private static boolean _check(Path mountpoint, ImageModificationCondition condition)
 	{
 		if(condition == null)
 			return true;
@@ -1233,9 +1233,14 @@ public class ImageHandler
 			return Files.exists(target);
 		};
 
-		return condition.getRequiredPaths()
-				.stream()
-				.allMatch(predicate);
+		final Function<Path, Path> mapper = (path) -> {
+			if (path.isAbsolute())
+				path = Path.of(path.toString().substring(1));
+
+			return path;
+		};
+
+		return condition.getPaths().stream().map(Path::of).map(mapper).allMatch(predicate);
 	}
 
 	public static boolean _check(DiskDescription.Partition partition, ImageGeneralizationPatch.Condition condition)
@@ -1263,7 +1268,40 @@ public class ImageHandler
 		return new URL(handle.toRestUrl(blobStoreRestAddress));
 	}
 
-	public String injectData(String imageId, ImageGeneralizationPatch.Condition condition, String dataUrl, Logger log) throws BWFLAException
+	private void extractTar(Path workdir, ImageMounter.Mount fsmnt, ImageModificationRequest request)
+	{
+		Path destination = Path.of(request.getDestination());
+		if (destination.isAbsolute())
+			destination = Path.of(destination.toString().substring(1));
+
+		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
+		pr.addArguments("-L", "-o", workdir.toString() + "/out.tgz");
+		pr.addArgument(request.getDataUrl());
+		pr.execute();
+
+		pr = new DeprecatedProcessRunner("sudo");
+		pr.setWorkingDirectory(fsmnt.getMountPoint().resolve(destination));
+		log.severe("working dir " + fsmnt.getMountPoint().resolve(destination));
+		pr.addArguments("tar", "xvf", workdir.toString() + "/out.tgz");
+		pr.execute();
+	}
+
+	private void copy(ImageMounter.Mount fsmnt, ImageModificationRequest request)
+	{
+		Path destination = Path.of(request.getDestination());
+		if (destination.isAbsolute())
+			destination = Path.of(destination.toString().substring(1));
+
+		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
+		pr.setWorkingDirectory(fsmnt.getMountPoint().resolve(destination));
+		log.severe("destination " + fsmnt.getMountPoint().resolve(destination));
+		pr.addArguments("curl");
+		pr.addArguments("-L", "-o", fsmnt.getMountPoint().resolve(destination).toString());
+		pr.addArgument(request.getDataUrl());
+		pr.execute();
+	}
+
+	public String injectData(String imageId, ImageModificationRequest request, Logger log) throws BWFLAException
 	{
 
 		try (final ImageMounter mounter = new ImageMounter(log)) {
@@ -1307,26 +1345,25 @@ public class ImageHandler
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
 
 				// !_check(partition, condition) ||
-				if (!_check(fsmnt.getMountPoint(), condition)) {
+				if (!_check(fsmnt.getMountPoint(), request.getCondition())) {
 					log.severe("partition not valid");
 					fsmnt.unmount(false);
 					continue;  // ...not applicable, try next one
 				}
 
 				log.info("Partition " + partition.getIndex() + " matches selectors! Applying patch...");
-				DeprecatedProcessRunner pr = new DeprecatedProcessRunner("curl");
-				pr.addArguments("-L", "-o", workdir.toString() + "/out.tgz");
-				pr.addArgument(dataUrl);
-				pr.execute();
-
-				pr = new DeprecatedProcessRunner("sudo");
-				pr.setWorkingDirectory(fsmnt.getMountPoint());
-				log.severe("working dir " + fsmnt.getMountPoint());
-				pr.addArguments("tar", "xvf", workdir.toString() + "/out.tgz");
-				pr.execute();
-
+				switch(request.getAction())
+				{
+					case COPY:
+						copy(fsmnt, request);
+						break;
+					case EXTRACT_TAR:
+						extractTar(workdir, fsmnt, request);
+						break;
+					default:
+						throw new BWFLAException("requested action " + request.getAction() + "not implemented");
+				}
 				mounter.unmount();
-
 				log.info("Data inject was successful!");
 				URL image =  publishImage(destImgFile);
 
