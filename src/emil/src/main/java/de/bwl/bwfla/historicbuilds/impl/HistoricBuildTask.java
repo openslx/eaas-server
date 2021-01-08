@@ -13,8 +13,10 @@ import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.historicbuilds.api.*;
 import org.apache.tamaya.ConfigurationProvider;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -83,7 +85,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
         URL recipeLocation = publishRecipeData(recipe);
-        URL cronLocation = publishCronTab(inputDirectory + "recipe.sh");
+        URL cronLocation = publishCronTab(inputDirectory + "/recipe.sh");
 
         return prepareEnvironment(swhDataLocation, recipeLocation, cronLocation);
     }
@@ -97,9 +99,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             //TODO create Condition and pass it to injectData
 
             //TODO right now inject tries to unzip the data everytime, only do that if file is in tar/zip format
-            String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, dataLocation, ImageModificationAction.EXTRACT_TAR);
-            String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, recipeLocation, ImageModificationAction.COPY);
-            String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", cronLocation, ImageModificationAction.COPY);
+            String envIdWithSWHData = injectDataIntoImage(environmentID, inputDirectory, "", dataLocation, ImageModificationAction.EXTRACT_TAR);
+            String envIdWithRecipe = injectDataIntoImage(envIdWithSWHData, inputDirectory, "recipe.sh", recipeLocation, ImageModificationAction.COPY);
+            String finalEnvId = injectDataIntoImage(envIdWithRecipe, "/var/spool/cron/crontabs/", "crontab", cronLocation, ImageModificationAction.COPY);
 
             HistoricResponse response = new HistoricResponse();
             response.setEnvironmentId(finalEnvId);
@@ -118,7 +120,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     }
 
     private String injectDataIntoImage(String environmentId,
-                                       String path, URL dataLocation,
+                                       String path, String filename, URL dataLocation,
                                        ImageModificationAction action) throws BWFLAException {
         // in case we want to inject data into the file system
         // 1. we need to find the image (-> boot drive)
@@ -145,6 +147,17 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         request.setCondition(imageModificationCondition);
         request.setDataUrl(dataLocation.toString());
         request.setAction(action);
+
+        if (!path.endsWith("/")) {
+            path = path + "/";
+        }
+        path = path + filename;
+
+        // when extract tar is called, it is important that the path stays untouched
+        if (action == ImageModificationAction.EXTRACT_TAR) {
+            path = "";
+        }
+
         request.setDestination(path);
 
         String newImageId = environmentsAdapter.injectData(imageId, request);
@@ -204,7 +217,15 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
                 }
 
-            } else { //TODO give better information (access python script output?)
+            } else {
+                BufferedReader stdError = new BufferedReader(new
+                        InputStreamReader(process.getErrorStream()));
+                String s;
+                LOG.severe("Error in python script while downloading SWH Data: Printing python stderr:");
+                while ((s = stdError.readLine()) != null) {
+                    LOG.severe(s);
+                }
+
                 throw new BWFLAException("Could not download from SWH, exitValue was not 0.");
             }
 

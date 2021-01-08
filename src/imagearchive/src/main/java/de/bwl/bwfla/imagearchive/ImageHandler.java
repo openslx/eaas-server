@@ -1293,7 +1293,7 @@ public class ImageHandler
 			destination = Path.of(destination.toString().substring(1));
 
 		DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
-		pr.setWorkingDirectory(fsmnt.getMountPoint().resolve(destination));
+		//pr.setWorkingDirectory(fsmnt.getMountPoint().resolve(destination));
 		log.severe("destination " + fsmnt.getMountPoint().resolve(destination));
 		pr.addArguments("curl");
 		pr.addArguments("-L", "-o", fsmnt.getMountPoint().resolve(destination).toString());
