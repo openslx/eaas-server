@@ -13,8 +13,10 @@ import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.historicbuilds.api.*;
 import org.apache.tamaya.ConfigurationProvider;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileWriter;
+import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -218,7 +220,15 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
                 }
 
-            } else { //TODO give better information (access python script output?)
+            } else {
+                BufferedReader stdError = new BufferedReader(new
+                        InputStreamReader(process.getErrorStream()));
+                String s;
+                LOG.severe("Error in python script while downloading SWH Data: Printing python stderr:");
+                while ((s = stdError.readLine()) != null) {
+                    LOG.severe(s);
+                }
+
                 throw new BWFLAException("Could not download from SWH, exitValue was not 0.");
             }
 
