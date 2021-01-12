@@ -111,12 +111,13 @@ public class NetworkEnvironments extends EmilRest {
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getNetworkEnvironment(@PathParam("envId") String envId,
-                                          @QueryParam("jsonUrl") boolean jsonUrl,
+                                          @QueryParam("jsonUrl") boolean jsonUrl, // deprecated, kept for compat reasons
+                                          @QueryParam("json") boolean jsonObject,
                                           @Context final HttpServletResponse response ) {
         try {
             NetworkEnvironment env = emilEnvRepo.getEmilNetworkEnvironmentById(envId);
 
-            if(jsonUrl)
+            if(jsonUrl || jsonObject)
             {
                 NetworkConfiguration config = new NetworkConfiguration();
                 config.setNetwork(env.getNetwork());
@@ -141,6 +142,9 @@ public class NetworkEnvironments extends EmilRest {
                     ecs.add(ec);
                 }
                 config.setEnvironments(ecs);
+                if(jsonObject)
+                    return Emil.createResponse(Response.Status.OK, config);
+
                 String networkJson = config.jsonValueWithoutRoot(true);
 
                 File tmpfile = File.createTempFile("network.json", null, null);
