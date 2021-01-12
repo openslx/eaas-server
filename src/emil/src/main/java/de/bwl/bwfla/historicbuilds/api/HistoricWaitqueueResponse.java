@@ -4,12 +4,19 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 
 public class HistoricWaitqueueResponse {
 
+    @Deprecated
     @JsonProperty("status")
     private String status;
     @JsonProperty("id")
     private String id;
     @JsonProperty("resultUrl")
     private String resultUrl;
+
+    @JsonProperty("isDone")
+    private Boolean isDone;
+
+    @JsonProperty("hasError")
+    private Boolean hasError;
 
     public HistoricWaitqueueResponse() {
     }
@@ -36,5 +43,21 @@ public class HistoricWaitqueueResponse {
 
     public void setResultUrl(String resultUrl) {
         this.resultUrl = resultUrl;
+    }
+
+    public Boolean getDone() {
+        return isDone;
+    }
+
+    public void setDone(Boolean done) {
+        isDone = done;
+    }
+
+    public Boolean getHasError() {
+        return hasError;
+    }
+
+    public void setHasError(Boolean hasError) {
+        this.hasError = hasError;
     }
 }

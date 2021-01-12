@@ -125,11 +125,14 @@ public class HistoricBuilds {
 
             if (info.result().isDone()) {
                 // Result is available!
-                response.setStatus("Done");
+                response.setStatus("Done"); //TODO remove deprecated string
+                response.setDone(true);
             } else {
                 // Result is not yet available!
-                response.setStatus("Processing");
+                response.setStatus("Processing"); //TODO remove deprecated string
+                response.setDone(false);
             }
+            //TODO check for errors and pass error flag to response
 
             return ResponseUtils.createResponse(status, response);
         } catch (Throwable throwable) {
