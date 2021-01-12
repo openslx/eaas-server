@@ -137,11 +137,7 @@ public class NetworkEnvironment extends JaxbType {
     public String getStartupEnvId() {
         return startupEnvId;
     }
-<<<<<<< HEAD
 
-=======
-    
->>>>>>> master
     public void setDnsServiceEnvId(String dnsServiceEnvId) {
         this.dnsServiceEnvId = dnsServiceEnvId;
     }
@@ -153,8 +149,6 @@ public class NetworkEnvironment extends JaxbType {
     public void setSmbServiceEnvId(String smbServiceEnvId) {
         this.smbServiceEnvId = smbServiceEnvId;
     }
-<<<<<<< HEAD
-=======
 
     public String getLinuxArchiveProxyEnvId() {
         return linuxArchiveProxyEnvId;
@@ -163,5 +157,4 @@ public class NetworkEnvironment extends JaxbType {
     public void setLinuxArchiveProxyEnvId(String linuxArchiveProxyEnvId) {
         this.linuxArchiveProxyEnvId = linuxArchiveProxyEnvId;
     }
->>>>>>> master
 }
