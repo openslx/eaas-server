@@ -1,8 +1,9 @@
 package de.bwl.bwfla.historicbuilds.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BuildToolchainRequest {
     @JsonProperty("environmentID")
     private String environmentID;
@@ -18,8 +19,22 @@ public class BuildToolchainRequest {
     private String mail;
     @JsonProperty("mode")
     private String mode;
+    @JsonProperty(value = "cronUser")
+    private String cronUser;
+    @JsonProperty("autoStart")
+    private Boolean autoStart;
+    @JsonProperty("recipeName")
+    private String recipeName;
+    @JsonProperty("recipeLocation")
+    private String recipeLocation;
+
 
     public BuildToolchainRequest() {
+        //defaults
+        recipeName = "recipe.sh";
+        autoStart = true;
+        cronUser = "root";
+        recipeLocation = "/";
     }
 
     public String getEnvironmentID() {
@@ -76,5 +91,37 @@ public class BuildToolchainRequest {
 
     public void setMode(String mode) {
         this.mode = mode;
+    }
+
+    public String getCronUser() {
+        return cronUser;
+    }
+
+    public void setCronUser(String cronUser) {
+        this.cronUser = cronUser;
+    }
+
+    public Boolean getAutoStart() {
+        return autoStart;
+    }
+
+    public void setAutoStart(Boolean autoStart) {
+        this.autoStart = autoStart;
+    }
+
+    public String getRecipeName() {
+        return recipeName;
+    }
+
+    public void setRecipeName(String recipeName) {
+        this.recipeName = recipeName;
+    }
+
+    public String getRecipeLocation() {
+        return recipeLocation;
+    }
+
+    public void setRecipeLocation(String recipeLocation) {
+        this.recipeLocation = recipeLocation;
     }
 }

@@ -1,8 +1,9 @@
 package de.bwl.bwfla.historicbuilds.api;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class SoftwareHeritageRequest {
     @JsonProperty("revisionId")
     private String revisionId;
