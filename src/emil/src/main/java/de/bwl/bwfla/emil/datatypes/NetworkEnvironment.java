@@ -42,6 +42,9 @@ public class NetworkEnvironment extends JaxbType {
     private String smbServiceEnvId;
 
     @XmlElement(required = false)
+    private String linuxArchiveProxyEnvId;
+
+    @XmlElement(required = false)
     private String startupEnvId;
 
     @XmlElement(required = false)
@@ -145,5 +148,13 @@ public class NetworkEnvironment extends JaxbType {
 
     public void setSmbServiceEnvId(String smbServiceEnvId) {
         this.smbServiceEnvId = smbServiceEnvId;
+    }
+
+    public String getLinuxArchiveProxyEnvId() {
+        return linuxArchiveProxyEnvId;
+    }
+
+    public void setLinuxArchiveProxyEnvId(String linuxArchiveProxyEnvId) {
+        this.linuxArchiveProxyEnvId = linuxArchiveProxyEnvId;
     }
 }
