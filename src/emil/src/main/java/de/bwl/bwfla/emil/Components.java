@@ -764,8 +764,7 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && machineDescription.getOptions().isNetworkEnabled())
-                    || ((MachineConfiguration) chosenEnv).isLinuxRuntime()) {
+            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId())) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {
                     LOG.warning("HWAddress is null! Using random..." );
