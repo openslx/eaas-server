@@ -46,6 +46,11 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final String mail;
     private final String mode;
 
+    private final String cronUser;
+    private final Boolean autoStart;
+    private final String recipeLocation;
+    private final String recipeName;
+
     private final String envType;
     private final DatabaseEnvironmentsAdapter environmentsAdapter;
 
@@ -67,10 +72,14 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.mail = btcRequest.getMail();
         this.mode = btcRequest.getMode();
 
+        //TODO incorporate these in execute()
+        this.cronUser = btcRequest.getCronUser();
+        this.autoStart = btcRequest.getAutoStart();
+        this.recipeLocation = btcRequest.getRecipeLocation();
+        this.recipeName = btcRequest.getRecipeName();
+
         this.envType = envType;
-
         this.environmentsAdapter = environmentsAdapter;
-
 
         this.revisionId = swhRequest.getRevisionId();
         this.directoryId = swhRequest.getDirectoryId();
@@ -125,7 +134,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             request.setCondition(imageModificationCondition);
             request.setDataUrl(cronLocation.toString());
             request.setAction(ImageModificationAction.COPY);
-            request.setDestination("/var/spool/cron/crontabs/user");
+            request.setDestination("/var/spool/cron/crontabs/root");
 
             requestList.add(request);
 
@@ -221,6 +230,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
                 }
 
             } else {
+                LOG.info("Some error occurred, trying to read stderr from python script...");
                 BufferedReader stdError = new BufferedReader(new
                         InputStreamReader(process.getErrorStream()));
                 String s;
@@ -254,7 +264,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
                 .setName(fileName);
 
         URL blobURL = storeDataInBlobstore(blob);
-        LOG.info("Stored crontab at:" + blobURL.toString());
+        LOG.info("Stored SWH Data at:" + blobURL.toString());
         return blobURL;
     }
 
@@ -272,7 +282,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
                 .setType(".sh")
                 .setName("recipe");
         URL blobURL = storeDataInBlobstore(blob);
-        LOG.info("Stored crontab at:" + blobURL.toString());
+        LOG.info("Stored recipe at:" + blobURL.toString());
         return blobURL;
     }
 
