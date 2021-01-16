@@ -41,7 +41,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final String environmentID;
     private final String inputDirectory;
     private final String outputDirectory;
-    private final String recipe;
+    private final String recipeContent;
     private final String[] prerequisites;
     private final String mail;
     private final String mode;
@@ -50,6 +50,8 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final Boolean autoStart;
     private final String recipeLocation;
     private final String recipeName;
+
+    private final String recipeFullPath;
 
     private final String envType;
     private final DatabaseEnvironmentsAdapter environmentsAdapter;
@@ -67,7 +69,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.environmentID = btcRequest.getEnvironmentID();
         this.inputDirectory = btcRequest.getInputDirectory();
         this.outputDirectory = btcRequest.getOutputDirectory();
-        this.recipe = btcRequest.getRecipe();
+        this.recipeContent = btcRequest.getRecipe();
         this.prerequisites = btcRequest.getPrerequisites();
         this.mail = btcRequest.getMail();
         this.mode = btcRequest.getMode();
@@ -77,6 +79,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.autoStart = btcRequest.getAutoStart();
         this.recipeLocation = btcRequest.getRecipeLocation();
         this.recipeName = btcRequest.getRecipeName();
+
+        this.recipeFullPath = Paths.get(this.inputDirectory).resolve(recipeName).toString();
+
 
         this.envType = envType;
         this.environmentsAdapter = environmentsAdapter;
@@ -94,8 +99,8 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
 
         URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
-        URL recipeLocation = publishRecipeData(recipe);
-        URL cronLocation = publishCronTab(inputDirectory + "/recipe.sh");
+        URL recipeLocation = publishRecipeData();
+        URL cronLocation = publishCronTab();
 
         return prepareEnvironment(swhDataLocation, recipeLocation, cronLocation);
     }
@@ -124,19 +129,21 @@ public class HistoricBuildTask extends BlockingTask<Object> {
             request.setCondition(imageModificationCondition);
             request.setDataUrl(recipeLocation.toString());
             request.setAction(ImageModificationAction.COPY);
-            request.setDestination(inputDirectory + "/recipe.sh");
+            request.setDestination(this.recipeFullPath);
 
             requestList.add(request);
 
-            request = new ImageModificationRequest();
-            imageModificationCondition = new ImageModificationCondition();
-            imageModificationCondition.getPaths().add("/var/spool/cron/crontabs/");
-            request.setCondition(imageModificationCondition);
-            request.setDataUrl(cronLocation.toString());
-            request.setAction(ImageModificationAction.COPY);
-            request.setDestination("/var/spool/cron/crontabs/root");
+            if (this.autoStart) {
+                request = new ImageModificationRequest();
+                imageModificationCondition = new ImageModificationCondition();
+                imageModificationCondition.getPaths().add("/etc/");
+                request.setCondition(imageModificationCondition);
+                request.setDataUrl(cronLocation.toString());
+                request.setAction(ImageModificationAction.COPY);
+                request.setDestination("/etc/crontab");
 
-            requestList.add(request);
+                requestList.add(request);
+            }
 
             String envId = injectDataIntoImage(environmentID, requestList);
 
@@ -268,38 +275,48 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         return blobURL;
     }
 
-    private URL publishRecipeData(String recipeContent) throws Exception {
+    private URL publishRecipeData() throws Exception {
 
-        File recipe = workingDir.resolve("recipe.sh").toFile();
+        File recipe = workingDir.resolve(this.recipeName).toFile();
         FileWriter fileWriter = new FileWriter(recipe);
-        fileWriter.write(recipeContent);
+        fileWriter.write(this.recipeContent);
         fileWriter.close();
 
         final BlobDescription blob = new BlobDescription()
                 .setDescription("Historic Builds Recipe")
                 .setNamespace("historic-recipe")
-                .setDataFromFile(workingDir.resolve("recipe.sh"))
-                .setType(".sh")
-                .setName("recipe");
+                .setDataFromFile(workingDir.resolve(this.recipeName));
+
+        if (this.recipeName.contains(".")) {
+            String[] recipes = this.recipeName.split("\\.");
+            String recipeName = recipes[0];
+            String recipeType = recipes[1];
+            LOG.info("RecipeName " + recipeName + " RecipeType " + recipeType);
+            blob.setName(recipeName);
+            blob.setType("." + recipeType);
+        } else {
+            blob.setName(this.recipeName);
+        }
+
         URL blobURL = storeDataInBlobstore(blob);
         LOG.info("Stored recipe at:" + blobURL.toString());
         return blobURL;
     }
 
-    private URL publishCronTab(String recipePath) throws Exception {
-
-        String user = "root"; //TODO make parameterized?
+    private URL publishCronTab() throws Exception {
 
         File crontab = workingDir.resolve("crontab").toFile();
         FileWriter fileWriter = new FileWriter(crontab);
-        fileWriter.write("@reboot /bin/sh " + recipePath);
+        fileWriter.append("SHELL=/bin/sh").append(System.getProperty("line.separator"))
+                .append("PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin").append(System.getProperty("line.separator"))
+                .append("@reboot root /bin/sh ").append(this.recipeFullPath).append(System.getProperty("line.separator")); //TODO always root?
         fileWriter.close();
 
         final BlobDescription blob = new BlobDescription()
                 .setDescription("Historic Builds Crontab")
                 .setNamespace("historic-crontab")
                 .setDataFromFile(workingDir.resolve("crontab"))
-                .setName(user);
+                .setName(this.cronUser);
 
         URL blobURL = storeDataInBlobstore(blob);
         LOG.info("Stored crontab at:" + blobURL.toString());
