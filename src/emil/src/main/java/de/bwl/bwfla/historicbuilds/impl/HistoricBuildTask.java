@@ -309,7 +309,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         FileWriter fileWriter = new FileWriter(crontab);
         fileWriter.append("SHELL=/bin/sh").append(System.getProperty("line.separator"))
                 .append("PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin").append(System.getProperty("line.separator"))
-                .append("@reboot root /bin/sh ").append(this.recipeFullPath).append(System.getProperty("line.separator")); //TODO always root?
+                .append("@reboot root /bin/sh ").append(this.recipeFullPath).append(">/output.txt 2>&1").append(System.getProperty("line.separator")); //TODO always root?
         fileWriter.close();
 
         final BlobDescription blob = new BlobDescription()
