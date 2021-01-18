@@ -27,6 +27,8 @@ public class BuildToolchainRequest {
     private String recipeName;
     @JsonProperty("recipeLocation")
     private String recipeLocation;
+    @JsonProperty("logFileLocation")
+    private String logFileLocation;
 
 
     public BuildToolchainRequest() {
@@ -35,7 +37,9 @@ public class BuildToolchainRequest {
         autoStart = true;
         cronUser = "root";
         recipeLocation = "/";
+        logFileLocation = "/swh-log.txt";
     }
+
 
     public String getEnvironmentID() {
         return environmentID;
@@ -123,5 +127,13 @@ public class BuildToolchainRequest {
 
     public void setRecipeLocation(String recipeLocation) {
         this.recipeLocation = recipeLocation;
+    }
+
+    public String getLogFileLocation() {
+        return logFileLocation;
+    }
+
+    public void setLogFileLocation(String logFileLocation) {
+        this.logFileLocation = logFileLocation;
     }
 }

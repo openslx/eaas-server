@@ -50,6 +50,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final Boolean autoStart;
     private final String recipeLocation;
     private final String recipeName;
+    private final String logFileLocation;
 
     private final String recipeFullPath;
 
@@ -79,6 +80,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.autoStart = btcRequest.getAutoStart();
         this.recipeLocation = btcRequest.getRecipeLocation();
         this.recipeName = btcRequest.getRecipeName();
+        this.logFileLocation = btcRequest.getLogFileLocation();
 
         this.recipeFullPath = Paths.get(this.inputDirectory).resolve(recipeName).toString();
 
@@ -309,7 +311,8 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         FileWriter fileWriter = new FileWriter(crontab);
         fileWriter.append("SHELL=/bin/sh").append(System.getProperty("line.separator"))
                 .append("PATH=/usr/local/sbin:/usr/local/bin:/sbin:/bin:/usr/sbin:/usr/bin").append(System.getProperty("line.separator"))
-                .append("@reboot root /bin/sh ").append(this.recipeFullPath).append(">/output.txt 2>&1").append(System.getProperty("line.separator")); //TODO always root?
+                .append("@reboot ").append(this.cronUser).append(" /bin/sh ").append(this.recipeFullPath)
+                .append(">").append(this.logFileLocation).append(" 2>&1").append(System.getProperty("line.separator"));
         fileWriter.close();
 
         final BlobDescription blob = new BlobDescription()
