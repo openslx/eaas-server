@@ -39,6 +39,7 @@
 		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
 		<slf4j.version>1.7.22</slf4j.version>
+		<minio.version>7.1.4</minio.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
 		<resteasy.version>3.11.0.Final</resteasy.version>
@@ -267,6 +268,7 @@
 		<module>common/eaas-configuration</module>
 		<module>common/eaas-wikidata</module>
 		<module>blobstore</module>
+		<module>blobstore-client-v2</module>
 		<module>environment-proposer</module>
 		<module>imagearchive</module>
 		<module>imagearchive/imagearchive-client</module>
@@ -514,6 +516,12 @@
 				<version>3.1.4</version>
 			</dependency>
 			<dependency>
+				<groupId>io.minio</groupId>
+				<artifactId>minio</artifactId>
+				<version>${minio.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
 				<artifactId>ear</artifactId>
 				<version>${project.version}</version>
@@ -680,6 +688,12 @@
 				<artifactId>blobstore-impl</artifactId>
 				<version>${project.version}</version>
 				<type>war</type>
+			</dependency>
+			<dependency>
+				<groupId>de.bwl.bwfla</groupId>
+				<artifactId>blobstore-client-v2</artifactId>
+				<version>${project.version}</version>
+				<type>jar</type>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>
