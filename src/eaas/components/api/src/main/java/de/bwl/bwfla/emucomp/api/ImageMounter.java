@@ -646,6 +646,7 @@ public class ImageMounter implements AutoCloseable
 		process.addArguments("-u");
 		process.addArgument(mntpoint.toString());
 		if (!process.execute()) {
+			process.cleanup();
 			throw new IllegalArgumentException("Unmounting " + mntpoint.toString() + " failed!");
 		}
 	}
