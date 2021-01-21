@@ -21,9 +21,15 @@ package de.bwl.bwfla.blobstore;
 
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import io.minio.ComposeObjectArgs;
+import io.minio.ComposeSource;
+import io.minio.CopyObjectArgs;
+import io.minio.CopySource;
+import io.minio.Directive;
 import io.minio.GetObjectArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
+import io.minio.ObjectConditionalReadArgs;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
 import io.minio.StatObjectArgs;
@@ -32,9 +38,12 @@ import io.minio.http.Method;
 
 import java.io.InputStream;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 
 public class Blob extends TaskExecutor
@@ -76,6 +85,11 @@ public class Blob extends TaskExecutor
 	public Uploader uploader()
 	{
 		return new Uploader();
+	}
+
+	public Copier copier()
+	{
+		return new Copier();
 	}
 
 	public void remove() throws BWFLAException
@@ -126,8 +140,49 @@ public class Blob extends TaskExecutor
 		return this.newPreSignedUrl(Method.PUT, expiry, unit, "uploading");
 	}
 
+	public static CopySourceBuilder newCopySource()
+	{
+		return new CopySourceBuilder();
+	}
 
-	public class Downloader
+
+	public interface RangeBuilder<D extends RangeBuilder<D>>
+	{
+		D offset(long offset);
+		D length(long length);
+
+		default D range(long offset, long length)
+		{
+			return this.offset(offset)
+					.length(length);
+		}
+	}
+
+	public static class MetaDataBuilder<D extends MetaDataBuilder<D>>
+	{
+		protected Map<String, String> userdata;
+		protected Map<String, String> tags;
+
+		public D userdata(String name, String value)
+		{
+			if (userdata == null)
+				userdata = new HashMap<>();
+
+			userdata.put(name, value);
+			return (D) this;
+		}
+
+		public D tag(String name, String value)
+		{
+			if (tags == null)
+				tags = new HashMap<>();
+
+			tags.put(name, value);
+			return (D) this;
+		}
+	}
+
+	public class Downloader implements RangeBuilder<Downloader>
 	{
 		private final GetObjectArgs.Builder args;
 
@@ -136,22 +191,18 @@ public class Blob extends TaskExecutor
 			this.args = GetObjectArgs.builder();
 		}
 
+		@Override
 		public Downloader offset(long offset)
 		{
 			args.offset(offset);
 			return this;
 		}
 
+		@Override
 		public Downloader length(long length)
 		{
 			args.length(length);
 			return this;
-		}
-
-		public Downloader range(long offset, long length)
-		{
-			return this.offset(offset)
-					.length(length);
 		}
 
 		public InputStream download() throws BWFLAException
@@ -168,13 +219,11 @@ public class Blob extends TaskExecutor
 		}
 	}
 
-	public class Uploader
+	public class Uploader extends MetaDataBuilder<Uploader>
 	{
 		private Path filename;
 		private InputStream stream;
 		private long size;
-		private Map<String, String> userdata;
-		private Map<String, String> tags;
 		private String contentType;
 
 
@@ -206,24 +255,6 @@ public class Blob extends TaskExecutor
 		public Uploader contentType(String type)
 		{
 			this.contentType = type;
-			return this;
-		}
-
-		public Uploader userdata(String name, String value)
-		{
-			if (userdata == null)
-				userdata = new HashMap<>();
-
-			userdata.put(name, value);
-			return this;
-		}
-
-		public Uploader tag(String name, String value)
-		{
-			if (tags == null)
-				tags = new HashMap<>();
-
-			tags.put(name, value);
 			return this;
 		}
 
@@ -259,6 +290,180 @@ public class Blob extends TaskExecutor
 			};
 
 			self.execute(op, "Uploading blob failed!");
+		}
+	}
+
+	public class Copier extends MetaDataBuilder<Copier>
+	{
+		private final List<CopySourceBuilder> sources;
+		private boolean multipart;
+
+		private Copier()
+		{
+			this.sources = new ArrayList<>();
+			this.multipart = false;
+		}
+
+		public Copier multipart(boolean enabled)
+		{
+			this.multipart = enabled;
+			return this;
+		}
+
+		public Copier source(String bucket, String blob)
+		{
+			final var source = new CopySourceBuilder()
+					.bucket(bucket)
+					.blob(blob);
+
+			return this.source(source);
+		}
+
+		public Copier source(Blob blob)
+		{
+			return this.source(blob.bucket(), blob.name());
+		}
+
+		public Copier source(CopySourceBuilder source)
+		{
+			sources.add(source);
+			return this;
+		}
+
+		public void copy() throws BWFLAException
+		{
+			if (multipart || sources.size() > 1)
+				this.copyMultiPart();
+			else this.copySinglePart();
+		}
+
+		private void copySinglePart() throws BWFLAException
+		{
+			final var self = Blob.this;
+
+			final RunnableTask op = () -> {
+				final var source = sources.get(0)
+						.toCopySource();
+
+				final var args = CopyObjectArgs.builder()
+						.bucket(self.bucket())
+						.object(self.name())
+						.source(source);
+
+				if (userdata != null) {
+					args.metadataDirective(Directive.REPLACE)
+							.userMetadata(userdata);
+				}
+
+				if (tags != null) {
+					args.taggingDirective(Directive.REPLACE)
+							.tags(tags);
+				}
+
+				minio.copyObject(args.build());
+			};
+
+			self.execute(op, "Copying blob failed!");
+		}
+
+		private void copyMultiPart() throws BWFLAException
+		{
+			final var self = Blob.this;
+
+			final RunnableTask op = () -> {
+				final var blobs = sources.stream()
+						.map(CopySourceBuilder::toComposeSource)
+						.collect(Collectors.toList());
+
+				final var args = ComposeObjectArgs.builder()
+						.bucket(self.bucket())
+						.object(self.name())
+						.sources(blobs);
+
+				if (userdata != null)
+					args.userMetadata(userdata);
+
+				if (tags != null)
+					args.tags(tags);
+
+				minio.composeObject(args.build());
+			};
+
+			self.execute(op, "Copying multipart blob failed!");
+		}
+	}
+
+	public static class CopySourceBuilder implements RangeBuilder<CopySourceBuilder>
+	{
+		private String bucket;
+		private String blob;
+		private long offset;
+		private long length;
+
+		private CopySourceBuilder()
+		{
+			this.bucket = null;
+			this.blob = null;
+			this.offset = -1L;
+			this.length = -1L;
+		}
+
+		public CopySourceBuilder bucket(String name)
+		{
+			this.bucket = name;
+			return this;
+		}
+
+		public CopySourceBuilder blob(String name)
+		{
+			this.blob = name;
+			return this;
+		}
+
+		public CopySourceBuilder blob(Blob source)
+		{
+			return this.bucket(source.bucket())
+					.blob(source.name());
+		}
+
+		@Override
+		public CopySourceBuilder offset(long offset)
+		{
+			this.offset = offset;
+			return this;
+		}
+
+		@Override
+		public CopySourceBuilder length(long length)
+		{
+			this.length = length;
+			return this;
+		}
+
+		private CopySource toCopySource()
+		{
+			final var source = CopySource.builder();
+			this.setup(source);
+			return source.build();
+		}
+
+		private ComposeSource toComposeSource()
+		{
+			final var source = ComposeSource.builder();
+			this.setup(source);
+			return source.build();
+		}
+
+		private void setup(ObjectConditionalReadArgs.Builder<?,?> source)
+		{
+			source.bucket(bucket);
+			source.object(blob);
+
+			if (offset >= 0L)
+				source.offset(offset);
+
+			if (length > 0L)
+				source.length(length);
 		}
 	}
 
