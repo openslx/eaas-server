@@ -29,6 +29,11 @@ public class BuildToolchainRequest {
     private String recipeLocation;
     @JsonProperty("logFileLocation")
     private String logFileLocation;
+    @JsonProperty("injectOnly")
+    private Boolean injectOnly;
+    @JsonProperty("additionalInjects")
+    private AdditionalInjectRequest[] additionalInjects;
+
 
 
     public BuildToolchainRequest() {
@@ -38,6 +43,8 @@ public class BuildToolchainRequest {
         cronUser = "root";
         recipeLocation = "/";
         logFileLocation = "/swh-log.txt";
+        injectOnly = false;
+        additionalInjects = null;
     }
 
 
@@ -135,5 +142,21 @@ public class BuildToolchainRequest {
 
     public void setLogFileLocation(String logFileLocation) {
         this.logFileLocation = logFileLocation;
+    }
+
+    public Boolean getInjectOnly() {
+        return injectOnly;
+    }
+
+    public void setInjectOnly(Boolean injectOnly) {
+        this.injectOnly = injectOnly;
+    }
+
+    public AdditionalInjectRequest[] getAdditionalInjects() {
+        return additionalInjects;
+    }
+
+    public void AdditionalInjectRequest(AdditionalInjectRequest[] additionalInjects) {
+        this.additionalInjects = additionalInjects;
     }
 }

@@ -52,6 +52,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     private final String recipeName;
     private final String logFileLocation;
 
+    private final Boolean injectOnly;
+    private final AdditionalInjectRequest[] additionalInjects;
+
     private final String recipeFullPath;
 
     private final String envType;
@@ -75,12 +78,15 @@ public class HistoricBuildTask extends BlockingTask<Object> {
         this.mail = btcRequest.getMail();
         this.mode = btcRequest.getMode();
 
-        //TODO incorporate these in execute()
         this.cronUser = btcRequest.getCronUser();
         this.autoStart = btcRequest.getAutoStart();
         this.recipeLocation = btcRequest.getRecipeLocation();
         this.recipeName = btcRequest.getRecipeName();
         this.logFileLocation = btcRequest.getLogFileLocation();
+
+        // If this is set to true, dont download data from SWH,
+        this.injectOnly = btcRequest.getInjectOnly();
+        this.additionalInjects = btcRequest.getAdditionalInjects();
 
         this.recipeFullPath = Paths.get(this.inputDirectory).resolve(recipeName).toString();
 
@@ -90,7 +96,7 @@ public class HistoricBuildTask extends BlockingTask<Object> {
 
         this.revisionId = swhRequest.getRevisionId();
         this.directoryId = swhRequest.getDirectoryId();
-        this.shouldExtract = swhRequest.isExtract(); //TODO change getter for extract
+        this.shouldExtract = swhRequest.getShouldExtract();
         this.scriptLocation = swhRequest.getScriptLocation();
         this.workingDir = createWorkingDir();
 
@@ -99,21 +105,72 @@ public class HistoricBuildTask extends BlockingTask<Object> {
     @Override
     protected HistoricResponse execute() throws Exception {
 
+        String envIdForAdditionalInjects = this.environmentID;
+        if (!this.injectOnly) {
+            LOG.info("Processing SWH Data...");
+            URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
+            URL recipeLocation = publishRecipeData();
+            URL cronLocation = publishCronTab();
 
-        URL swhDataLocation = downloadAndStoreFromSoftwareHeritage();
-        URL recipeLocation = publishRecipeData();
-        URL cronLocation = publishCronTab();
+            envIdForAdditionalInjects = prepareEnvironmentWithSWHData(swhDataLocation, recipeLocation, cronLocation);
+        }
+        LOG.info("Injecting additional files...");
+        return prepareEnvironmentInjects(envIdForAdditionalInjects);
+    }
 
-        return prepareEnvironment(swhDataLocation, recipeLocation, cronLocation);
+    private HistoricResponse prepareEnvironmentInjects(String envId) throws BWFLAException {
+
+        if (this.additionalInjects == null || this.additionalInjects.length == 0) {
+            LOG.info("No additional injects requested returning environment: " + environmentID);
+            HistoricResponse response = new HistoricResponse();
+            response.setEnvironmentId(envId);
+            return response;
+        } else {
+            List<ImageModificationRequest> requestList = new ArrayList<>();
+            for (AdditionalInjectRequest entry : this.additionalInjects) {
+
+                String url = entry.getUrl();
+                String action = entry.getAction();
+                String name = entry.getName();
+
+                LOG.info("Adding File with url" + url);
+                LOG.info("Applying action" + action);
+
+                ImageModificationRequest request = new ImageModificationRequest();
+                ImageModificationCondition imageModificationCondition = new ImageModificationCondition();
+                imageModificationCondition.getPaths().add(inputDirectory);
+                request.setCondition(imageModificationCondition);
+                request.setDataUrl(url);
+
+                switch (action) {
+                    case "copy":
+                        request.setAction(ImageModificationAction.COPY);
+                        request.setDestination(Paths.get(inputDirectory).resolve(name).toString());
+                        break;
+                    case "extract":
+                        request.setAction(ImageModificationAction.EXTRACT_TAR);
+                        request.setDestination(inputDirectory);
+                        break;
+                }
+
+                requestList.add(request);
+            }
+
+            String newEnvId = injectDataIntoImage(envId, requestList);
+            HistoricResponse response = new HistoricResponse();
+            response.setEnvironmentId(newEnvId);
+            return response;
+        }
+
+
     }
 
 
-    private HistoricResponse prepareEnvironment(URL dataLocation, URL recipeLocation, URL cronLocation) throws BWFLAException {
+    private String prepareEnvironmentWithSWHData(URL dataLocation, URL recipeLocation, URL cronLocation) throws BWFLAException {
 
         if (envType.equals("base")) {
 
             //TODO check if error should be thrown when extract is true and envType is machine
-            //TODO create Condition and pass it to injectData
 
             List<ImageModificationRequest> requestList = new ArrayList<>();
 
@@ -147,16 +204,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
                 requestList.add(request);
             }
 
-            String envId = injectDataIntoImage(environmentID, requestList);
-
-            HistoricResponse response = new HistoricResponse();
-            response.setEnvironmentId(envId);
-            return response;
+            return injectDataIntoImage(environmentID, requestList);
 
         } else if (envType.equals("container")) {
-
-            ContainerComponentRequest componentRequest = new ContainerComponentRequest();
-            componentRequest.setEnvironment(environmentID);
             //TODO create mapping from swhPath -> inputFolder
             return null;
         } else {
@@ -202,11 +252,9 @@ public class HistoricBuildTask extends BlockingTask<Object> {
                 throw new BWFLAException("Can't download without id (no revisionId and not directoryId given!");
             } else if (revisionId != null) {
                 arguments.add(revisionId);
-                idToBeUsed = revisionId;
             } else {
                 arguments.add(directoryId);
                 arguments.add("--dir");
-                idToBeUsed = directoryId;
             }
 
             if (shouldExtract) {

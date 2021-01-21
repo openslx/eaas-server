@@ -42,7 +42,7 @@ public class SoftwareHeritageRequest {
         this.directoryId = directoryId;
     }
 
-    public boolean isExtract() {
+    public boolean getShouldExtract() {
         return extract;
     }
 

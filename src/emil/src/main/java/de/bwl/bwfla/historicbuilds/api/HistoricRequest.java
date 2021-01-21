@@ -12,6 +12,8 @@ public class HistoricRequest {
     private BuildToolchainRequest buildToolchainRequest;
 
     public HistoricRequest() {
+        swhRequest = new SoftwareHeritageRequest();
+        buildToolchainRequest = new BuildToolchainRequest();
     }
 
     public SoftwareHeritageRequest getSwhRequest() {
