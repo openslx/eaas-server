@@ -845,7 +845,7 @@ public class EmilEnvironmentRepository {
 
 		EmilEnvironment env = getEmilEnvironmentById(req.getEnvId());
 		if (env == null) {
-			if (req instanceof SaveCreatedEnvironmentRequest) {
+			if (req instanceof SaveCreatedEnvironmentRequest || req instanceof SaveNewEnvironmentRequest) {
 				// no emil env -> new environment has been created and committed
 				Environment _env = null;
 				_env = environmentsAdapter.getEnvironmentById(req.getArchive(), req.getEnvId());
@@ -853,7 +853,8 @@ public class EmilEnvironmentRepository {
 				env = new EmilEnvironment();
 				env.setTitle(_env.getDescription().getTitle());
 				env.setEnvId(req.getEnvId());
-				env.setDescription("empty hard disk");
+				if(req instanceof SaveNewEnvironmentRequest)
+					env.setDescription(((SaveNewEnvironmentRequest) req).getTitle());
 			} else
 				throw new BWFLAException("Environment with id " + req.getEnvId() + " not found");
 		}
