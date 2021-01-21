@@ -384,18 +384,6 @@ public class ImageMounter implements AutoCloseable
 		return synced;
 	}
 
-	public static boolean mount(Path device, Path mountpoint, FileSystemType fstype, Logger log)
-	{
-		try {
-			mountFileSystem(device, mountpoint, fstype, log);
-			return true;
-		}
-		catch (Exception error) {
-			log.warning("Mounting " + fstype.name() + " filesystem from '" + device.toString() + "' failed!");
-			return false;
-		}
-	}
-
 	public static boolean delete(Path path, Logger log)
 	{
 		// Delete file or a directory recursively
@@ -576,7 +564,6 @@ public class ImageMounter implements AutoCloseable
 		process.addArgument(dst.toString());
 		process.redirectStdErrToStdOut(false);
 		if (!process.execute()) {
-			process.cleanup();
 			throw new BWFLAException(process.getCommandString() + " failed: " + process.getStdErrString());
 		}
 	}
