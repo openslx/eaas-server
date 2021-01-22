@@ -24,6 +24,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import io.minio.BucketExistsArgs;
 import io.minio.DeleteBucketPolicyArgs;
 import io.minio.GetBucketPolicyArgs;
+import io.minio.GetBucketTagsArgs;
 import io.minio.ListObjectsArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
@@ -31,11 +32,13 @@ import io.minio.RemoveBucketArgs;
 import io.minio.RemoveObjectsArgs;
 import io.minio.Result;
 import io.minio.SetBucketPolicyArgs;
+import io.minio.SetBucketTagsArgs;
 import io.minio.messages.DeleteError;
 import io.minio.messages.DeleteObject;
 import io.minio.messages.Item;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Spliterator;
 import java.util.Spliterators;
@@ -184,6 +187,35 @@ public class Bucket extends TaskExecutor
 	public Blob blob(String blob)
 	{
 		return new Blob(storage, bucket, blob);
+	}
+
+	public Map<String, String> tags() throws BWFLAException
+	{
+		final SupplierTask<Map<String, String>> op = () -> {
+			final var args = GetBucketTagsArgs.builder()
+					.bucket(bucket)
+					.build();
+
+			return minio.getBucketTags(args)
+					.get();
+		};
+
+		return this.execute(op, "Looking up bucket tags failed!");
+	}
+
+	public Bucket setTags(Map<String, String> tags) throws BWFLAException
+	{
+		final RunnableTask op = () -> {
+			final var args = SetBucketTagsArgs.builder()
+					.bucket(bucket)
+					.tags(tags)
+					.build();
+
+			minio.setBucketTags(args);
+		};
+
+		this.execute(op, "Tagging bucket failed!");
+		return this;
 	}
 
 	public String policy() throws BWFLAException

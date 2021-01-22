@@ -27,11 +27,13 @@ import io.minio.CopyObjectArgs;
 import io.minio.CopySource;
 import io.minio.Directive;
 import io.minio.GetObjectArgs;
+import io.minio.GetObjectTagsArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import io.minio.ObjectConditionalReadArgs;
 import io.minio.PutObjectArgs;
 import io.minio.RemoveObjectArgs;
+import io.minio.SetObjectTagsArgs;
 import io.minio.StatObjectArgs;
 import io.minio.UploadObjectArgs;
 import io.minio.http.Method;
@@ -118,6 +120,37 @@ public class Blob extends TaskExecutor
 		};
 
 		return this.execute(op, "Stating blob failed!");
+	}
+
+	public Map<String, String> tags() throws BWFLAException
+	{
+		final SupplierTask<Map<String, String>> op = () -> {
+			final var args = GetObjectTagsArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.build();
+
+			return minio.getObjectTags(args)
+					.get();
+		};
+
+		return this.execute(op, "Looking up blob tags failed!");
+	}
+
+	public Blob setTags(Map<String, String> tags) throws BWFLAException
+	{
+		final RunnableTask op = () -> {
+			final var args = SetObjectTagsArgs.builder()
+					.bucket(bucket)
+					.object(blob)
+					.tags(tags)
+					.build();
+
+			minio.setObjectTags(args);
+		};
+
+		this.execute(op, "Tagging blob failed!");
+		return this;
 	}
 
 	public String newPreSignedGetUrl() throws BWFLAException
