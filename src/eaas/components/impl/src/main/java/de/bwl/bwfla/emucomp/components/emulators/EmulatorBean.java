@@ -37,7 +37,6 @@ import de.bwl.bwfla.common.services.guacplay.net.TunnelConfig;
 import de.bwl.bwfla.common.services.guacplay.protocol.InstructionBuilder;
 import de.bwl.bwfla.common.services.guacplay.record.SessionRecorder;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.common.utils.ProcessMonitor;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.emucomp.api.*;
@@ -645,7 +644,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			final String cid = this.getContainerId();
 			final String workdir = this.getWorkingDir().toString();
-			final String rootfsdir = this.lookupResource(EMUCON_ROOTFS_BINDING_ID, XmountOutputFormat.RAW);
+			final String rootfsdir = this.lookupResource(EMUCON_ROOTFS_BINDING_ID);
 
 			// Generate container's config
 			{
@@ -761,7 +760,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			if (emuEnvironment.hasCheckpointBindingId()) {
 				try {
 					final String checkpointBindingId = emuEnvironment.getCheckpointBindingId();
-					final String checkpoint = this.lookupResource(checkpointBindingId, XmountOutputFormat.RAW);
+					final String checkpoint = this.lookupResource(checkpointBindingId);
 					emuRunner.addArguments("--checkpoint", checkpoint);
 
 					LOG.info("Container state will be restored from checkpoint");
@@ -995,7 +994,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				type = ".zip";
 
 				// Mount partition's filesystem
-				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow), workdir.resolve("raw"), binding.getPartitionOffset());
+				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow),
+						workdir.resolve(Path.of(qcow).getFileName() + ".dd"), binding.getPartitionOffset());
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
 				final Path srcdir = fsmnt.getMountPoint();
 				if (emuEnvironment.isLinuxRuntime())
@@ -1292,16 +1292,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				return containerId;
 			}
 
-			//            Resource res = new VolatileResource();
-			//            res.setUrl(objReference);
-			//            res.setId("attached_container_" + containerId);
-			//            this.prepareResource(res);
-			//            this.emuEnvironment.getBinding().add(res);
-
-
 			drive.setData(objReference);
-			//            this.emuEnvironment.getDrive().add(drive);
-
 			boolean attachOk = (emuBeanState.fetch() == EmuCompState.EMULATOR_RUNNING) ? connectDrive(drive, true) : addDrive(drive);
 
 			if (!attachOk) {
@@ -1317,8 +1308,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	}
 
 	@Override
+	@Deprecated
 	public int attachMedium(DataHandler data, String mediumType) throws BWFLAException
 	{
+		/*
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -1386,11 +1379,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			return id;
 		}
+		 */
+		return -1;
 	}
 
 	@Override
 	public DataHandler detachMedium(int containerId) throws BWFLAException
 	{
+		/*
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -1435,6 +1431,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		throw new BWFLAException("could not find container by this container id: " + containerId)
 				.setId(this.getComponentId());
+
+		 */
+		return null;
 	}
 
 
@@ -2291,37 +2290,25 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	 * @return The resolved path or null, if the binding cannot
 	 *         be found
 	 */
-	protected String lookupResource(String binding, XmountOutputFormat outputFormat)
-			throws BWFLAException, IOException
+	protected String lookupResource(String binding) throws BWFLAException, IOException
 	{
 		String mountpoint = bindings.lookup(binding);
 		if (mountpoint == null)
-			mountpoint = bindings.mount(binding, this.getBindingsDir(), outputFormat);
+			mountpoint = bindings.mount(binding, this.getBindingsDir());
 
 		return mountpoint;
 	}
 
-	/**
-	 * Resolves a binding location of either the form
-	 * binding://binding_id[/path/to/subres] or binding_id[/path/to/subres]. The
-	 * binding_id is replaced with the actual filesystem location of the
-	 * binding's mountpoint. The possible reference to the subresource is
-	 * preserved in the returned string.
-	 *
-	 * @param binding
-	 *            A binding location
-	 * @return The resolved path or null, if the binding cannot
-	 *         be found
-	 */
-	protected String lookupResourceRaw(String binding, XmountOutputFormat outputFormat)
-			throws BWFLAException, IOException
-	{ this.lookupResource(binding, outputFormat);
-		return this.lookupResource(BindingsManager.toBindingId(binding, BindingsManager.EntryType.RAW_MOUNT), outputFormat);
+	@Deprecated
+	protected String lookupResource(String binding, XmountOutputFormat unused) throws BWFLAException, IOException {
+		return lookupResource(binding);
 	}
 
+	@Deprecated
 	protected String lookupResource(String binding, DriveType driveType)
 			throws BWFLAException, IOException {
-		return this.lookupResource(binding, this.getImageFormatForDriveType(driveType));
+		// this.getImageFormatForDriveType(driveType)
+		return this.lookupResource(binding);
 	}
 
 	protected void prepareResource(AbstractDataResource resource) throws IllegalArgumentException, IOException, BWFLAException
@@ -2333,7 +2320,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			bindings.find(resource.getId() + "/")
 					.forEach((binding) -> {
 						try {
-							this.lookupResourceRaw(binding, XmountOutputFormat.RAW);
+							this.lookupResource(binding);
 						}
 						catch (Exception error) {
 							throw new IllegalArgumentException(error);
@@ -2470,7 +2457,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 						res = m.group(0);
 					}
 
-					bindingPath = this.lookupResource(res.trim(), XmountOutputFormat.RAW);
+					bindingPath = this.lookupResource(res.trim());
 				} catch (Exception e) {
 					LOG.severe("lookupResource with " + m.group(1) + " failed.");
 					LOG.log(Level.SEVERE, e.getMessage(), e);

@@ -19,18 +19,6 @@
 
 package de.bwl.bwfla.emucomp.api;
 
-import de.bwl.bwfla.emucomp.api.Binding;
-
 public class VolatileResource extends Binding {
-	private String resourcePath;
 
-	public String getResourcePath() {
-		return resourcePath;
-	}
-
-	public void setResourcePath(String resourcePath) {
-		this.resourcePath = resourcePath;
-	}
-	
-	
 }

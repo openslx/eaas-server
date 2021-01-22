@@ -25,11 +25,13 @@ import de.bwl.bwfla.common.utils.EaasFileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 
 import java.io.IOException;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -67,7 +69,7 @@ public class ImageMounter implements AutoCloseable
 	/** Mount image at mountpoint. */
 	public Mount mount(Path image, Path mountpoint) throws BWFLAException, IllegalArgumentException
 	{
-		return this.mount(image, mountpoint, new XmountOptions());
+		return this.mount(image, mountpoint, new MountOptions());
 	}
 
 	/** Mount image, beginning at offset, at specified mountpoint. */
@@ -83,7 +85,7 @@ public class ImageMounter implements AutoCloseable
 		this.check(offset, OFFSET_MIN_BOUND, "offset");
 		this.check(size, SIZE_MIN_BOUND, "size");
 
-		final XmountOptions options = new XmountOptions();
+		final MountOptions options = new MountOptions();
 		options.setOffset(offset);
 		options.setSize(size);
 
@@ -91,13 +93,16 @@ public class ImageMounter implements AutoCloseable
 	}
 
 	/** Mount image at mountpoint with options. */
-	public Mount mount(Path image, Path mountpoint, XmountOptions options)
+	public Mount mount(Path image, Path mountpoint, MountOptions options)
 			throws BWFLAException, IllegalArgumentException
 	{
 		this.check(image);
 
-		final Path target = EmulatorUtils.xmount(image.toString(), mountpoint, options, log);
-		final Mount mount = new Mount(image, target, mountpoint);
+		final DeprecatedProcessRunner process = nbdMount(image.toString(), mountpoint, options, log);
+
+
+
+		final Mount mount = new Mount(image, mountpoint, mountpoint, process);
 		this.register(mount);
 		return mount;
 	}
@@ -107,15 +112,15 @@ public class ImageMounter implements AutoCloseable
 			throws BWFLAException, IllegalArgumentException
 	{
 		this.check(image);
-
+		DeprecatedProcessRunner process = null;
 		try {
-			EmulatorUtils.mountFileSystem(image, mountpoint, fstype, log);
+			process = mountFileSystem(image, mountpoint, fstype, log);
 		}
 		catch (IOException error) {
 			throw new BWFLAException(error);
 		}
 
-		final Mount mount = new Mount(image, mountpoint);
+		final Mount mount = new Mount(image, mountpoint, process);
 		this.register(mount);
 		return mount;
 	}
@@ -145,7 +150,7 @@ public class ImageMounter implements AutoCloseable
 		this.check(offset, OFFSET_MIN_BOUND, "offset");
 		this.check(size, SIZE_MIN_BOUND, "size");
 
-		final XmountOptions options = new XmountOptions();
+		final MountOptions options = new MountOptions();
 		options.setOffset(offset);
 		options.setSize(size);
 
@@ -156,7 +161,7 @@ public class ImageMounter implements AutoCloseable
 	 * Re-mount an already mounted image, using provided options.
 	 * The previous mount will be unmounted and invalidated!
 	 */
-	public Mount remount(Mount mount, XmountOptions options) throws BWFLAException, IllegalArgumentException
+	public Mount remount(Mount mount, MountOptions options) throws BWFLAException, IllegalArgumentException
 	{
 		this.check(mount);
 
@@ -187,7 +192,7 @@ public class ImageMounter implements AutoCloseable
 	{
 		this.check(mount);
 
-		final boolean unmounted = this.unmount(mount.getMountPoint(), rmdirs);
+		final boolean unmounted = this.unmount(mount.getMountPoint(), mount.getProcess(), rmdirs);
 		if (unmounted)
 			this.unregister(mount);
 
@@ -247,17 +252,19 @@ public class ImageMounter implements AutoCloseable
 		private Path mountpoint;
 		private Path source;
 		private Path target;
+		private DeprecatedProcessRunner process;
 
-		private Mount(Path image, Path mountpoint)
+		private Mount(Path image, Path mountpoint, DeprecatedProcessRunner process)
 		{
-			this(image, image, mountpoint);
+			this(image, image, mountpoint, process);
 		}
 
-		private Mount(Path source, Path target, Path mountpoint)
+		private Mount(Path source, Path target, Path mountpoint, DeprecatedProcessRunner process)
 		{
 			this.mountpoint = mountpoint;
 			this.source = source;
 			this.target = target;
+			this.process = process;
 		}
 
 		/** Get image's source path. */
@@ -331,11 +338,16 @@ public class ImageMounter implements AutoCloseable
 			this.mountpoint = null;
 			this.source = null;
 			this.target = null;
+			this.process = null;
 		}
 
 		private Path id()
 		{
 			return source;
+		}
+
+		public DeprecatedProcessRunner getProcess() {
+			return process;
 		}
 	}
 
@@ -370,30 +382,6 @@ public class ImageMounter implements AutoCloseable
 			log.warning("Syncing filesystem for '" + path.toString() + "' failed!");
 
 		return synced;
-	}
-
-	public static boolean mount(Path device, Path mountpoint, FileSystemType fstype, Logger log)
-	{
-		try {
-			EmulatorUtils.mountFileSystem(device, mountpoint, fstype, log);
-			return true;
-		}
-		catch (Exception error) {
-			log.warning("Mounting " + fstype.name() + " filesystem from '" + device.toString() + "' failed!");
-			return false;
-		}
-	}
-
-	public static boolean unmount(Path path, Logger log)
-	{
-		try {
-			EmulatorUtils.unmount(path, log);
-			return true;
-		}
-		catch (Exception error) {
-			log.log(Level.WARNING, "Unmounting '" + path.toString() + "' failed!\n", error);
-			return false;
-		}
 	}
 
 	public static boolean delete(Path path, Logger log)
@@ -451,20 +439,215 @@ public class ImageMounter implements AutoCloseable
 		mount.invalidate();
 	}
 
-	private boolean unmount(Path mountpoint, boolean rmdirs)
-	{
+	private boolean unmount(Path mountpoint, DeprecatedProcessRunner processRunner, boolean rmdirs)  {
 		if (mountpoint == null)
 			return true;
 
 		// TODO: find a more elegant way for flushing caches!
 		ImageMounter.sync(mountpoint, log);
+		try {
+			ImageMounter.unmountFuse(mountpoint, log);
+		}
+		catch (Exception error) {
+			log.warning(error.getMessage());
+		}
+		boolean unmounted = processRunner.waitUntilFinished(60, TimeUnit.SECONDS);
+		if(!unmounted)
+		{
+			processRunner.kill();
+			try {
+				log.severe("killed FUSE. we should throw instead!" + processRunner.getStdErrString() + "\n" + processRunner.getStdOutString());
+			} catch (IOException ignored) { }
+		}
+		processRunner.cleanup();
 
-		boolean unmounted = ImageMounter.unmount(mountpoint, log);
 		if (rmdirs && unmounted) {
 			// Skip mountpoint deletion, if unmount failed!
 			unmounted = ImageMounter.delete(mountpoint, log);
 		}
 
 		return unmounted;
+	}
+
+	private static DeprecatedProcessRunner nbdMount(String imagePath, Path mountpoint, MountOptions options, Logger log) throws BWFLAException {
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo");
+		process.addArgument("unshare");
+		process.addArgument("-p");
+		process.addArgument("-f");
+		process.addArgument("--kill-child");
+		process.addArgument("--");
+		process.addArgument("/libexec/fuseqemu/fuseqemu");
+		process.addArgument(imagePath);
+		process.addArgument(mountpoint.toAbsolutePath().toString());
+		process.addArguments(options.getArgs());
+		process.addArgument("--");
+		process.addArguments("-o", "allow_root");
+		process.addArgument("-f");
+
+		if (!process.start()) {
+			throw new BWFLAException("Error mounting " + imagePath
+					+ ". See log output for more information (maybe).");
+		}
+
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(mountpoint, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+		process.kill();
+		process.cleanup();
+
+		throw new BWFLAException("mount failed");
+	}
+
+	private static DeprecatedProcessRunner mountFileSystem(Path device, Path dest, FileSystemType fsType, Logger log)
+			throws BWFLAException, IOException
+	{
+		if (!Files.exists(dest)) {
+			log.info("Directory '" + dest + "' does not exist. Creating it...");
+			Files.createDirectories(dest);
+		}
+
+		switch (fsType) {
+			case NTFS:
+				return ntfsMount(device, dest, null, log);
+
+
+			default:
+				return lklMount(device, dest, fsType.toString().toLowerCase(), log, false);
+
+		}
+	}
+
+	private static DeprecatedProcessRunner ntfsMount(Path src, Path dst, String options, Logger log) throws BWFLAException {
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo")
+				.addArgument("--non-interactive")
+				.addArgument("ntfs-3g")
+				.addArguments("-o", "no_detach")
+				.setLogger(log);
+
+		if (options != null)
+			process.addArgument(options);
+
+		process.addArgument(src.toString());
+		process.addArgument(dst.toString());
+
+		// process.redirectStdErrToStdOut(false);
+		if (!process.start()) {
+			throw new BWFLAException("Mounting NTFS-filesystem failed!");
+		}
+
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(dst, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+		process.kill();
+		process.cleanup();
+		throw new BWFLAException("mount failed");
+	}
+
+	private static void sysMount(Path src, Path dst, String fs, String options, Logger log) throws BWFLAException, IOException {
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+		process.setLogger(log);
+		process.setCommand("mount");
+		if (fs != null)
+			process.addArguments("-t", fs);
+		if (options != null)
+			process.addArgument(options);
+
+		process.addArgument(src.toString());
+		process.addArgument(dst.toString());
+		process.redirectStdErrToStdOut(false);
+		if (!process.execute()) {
+			throw new BWFLAException(process.getCommandString() + " failed: " + process.getStdErrString());
+		}
+	}
+
+	private static DeprecatedProcessRunner lklMount(Path path, Path dest, String fsType, Logger log, boolean isReadOnly) throws BWFLAException {
+
+		if(fsType != null && fsType.equalsIgnoreCase("fat32"))
+			fsType = "vfat";
+
+		if (path == null)
+			throw new BWFLAException("mount failed: path = null");
+
+		if (!Files.exists(dest)) {
+			try {
+				Files.createDirectories(dest);
+			}
+			catch (Exception error) {
+				throw new BWFLAException("Creating mountpoint failed!", error);
+			}
+		}
+
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
+		process.setLogger(log);
+
+		process.setCommand("lklfuse");
+		process.addArguments("-f");
+		if (fsType != null) {
+			process.addArgument("-o");
+			if (isReadOnly)
+				process.addArgValue("type=" + fsType + ",ro");
+			else
+				process.addArgValue("type=" + fsType);
+		}
+		process.addArguments("-o", "allow_root");
+		process.addArguments("-o", "use_ino");
+
+		process.addArguments("-o",
+				"uid=" + ConfigurationProvider.getConfiguration().get("components.emulator_containers.uid"));
+
+
+		process.addArgument(path.toString());
+		process.addArgument(dest.toString());
+
+		if (!process.start()) {
+			throw new BWFLAException("mount failed");
+		}
+
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(dest, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+		throw new BWFLAException("mount failed");
+	}
+
+	private static void unmountFuse(Path mntpoint, Logger log)  {
+		log.severe("unmounting " + mntpoint);
+		if (mntpoint == null)
+			return;
+
+		if (!isMountpoint(mntpoint, log)) {
+			log.severe(mntpoint + " is not a mountpoint. abort");
+			return;
+		}
+
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo");
+		process.setLogger(log);
+
+		process.addArgument("fusermount");
+		process.addArguments("-u");
+		process.addArgument(mntpoint.toString());
+		if (!process.execute()) {
+			process.cleanup();
+			throw new IllegalArgumentException("Unmounting " + mntpoint.toString() + " failed!");
+		}
+	}
+
+	private static boolean isMountpoint(Path mountpoint, Logger log)
+	{
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("mountpoint");
+		process.setLogger(log);
+		process.addArgument(mountpoint.toAbsolutePath().toString());
+		return process.execute();
 	}
 }

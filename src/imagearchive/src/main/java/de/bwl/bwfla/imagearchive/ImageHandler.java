@@ -22,7 +22,6 @@ import javax.activation.DataHandler;
 import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
-import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.*;
 import de.bwl.bwfla.emucomp.api.*;
@@ -979,8 +978,7 @@ public class ImageHandler
 			final Path workdir = ImageMounter.createWorkingDirectory();
 			mounter.addWorkingDirectory(workdir);
 
-			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve("raw"));
-			// todo: read from metadata
+			ImageMounter.Mount rawmnt = mounter.mount(imgFile.toPath(), workdir.resolve(imgFile.toPath().getFileName() + ".dd"));
 			ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4);
 			log.info("after fsmount");
 			Path fsDir = fsmnt.getMountPoint();
@@ -1136,32 +1134,32 @@ public class ImageHandler
 		return taskids;
 	}
 
-	protected String createPatchedImage(String parentId, String cowId, String type, ImageGeneralizationPatch patch)
-			throws IOException, BWFLAException
+	protected String createPatchedImage(String parentId, String type, ImageGeneralizationPatch patch)
+			throws  BWFLAException
 	{
 		if (parentId == null)
 			throw new BWFLAException("Invalid image's ID!");
 
 		String newBackingFile = getArchivePrefix() + parentId;
-		File target = getImageTargetPath(type);
-		Path destImgFile = target.toPath().resolve(cowId);
-		QcowOptions options = new QcowOptions();
-		options.setBackingFile(newBackingFile);
-		if(MachineTokenProvider.getAuthenticationProxy() != null)
-			options.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
-		else
-			options.setProxyUrl(MachineTokenProvider.getProxy());
-
 		try {
 			log.info("Preparing image '" + parentId + "' for patching with patch '" + patch.getName() + "'...");
-			EmulatorUtils.createCowFile(destImgFile, options);
-			patch.applyto(destImgFile, log);
-			return cowId;
+			URL urlToQcow = patch.applyto(newBackingFile, log);
+
+			ImageArchiveMetadata md = new ImageArchiveMetadata(ImageType.valueOf(type));
+			TaskState state = importImageUrlAsync(urlToQcow, md, false);
+			state = ImageArchiveRegistry.getState(state.getTaskId());
+			while(!state.isDone()) {
+				Thread.sleep(500);
+				state = ImageArchiveRegistry.getState(state.getTaskId());
+			}
+			if(state.isFailed())
+				throw new BWFLAException("failed to patch");
+
+			log.info("finished patching. new image id " + state.getResult());
+			return state.getResult();
 		}
-		catch (BWFLAException error) {
-			// Remove created but unpatched image
-			Files.deleteIfExists(destImgFile);
-			throw error;
+		catch (BWFLAException | InterruptedException | IOException error) {
+			throw new BWFLAException(error);
 		}
 	}
 
@@ -1329,7 +1327,8 @@ public class ImageHandler
 				if(!destImgFile.exists()) {
 					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
 				}
-				ImageInformation.QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
+				ImageInformation info = new ImageInformation(destImgFile.toPath().toString(), log);
+				ImageInformation.QemuImageFormat fmt = info.getFileFormat();
 				if (fmt == null) {
 					throw new BWFLAException("could not determine file fmt");
 				}
