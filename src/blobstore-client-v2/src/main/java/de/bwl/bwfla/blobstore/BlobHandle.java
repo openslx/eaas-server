@@ -48,7 +48,6 @@ public class BlobHandle
 
 	public BlobHandle(String bucket, String name)
 	{
-		BlobUploader.checkName(name);
 		this.bucket = bucket;
 		this.name = name;
 	}

@@ -39,7 +39,7 @@
 		<javaee-api.version>8.0</javaee-api.version>
 		<tamaya.version>0.3-incubating</tamaya.version>
 		<slf4j.version>1.7.22</slf4j.version>
-		<minio.version>7.1.4</minio.version>
+		<minio.version>8.0.3</minio.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
 		<resteasy.version>3.11.0.Final</resteasy.version>

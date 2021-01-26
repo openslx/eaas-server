@@ -19,129 +19,76 @@
 
 package de.bwl.bwfla.blobstore;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import io.minio.StatObjectResponse;
+import io.minio.messages.Item;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.io.IOException;
-import java.io.StringWriter;
+import java.time.ZonedDateTime;
+import java.util.Map;
 
 
-@XmlRootElement
-@XmlAccessorType(XmlAccessType.NONE)
+/** Description of a blob */
 public class BlobDescription
 {
-	@XmlElement(name = "file_extension", required = true)
-	private String fileext;
+	private final String bucket;
+	private final String name;
+	private final ZonedDateTime mtime;
+	private final long size;
+	private final String contentType;
+	private final Map<String, String> userdata;
 
-	@XmlElement(name = "filename")
-	private String filename;
-
-	@XmlElement(name = "description")
-	private String description;
-
-	/** Pattern representing valid filenames */
-	private static final String NAME_PATTERN = "\\w([-_]\\w)*";
-
-	/** Pattern representing valid types */
-	private static final String EXTENSION_PATTERN = "(\\.[a-zA-Z0-9]+)+";
-
-	private static final String METADATA_NAME_PREFIX = "--BLOBMETA--";
-
-	public static final String METADATA_CONTENT_TYPE = "application/json";
-
-
-	public BlobDescription()
+	BlobDescription(StatObjectResponse stat)
 	{
-		this.fileext = null;
-		this.filename = null;
-		this.description = null;
+		this.bucket = stat.bucket();
+		this.name = stat.object();
+		this.mtime = stat.lastModified();
+		this.size = stat.size();
+		this.contentType = stat.contentType();
+		this.userdata = stat.userMetadata();
 	}
 
-	public String getFileExtension()
+	BlobDescription(String bucket, Item item)
 	{
-		return fileext;
+		this.bucket = bucket;
+		this.name = item.objectName();
+		this.mtime = item.lastModified();
+		this.size = item.size();
+		this.contentType = "application/octet-stream";
+		this.userdata = item.userMetadata();
 	}
 
-	public BlobDescription setFileExtension(String extension)
+	/** Blob's bucket name */
+	public String bucket()
 	{
-		if (extension == null)
-			return this;
-
-		BlobDescription.checkFileExtension(extension);
-		this.fileext = extension;
-		return this;
+		return bucket;
 	}
 
-	public boolean hasFileName()
+	/** Blob's name */
+	public String name()
 	{
-		return (filename != null && !filename.isEmpty());
+		return name;
 	}
 
-	public String getFileName()
+	/** Blob's last-modified time */
+	public ZonedDateTime mtime()
 	{
-		return filename;
+		return mtime;
 	}
 
-	public BlobDescription setFileName(String name)
+	/** Blob's size */
+	public long size()
 	{
-		BlobDescription.checkFileName(name);
-		this.filename = name;
-		return this;
+		return size;
 	}
 
-	public boolean hasDescription()
+	/** Blob's content type */
+	public String contentType()
 	{
-		return (description != null && !description.isEmpty());
+		return contentType;
 	}
 
-	public String getDescription()
+	/** Blob's user-metadata */
+	public Map<String, String> userdata()
 	{
-		return description;
-	}
-
-	public BlobDescription setDescription(String description)
-	{
-		BlobDescription.check(description, "Blob's description");
-		this.description = description;
-		return this;
-	}
-
-	public String toJsonString() throws IOException
-	{
-		final StringWriter writer = new StringWriter(4096);
-		final ObjectMapper mapper = new ObjectMapper();
-		mapper.writeValue(writer, this);
-		return writer.toString();
-	}
-
-	public static String toMetaDataName(String blobname)
-	{
-		return METADATA_NAME_PREFIX + "/" + blobname;
-	}
-
-
-	// ========== Internal Helpers ====================
-
-	private static void check(String value, String msgprefix)
-	{
-		if (value == null || value.isEmpty())
-			throw new IllegalArgumentException(msgprefix + " is null or empty!");
-	}
-
-	private static void checkFileName(String name)
-	{
-		BlobDescription.check(name, "Blob's file name");
-		if (!name.matches(NAME_PATTERN))
-			throw new IllegalArgumentException("Blob's file name contains invalid character(s)!");
-	}
-
-	private static void checkFileExtension(String name)
-	{
-		BlobDescription.check(name, "Blob's file extension");
-		if (!name.matches(EXTENSION_PATTERN))
-			throw new IllegalArgumentException("Blob's file extension contains invalid character(s)!");
+		return userdata;
 	}
 }

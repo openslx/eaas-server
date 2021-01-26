@@ -19,52 +19,42 @@
 
 package de.bwl.bwfla.blobstore;
 
-import io.minio.ObjectStat;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
-import java.time.ZonedDateTime;
-import java.util.List;
-import java.util.Map;
+/* package-private */
 
 
-public class BlobInfo
+class TaskExecutor
 {
-	private final String name;
-	private final ZonedDateTime lastModified;
-	private final long size;
-	private final String contentType;
-	private final Map<String, List<String>> headers;
-
-	BlobInfo(ObjectStat stat)
+	@FunctionalInterface
+	interface RunnableTask
 	{
-		this.name = stat.name();
-		this.lastModified = stat.createdTime();
-		this.size = stat.length();
-		this.contentType = stat.contentType();
-		this.headers = stat.httpHeaders();
+		void run() throws Exception;
 	}
 
-	public String getName()
+	@FunctionalInterface
+	interface SupplierTask<T>
 	{
-		return name;
+		T get() throws Exception;
 	}
 
-	public ZonedDateTime getLastModified()
+	protected void execute(RunnableTask task, String errmsg) throws BWFLAException
 	{
-		return lastModified;
+		try {
+			task.run();
+		}
+		catch (Exception error) {
+			throw new BWFLAException(errmsg, error);
+		}
 	}
 
-	public long getSize()
+	protected <T> T execute(SupplierTask<T> task, String errmsg) throws BWFLAException
 	{
-		return size;
-	}
-
-	public String getContentType()
-	{
-		return contentType;
-	}
-
-	public Map<String, List<String>> getHeaders()
-	{
-		return headers;
+		try {
+			return task.get();
+		}
+		catch (Exception error) {
+			throw new BWFLAException(errmsg, error);
+		}
 	}
 }
