@@ -48,6 +48,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 
+/** Wrapper representing a blob in a bucket */
 public class Blob extends TaskExecutor
 {
 	private final BlobStore storage;
@@ -56,21 +57,25 @@ public class Blob extends TaskExecutor
 	private final String blob;
 
 
+	/** Blob's blobstore */
 	public BlobStore storage()
 	{
 		return storage;
 	}
 
+	/** Blob's handle */
 	public BlobHandle handle()
 	{
 		return new BlobHandle(bucket, blob);
 	}
 
+	/** Blob's bucket name */
 	public String bucket()
 	{
 		return bucket;
 	}
 
+	/** Blob's name */
 	public String name()
 	{
 		return blob;
@@ -79,21 +84,25 @@ public class Blob extends TaskExecutor
 
 	// ===== Blob API ====================
 
+	/** Builder for blob-downloading */
 	public Downloader downloader()
 	{
 		return new Downloader();
 	}
 
+	/** Builder for blob-uploading */
 	public Uploader uploader()
 	{
 		return new Uploader();
 	}
 
+	/** Builder for blob-copying */
 	public Copier copier()
 	{
 		return new Copier();
 	}
 
+	/** Remove this blob from backing store */
 	public void remove() throws BWFLAException
 	{
 		final RunnableTask op = () -> {
@@ -108,6 +117,7 @@ public class Blob extends TaskExecutor
 		this.execute(op, "Deleting blob failed!");
 	}
 
+	/** Retrieve blob's description */
 	public BlobDescription stat() throws BWFLAException
 	{
 		final SupplierTask<BlobDescription> op = () -> {
@@ -122,6 +132,7 @@ public class Blob extends TaskExecutor
 		return this.execute(op, "Stating blob failed!");
 	}
 
+	/** Retrieve blob's tags */
 	public Map<String, String> tags() throws BWFLAException
 	{
 		final SupplierTask<Map<String, String>> op = () -> {
@@ -137,6 +148,7 @@ public class Blob extends TaskExecutor
 		return this.execute(op, "Looking up blob tags failed!");
 	}
 
+	/** Set blob's tags */
 	public Blob setTags(Map<String, String> tags) throws BWFLAException
 	{
 		final RunnableTask op = () -> {
@@ -153,26 +165,31 @@ public class Blob extends TaskExecutor
 		return this;
 	}
 
+	/** Generate URL for pre-signed GET operation */
 	public String newPreSignedGetUrl() throws BWFLAException
 	{
 		return this.newPreSignedGetUrl(7, TimeUnit.DAYS);
 	}
 
+	/** Generate URL for pre-signed GET operation */
 	public String newPreSignedGetUrl(int expiry, TimeUnit unit) throws BWFLAException
 	{
 		return this.newPreSignedUrl(Method.GET, expiry, unit, "downloading");
 	}
 
+	/** Generate URL for pre-signed PUT operation */
 	public String newPreSignedPutUrl() throws BWFLAException
 	{
 		return this.newPreSignedPutUrl(7, TimeUnit.DAYS);
 	}
 
+	/** Generate URL for pre-signed PUT operation */
 	public String newPreSignedPutUrl(int expiry, TimeUnit unit) throws BWFLAException
 	{
 		return this.newPreSignedUrl(Method.PUT, expiry, unit, "uploading");
 	}
 
+	/** Return builder for copy-sources */
 	public static CopySourceBuilder newCopySource()
 	{
 		return new CopySourceBuilder();
@@ -196,6 +213,7 @@ public class Blob extends TaskExecutor
 		protected Map<String, String> userdata;
 		protected Map<String, String> tags;
 
+		/** Add a new user-data entry */
 		public D userdata(String name, String value)
 		{
 			if (userdata == null)
@@ -205,6 +223,7 @@ public class Blob extends TaskExecutor
 			return (D) this;
 		}
 
+		/** Add a new tag entry */
 		public D tag(String name, String value)
 		{
 			if (tags == null)
@@ -238,6 +257,7 @@ public class Blob extends TaskExecutor
 			return this;
 		}
 
+		/** Execute download operation, returning content as stream */
 		public InputStream download() throws BWFLAException
 		{
 			final var self = Blob.this;
@@ -265,6 +285,7 @@ public class Blob extends TaskExecutor
 			// Empty!
 		}
 
+		/** Specify file to be uploaded as content */
 		public Uploader filename(Path filename)
 		{
 			this.filename = filename;
@@ -272,11 +293,13 @@ public class Blob extends TaskExecutor
 			return this;
 		}
 
+		/** Specify stream to be uploaded as content */
 		public Uploader stream(InputStream stream)
 		{
 			return this.stream(stream, -1L);
 		}
 
+		/** Specify stream to be uploaded as content */
 		public Uploader stream(InputStream stream, long size)
 		{
 			this.stream = stream;
@@ -285,12 +308,14 @@ public class Blob extends TaskExecutor
 			return this;
 		}
 
+		/** Specify content-type of uploaded data */
 		public Uploader contentType(String type)
 		{
 			this.contentType = type;
 			return this;
 		}
 
+		/** Execute upload operation */
 		public void upload() throws BWFLAException
 		{
 			final var self = Blob.this;
@@ -337,12 +362,18 @@ public class Blob extends TaskExecutor
 			this.multipart = false;
 		}
 
+		/**
+		 * Optionally enable multipart mode
+		 * <br><br>
+		 * <b>NOTE:</b> Multipart mode must be explicitly enabled if copy size exceeds 5GB!
+		 */
 		public Copier multipart(boolean enabled)
 		{
 			this.multipart = enabled;
 			return this;
 		}
 
+		/** Specify source to copy from */
 		public Copier source(String bucket, String blob)
 		{
 			final var source = new CopySourceBuilder()
@@ -352,17 +383,20 @@ public class Blob extends TaskExecutor
 			return this.source(source);
 		}
 
+		/** Specify source to copy from */
 		public Copier source(Blob blob)
 		{
 			return this.source(blob.bucket(), blob.name());
 		}
 
+		/** Specify source to copy from */
 		public Copier source(CopySourceBuilder source)
 		{
 			sources.add(source);
 			return this;
 		}
 
+		/** Execute server-side copy operation */
 		public void copy() throws BWFLAException
 		{
 			if (multipart || sources.size() > 1)

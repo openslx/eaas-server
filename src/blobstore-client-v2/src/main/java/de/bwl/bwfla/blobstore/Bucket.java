@@ -50,6 +50,7 @@ import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
 
+/** Wrapper representing a bucket in a BlobStore */
 public class Bucket extends TaskExecutor
 {
 	private final BlobStore storage;
@@ -57,11 +58,13 @@ public class Bucket extends TaskExecutor
 	private final String bucket;
 
 
+	/** Bucket's blobstore */
 	public BlobStore storage()
 	{
 		return storage;
 	}
 
+	/** Bucket's name */
 	public String name()
 	{
 		return bucket;
@@ -70,6 +73,7 @@ public class Bucket extends TaskExecutor
 
 	// ===== Bucket API ====================
 
+	/** Return true if bucket exists, else false */
 	public boolean exists() throws BWFLAException
 	{
 		final SupplierTask<Boolean> op = () -> {
@@ -83,6 +87,7 @@ public class Bucket extends TaskExecutor
 		return this.execute(op, "Checking bucket existence failed!");
 	}
 
+	/** Create this bucket in backing store */
 	public void create() throws BWFLAException
 	{
 		final RunnableTask op = () -> {
@@ -96,6 +101,7 @@ public class Bucket extends TaskExecutor
 		this.execute(op, "Creating bucket failed!");
 	}
 
+	/** Remove this bucket from backing store */
 	public void remove() throws BWFLAException
 	{
 		final RunnableTask op = () -> {
@@ -109,6 +115,7 @@ public class Bucket extends TaskExecutor
 		this.execute(op, "Removing bucket failed!");
 	}
 
+	/** Remove this bucket (and optionally its blobs) from backing store */
 	public void remove(boolean recursive) throws BWFLAException
 	{
 		// Remove all blobs first?
@@ -131,6 +138,7 @@ public class Bucket extends TaskExecutor
 		this.remove();
 	}
 
+	/** Remove given blobs from this bucket */
 	public void remove(Stream<String> blobs) throws BWFLAException
 	{
 		final RunnableTask op = () -> {
@@ -151,44 +159,52 @@ public class Bucket extends TaskExecutor
 		this.execute(op, "Removing blob(s) failed!");
 	}
 
+	/** Remove given blobs from this bucket */
 	public void remove(Iterator<String> blobs) throws BWFLAException
 	{
 		final var spliterator = Spliterators.spliteratorUnknownSize(blobs, 0);
 		this.remove(StreamSupport.stream(spliterator, false));
 	}
 
+	/** Remove given blobs from this bucket */
 	public void remove(Iterable<String> blobs) throws BWFLAException
 	{
 		this.remove(StreamSupport.stream(blobs.spliterator(), false));
 	}
 
+	/** List all blobs stored in this bucket */
 	public Stream<BlobDescription> list() throws BWFLAException
 	{
 		return this.list(null);
 	}
 
+	/** List blobs with given prefix stored in this bucket */
 	public Stream<BlobDescription> list(String prefix) throws BWFLAException
 	{
 		return this.items(prefix)
 				.map((item) -> new BlobDescription(bucket, item));
 	}
 
+	/** List all blobs stored in this bucket */
 	public Stream<Blob> blobs() throws BWFLAException
 	{
 		return this.blobs(null);
 	}
 
+	/** List blobs with given prefix stored in this bucket */
 	public Stream<Blob> blobs(String prefix) throws BWFLAException
 	{
 		return this.items(prefix)
 				.map((item) -> this.blob(item.objectName()));
 	}
 
+	/** Create wrapper for named blob */
 	public Blob blob(String blob)
 	{
 		return new Blob(storage, bucket, blob);
 	}
 
+	/** Retrieve bucket's tags */
 	public Map<String, String> tags() throws BWFLAException
 	{
 		final SupplierTask<Map<String, String>> op = () -> {
@@ -203,6 +219,7 @@ public class Bucket extends TaskExecutor
 		return this.execute(op, "Looking up bucket tags failed!");
 	}
 
+	/** Set bucket's tags */
 	public Bucket setTags(Map<String, String> tags) throws BWFLAException
 	{
 		final RunnableTask op = () -> {
@@ -218,6 +235,7 @@ public class Bucket extends TaskExecutor
 		return this;
 	}
 
+	/** Retrieve bucket's access-policy */
 	public String policy() throws BWFLAException
 	{
 		final SupplierTask<String> op = () -> {
@@ -231,6 +249,7 @@ public class Bucket extends TaskExecutor
 		return this.execute(op, "Looking up bucket-policy failed!");
 	}
 
+	/** Set bucket's access-policy */
 	public Bucket setPolicy(String policy) throws BWFLAException
 	{
 		final RunnableTask op = () -> {

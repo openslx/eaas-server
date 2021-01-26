@@ -26,6 +26,7 @@ import java.time.ZonedDateTime;
 import java.util.Map;
 
 
+/** Description of a blob */
 public class BlobDescription
 {
 	private final String bucket;
@@ -55,31 +56,37 @@ public class BlobDescription
 		this.userdata = item.userMetadata();
 	}
 
+	/** Blob's bucket name */
 	public String bucket()
 	{
 		return bucket;
 	}
 
+	/** Blob's name */
 	public String name()
 	{
 		return name;
 	}
 
+	/** Blob's last-modified time */
 	public ZonedDateTime mtime()
 	{
 		return mtime;
 	}
 
+	/** Blob's size */
 	public long size()
 	{
 		return size;
 	}
 
+	/** Blob's content type */
 	public String contentType()
 	{
 		return contentType;
 	}
 
+	/** Blob's user-metadata */
 	public Map<String, String> userdata()
 	{
 		return userdata;

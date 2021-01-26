@@ -30,12 +30,14 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 
+/** Client for S3-compatible BlobStore */
 public class BlobStore extends TaskExecutor
 {
 	private final Logger log;
 	private final MinioClient minio;
 
 
+	/** List all available bucket names */
 	public Stream<String> list() throws BWFLAException
 	{
 		final SupplierTask<Stream<String>> op = () -> {
@@ -47,32 +49,38 @@ public class BlobStore extends TaskExecutor
 		return this.execute(op, "Listing buckets failed!");
 	}
 
+	/** List all available buckets */
 	public Stream<Bucket> buckets() throws BWFLAException
 	{
 		return this.list()
 				.map(this::bucket);
 	}
 
+	/** Create wrapper for named bucket */
 	public Bucket bucket(String name)
 	{
 		return new Bucket(this, name);
 	}
 
+	/** Create wrapper for named blob */
 	public Blob blob(String bucket, String name)
 	{
 		return new Blob(this, bucket, name);
 	}
 
+	/** Create wrapper from blob-handle */
 	public Blob blob(BlobHandle handle)
 	{
 		return this.blob(handle.bucket(), handle.name());
 	}
 
+	/** Create new client builder */
 	public static Builder builder()
 	{
 		return new Builder();
 	}
 
+	/** Create client with default configuration */
 	public static BlobStore create(Logger log) throws BWFLAException
 	{
 		final Configuration config = ConfigurationProvider.getConfiguration();
@@ -87,6 +95,7 @@ public class BlobStore extends TaskExecutor
 				.build();
 	}
 
+	/** Return configured default bucket name */
 	public static String getDefaultBucket()
 	{
 		return ConfigurationProvider.getConfiguration()
@@ -94,6 +103,7 @@ public class BlobStore extends TaskExecutor
 	}
 
 
+	/** Client builder for S3-compatible BlobStore */
 	public static class Builder
 	{
 		private final MinioClient.Builder mcb;
@@ -104,30 +114,35 @@ public class BlobStore extends TaskExecutor
 			this.mcb = MinioClient.builder();
 		}
 
+		/** Access credentials for backing storage service */
 		public Builder credentials(String accessKey, String secretKey)
 		{
 			mcb.credentials(accessKey, secretKey);
 			return this;
 		}
 
+		/** Storage service's region */
 		public Builder region(String region)
 		{
 			mcb.region(region);
 			return this;
 		}
 
+		/** Endpoint for backing storage service */
 		public Builder endpoint(String endpoint)
 		{
 			mcb.endpoint(endpoint);
 			return this;
 		}
 
+		/** Endpoint for backing storage service */
 		public Builder endpoint(URL endpoint)
 		{
 			mcb.endpoint(endpoint);
 			return this;
 		}
 
+		/** Logger to use internally */
 		public Builder logger(Logger logger)
 		{
 			this.logger = logger;
