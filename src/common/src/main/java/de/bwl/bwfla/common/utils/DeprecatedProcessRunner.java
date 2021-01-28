@@ -153,7 +153,8 @@ public class DeprecatedProcessRunner
 	/** Set a new logger. */
 	public DeprecatedProcessRunner setLogger(Logger log)
 	{
-		this.log = log;
+		if(log != null)
+			this.log = log;
 		return this;
 	}
 
