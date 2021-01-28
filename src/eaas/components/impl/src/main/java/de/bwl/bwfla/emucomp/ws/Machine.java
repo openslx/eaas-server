@@ -85,13 +85,15 @@ public class Machine
 		final EmulatorComponent emul = nodeManager.getComponentById(componentId, EmulatorComponent.class);
 		return emul.changeMedium(containerId, objReference);
 	}
-	
+
+	@Deprecated
 	public int attachMedium(String componentId, @XmlMimeType("application/octet-stream") DataHandler data, String mediaType) throws BWFLAException
 	{
 		final EmulatorComponent emul = nodeManager.getComponentById(componentId, EmulatorComponent.class);
 		return emul.attachMedium(data, mediaType);
 	}
-	
+
+	@Deprecated
 	public @XmlMimeType("application/octet-stream") DataHandler detachMedium(String componentId, int handle) throws BWFLAException
 	{
 		EmulatorComponent emul = nodeManager.getComponentById(componentId, EmulatorComponent.class);		

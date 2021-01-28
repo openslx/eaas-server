@@ -30,7 +30,6 @@ import de.bwl.bwfla.emucomp.api.ComponentState;
 import de.bwl.bwfla.emucomp.api.ContainerComponent;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 import de.bwl.bwfla.emucomp.api.DockerContainerConfiguration;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
 import de.bwl.bwfla.emucomp.components.BindingsManager;
 import de.bwl.bwfla.emucomp.components.EaasComponentBean;
@@ -169,13 +168,12 @@ public abstract class ContainerBean extends EaasComponentBean implements Contain
 			for (AbstractDataResource resource : config.getDataResources())
 				bindings.register(resource);
 
-			final EmulatorUtils.XmountOutputFormat format = EmulatorUtils.XmountOutputFormat.RAW;
 			final Path outdir = this.getBindingsDir();
 
 			// Resolve and mount all bindings
 			if (config.hasInputs()) {
 				for (ContainerConfiguration.Input input : config.getInputs())
-					bindings.mount(input.getBinding(), outdir, format);
+					bindings.mount(input.getBinding(), outdir);
 			}
 
 			this.prepare();

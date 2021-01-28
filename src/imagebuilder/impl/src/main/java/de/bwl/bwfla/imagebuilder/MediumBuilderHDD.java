@@ -111,7 +111,7 @@ public class MediumBuilderHDD extends MediumBuilder
 				return new ImageHandle(qcow, outname, outtype);
 
 			// Mount it as raw disk-image
-			ImageMounter.Mount rawmnt = mounter.mount(qcow, workdir.resolve("raw"));
+			ImageMounter.Mount rawmnt = mounter.mount(qcow, workdir.resolve(qcow.getFileName() + ".fuse"));
 
 			// Partition the raw disk-image
 			if (backingFile == null && description.getPartitionTableType() != PartitionTableType.NONE) {

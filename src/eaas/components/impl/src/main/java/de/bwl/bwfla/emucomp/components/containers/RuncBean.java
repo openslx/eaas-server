@@ -24,7 +24,6 @@ import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.net.ConfigKey;
 import de.bwl.bwfla.common.utils.net.PortRangeProvider;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
-import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
 
 import org.apache.tamaya.inject.api.Config;
@@ -57,8 +56,7 @@ public class RuncBean extends ContainerBean
 
 		// Resolve and mount runc-specific bindings
 		{
-			final EmulatorUtils.XmountOutputFormat format = EmulatorUtils.XmountOutputFormat.RAW;
-			bindings.mount(config.getRootFilesystem(), this.getBindingsDir(), format);
+			bindings.mount(config.getRootFilesystem(), this.getBindingsDir());
 		}
 
 		// Generate container's config
@@ -184,7 +182,7 @@ public class RuncBean extends ContainerBean
 	@Override
 	public void stop() throws BWFLAException {
 		if (xpraRunner.isProcessRunning())
-			EmulatorUtils.stopXpraServer(xpraRunner);
+			stopXpraServer(xpraRunner);
 		super.stop();
 	}
 
@@ -195,11 +193,37 @@ public class RuncBean extends ContainerBean
 		super.destroy();
 	}
 
-
-
 	public int getPort() throws IOException {
 		if (port == -1)
 			this.port = listenPort.get();
 		return port;
+	}
+
+	private void stopXpraServer(DeprecatedProcessRunner runner) throws BWFLAException {
+		final int xpraProcessId = runner.getProcessId();
+		LOG.info("Stopping Xpra server " + xpraProcessId + "...");
+
+		// We need to send INT signal to gracefully stop Xpra server
+		DeprecatedProcessRunner xpraKiller = new DeprecatedProcessRunner();
+		xpraKiller.setCommand("kill");
+		xpraKiller.addArgument("-SIGINT");
+		xpraKiller.addArgument("" + xpraProcessId);
+		xpraKiller.execute();
+
+		try {
+			// Give Xpra server a chance to shutdown cleanly
+			for (int i = 0; i < 10; ++i) {
+				if (runner.isProcessFinished()) {
+					LOG.info("Xpra server " + xpraProcessId + " stopped.");
+					return;
+				}
+				Thread.sleep(500);
+			}
+		}
+		catch (Exception exception) {
+			throw new BWFLAException(exception.getMessage());
+		}
+
+		LOG.warning("Xpra server " + xpraProcessId + " failed to shutdown cleanly! Zomby processes may be left.");
 	}
 }

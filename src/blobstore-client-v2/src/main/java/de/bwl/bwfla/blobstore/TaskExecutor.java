@@ -17,8 +17,44 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emucomp.api;
+package de.bwl.bwfla.blobstore;
 
-public class VolatileResource extends Binding {
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+/* package-private */
+
+
+class TaskExecutor
+{
+	@FunctionalInterface
+	interface RunnableTask
+	{
+		void run() throws Exception;
+	}
+
+	@FunctionalInterface
+	interface SupplierTask<T>
+	{
+		T get() throws Exception;
+	}
+
+	protected void execute(RunnableTask task, String errmsg) throws BWFLAException
+	{
+		try {
+			task.run();
+		}
+		catch (Exception error) {
+			throw new BWFLAException(errmsg, error);
+		}
+	}
+
+	protected <T> T execute(SupplierTask<T> task, String errmsg) throws BWFLAException
+	{
+		try {
+			return task.get();
+		}
+		catch (Exception error) {
+			throw new BWFLAException(errmsg, error);
+		}
+	}
 }
