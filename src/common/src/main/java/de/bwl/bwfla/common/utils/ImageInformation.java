@@ -1,7 +1,9 @@
 package de.bwl.bwfla.common.utils;
 
+import de.bwl.bwfla.common.datatypes.QemuImage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import javax.xml.bind.JAXBException;
 import java.io.IOException;
 import java.util.logging.Logger;
 
@@ -13,30 +15,9 @@ public class ImageInformation {
 
     private String backingFile = null;
     private QemuImageFormat fileFormat = null;
+    private QemuImage imageInfo;
 
-    private void parseOutput(String output) throws BWFLAException
-    {
-        String[] lines = output.trim().split("\n");
-        for(String line : lines)
-        {
-            String[] tokens = line.split(": ");
-            if(tokens.length < 2)
-                continue;
-            // System.out.println("value: " + tokens[0] + " " + tokens[1]);
-
-            if(tokens[0].equals("backing file"))
-                backingFile = tokens[1].trim();
-            else if(tokens[0].equals("file format"))
-            {
-                for (QemuImageFormat fmt : QemuImageFormat.values()) {
-                    if (tokens[1].startsWith(fmt.toString())) {
-                        fileFormat = fmt;
-                        break;
-                    }
-                }
-            }
-        }
-    }
+    protected final Logger log = Logger.getLogger(this.getClass().getName());
 
     static public String getBackingImageId(String bf) throws BWFLAException {
         if (bf.contains("exportname")) {
@@ -45,13 +26,14 @@ public class ImageInformation {
         else if (bf.startsWith("http")) {
             return bf.substring(bf.lastIndexOf('/') + 1);
         }
-        throw new BWFLAException("cannot determine image id. unsupported schema: " + bf);
+        else return bf;
     }
 
     public ImageInformation(String imageFile, Logger log) throws IOException, BWFLAException {
         DeprecatedProcessRunner process = new DeprecatedProcessRunner();
         process.setCommand("qemu-img");
         process.addArguments("info");
+        process.addArguments("--output", "json");
         process.addArgument(imageFile);
         process.setLogger(log);
 
@@ -61,19 +43,20 @@ public class ImageInformation {
         if (result == null || !result.successful())
             throw new BWFLAException("qemu-img info " + imageFile.toString() + " failed");
 
-        this.parseOutput(result.stdout());
+        imageInfo = QemuImage.fromJsonValueWithoutRoot(result.stdout(), QemuImage.class);
+        process.cleanup();
     }
 
     public boolean hasBackingFile() {
-        return backingFile != null;
+        return imageInfo.getBackingFile() != null;
     }
 
     public String getBackingFile() {
-        return backingFile;
+        return imageInfo.getBackingFile();
     }
 
     public QemuImageFormat getFileFormat() {
-        return fileFormat;
+        return QemuImageFormat.valueOf(imageInfo.getFormat().toUpperCase());
     }
 
     public enum QemuImageFormat{
