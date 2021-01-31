@@ -776,34 +776,6 @@ public class EmilEnvironmentRepository {
 		return ee.getEnvId();
 	}
 
-	@Deprecated
-	String saveImport(Snapshot snapshot, SaveImportRequest request) throws BWFLAException {
-		Environment environment = environmentsAdapter.getEnvironmentById(request.getArchive(), request.getEnvId());
-		EnvironmentDescription description = new EnvironmentDescription();
-		description.setTitle(request.getTitle());
-		environment.setDescription(description);
-
-		environmentsAdapter.updateMetadata("default", environment);
-		environmentsAdapter.commitTempEnvironment("default", request.getEnvId());
-
-		EmilEnvironment newEmilEnv = getEmilEnvironmentById(request.getEnvId());
-
-		if (newEmilEnv != null)
-			throw new BWFLAException("import failed: environment with id: " + request.getEnvId() + " exists.");
-
-		newEmilEnv = new EmilEnvironment();
-		newEmilEnv.setTitle(request.getTitle());
-		newEmilEnv.setEnvId(request.getEnvId());
-		newEmilEnv.setAuthor(request.getAuthor());
-		newEmilEnv.setEnableRelativeMouse(request.isRelativeMouse());
-
-		newEmilEnv.setDescription(request.getMessage());
-		save(newEmilEnv, true);
-
-		return request.getEnvId();
-	}
-
-
 	void saveImportedContainer(SaveImportedContainerRequest req) throws BWFLAException {
 		environmentsAdapter.commitTempEnvironmentWithCustomType("default", req.getId(), "containers");
 

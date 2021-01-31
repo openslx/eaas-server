@@ -166,12 +166,6 @@ public class DatabaseEnvironmentsAdapter {
         environmentsAdapter.delete(archive, envId, deleteMetadata, deleteImage);
     }
 
-
-    public void commitTempEnvironment(String archive, String id) throws BWFLAException {
-        commitTempEnvironmentWithCustomType(archive, id, "user");
-    }
-
-
     public void commitTempEnvironmentWithCustomType(String archive, String id, String type) throws BWFLAException {
         try {
             environmentsAdapter.commitTempEnvironmentWithCustomType(id, type);
