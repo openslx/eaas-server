@@ -37,10 +37,14 @@ public class BlobTest extends BaseTest
 		final String content = "hello world!";
 		final var blob = bucket.blob("blob");
 
+		Assert.assertFalse("blob's existence", blob.exists());
+
 		blob.uploader()
 				.stream(new ByteArrayInputStream(content.getBytes()))
 				.contentType("text/plain")
 				.upload();
+
+		Assert.assertTrue("blob's existence", blob.exists());
 
 		// full content case
 		var bytes = blob.downloader()

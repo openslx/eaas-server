@@ -117,6 +117,17 @@ public class Blob extends TaskExecutor
 		this.execute(op, "Deleting blob failed!");
 	}
 
+	/** Return true if this blob exists, else false */
+	public boolean exists()
+	{
+		try {
+			return this.stat() != null;
+		}
+		catch (Exception error) {
+			return false;
+		}
+	}
+
 	/** Retrieve blob's description */
 	public BlobDescription stat() throws BWFLAException
 	{
