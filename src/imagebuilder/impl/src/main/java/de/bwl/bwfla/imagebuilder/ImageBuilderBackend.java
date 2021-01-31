@@ -23,9 +23,10 @@ import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
+import de.bwl.bwfla.emucomp.api.ImageMounter;
 import de.bwl.bwfla.imagebuilder.api.IImageBuilder;
 import de.bwl.bwfla.imagebuilder.api.ImageBuildHandle;
 import de.bwl.bwfla.imagebuilder.api.ImageBuilderResult;
@@ -94,14 +95,14 @@ public class ImageBuilderBackend implements IImageBuilder
 	public ImageBuildHandle build(ImageDescription description) throws BWFLAException
 	{
 		final Path workdir = this.createWorkingDir();
-		final String tid = builds.submitTask(new ImageBuildTask(workdir, description));
+		final String tid = builds.submit(new ImageBuildTask(workdir, description));
 		return new ImageBuildHandle(tid);
 	}
 
 	@Override
 	public boolean isDone(ImageBuildHandle build) throws BWFLAException
 	{
-		final TaskInfo<ImageBuilderResult> info = builds.getTaskInfo(build.getId());
+		final TaskInfo<ImageBuilderResult> info = builds.lookup(build.getId());
 		if (info == null)
 			throw new BWFLAException("Invalid image-build handle!");
 
@@ -111,7 +112,7 @@ public class ImageBuilderBackend implements IImageBuilder
 	@Override
 	public ImageBuilderResult get(ImageBuildHandle build) throws BWFLAException
 	{
-		final TaskInfo<ImageBuilderResult> info = builds.getTaskInfo(build.getId());
+		final TaskInfo<ImageBuilderResult> info = builds.lookup(build.getId());
 		if (info == null)
 			throw new BWFLAException("Invalid image-build handle!");
 
@@ -122,7 +123,7 @@ public class ImageBuilderBackend implements IImageBuilder
 			throw new BWFLAException("Retrieving image-build result failed!", error);
 		}
 		finally {
-			builds.removeTaskInfo(build.getId());
+			builds.remove(build.getId());
 		}
 	}
 
@@ -162,11 +163,11 @@ public class ImageBuilderBackend implements IImageBuilder
 	{
 		public TaskManager() throws NamingException
 		{
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/batch"));
+			super("IMAGE-BUILDER-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/batch"));
 		}
 	}
 
-	private class ImageBuildTask extends AbstractTask<ImageBuilderResult>
+	private class ImageBuildTask extends BlockingTask<ImageBuilderResult>
 	{
 		private final ImageBuilderBackend backend;
 		private final Path workdir;
@@ -198,8 +199,12 @@ public class ImageBuilderBackend implements IImageBuilder
 				result.setMetadata(image.getMetadata());
 				return result;
 			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Building new image failed!", error);
+				throw error;
+			}
 			finally {
-				MediumBuilder.delete(workdir, log);
+				ImageMounter.delete(workdir, log);
 			}
 		}
 	}

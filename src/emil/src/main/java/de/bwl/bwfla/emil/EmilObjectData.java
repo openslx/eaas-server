@@ -25,7 +25,7 @@ public class EmilObjectData extends EmilRest {
 	private ObjectRepository objrepo = null;
 
 
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -35,7 +35,7 @@ public class EmilObjectData extends EmilRest {
 				.sync();
 	}
 
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@POST
 	@Path("/syncObjects")
 	@Consumes(MediaType.APPLICATION_JSON)
@@ -46,7 +46,7 @@ public class EmilObjectData extends EmilRest {
 				.sync(req.getArchive(), req);
 	}
 
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@GET
 	@Path("/objectImportTaskState")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -67,7 +67,7 @@ public class EmilObjectData extends EmilRest {
 	 *
 	 * @documentationType de.bwl.bwfla.emil.datatypes.ObjectListItem
 	 */
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@GET
 	@Path("/{objectArchive}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -79,7 +79,7 @@ public class EmilObjectData extends EmilRest {
 				.list(response);
 	}
 
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@DELETE
 	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -97,7 +97,7 @@ public class EmilObjectData extends EmilRest {
 	 * @param objectId The object's ID to look up metadata for.
 	 * @return A JSON object with object's metadata when found, else an error message.
 	 */
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@GET
 	@Path("/{objectArchive}/{objectId}")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -109,7 +109,7 @@ public class EmilObjectData extends EmilRest {
 				.get(objectId);
 	}
 
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@GET
 	@Path("/archives")
 	@Produces(MediaType.APPLICATION_JSON)
@@ -119,7 +119,7 @@ public class EmilObjectData extends EmilRest {
 				.list();
 	}
 
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	@POST
 	@Path("/import")
 	@Consumes(MediaType.APPLICATION_JSON)

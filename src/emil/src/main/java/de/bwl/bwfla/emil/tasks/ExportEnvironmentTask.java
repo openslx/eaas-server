@@ -1,7 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
@@ -15,13 +15,11 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermission;
-import java.nio.file.attribute.PosixFilePermissions;
-import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ExportEnvironmentTask extends AbstractTask<Object> {
+public class ExportEnvironmentTask extends BlockingTask<Object>
+{
 
     private static final Logger LOG = Logger.getLogger(ExportEnvironmentTask.class.getName());
 
@@ -278,6 +276,7 @@ public class ExportEnvironmentTask extends AbstractTask<Object> {
 //        }
     }
 
+    /*
     private static void exportCowFile(String ref, File imageDir) throws IOException, BWFLAException
     {
         Set<PosixFilePermission> permissions = new HashSet<>();
@@ -297,13 +296,15 @@ public class ExportEnvironmentTask extends AbstractTask<Object> {
         java.nio.file.Path fuseMountpoint = cowPath
                 .resolveSibling(cowPath.getFileName() + ".fuse");
 
-        File exportFile = EmulatorUtils.mountCowFile(cowPath, fuseMountpoint).toFile();
+        File exportFile = EmulatorUtils.mountCowFile(cowPath, fuseMountpoint, LOG).toFile();
 
         File dest = new File(imageDir, ImageInformation.getBackingImageId(ref));
         // java.nio.file.Files.copy(exportFile.toPath(), dest.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         EmulatorUtils.convertImage(exportFile.toPath(), dest.toPath(), ImageInformation.QemuImageFormat.QCOW2, LOG);
         tempDir.delete();
     }
+    */
+
 
 //    private void sync()
 //    {

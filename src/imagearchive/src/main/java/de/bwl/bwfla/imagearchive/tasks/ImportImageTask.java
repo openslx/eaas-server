@@ -1,7 +1,7 @@
 package de.bwl.bwfla.imagearchive.tasks;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
@@ -17,7 +17,8 @@ import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-public class ImportImageTask extends AbstractTask<String> {
+public class ImportImageTask extends BlockingTask<String>
+{
 
 
     private File destImgFile;
@@ -94,7 +95,7 @@ public class ImportImageTask extends AbstractTask<String> {
                 final Binding binding = new Binding();
                 try {
                     binding.setUrl(nexturl);
-                    EmulatorUtils.copyRemoteUrl(binding, layer, null, log);
+                    EmulatorUtils.copyRemoteUrl(binding, layer, log);
                 }
                 catch (BWFLAException error) {
                     log.log(Level.WARNING, "Downloading backing file failed!", error);
@@ -138,11 +139,12 @@ public class ImportImageTask extends AbstractTask<String> {
             // EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
 
             if(!destImgFile.exists()) {
-                EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null, log);
+                EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), log);
             }
 
             log.info("Looking up image file format...");
-            ImageInformation.QemuImageFormat fmt = EmulatorUtils.getImageFormat(destImgFile.toPath(), log);
+            ImageInformation info = new ImageInformation(destImgFile.toPath().toString(), log);
+            ImageInformation.QemuImageFormat fmt = info.getFileFormat();
             if (fmt == null) {
                 destImgFile.delete();
                 throw new BWFLAException("could not determine file fmt");

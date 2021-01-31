@@ -50,7 +50,6 @@ import javax.xml.bind.annotation.XmlType;
  *         &lt;element name="transport" minOccurs="0">
  *           &lt;simpleType>
  *             &lt;restriction base="{http://www.w3.org/2001/XMLSchema}string">
- *               &lt;enumeration value="nbd"/>
  *               &lt;enumeration value="file"/>
  *               &lt;enumeration value="auto"/>
  *             &lt;/restriction>
@@ -253,7 +252,6 @@ public class Binding extends AbstractDataResource {
      * <pre>
      * &lt;simpleType>
      *   &lt;restriction base="{http://www.w3.org/2001/XMLSchema}string">
-     *     &lt;enumeration value="nbd"/>
      *     &lt;enumeration value="file"/>
      *     &lt;enumeration value="auto"/>
      *   &lt;/restriction>
@@ -265,8 +263,6 @@ public class Binding extends AbstractDataResource {
     @XmlEnum
     public enum TransportType {
 
-        @XmlEnumValue("nbd")
-        NBD("nbd"),
         @XmlEnumValue("file")
         FILE("file"),
         @XmlEnumValue("auto")
@@ -313,6 +309,12 @@ public class Binding extends AbstractDataResource {
          */
         @XmlEnumValue("floppy")
         FLOPPY("floppy"),
+
+        /**
+         * Cartridge image file
+         */
+        @XmlEnumValue("cart")
+        CART("cart"),
     	
     	/**
     	 * ZIP archive 

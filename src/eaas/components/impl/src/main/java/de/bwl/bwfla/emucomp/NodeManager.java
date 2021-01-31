@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 import javax.annotation.Resource;
 import javax.enterprise.concurrent.ManagedScheduledExecutorService;
@@ -45,7 +46,6 @@ import de.bwl.bwfla.emucomp.components.AbstractEaasComponent;
 import de.bwl.bwfla.emucomp.components.emulators.EmulatorBean;
 import de.bwl.bwfla.emucomp.components.network.NetworkSwitchBean;
 import de.bwl.bwfla.emucomp.components.network.VdeSlirpBean;
-import de.bwl.bwfla.emucomp.components.network.VdeSocksBean;
 
 @ApplicationScoped
 public class NodeManager {
@@ -126,7 +126,10 @@ public class NodeManager {
                 throw (BWFLAException) error;
             else if (error.getCause() instanceof BWFLAException)
                 throw (BWFLAException) error.getCause();
-            else throw new BWFLAException("Allocating component failed!", error);
+            else {
+                log.log(Level.WARNING, "Allocating component failed!", error);
+                throw new BWFLAException("Allocating component failed!", error);
+            }
         }
     }
     
@@ -202,8 +205,6 @@ public class NodeManager {
                 component = VdeSlirpBean.createVdeSlirp((VdeSlirpConfiguration) configuration);
             } else if (configuration instanceof NetworkSwitchConfiguration) {
                 component = NetworkSwitchBean.createNetworkSwitch((NetworkSwitchConfiguration) configuration);
-            } else if (configuration instanceof VdeSocksConfiguration) {
-                component = VdeSocksBean.createVdeSocks((VdeSocksConfiguration) configuration);
             } else if (configuration instanceof NodeTcpConfiguration) {
                 component = NodeTcpBean.createNodeTcp((NodeTcpConfiguration) configuration);
             } else {

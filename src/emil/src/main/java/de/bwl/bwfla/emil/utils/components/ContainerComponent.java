@@ -159,14 +159,14 @@ public class ContainerComponent {
 
 
     public ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
-        if (inputMedia.size() != 1)
+        if (inputMedia.size() > 1)
             throw new BWFLAException("Size of Input drives cannot exceed 1");
 
-        ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
         final FileSystemType fileSystemType = FileSystemType.EXT4;
-        int sizeInMb = medium.getSizeInMb();
-        if (sizeInMb <= 0)
-            sizeInMb = 1024;
+
+        int sizeInMb = 1024;
+        if(inputMedia.size() > 0 && inputMedia.get(0).getSizeInMb() >= 0)
+            sizeInMb = inputMedia.get(0).getSizeInMb();
 
         final ImageDescription description = new ImageDescription()
                 .setMediumType(MediumType.HDD)
@@ -176,28 +176,45 @@ public class ContainerComponent {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), medium.getExtFiles().size() > 0, linuxRuntime.isTelnetEnabled());
+        boolean requiersInputFiles = false;
+        if(inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0)
+            requiersInputFiles = true;
+
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiersInputFiles, linuxRuntime.isTelnetEnabled());
+
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
-                .setDataFromUrl(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
+                .setUrlDataSource(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
                 .setName("metadata.json");
         description.addContentEntry(metadataEntry);
 
+        if(inputMedia.size() > 0) {
+            ComponentWithExternalFilesRequest.InputMedium medium = inputMedia.get(0);
+            for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
+                final URL url = new URL(extfile.getUrl());
+                final ImageContentDescription entry = new ImageContentDescription()
+                        .setAction(extfile.getAction())
+                        .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
+                        .setUrlDataSource(url)
+                        .setSubdir("container-input");
 
-        for (ComponentWithExternalFilesRequest.FileURL extfile : medium.getExtFiles()) {
-            final ImageContentDescription entry = new ImageContentDescription()
-                    .setAction(extfile.getAction())
-                    .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-                    .setURL(new URL(extfile.getUrl()))
-                    .setSubdir("container-input");
+                if (extfile.hasName())
+                    entry.setName(extfile.getName());
+                else entry.setName(Components.getFileName(url));
 
+                description.addContentEntry(entry);
+            }
 
-            if (extfile.getName() == null || extfile.getName().isEmpty())
-                entry.setName(FilenameUtils.getName(entry.getURL().getPath()));
-            else
-                entry.setName(extfile.getName());
+            for (ComponentWithExternalFilesRequest.FileData inlfile : medium.getInlineFiles()) {
+                final ImageContentDescription entry = new ImageContentDescription()
+                        .setAction(inlfile.getAction())
+                        .setArchiveFormat(inlfile.getCompressionFormat())
+                        .setName(inlfile.getName())
+                        .setByteArrayDataSource(inlfile.getData())
+                        .setSubdir("container-input");
 
-            description.addContentEntry(entry);
+                description.addContentEntry(entry);
+            }
         }
 
         return description;

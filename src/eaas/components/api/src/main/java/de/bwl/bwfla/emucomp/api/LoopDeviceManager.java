@@ -43,13 +43,8 @@ public class LoopDeviceManager {
 		process.setCommand("losetup");
 		process.addArguments("-d", dev);
 		process.redirectStdErrToStdOut(false);
-		try {
-			if (!process.execute(false, false)) {
-				throw new BWFLAException(process.getCommandString() + " failed: " + process.getStdErrString());
-			}
-		} finally {
-			process.cleanup();
-		}
+		if (!process.execute())
+			throw new BWFLAException("Detaching loop-device failed!");
 	}
 
 	public static Object getKeyFromValue(Map hm, Object value) {

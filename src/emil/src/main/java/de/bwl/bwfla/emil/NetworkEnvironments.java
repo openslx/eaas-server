@@ -28,6 +28,7 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 @Path("network-environments")
@@ -63,7 +64,7 @@ public class NetworkEnvironments extends EmilRest {
         }
     }
 
-    @Secured(roles = {Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRICTED})
     @PUT
     @Path("/")
     @Produces(MediaType.APPLICATION_JSON)
@@ -110,12 +111,13 @@ public class NetworkEnvironments extends EmilRest {
     @Path("/{envId}")
     @Produces(MediaType.APPLICATION_JSON)
     public Response getNetworkEnvironment(@PathParam("envId") String envId,
-                                          @QueryParam("jsonUrl") boolean jsonUrl,
+                                          @QueryParam("jsonUrl") boolean jsonUrl, // deprecated, kept for compat reasons
+                                          @QueryParam("json") boolean jsonObject,
                                           @Context final HttpServletResponse response ) {
         try {
             NetworkEnvironment env = emilEnvRepo.getEmilNetworkEnvironmentById(envId);
 
-            if(jsonUrl)
+            if(jsonUrl || jsonObject)
             {
                 NetworkConfiguration config = new NetworkConfiguration();
                 config.setNetwork(env.getNetwork());
@@ -135,11 +137,14 @@ public class NetworkEnvironments extends EmilRest {
                     ec.setMac(_env.getMacAddress());
                     ec.setIp(_env.getServerIp());
                     ec.setWildcard(_env.isWildcard());
-                    if (_env.getFqdn() != null)
-                        ec.getHostnames().add(_env.getFqdn());
+                    if (_env.getFqdnList() != null)
+                        ec.getHostnames().addAll(Arrays.asList(_env.getFqdnList()));
                     ecs.add(ec);
                 }
                 config.setEnvironments(ecs);
+                if(jsonObject)
+                    return Emil.createResponse(Response.Status.OK, config);
+
                 String networkJson = config.jsonValueWithoutRoot(true);
 
                 File tmpfile = File.createTempFile("network.json", null, null);

@@ -93,6 +93,7 @@ public class VdeSlirpBean extends EaasComponentBean {
 
             LOG.severe("using " +  network + " " + mask);
 
+            runner.addArgument("--disable-ipv6");
             runner.addArguments("--net", network);
             runner.addArguments("--mask",  mask);
 
@@ -106,7 +107,7 @@ public class VdeSlirpBean extends EaasComponentBean {
             }
             else {
                 // we assume the full range from 15.
-                String dhcpStart = network.substring(0, network.length() - 1) + "15";
+                String dhcpStart = network.substring(0, network.length() - 2) + "15";
                 runner.addArguments("--dhcp-start", dhcpStart);
             }
 

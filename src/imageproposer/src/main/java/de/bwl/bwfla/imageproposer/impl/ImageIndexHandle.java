@@ -33,7 +33,7 @@ import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystemInformation;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emucomp.api.Environment;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
@@ -81,7 +81,7 @@ public class ImageIndexHandle
 
 	public String refreshAsTask()
 	{
-		return taskmgr.submitTask(new ImageIndexBuilderTask());
+		return taskmgr.submit(new ImageIndexBuilderTask());
 	}
 
 	/**
@@ -136,7 +136,7 @@ public class ImageIndexHandle
 	}
 
 
-	private class ImageIndexBuilderTask extends AbstractTask<Object>
+	private class ImageIndexBuilderTask extends BlockingTask<Object>
 	{
 		@Override
 		protected Object execute() throws Exception {

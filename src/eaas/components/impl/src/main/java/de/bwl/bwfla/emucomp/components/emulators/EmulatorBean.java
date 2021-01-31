@@ -37,7 +37,6 @@ import de.bwl.bwfla.common.services.guacplay.net.TunnelConfig;
 import de.bwl.bwfla.common.services.guacplay.protocol.InstructionBuilder;
 import de.bwl.bwfla.common.services.guacplay.record.SessionRecorder;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.common.utils.ProcessMonitor;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.emucomp.api.*;
@@ -277,6 +276,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return "machine";
 	}
 
+	boolean isBeanReady() {
+		return false; // this is the default, if the bean has no internal state
+	}
 
 	@Override
 	public ComponentState getState() throws BWFLAException
@@ -289,6 +291,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return ComponentState.STOPPED;
 		if (emulatorBeanState.equals(EmuCompState.EMULATOR_FAILED.value()))
 			return ComponentState.FAILED;
+		if (isBeanReady())
+			return ComponentState.READY;
 		return ComponentState.OK;
 	}
 
@@ -640,7 +644,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			final String cid = this.getContainerId();
 			final String workdir = this.getWorkingDir().toString();
-			final String rootfsdir = this.lookupResource(EMUCON_ROOTFS_BINDING_ID, XmountOutputFormat.RAW);
+			final String rootfsdir = this.lookupResource(EMUCON_ROOTFS_BINDING_ID);
 
 			// Generate container's config
 			{
@@ -756,7 +760,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			if (emuEnvironment.hasCheckpointBindingId()) {
 				try {
 					final String checkpointBindingId = emuEnvironment.getCheckpointBindingId();
-					final String checkpoint = this.lookupResource(checkpointBindingId, XmountOutputFormat.RAW);
+					final String checkpoint = this.lookupResource(checkpointBindingId);
 					emuRunner.addArguments("--checkpoint", checkpoint);
 
 					LOG.info("Container state will be restored from checkpoint");
@@ -845,6 +849,16 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				emuRunner.waitUntilFinished();
 
+				// upload emulator's output
+				if (this.isOutputAvailable()) {
+					try {
+						this.processEmulatorOutput();
+					}
+					catch (BWFLAException error) {
+						LOG.log(Level.WARNING, "Processing emulator's output failed!", error);
+					}
+				}
+
 				// cleanup will be performed later by EmulatorBean.destroy()
 
 				synchronized (emuBeanState) {
@@ -859,14 +873,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 							// FIXME: setting here also to STOPPED, since there is currently no reliable way
 							// to determine (un-)successful termination depending on application exit code
 							emuBeanState.set(EmuCompState.EMULATOR_STOPPED);
-						}
-					}
-					// create containers output
-					if (this.isOutputAvailable() && emuEnvironment.isLinuxRuntime()) {
-						try {
-							this.processOutput();
-						} catch (BWFLAException e) {
-							e.printStackTrace();
 						}
 					}
 				}
@@ -930,13 +936,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.addControlConnector(new AudioConnector(() -> new PulseAudioStreamer(cid, pulsesock)));
 		}
 
+
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
 	}
 
 	@Override
 	synchronized public String stop() throws BWFLAException
 	{
-		String result = null;
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -950,11 +956,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		this.stopInternal();
 
-		if (this.isOutputAvailable() && !emuEnvironment.isLinuxRuntime())
-				result = this.processOutput();
-
 		emuBeanState.update(EmuCompState.EMULATOR_STOPPED);
-		return result;
+		return this.getEmulatorOutputLocation();
 	}
 
 	private boolean isOutputAvailable()
@@ -962,7 +965,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return emuEnvironment.getOutputBindingId() != null;
 	}
 
-	private String processOutput() throws BWFLAException
+	private void processEmulatorOutput() throws BWFLAException
 	{
 		final String bindingId = emuEnvironment.getOutputBindingId();
 		final BlobStoreBinding binding = (BlobStoreBinding) bindings.get(bindingId);
@@ -972,40 +975,38 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		this.unmountBindings();
 
-		Path output = null;
-		String type = null;
-
-		Path rawmnt = null, fusemnt = null;
 		final BlobDescription blob = new BlobDescription()
 				.setDescription("Output for session " + this.getComponentId())
 				.setNamespace("emulator-outputs")
 				.setName("output");
 
-		try {
+		try (final ImageMounter mounter = new ImageMounter(LOG)) {
 			BlobHandle handle = null;
+			Path output = null;
+			String type = null;
+
 			if( binding.getResourceType() != Binding.ResourceType.ISO) {
 
-				final Path workdir = EaasFileUtils.createTempDirectory(this.getWorkingDir(), "output-");
-				rawmnt = workdir.resolve("raw");
-				fusemnt = workdir.resolve("fuse");
-
-				// Mount partition only
-				final XmountOptions options = new XmountOptions();
-				options.setOffset(binding.getPartitionOffset());
-				final Path rawimg = EmulatorUtils.xmount(qcow, rawmnt, options, LOG);
-
-				// Mount partition's filesystem
-				EmulatorUtils.mountFileSystem(rawimg, fusemnt, fsType);
+				final Path workdir = this.getWorkingDir().resolve("output");
+				Files.createDirectories(workdir);
 
 				output = workdir.resolve("output.zip");
-				Set<String> exclude = new HashSet<>();
-				exclude.add("autorun.inf");
-				if (emuEnvironment.isLinuxRuntime())
-					Zip32Utils.zip(output.toFile(), fusemnt.resolve(containerOutput).toFile());
-				else
-					Zip32Utils.zip(output.toFile(), fusemnt.toFile(), exclude);
-
 				type = ".zip";
+
+				// Mount partition's filesystem
+				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow),
+						workdir.resolve(Path.of(qcow).getFileName() + ".dd"), binding.getPartitionOffset());
+				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
+				final Path srcdir = fsmnt.getMountPoint();
+				if (emuEnvironment.isLinuxRuntime())
+					Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
+				else {
+					Set<String> exclude = new HashSet<>();
+					exclude.add("uvi.bat");
+					exclude.add("autorun.inf");
+
+					Zip32Utils.zip(output.toFile(), srcdir.toFile(), exclude);
+				}
 
 				blob.setDataFromFile(output);
 				blob.setType(type);
@@ -1023,27 +1024,34 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			this.result.complete(handle);
-			String location;
-			if (blobStoreRestAddress.contains("http://eaas:8080"))
-				location = handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
-			else
-				location = handle.toRestUrl(blobStoreRestAddress);
-
-			return location;
 		}
-		catch (BWFLAException | IOException error) {
+		catch (BWFLAException | IOException cause) {
 			final String message = "Creation of output.zip failed!";
+			final BWFLAException error = new BWFLAException(message, cause)
+					.setId(this.getComponentId());
+
+			this.result.completeExceptionally(error);
+			throw error;
+		}
+	}
+
+	private String getEmulatorOutputLocation() throws BWFLAException
+	{
+		if (!this.isOutputAvailable())
+			return null;
+
+		try {
+			final BlobHandle handle = super.result.get(2, TimeUnit.MINUTES);
+			if (blobStoreRestAddress.contains("http://eaas:8080"))
+				return handle.toRestUrl(blobStoreRestAddress.replace("http://eaas:8080", ""));
+			else
+				return handle.toRestUrl(blobStoreRestAddress);
+		}
+		catch (Exception error) {
+			final String message = "Waiting for emulator's output failed!";
 			LOG.log(Level.WARNING, message, error);
 			throw new BWFLAException(message, error)
 					.setId(this.getComponentId());
-		}
-		finally {
-			try {
-				EmulatorUtils.checkAndUnmount(fusemnt, rawmnt);
-			}
-			catch (IOException error) {
-				LOG.log(Level.WARNING, "Could not unmount after creation of output.zip!", error);
-			}
 		}
 	}
 
@@ -1284,16 +1292,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				return containerId;
 			}
 
-			//            Resource res = new VolatileResource();
-			//            res.setUrl(objReference);
-			//            res.setId("attached_container_" + containerId);
-			//            this.prepareResource(res);
-			//            this.emuEnvironment.getBinding().add(res);
-
-
 			drive.setData(objReference);
-			//            this.emuEnvironment.getDrive().add(drive);
-
 			boolean attachOk = (emuBeanState.fetch() == EmuCompState.EMULATOR_RUNNING) ? connectDrive(drive, true) : addDrive(drive);
 
 			if (!attachOk) {
@@ -1309,8 +1308,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	}
 
 	@Override
+	@Deprecated
 	public int attachMedium(DataHandler data, String mediumType) throws BWFLAException
 	{
+		/*
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -1378,11 +1379,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			return id;
 		}
+		 */
+		return -1;
 	}
 
 	@Override
 	public DataHandler detachMedium(int containerId) throws BWFLAException
 	{
+		/*
 		synchronized (emuBeanState)
 		{
 			final EmuCompState curstate = emuBeanState.get();
@@ -1427,6 +1431,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		throw new BWFLAException("could not find container by this container id: " + containerId)
 				.setId(this.getComponentId());
+
+		 */
+		return null;
 	}
 
 
@@ -1651,7 +1658,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		emuConfig.setIoSocket(emusocket);
 
 		// HACK: Qemu uses a custom audio setup!
-		if (this instanceof QemuBean) {
+		if (this instanceof QemuBean && this.isPulseAudioEnabled()	) {
 			emuRunner.getEnvVariables()
 					.remove("SDL_AUDIODRIVER");
 		}
@@ -2283,37 +2290,25 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	 * @return The resolved path or null, if the binding cannot
 	 *         be found
 	 */
-	protected String lookupResource(String binding, XmountOutputFormat outputFormat)
-			throws BWFLAException, IOException
+	protected String lookupResource(String binding) throws BWFLAException, IOException
 	{
 		String mountpoint = bindings.lookup(binding);
 		if (mountpoint == null)
-			mountpoint = bindings.mount(binding, this.getBindingsDir(), outputFormat);
+			mountpoint = bindings.mount(binding, this.getBindingsDir());
 
 		return mountpoint;
 	}
 
-	/**
-	 * Resolves a binding location of either the form
-	 * binding://binding_id[/path/to/subres] or binding_id[/path/to/subres]. The
-	 * binding_id is replaced with the actual filesystem location of the
-	 * binding's mountpoint. The possible reference to the subresource is
-	 * preserved in the returned string.
-	 *
-	 * @param binding
-	 *            A binding location
-	 * @return The resolved path or null, if the binding cannot
-	 *         be found
-	 */
-	protected String lookupResourceRaw(String binding, XmountOutputFormat outputFormat)
-			throws BWFLAException, IOException
-	{ this.lookupResource(binding, outputFormat);
-		return this.lookupResource(BindingsManager.toBindingId(binding, BindingsManager.EntryType.RAW_MOUNT), outputFormat);
+	@Deprecated
+	protected String lookupResource(String binding, XmountOutputFormat unused) throws BWFLAException, IOException {
+		return lookupResource(binding);
 	}
 
+	@Deprecated
 	protected String lookupResource(String binding, DriveType driveType)
 			throws BWFLAException, IOException {
-		return this.lookupResource(binding, this.getImageFormatForDriveType(driveType));
+		// this.getImageFormatForDriveType(driveType)
+		return this.lookupResource(binding);
 	}
 
 	protected void prepareResource(AbstractDataResource resource) throws IllegalArgumentException, IOException, BWFLAException
@@ -2325,7 +2320,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			bindings.find(resource.getId() + "/")
 					.forEach((binding) -> {
 						try {
-							this.lookupResourceRaw(binding, XmountOutputFormat.RAW);
+							this.lookupResource(binding);
 						}
 						catch (Exception error) {
 							throw new IllegalArgumentException(error);
@@ -2444,7 +2439,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			// search for binding:// and replace all occurrences with the
 			// actual path
 			// Pattern p = Pattern.compile("binding://(\\w*/?)");
-			Pattern p = Pattern.compile("binding://(\\w*/?)|rom://(.*)");
+			Pattern p = Pattern.compile("binding://(\\w*/?)|rom://(\\S+)");
 			Matcher m = p.matcher(nativeString);
 			StringBuffer sb = new StringBuffer();
 			while(m.find())
@@ -2462,7 +2457,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 						res = m.group(0);
 					}
 
-					bindingPath = this.lookupResource(res, XmountOutputFormat.RAW);
+					bindingPath = this.lookupResource(res.trim());
 				} catch (Exception e) {
 					LOG.severe("lookupResource with " + m.group(1) + " failed.");
 					LOG.log(Level.SEVERE, e.getMessage(), e);

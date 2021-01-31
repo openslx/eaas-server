@@ -68,6 +68,9 @@ public class NetworkRequest extends JaxbType {
         @XmlElement(required = false)
         private String serverIp;
 
+        @XmlElement
+        private String fqdn;
+
         @XmlElement(required = false, defaultValue = "auto")
         private String hwAddress = "auto";
 
@@ -111,6 +114,14 @@ public class NetworkRequest extends JaxbType {
 
         public void setHwAddress(String hwAddress) {
             this.hwAddress = hwAddress;
+        }
+
+        public String getFqdn() {
+            return fqdn;
+        }
+
+        public void setFqdn(String fqdn) {
+            this.fqdn = fqdn;
         }
     }
 

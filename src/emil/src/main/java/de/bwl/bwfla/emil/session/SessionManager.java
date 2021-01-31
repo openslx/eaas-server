@@ -40,7 +40,7 @@ public class SessionManager
 {
 	private final Logger log = Logger.getLogger("SESSION-MANAGER");
 
-	private final Map<String, Session> sessions;
+	private final Map<String, Session> sessions = new ConcurrentHashMap<String, Session>();
 
 	@Inject
 	private Components endpoint = null;
@@ -48,12 +48,6 @@ public class SessionManager
 	@Inject
 	@Config("components.client_timeout")
 	protected Duration sessionExpirationTimeout;
-
-
-	public SessionManager()
-	{
-		this.sessions = new ConcurrentHashMap<String, Session>();
-	}
 
 	/** Registers a new session */
 	public void register(Session session)
@@ -89,11 +83,10 @@ public class SessionManager
 		sessions.computeIfPresent(sid, (unused, session) -> {
 			session.setName(name);
 			if (lifetime < 0) {
-				session.setExpirationTimestamp(-1);
+				session.setConfiguredExpirationTime(-1);
 			}
 			else {
-				final long timestamp = SessionManager.timems() + unit.toMillis(lifetime);
-				session.setExpirationTimestamp(timestamp);
+				session.setConfiguredExpirationTime(unit.toMillis(lifetime));
 			}
 
 			if (title != null && title.getComponentName() != null) {
@@ -117,11 +110,15 @@ public class SessionManager
 	/** Send keepalive for session */
 	public boolean keepalive(String id)
 	{
-		final Session session = this.get(id);
-		if (session == null)
-			return false;
+		sessions.computeIfPresent(id, (unused, session) -> {
 
-		session.keepalive(endpoint, log);
+			long expTime = session.getConfiguredExpirationTime();
+			if(expTime < 0)
+				return session;
+
+			session.setExpirationTimestamp(expTime + SessionManager.timems());
+			return session;
+		});
 		return true;
 	}
 
@@ -141,7 +138,8 @@ public class SessionManager
 			if (session.isDetached()) {
 				if (session.hasExpirationTimestamp() && curtime > session.getExpirationTimestamp())
 					idsToRemove.add(id);
-				else executor.execute(new SessionKeepAliveTask(session, log));
+				else
+					executor.execute(new SessionKeepAliveTask(session, log));
 
 				return;
 			}

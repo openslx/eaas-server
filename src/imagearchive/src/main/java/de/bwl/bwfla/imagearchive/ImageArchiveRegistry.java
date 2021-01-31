@@ -31,7 +31,7 @@ import javax.ejb.Startup;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
@@ -52,7 +52,7 @@ public class ImageArchiveRegistry
 
 	private static class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<String> {
 		public AsyncIoTaskManager() throws NamingException {
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+			super("IMAGE-ARCHIVE-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
 	}
 
@@ -122,9 +122,9 @@ public class ImageArchiveRegistry
 		log.info("Initialized " + backendConfigs.size() + " image-archive(s)");
 	}
 
-	public static TaskState submitTask(AbstractTask<String> task)
+	public static TaskState submitTask(BlockingTask<String> task)
 	{
-		String taskId = taskManager.submitTask(task);
+		String taskId = taskManager.submit(task);
 		TaskState state = new TaskState(taskId);
 		return state;
 	}
@@ -136,7 +136,7 @@ public class ImageArchiveRegistry
 
 		TaskState state = new TaskState(taskId);
 		try {
-			final TaskInfo<String> info = taskManager.getTaskInfo(taskId);
+			final TaskInfo<String> info = taskManager.lookup(taskId);
 			if (info == null)
 				return null;
 

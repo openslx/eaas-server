@@ -22,6 +22,7 @@ package de.bwl.bwfla.imagearchive;
 import java.net.URL;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import javax.activation.DataHandler;
 import javax.ejb.Stateless;
@@ -31,12 +32,14 @@ import javax.xml.bind.annotation.XmlMimeType;
 import javax.xml.ws.soap.MTOM;
 
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatchDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
-import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatches;
 import org.jboss.ejb3.annotation.TransactionTimeout;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -53,8 +56,19 @@ public class ImageArchiveWS
 	@Inject
 	private ImageArchiveRegistry backends = null;
 
+	@Inject
+	private ImageGeneralizationPatches patches = null;
+
 
 	/* ========================= Public API ========================= */
+
+	public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches()
+	{
+		return patches.list()
+				.stream()
+				.map((entry) -> new ImageGeneralizationPatchDescription(entry.getName(), entry.getDescription()))
+				.collect(Collectors.toList());
+	}
 
 	public void deleteTempEnvironments(String backend) throws BWFLAException
 	{
@@ -125,9 +139,13 @@ public class ImageArchiveWS
 				.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String backend, String imageId, ImageType type, String patchId, String emulatorArchiveName) throws BWFLAException {
-			return this.lookup(backend)
-					.generalizedImport(imageId, type,  patchId, this.lookup(emulatorArchiveName).getConfig().getHttpPrefix());
+	public String createPatchedImage(String backend, String imageId, ImageType type, String patchId) throws BWFLAException
+	{
+		if (patchId == null)
+			throw new BWFLAException("Invalid image-generalization patch ID!");
+
+		return this.lookup(backend)
+				.createPatchedImage(imageId, type, patches.lookup(patchId));
 	}
 
 	public String createImage(String backend, String size, String type) throws BWFLAException
@@ -248,8 +266,8 @@ public class ImageArchiveWS
 			return backends.listBackendNames();
 	}
 
-	public void extractMetadata(String backend, String imageId) throws BWFLAException {
-		this.lookup(backend).extractMetadata(imageId);
+	public EmulatorMetadata extractMetadata(String backend, String imageId) throws BWFLAException {
+		return this.lookup(backend).extractMetadata(imageId);
 	}
 
 	/* ========================= Internal Helpers ========================= */

@@ -42,7 +42,7 @@ public class NetworkResponse extends JaxbType {
     @XmlElement
     private Map<String, URI> networkUrls ;
 
-
+    private NetworkResponse() {}
 
     public NetworkResponse(String id) {
         super();

@@ -1,7 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.emil.datatypes.rest.ImportObjectRequest;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
@@ -11,7 +11,8 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.UUID;
 
-public class ImportObjectTask extends AbstractTask<Object> {
+public class ImportObjectTask extends BlockingTask<Object>
+{
 
     private final ImportObjectRequest req;
     private final String archiveId;

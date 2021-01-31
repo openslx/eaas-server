@@ -32,6 +32,8 @@ import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.EnvironmentCreateRequest;
 import de.bwl.bwfla.emil.datatypes.EnvironmentDeleteRequest;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
+import de.bwl.bwfla.emil.datatypes.ImageGeneralizationPatchRequest;
+import de.bwl.bwfla.emil.datatypes.ImageGeneralizationPatchResponse;
 import de.bwl.bwfla.emil.datatypes.ImportImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
@@ -61,14 +63,11 @@ import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.stream.JsonGenerator;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
-import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -169,7 +168,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/db-content")
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className)
 	{
@@ -189,7 +188,7 @@ public class EnvironmentRepository extends EmilRest
 
 	@GET
 	@Path("/db-migration")
-	@Secured(roles={Role.RESTRCITED})
+	@Secured(roles={Role.RESTRICTED})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response migrateDb()
 	{
@@ -292,14 +291,16 @@ public class EnvironmentRepository extends EmilRest
 		@GET
 		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response list(@QueryParam("detailed") @DefaultValue("false") boolean detailed)
+		public Response list(@QueryParam("detailed") @DefaultValue("false") boolean detailed,
+							 @QueryParam("localOnly") @DefaultValue("true") boolean localOnly)
 		{
 			LOG.info("Listing all available environments...");
 			try {
 				final Stream<EmilEnvironment> environments = emilEnvRepo.getEmilEnvironments();
-				final Stream<Object> entries = (!detailed) ? environments.map(EnvironmentListItem::new)
+				final Stream<Object> entries = (!detailed) ? environments.filter((env) -> (!localOnly || !(env).getArchive().equals("remote"))).map(EnvironmentListItem::new)
 						: environments.map((env) -> (Object) this.addEnvironmentDetailsNoThrow(env))
-								.filter(Objects::nonNull);
+								.filter(Objects::nonNull)
+								.filter((env) -> (!localOnly || !((EnvironmentDetails) env).getArchive().equals("remote")));
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
@@ -371,7 +372,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** Create a new environment */
 		@POST
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		@Consumes(MediaType.APPLICATION_JSON)
 		public Response create(EnvironmentCreateRequest envReq)
@@ -430,7 +431,11 @@ public class EnvironmentRepository extends EmilRest
 					env.getAbstractDataResource().add(romBinding);
 				}
 
-				String id = envdb.importMetadata("default", env, iaMd, false);
+				String id;
+				if(env.isLinuxRuntime())
+					id = envdb.importMetadata("public", env, iaMd, false);
+				else
+					id = envdb.importMetadata("default", env, iaMd, false);
 
 				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
 
@@ -441,6 +446,8 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setTitle(envReq.getLabel());
 				newEmilEnv.setEnvId(id);
 				newEmilEnv.setLinuxRuntime(env.isLinuxRuntime());
+				if(env.isLinuxRuntime())
+					newEmilEnv.setArchive("public");
 				newEmilEnv.setEnableRelativeMouse(envReq.isEnableRelativeMouse());
 				newEmilEnv.setEnablePrinting(envReq.isEnablePrinting());
 				newEmilEnv.setShutdownByOs(envReq.isShutdownByOs());
@@ -494,7 +501,7 @@ public class EnvironmentRepository extends EmilRest
 		 */
 		@PATCH
 		@Path("/{envId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response update(@PathParam("envId") String envId, UpdateEnvironmentDescriptionRequest desc)
@@ -629,7 +636,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Delete a specific environment */
 		@DELETE
 		@Path("/{envId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		@Consumes(MediaType.APPLICATION_JSON)
 		public Response delete(@PathParam("envId") String envId, EnvironmentDeleteRequest desc)
@@ -663,7 +670,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Export the specified environment. */
 		@POST
 		@Path("/{envId}/export")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse export(@PathParam("envId") String envId, ExportRequest exportRequest)
 		{
@@ -729,7 +736,7 @@ public class EnvironmentRepository extends EmilRest
 	{
 		/** List all default environments */
 		@GET
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Map<String, String> list()
 		{
@@ -769,7 +776,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Set default environment for a specific operating system ID */
 		@PATCH
 		@Path("/{osId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public EmilResponseType set(@PathParam("osId") String osId, @QueryParam("envId") String envId)
 		{
@@ -797,7 +804,7 @@ public class EnvironmentRepository extends EmilRest
 
 		/** Create a new revision  */
 		@POST
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response create()
@@ -829,7 +836,7 @@ public class EnvironmentRepository extends EmilRest
 
 		@POST
 		@Path("/{revId}")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public synchronized Response revert(@PathParam("revId") String revId)
@@ -874,7 +881,7 @@ public class EnvironmentRepository extends EmilRest
 	public class Templates
 	{
 		@GET
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		/**
 		 *
@@ -946,24 +953,64 @@ public class EnvironmentRepository extends EmilRest
 
 	public class Patches
 	{
+		/** List all available image-generalization patches. */
 		@GET
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
-		/**
-		 *
-		 * @return
-		 *
-		 * 		{"status": "0", "systems": [{"id": "abc", "label": "Windows XP
-		 *         SP1", "native_config": "test", "properties": [{"name":
-		 *         "Architecture", "value": "x86_64"}, {"name": "Fun Fact", "value":
-		 *         "In 1936, the Russians made a computer that ran on water"}]}]}
-		 */
-		public List<GeneralizationPatch> list() throws BWFLAException, JAXBException
+		public List<ImageGeneralizationPatchDescription> list() throws BWFLAException
 		{
-			LOG.info("Listing environment patches...");
+			LOG.info("Listing image-generalization patches...");
 
 			// TODO: fix response in case of errors!
-			return envdb.getPatches();
+			return envdb.getImageGeneralizationPatches();
+		}
+
+		/** Try to apply a patch to the specified image. */
+		@POST
+		@Path("/{patchId}")
+		@Secured(roles={Role.RESTRICTED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		@Produces(MediaType.APPLICATION_JSON)
+		public Response apply(@PathParam("patchId") String patchId, ImageGeneralizationPatchRequest request)
+		{
+			LOG.info("Applying image-generalization patch...");
+			try {
+				ImageNameIndex index = envdb.getImagesIndex();
+				ImageNameIndex.Entries.Entry originalEntry = index.getEntries()
+						.getEntry()
+						.stream()
+						.filter(e -> e.getValue().getName().equals(request.getImageId()))
+						.findAny()
+						.get();
+
+				ImageMetadata originalMetadata = originalEntry.getValue();
+				LOG.severe("label " + originalMetadata.getLabel());
+
+				final String newImageId = (request.getArchive() != null) ?
+						envdb.createPatchedImage(request.getArchive(), request.getImageId(), request.getImageType(), patchId)
+						: envdb.createPatchedImage(request.getImageId(), request.getImageType(), patchId);
+
+				final ImageGeneralizationPatchResponse response = new ImageGeneralizationPatchResponse();
+
+				ImageMetadata entry = new ImageMetadata();
+				entry.setName(newImageId);
+				entry.setLabel(originalMetadata.getLabel() + " (generalized)");
+				ImageDescription description = new ImageDescription();
+				description.setType(request.getImageType().value());
+				description.setId(newImageId);
+				entry.setImage(description);
+
+				envdb.addNameIndexesEntry(request.getArchive(), entry, null);
+
+				response.setStatus("0");
+				response.setImageId(newImageId);
+				return Response.ok()
+						.entity(response)
+						.build();
+			}
+			catch (Throwable error) {
+				return EnvironmentRepository.internalErrorResponse(error);
+			}
 		}
 	}
 
@@ -989,7 +1036,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Synchronize internal database with the image archives. */
 		@POST
 		@Path("/sync")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response sync()
 		{
@@ -1003,7 +1050,7 @@ public class EnvironmentRepository extends EmilRest
 		/** create new image */
 		@POST
 		@Path("/create-image")
-		@Secured(roles = {Role.RESTRCITED})
+		@Secured(roles = {Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse createImage(ImageCreateRequest imageReq)
@@ -1016,7 +1063,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Import an image for new environment */
 		@POST
 		@Path("/import-image")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importImage(ImportImageRequest imageReq)
@@ -1069,7 +1116,7 @@ public class EnvironmentRepository extends EmilRest
 		/** Replicate an image from remote archives */
 		@POST
 		@Path("/replicate-image")
-		@Secured(roles={Role.RESTRCITED})
+		@Secured(roles={Role.RESTRICTED})
 		@Consumes(MediaType.APPLICATION_JSON)
 		@Produces(MediaType.APPLICATION_JSON)
 		public ReplicateImagesResponse replicateImage(ReplicateImagesRequest replicateImagesRequest)
@@ -1156,7 +1203,8 @@ public class EnvironmentRepository extends EmilRest
 						ds.getImageId(),
 						ImageType.USER.value());
 				binding.setId(ds.getImageId());
-				env.getAbstractDataResource().add(binding);
+				if(env.getAbstractDataResource().stream().noneMatch(b -> binding.getId().equals(b.getId())))
+					env.getAbstractDataResource().add(binding);
 				EmulationEnvironmentHelper.setDrive(env, ds.getDrive(), ds.getDriveIndex());
 				if (EmulationEnvironmentHelper.registerDrive(env, binding.getId(), null, ds.getDriveIndex()) < 0)
 					throw new BadRequestException(Response

@@ -38,6 +38,7 @@ import java.util.stream.StreamSupport;
 
 import javax.inject.Inject;
 
+
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
@@ -190,6 +191,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 				break;
 			case DISK:
 				targetDir = targetDir.resolve("disk");
+				break;
+			case CART:
+				targetDir = targetDir.resolve("cart");
 				break;
 			default:
 				throw new BWFLAException("unsupported type " + type);
@@ -584,6 +588,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	@Override
 	public DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException {
+
 		MetsObject o = loadMetsData(objectId);
 		Mets m = MetsUtil.export(o.getMets(), getExportPrefix());
 		DigitalObjectMetadata md = new DigitalObjectMetadata(m);
@@ -598,6 +603,16 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			md.setThumbnail(thumb);
 
 		return md;
+	}
+
+	private MetsObject loadMetsData(String objectId) throws BWFLAException {
+		Path targetDir = resolveMetadatTarget(objectId);
+		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
+		if(!Files.exists(metsPath)) {
+			createMetsFiles(objectId);
+		}
+		MetsObject mets = new MetsObject(metsPath.toFile());
+		return mets;
 	}
 
 	@Override
@@ -616,16 +631,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		return this.getObjectIds()
 				.map(mapper)
 				.filter(Objects::nonNull);
-	}
-
-	private MetsObject loadMetsData(String objectId) throws BWFLAException {
-		Path targetDir = resolveMetadatTarget(objectId);
-		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
-		if(!Files.exists(metsPath)) {
-			createMetsFiles(objectId);
-		}
-		MetsObject mets = new MetsObject(metsPath.toFile());
-		return mets;
 	}
 
 	@Override

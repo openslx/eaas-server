@@ -19,9 +19,11 @@
 
 package de.bwl.bwfla.emil;
 
-import java.io.IOException;
 import java.net.URI;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -81,6 +83,10 @@ public class Networks {
     @Config(value = "ws.eaasgw")
     private String eaasGw;
 
+    @Inject
+    @Config(value = "emil.retain_session")
+    private String retain_session;
+
     protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
 
     @POST
@@ -105,7 +111,11 @@ public class Networks {
             session.components()
                     .add(new SessionComponent(switchId));
 
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            
             sessions.register(session);
+            sessions.setLifetime(session.id(), Long.parseLong(retain_session), TimeUnit.MINUTES,
+                    "autodetached session @ " + dateFormat.format(new Date()));
 
             networkResponse = new NetworkResponse(session.id());
 
@@ -196,6 +206,7 @@ public class Networks {
             return networkResponse;
         }
         catch (Exception error) {
+            error.printStackTrace();
             throw Components.newInternalError(error);
         }
     }
@@ -245,7 +256,7 @@ public class Networks {
     }
 
     @DELETE
-    @Secured(roles = {Role.RESTRCITED})
+    @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
  //       try {
@@ -321,7 +332,17 @@ public class Networks {
             } else {
                 uri = map.get("ws+ethernet+" + component.getHwAddress());
             }
+
+            if(uri == null) {
+                throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                        .entity(new ErrorInformation(
+                                "Cannot find suitable ethernet URI for requested component.",
+                                "Requested component has either been stopped or is not suitable for networking"))
+                        .build());
+            }
+            
             componentClient.getNetworkSwitchPort(eaasGw).connect(switchId, uri.toString());
+            components.registerNetworkCleanupTask(component.getComponentId(), switchId, uri.toString());
 
             if (addToGroup) {
                 session.components()

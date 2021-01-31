@@ -30,7 +30,6 @@ import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.api.metadata.ImageBuilderMetadata;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Logger;
@@ -86,11 +85,8 @@ public class MediumBuilderHDD extends MediumBuilder
 		final String outname = "image";
 		final String outtype = ".qcow2";
 
-		final Path rawmnt = workdir.resolve("raw");
-		final Path fusemnt = workdir.resolve("fuse");
 		final Path qcow = workdir.resolve(outname + outtype);
 
-		final Deque<Runnable> tasks = new ArrayDeque<Runnable>();
 		final PrefixLogger log = new PrefixLogger(this.getClass().getSimpleName());
 		log.getContext().add(workdir.getFileName().toString());
 		{
@@ -100,7 +96,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			log.info(message);
 		}
 
-		try {
+		try (final ImageMounter mounter = new ImageMounter(log)) {
 			MediumBuilderHDD.prepare(description.getContentEntries(), workdir, log);
 
 			// Create base qcow container
@@ -115,42 +111,31 @@ public class MediumBuilderHDD extends MediumBuilder
 				return new ImageHandle(qcow, outname, outtype);
 
 			// Mount it as raw disk-image
-			final XmountOptions xmoptions = new XmountOptions();
-			final Path rawimg = EmulatorUtils.xmount(qcow.toString(), rawmnt, xmoptions, log);
-			tasks.add(() -> {
-				MediumBuilderHDD.sync(rawmnt, log);
-				MediumBuilderHDD.unmount(rawmnt, log);
-			});
+			ImageMounter.Mount rawmnt = mounter.mount(qcow, workdir.resolve(qcow.getFileName() + ".fuse"));
 
 			// Partition the raw disk-image
 			if (backingFile == null && description.getPartitionTableType() != PartitionTableType.NONE) {
 				final int offset = description.getPartitionOffset();
-				this.partition(description.getPartitionTableType(), rawimg, description.getFileSystemType().name(), offset, log);
+				final String fstype = description.getFileSystemType().name();
+				this.partition(description.getPartitionTableType(), rawmnt.getTargetImage(), fstype, offset, log);
 
 				// Re-mount partition only
-				xmoptions.setOffset(offset);
-				MediumBuilderHDD.remount(qcow, rawmnt, xmoptions, log);
-
-				// Since we remount, unmount handler is already registered!
+				rawmnt = rawmnt.remount(offset);
 			}
 
 			// Prepare filesystem on the partition
 			final FileSystemType fstype = description.getFileSystemType();
-			if(backingFile == null){
-				this.makefs(fstype, rawimg, description.getLabel(), log);
-			}
-			MediumBuilderHDD.sync(rawmnt, log);
-			MediumBuilderHDD.lklmount(rawimg, fusemnt, fstype, log);
-			tasks.add(() -> {
-				MediumBuilderHDD.sync(fusemnt, log);
-				MediumBuilderHDD.unmount(fusemnt, log);
-			});
+			if (backingFile == null)
+				this.makefs(fstype, rawmnt.getTargetImage(), description.getLabel(), log);
+
+			rawmnt.sync();
 
 			// Finally, build image's content
-			ImageBuilderMetadata md = MediumBuilderHDD.build(description.getContentEntries(), fusemnt, workdir, log);
+			final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fstype);
+			final ImageBuilderMetadata md = MediumBuilderHDD.build(description.getContentEntries(), fsmnt.getMountPoint(), workdir, log);
 
 			// Unmount everything and flush data to disk!
-			MediumBuilderHDD.run(tasks, true);
+			mounter.unmount();
 
 			log.info("Image built successfully");
 
@@ -165,10 +150,6 @@ public class MediumBuilderHDD extends MediumBuilder
 
 			throw new BWFLAException(error);
 		}
-		finally {
-			log.info("Cleaning up...");
-			MediumBuilderHDD.run(tasks, true);
-		}
 	}
 
 	private String lookupBackingFile(ImageDescription description) {
@@ -178,10 +159,9 @@ public class MediumBuilderHDD extends MediumBuilder
 		for(ImageContentDescription e : description.getContentEntries())
 		{
 			if(e.getArchiveFormat() == null || !e.getArchiveFormat().equals(ImageContentDescription.ArchiveFormat.DOCKER))
-			{
 				continue;
-			}
-			if(e.getDockerDataSource() == null)
+
+			if(!(e.getDataSource() instanceof ImageContentDescription.DockerDataSource))
 				continue;
 
 			ImageContentDescription.DockerDataSource ds = e.getDockerDataSource();
@@ -242,21 +222,5 @@ public class MediumBuilderHDD extends MediumBuilder
 		}
 
 		fsmaker.execute(device, label, log);
-	}
-
-	private static void lklmount(Path device, Path mountpoint, FileSystemType fstype, Logger log)
-			throws BWFLAException, IOException
-	{
-		EmulatorUtils.mountFileSystem(device, mountpoint, fstype, log);
-	}
-
-	private static void run(Deque<Runnable> tasks, boolean reverse)
-	{
-		while (!tasks.isEmpty()) {
-			final Runnable task = (reverse) ?
-					tasks.removeLast() : tasks.removeFirst();
-
-			task.run();
-		}
 	}
 }

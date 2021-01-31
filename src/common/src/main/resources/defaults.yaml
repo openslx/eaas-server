@@ -5,6 +5,7 @@ helpers:
     hddhfsio: /usr/bin/hdd_io_hfs.sh
     floppyfat12create:  /usr/bin/floppy_create.sh
 runners:
+    tmpbasedir: /tmp/process-runners
     tmpdirprefix: eaas-pr-
     stdoutfilename: stdout.log
     stderrfilename: stderr.log
@@ -29,3 +30,6 @@ handle:
         private_key_file: /home/bwfla/server-data/hdl-keys/admpriv.bin
         handle: 0.NA/11270
         index: 300
+
+imagemounter:
+    basedir: /tmp-storage/image-mounts

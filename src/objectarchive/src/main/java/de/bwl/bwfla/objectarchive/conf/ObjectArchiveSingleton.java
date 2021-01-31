@@ -34,7 +34,7 @@ import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
@@ -87,7 +87,7 @@ public class ObjectArchiveSingleton
 
 	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
 		public AsyncIoTaskManager() throws NamingException {
-			super(InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+			super("OBJECT-ARCHIVE-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
 		}
 	}
 
@@ -166,9 +166,9 @@ public class ObjectArchiveSingleton
 		}
 	}
 
-	public static TaskState submitTask(AbstractTask<Object> task)
+	public static TaskState submitTask(BlockingTask<Object> task)
 	{
-		String taskId = taskManager.submitTask(task);
+		String taskId = taskManager.submit(task);
 		TaskState state = new TaskState(taskId);
 		return state;
 	}
@@ -179,7 +179,7 @@ public class ObjectArchiveSingleton
 			return null;
 
 		TaskState state = new TaskState(taskId);
-		final TaskInfo<Object> info = taskManager.getTaskInfo(taskId);
+		final TaskInfo<Object> info = taskManager.lookup(taskId);
 		if(info == null)
 			return null;
 		if(info.result().isDone())

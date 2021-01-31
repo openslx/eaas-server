@@ -81,6 +81,7 @@ public class ObjectArchiveHelper {
 		return archive.getObjectMetadata(_archive, id);
 	}
 
+
 	public Stream<DigitalObjectMetadata> getObjectMetadata(String _archive) throws BWFLAException
 	{
 		connectArchive();
@@ -116,6 +117,13 @@ public class ObjectArchiveHelper {
 		catch (Exception error) {
 			throw new BWFLAException("Parsing object IDs failed!", error);
 		}
+
+		
+//		log.info(_archive + ": found " + objs.size() + " objects");
+//		List<String> uniqueList = new ArrayList<String>(
+//				new HashSet<String>(objs));
+//		java.util.Collections.sort(uniqueList);
+//		return uniqueList;
 	}
 
 	public FileCollection getObjectReference(String _archive, String id) throws BWFLAException
@@ -170,6 +178,26 @@ public class ObjectArchiveHelper {
 	public int getNumObjectSeats(String _archive, String objectId) throws BWFLAException {
 		connectArchive();
 		return archive.getNumObjectSeats(_archive, objectId);
+	}
+
+	public int getNumObjectSeatsForTenant(String _archive, String object, String tenant) throws BWFLAException {
+		connectArchive();
+		return archive.getNumObjectSeatsForTenant(_archive, object, tenant);
+	}
+
+	public void setNumObjectSeatsForTenant(String _archive, String object, String tenant, int seats) throws BWFLAException {
+		connectArchive();
+		archive.setNumObjectSeatsForTenant(_archive, object, tenant, seats);
+	}
+
+	public void resetNumObjectSeatsForTenant(String _archive, String object, String tenant) throws BWFLAException {
+		connectArchive();
+		archive.resetNumObjectSeatsForTenant(_archive, object, tenant);
+	}
+
+	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException {
+		connectArchive();
+		archive.resetAllObjectSeatsForTenant(tenant);
 	}
 
 	public List<String> getArchives() throws BWFLAException {

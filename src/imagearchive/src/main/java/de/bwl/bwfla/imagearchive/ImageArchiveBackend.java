@@ -27,13 +27,14 @@ import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
-import de.bwl.bwfla.imagearchive.ImageIndex.ImageDescription;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageNameIndex;
 import de.bwl.bwfla.imagearchive.conf.ImageArchiveBackendConfig;
 import de.bwl.bwfla.imagearchive.datatypes.DefaultEnvironments;
+import de.bwl.bwfla.imagearchive.datatypes.EmulatorMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata;
 import de.bwl.bwfla.imagearchive.datatypes.ImageArchiveMetadata.ImageType;
 import de.bwl.bwfla.imagearchive.datatypes.ImageImportResult;
+import de.bwl.bwfla.imagearchive.generalization.ImageGeneralizationPatch;
 import de.bwl.bwfla.imagearchive.tasks.CreateImageTask;
 
 import javax.activation.DataHandler;
@@ -122,9 +123,6 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		{
 			for (ImageType t : ImageType.values()) {
 				if (t.equals(ImageType.template))
-					continue;
-
-				if (t.equals(ImageType.patches))
 					continue;
 
 				if (t.equals(ImageType.tmp))
@@ -220,21 +218,16 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		return imageHandler.getImageImportResult(sessionId);
 	}
 
-	public String generalizedImport(String imageId, ImageType type, String patchId, String emulatorArchiveprefix) throws BWFLAException
+	public String createPatchedImage(String imageId, ImageType type, ImageGeneralizationPatch patch) throws BWFLAException
 	{
+		if (patch == null)
+			throw new BWFLAException("Requested patch was not found!");
 
-		log.warning("emulatorArchiveprefix: " + emulatorArchiveprefix);
-		try {
-			String cowId = UUID.randomUUID().toString() + String.valueOf(System.currentTimeMillis()).substring(0, 2);
-			return imageHandler.createPatchedCow(imageId, cowId, patchId, type.name(), emulatorArchiveprefix);
-		}
-		catch (IOException e) {
-			throw new BWFLAException(e);
-		}
+		return imageHandler.createPatchedImage(imageId, type.name(), patch);
 	}
 
-	public void extractMetadata(String imageId) throws BWFLAException {
-		imageHandler.extractMetadata(imageId);
+	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
+		return imageHandler.extractMetadata(imageId);
 	}
 
 	public String createImage(String size, String type) throws BWFLAException
@@ -339,6 +332,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 
 	public String getDefaultEnvironment(String osId)
 	{
+		if(osId == null)
+			osId = "default";
 		synchronized (defaultEnvironments) {
 			return defaultEnvironments.getProperty(osId);
 		}
@@ -367,6 +362,8 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 	public synchronized void setDefaultEnvironment(String osId, String envId) throws BWFLAException
 	{
 		synchronized (defaultEnvironments) {
+			if(osId == null) // default for all OS
+				osId = "default";
 			defaultEnvironments.setProperty(osId, envId);
 			if (config.getDefaultEnvironmentsPath() == null)
 				return;

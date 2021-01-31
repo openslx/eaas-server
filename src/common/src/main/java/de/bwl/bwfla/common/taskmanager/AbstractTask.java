@@ -19,23 +19,39 @@
 
 package de.bwl.bwfla.common.taskmanager;
 
-import java.util.concurrent.Callable;
-
 import de.bwl.bwfla.common.logging.PrefixLogger;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Executor;
 
-public abstract class AbstractTask<R> implements Callable<R>
+
+public abstract class AbstractTask<R> implements Runnable
 {
 	protected final PrefixLogger log;
-	
+
+	private final CompletableFuture<R> result;
+
+	private Executor executor;
 	private TaskGroup group;
 	private String id;
-	
+
 	protected AbstractTask()
 	{
 		this.log = new PrefixLogger(this.getClass().getName());
+		this.result = new CompletableFuture<>();
 		this.group = null;
 		this.id = "-1";
+	}
+
+	protected void markTaskAsDone()
+	{
+		if (group != null)
+			group.markTaskAsDone(this.getTaskId());
+	}
+
+	protected Executor executor()
+	{
+		return executor;
 	}
 
 	public String getTaskId()
@@ -47,24 +63,16 @@ public abstract class AbstractTask<R> implements Callable<R>
 	{
 		return group;
 	}
-	
-	@Override
-	public final R call() throws Exception
+
+	public CompletableFuture<R> getTaskResult()
 	{
-		R result = this.execute();
-		
-		if (group != null)
-			group.markTaskAsDone(id);
-		
 		return result;
 	}
 	
-	/** Task handler to be implemented by subclasses. */
-	protected abstract R execute() throws Exception;
-	
 	/** package-private initialization */
-	void setup(String taskid, TaskGroup group)
+	void setup(String taskid, TaskGroup group, Executor executor)
 	{
+		this.executor = executor;
 		this.id = taskid;
 		this.group = group;
 		if (group != null)

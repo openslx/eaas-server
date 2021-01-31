@@ -12,10 +12,22 @@ public class BrowserBean extends EmulatorBean {
 
     private DeprecatedProcessRunner proxyRunner;
     private String nic;
+    private boolean isReady = false;
+
+    @Override
+    boolean isBeanReady()
+    {
+        if(!isReady && this.isContainerModeEnabled()) {
+            DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
+            pr.addArguments("runc", "exec", this.getContainerId(), "stat", "/tmp/eaas-proxy.run/run");
+            isReady = pr.execute();
+            return isReady;
+        }
+        else return false;
+    }
 
     @Override
     protected void prepareEmulatorRunner() throws BWFLAException {
-
 
         // disable fake clock, otherwise it will cause rendering issues
         this.disableFakeClock = true;

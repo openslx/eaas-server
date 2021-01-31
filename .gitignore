@@ -28,3 +28,5 @@ src/eaas/src/main/resources/googlecloudplugin.xml
 src/eaas/src/main/resources/eaas.xml
 src/.m2
 src/\?
+
+deployments/

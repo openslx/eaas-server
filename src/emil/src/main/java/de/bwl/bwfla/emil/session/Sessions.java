@@ -89,7 +89,7 @@ public class Sessions
 
 	@DELETE
 	@Path("/{id}")
-	@Secured(roles = {Role.RESTRCITED})
+	@Secured(roles = {Role.RESTRICTED})
 	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
 	{
 		sessions.remove(id);
@@ -183,6 +183,7 @@ public class Sessions
 	@GET
 	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}")
+	@Produces(MediaType.APPLICATION_JSON)
 	public SessionResponse listComponents(@PathParam("id") String id) {
 		try {
 			Session session = sessions.get(id);

@@ -25,6 +25,7 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
+
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
@@ -50,6 +51,9 @@ public class ObjectArchiveFacadeWS
 	@Inject
 	@Config(value="objectarchive.user_archive_prefix")
 	private String USERARCHIVEPRIFIX;
+
+	@Inject
+	private SeatManager seatmgr;
 	
 	@PostConstruct
 	private void initialize()
@@ -88,6 +92,7 @@ public class ObjectArchiveFacadeWS
 
 	public @XmlMimeType("application/xml") DataHandler getObjectIds(String archive) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
+//		return a.getObjectList();
 		final Stream<String> ids = a.getObjectIds();
 		return this.toDataHandler(ids.map(GenericId::new), GenericId.class, JaxbNames.DIGITAL_OBJECT_IDS);
 	}
@@ -137,7 +142,36 @@ public class ObjectArchiveFacadeWS
 	public int getNumObjectSeats(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		return a.getNumObjectSeats(id);
+	}
 
+	public int getNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
+	{
+		int seats = -1;
+
+		if (tenant != null)
+			seats = seatmgr.getNumSeats(tenant, archive, id);
+
+		if (seats < 0) {
+			// No tenant specific limits defined!
+			seats = this.getNumObjectSeats(archive, id);
+		}
+
+		return seats;
+	}
+
+	public void setNumObjectSeatsForTenant(String archive, String id, String tenant, int seats) throws BWFLAException
+	{
+		seatmgr.setNumSeats(tenant, archive, id, seats);
+	}
+
+	public void resetNumObjectSeatsForTenant(String archive, String id, String tenant) throws BWFLAException
+	{
+		seatmgr.resetNumSeats(tenant, archive, id);
+	}
+
+	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException
+	{
+		seatmgr.resetNumSeats(tenant);
 	}
 
 	public TaskState getTaskState(String id)

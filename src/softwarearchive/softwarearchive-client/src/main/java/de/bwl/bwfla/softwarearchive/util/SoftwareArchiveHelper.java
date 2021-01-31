@@ -50,6 +50,34 @@ public class SoftwareArchiveHelper
 		
 		return archive.getNumSoftwareSeatsById(id);
 	}
+
+	public int getNumSoftwareSeatsForTenant(String id, String tenant) throws BWFLAException
+	{
+		this.connectArchive();
+
+		return archive.getNumSoftwareSeatsForTenant(id, tenant);
+	}
+
+	public void setNumSoftwareSeatsForTenant(String id, String tenant, int seats) throws BWFLAException
+	{
+		this.connectArchive();
+
+		archive.setNumSoftwareSeatsForTenant(id, tenant, seats);
+	}
+
+	public void resetNumSoftwareSeatsForTenant(String id, String tenant) throws BWFLAException
+	{
+		this.connectArchive();
+
+		archive.resetNumSoftwareSeatsForTenant(id, tenant);
+	}
+
+	public void resetAllSoftwareSeatsForTenant(String tenant) throws BWFLAException
+	{
+		this.connectArchive();
+
+		archive.resetAllSoftwareSeatsForTenant(tenant);
+	}
 	
 	public SoftwarePackage getSoftwarePackageById(String id) throws BWFLAException
 	{

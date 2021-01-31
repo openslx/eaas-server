@@ -25,7 +25,7 @@ import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.taskmanager.AbstractTask;
+import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emil.ObjectClassification;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
@@ -64,7 +64,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 
-public class ProposalTask extends AbstractTask<Object>
+public class ProposalTask extends BlockingTask<Object>
 {
 	private final String userid;
 	private final ProposalRequest request;
@@ -252,7 +252,7 @@ public class ProposalTask extends AbstractTask<Object>
 			final ImageContentDescription entry = new ImageContentDescription()
 					.setAction(ImageContentDescription.Action.EXTRACT)
 					.setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
-					.setURL(new URL(blob.toRestUrl(blobStoreAddress)))
+					.setUrlDataSource(new URL(blob.toRestUrl(blobStoreAddress)))
 					.setName("data");
 
 			imgdesc.addContentEntry(entry);
@@ -305,11 +305,12 @@ public class ProposalTask extends AbstractTask<Object>
 
 		final FileCollection fc = this.newFileCollection(imageurl);
 		final ClassificationTask classification = classifier.newClassificationTask(fc, true, true, false, userid);
+		classification.run();
 
 		return new Proposal()
 				.setImportedImageUrl(imageurl)
 				.setImportedImageType(PREPARED_IMAGE_TYPE)
-				.setResult((ClassificationResult) classification.call());
+				.setResult((ClassificationResult) classification.getTaskResult().get());
 	}
 
 	private static void cleanup(Path workdir, Logger log)

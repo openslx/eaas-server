@@ -24,10 +24,14 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.URI;
 import java.nio.file.Path;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.ProcessRunner;
+import de.bwl.bwfla.emucomp.api.EthernetAlreadyConnectedException;
 import de.bwl.bwfla.emucomp.components.emulators.EmulatorBean;
+import de.bwl.bwfla.emucomp.components.network.VdeSwitchBean;
 
 
 public class EthernetConnector implements IConnector {
@@ -62,14 +66,9 @@ public class EthernetConnector implements IConnector {
         return getProtocolForHwaddress(this.hwAddress);
     }
 
-    public synchronized void connect(String id) {
+    public synchronized void connect(String id) throws EthernetAlreadyConnectedException {
         if (this.runner != null)
-            return;
-
-        if (emubean == null) {
-            System.out.println("NULL");
-        }
-
+            throw new EthernetAlreadyConnectedException();
 
         // Start a new VDE plug instance that connects to the emulator's switch
         this.runner = new DeprecatedProcessRunner();
@@ -103,6 +102,9 @@ public class EthernetConnector implements IConnector {
     }
     
     public void close() {
+        Logger.getLogger(VdeSwitchBean.class.getName()).log(Level.SEVERE,"NET_DEBUG: EthernetConnector Closed");
         this.runner.stop();
+        this.runner.cleanup();
+        this.runner = null;
     }
 }

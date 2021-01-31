@@ -46,7 +46,7 @@ public class EnvironmentListItem {
     private String description;
 
     @XmlElement
-    private boolean isLinuxRuntime;
+    private boolean linuxRuntime;
 
     @XmlElement
     private boolean networkEnabled;
@@ -57,7 +57,7 @@ public class EnvironmentListItem {
         this.title = emilenv.getTitle();
         this.archive = emilenv.getArchive();
         this.envType = "base";
-        this.isLinuxRuntime = emilenv.isLinuxRuntime();
+        this.linuxRuntime = emilenv.isLinuxRuntime();
         this.timestamp = emilenv.getTimestamp();
         this.operatingSystem = emilenv.getOs();
         this.description = emilenv.getDescription();
@@ -86,11 +86,11 @@ public class EnvironmentListItem {
     }
 
     public boolean isLinuxRuntime() {
-        return isLinuxRuntime;
+        return linuxRuntime;
     }
 
     public void setLinuxRuntime(boolean linuxRuntime) {
-        isLinuxRuntime = linuxRuntime;
+        linuxRuntime = linuxRuntime;
     }
 
     public String getEnvId() {
@@ -155,5 +155,29 @@ public class EnvironmentListItem {
 
     public void setNetworkEnabled(boolean networkEnabled) {
         this.networkEnabled = networkEnabled;
+    }
+
+    public String getTimestamp() {
+        return timestamp;
+    }
+
+    public void setTimestamp(String timestamp) {
+        this.timestamp = timestamp;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public String getOperatingSystem() {
+        return operatingSystem;
+    }
+
+    public void setOperatingSystem(String operatingSystem) {
+        this.operatingSystem = operatingSystem;
     }
 }

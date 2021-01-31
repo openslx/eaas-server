@@ -3,6 +3,7 @@ package de.bwl.bwfla.common.services.security;
 public class UserContext {
 
     private String userId;
+    private String tenantId;
     private String username;
     private String name;
     private Role role;
@@ -15,6 +16,14 @@ public class UserContext {
 
     public void setUserId(String userId) {
         this.userId = userId;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String id) {
+        this.tenantId = id;
     }
 
     public String getName() {

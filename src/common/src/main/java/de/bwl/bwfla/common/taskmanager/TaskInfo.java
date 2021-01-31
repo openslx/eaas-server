@@ -19,20 +19,20 @@
 
 package de.bwl.bwfla.common.taskmanager;
 
-import java.util.concurrent.Future;
+import java.util.concurrent.CompletableFuture;
 
 
 public class TaskInfo<R>
 {
 	private final AbstractTask<R> task;
-	private final Future<R> result;
 	private Object userdata;
+	private long lastAccessTimestamp;
 	
-	TaskInfo(AbstractTask<R> task, Future<R> result, Object userdata)
+	TaskInfo(AbstractTask<R> task, Object userdata)
 	{
 		this.task = task;
-		this.result = result;
 		this.userdata = userdata;
+		this.lastAccessTimestamp = TaskInfo.now();
 	}
 	
 	public AbstractTask<R> task()
@@ -45,9 +45,9 @@ public class TaskInfo<R>
 		return clazz.cast(task);
 	}
 	
-	public Future<R> result()
+	public CompletableFuture<R> result()
 	{
-		return result;
+		return task.getTaskResult();
 	}
 	
 	public Object userdata()
@@ -64,4 +64,20 @@ public class TaskInfo<R>
 	{
 		this.userdata = userdata;
 	}
+
+	public long getAccessTimestamp()
+	{
+		return lastAccessTimestamp;
+	}
+
+	void updateAccessTimestamp()
+	{
+		this.lastAccessTimestamp = TaskInfo.now();
+	}
+
+	public static long now()
+	{
+		return System.currentTimeMillis();
+	}
+
 }
