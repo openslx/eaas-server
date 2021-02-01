@@ -4,6 +4,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
+import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageResult;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
@@ -82,6 +83,8 @@ public class TaskManager {
                     response = new TaskStateResponse((BWFLAException) result);
                 if (result instanceof ClassificationResult)
                     response.setObject((ClassificationResult) result);
+                if (result instanceof CreateContainerImageResult)
+                    response.setObject((CreateContainerImageResult)result);
                 if (result instanceof Map)
                     response.setUserData((Map<String,String>) result);
             }

@@ -22,6 +22,7 @@ import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.emil.tasks.BuildContainerImageTask;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportContainerTask;
@@ -192,20 +193,11 @@ public class EmilContainerData extends EmilRest {
 
     @Secured(roles={Role.RESTRICTED})
     @POST
-    @Path("/importContainer")
+    @Path("/buildContainerImage")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public TaskStateResponse saveContainerImage(ImportContainerRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
-    }
-
-    @Secured(roles={Role.RESTRICTED})
-    @POST
-    @Path("/importEmulator")
-    @Consumes(MediaType.APPLICATION_JSON)
-    @Produces(MediaType.APPLICATION_JSON)
-    public TaskStateResponse importEmulator(ImportEmulatorRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, containerUtil, envHelper)));
+    public TaskStateResponse saveContainerImage(CreateContainerImageRequest req) {
+        return new TaskStateResponse(taskManager.submitTask(new BuildContainerImageTask(req)));
     }
 
     @Secured(roles={Role.RESTRICTED})
@@ -261,16 +253,11 @@ public class EmilContainerData extends EmilRest {
 
     @Secured(roles={Role.RESTRICTED})
     @POST
-    @Path("/saveImportedContainer")
+    @Path("/importContainer")
+    @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public Response saveImportedContainer(SaveImportedContainerRequest saveImpContainerReq) {
-        try {
-            emilEnvRepo.saveImportedContainer(saveImpContainerReq);
-        } catch (BWFLAException e1) {
-            e1.printStackTrace();
-            return Emil.internalErrorResponse(e1);
-        }
-        return Emil.successMessageResponse("save success!");
+    public TaskStateResponse importEmulator(ImportContainerRequest req) {
+        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, envHelper, emilEnvRepo)));
     }
 
     private String getEmulatorArchive() {

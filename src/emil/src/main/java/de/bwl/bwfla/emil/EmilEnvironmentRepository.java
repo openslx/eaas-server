@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.api.imagebuilder.DockerImport;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -24,6 +25,8 @@ import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.common.services.security.UserContext;
+import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageRequest;
+import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.emucomp.api.*;
@@ -776,22 +779,24 @@ public class EmilEnvironmentRepository {
 		return ee.getEnvId();
 	}
 
-	void saveImportedContainer(SaveImportedContainerRequest req) throws BWFLAException {
-		environmentsAdapter.commitTempEnvironmentWithCustomType("default", req.getId(), "containers");
+	public void saveImportedContainer(String envId, ImportContainerRequest req) throws BWFLAException {
 
-		EmilEnvironment newEmilEnv = getEmilEnvironmentById(req.getId());
+
+		EmilEnvironment newEmilEnv = getEmilEnvironmentById(envId);
 		if (newEmilEnv != null)
-			throw new BWFLAException("import failed: environment with id: " + req.getId() + " exists.");
-
-		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
+			throw new BWFLAException("import failed: environment with id: " + envId + " exists.");
 
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
-		env.setEnvId(req.getId());
+		env.setEnvId(envId);
 		env.setTitle(req.getTitle());
 		env.setDescription(req.getDescription());
-		env.setInput(containerConfiguration.getInput());
-		env.setOutput(containerConfiguration.getOutputPath());
-		env.setArgs(containerConfiguration.getProcess().getArguments());
+		env.setInput(req.getInputFolder());
+		env.setOutput(req.getOutputFolder());
+
+		if (req.getImageType() == CreateContainerImageRequest.ContainerType.DOCKERHUB) {
+			env.setArgs(((DockerImport) req.getMetadata()).getEntryProcesses());
+			env.setEnv(((DockerImport) req.getMetadata()).getEnvVariables());
+		}
 		if(req.getRuntimeId() != null)
 			env.setRuntimeId(req.getRuntimeId());
 		if(req.isEnableNetwork())
@@ -800,8 +805,6 @@ public class EmilEnvironmentRepository {
 			net.setConnectEnvs(true);
 			env.setNetworking(net);
 		}
-		if (containerConfiguration.getProcess().getEnvironmentVariables() != null)
-			env.setEnv(containerConfiguration.getProcess().getEnvironmentVariables());
 
 		env.setServiceContainer(req.isServiceContainer());
 		env.setAuthor(req.getAuthor());

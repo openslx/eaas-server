@@ -19,8 +19,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
-import static de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest.ContainerImageType.DOCKERHUB;
-
 public class ReplicateImageTask extends BlockingTask<Object>
 {
 
@@ -118,12 +116,15 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 if(ociSourceUrl == null)
                     throw new BWFLAException("invalid emulator metadata: ociSource is mandatory");
 
+                /*
                 ImportEmulatorRequest importEmulatorRequest = new ImportEmulatorRequest();
                 importEmulatorRequest.setDigest(digest);
                 importEmulatorRequest.setUrlString(ociSourceUrl);
                 importEmulatorRequest.setImageType(DOCKERHUB);
 
                 request.containerUtil.importEmulator(importEmulatorRequest);
+
+                 */
             }
 
         }
