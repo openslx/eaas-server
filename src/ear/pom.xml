@@ -182,6 +182,15 @@
 					<artifactId>imagearchive</artifactId>
 					<type>war</type>
 				</dependency>
+				<dependency>
+					<groupId>com.openslx.eaas</groupId>
+					<artifactId>image-archive-api</artifactId>
+				</dependency>
+				<dependency>
+					<groupId>com.openslx.eaas</groupId>
+					<artifactId>image-archive-impl</artifactId>
+					<type>war</type>
+				</dependency>
 			</dependencies>
 		</profile>
 
