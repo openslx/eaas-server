@@ -9,6 +9,8 @@ import org.eclipse.persistence.internal.oxm.conversion.Base64;
 import java.io.UnsupportedEncodingException;
 import java.time.Duration;
 import java.util.Date;
+import java.util.function.Function;
+
 
 public class MachineTokenProvider {
     private static String authProxy = ConfigurationProvider.getConfiguration().get("emucomp.image_proxy");
@@ -35,11 +37,12 @@ public class MachineTokenProvider {
        if(apiSecret == null)
             return null;
 
+       final var lifetime = MachineTokenProvider.getDefaultLifetime();
        try {
             Algorithm algorithm = Algorithm.HMAC256(apiSecret);
             String token = JWT.create()
                     .withIssuer("eaasi")
-                    .withExpiresAt(new Date(System.currentTimeMillis() + MachineTokenProvider.getTokenLifetime()))
+                    .withExpiresAt(new Date(MachineTokenProvider.time() + lifetime.toMillis()))
                     .sign(algorithm);
            // System.out.println("Token:"  + token);
             return token;
@@ -51,6 +54,11 @@ public class MachineTokenProvider {
 
     public static String getJwt(String secret)
     {
+        return MachineTokenProvider.getBearerToken(secret, MachineTokenProvider.getDefaultLifetime());
+    }
+
+    private static String getBearerToken(String secret, Duration lifetime)
+    {
         if(secret == null)
             return null;
 
@@ -58,7 +66,7 @@ public class MachineTokenProvider {
             Algorithm algorithm = Algorithm.HMAC256(secret);
             String token = JWT.create()
                     .withIssuer("eaas")
-                    .withExpiresAt(new Date(System.currentTimeMillis() + MachineTokenProvider.getTokenLifetime()))
+                    .withExpiresAt(new Date(MachineTokenProvider.time() + lifetime.toMillis()))
                     .sign(algorithm);
             // System.out.println("Token:"  + token);
             return "Bearer " + token;
@@ -68,12 +76,21 @@ public class MachineTokenProvider {
         }
     }
 
-    public static String getInternalApiToken()
+    public static MachineToken getInternalToken()
     {
-        final var secret = ConfigurationProvider.getConfiguration()
-                .get("rest.internalApiSecret");
+        return MachineTokenProvider.getInternalToken(MachineTokenProvider.getDefaultLifetime());
+    }
 
-        return MachineTokenProvider.getJwt(secret);
+    public static MachineToken getInternalToken(Duration lifetime)
+    {
+        final Function<Duration, String> refresher = (time) -> {
+            final var secret = ConfigurationProvider.getConfiguration()
+                    .get("rest.internalApiSecret");
+
+            return MachineTokenProvider.getBearerToken(secret, time);
+        };
+
+        return new MachineToken(lifetime, refresher);
     }
 
     public static String getAuthenticationProxy()
@@ -101,9 +118,13 @@ public class MachineTokenProvider {
             return null;
     }
 
-    public static long getTokenLifetime()
+    public static Duration getDefaultLifetime()
     {
-        return Duration.ofHours(1L)
-                .toMillis();
+        return Duration.ofHours(2L);
+    }
+
+    public static long time()
+    {
+        return System.currentTimeMillis();
     }
 }

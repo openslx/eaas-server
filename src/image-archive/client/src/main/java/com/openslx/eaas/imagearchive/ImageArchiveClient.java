@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive;
 
 
+import de.bwl.bwfla.common.services.security.MachineToken;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
@@ -73,11 +74,18 @@ public class ImageArchiveClient implements Closeable
 
 	private static class AuthFilter implements ClientRequestFilter
 	{
+		private final MachineToken token;
+
+		private AuthFilter()
+		{
+			this.token = MachineTokenProvider.getInternalToken();
+		}
+
 		@Override
 		public void filter(ClientRequestContext context) throws IOException
 		{
 			context.getHeaders()
-					.add(HttpHeaders.AUTHORIZATION, MachineTokenProvider.getInternalApiToken());
+					.add(HttpHeaders.AUTHORIZATION, token.get());
 		}
 	}
 }
