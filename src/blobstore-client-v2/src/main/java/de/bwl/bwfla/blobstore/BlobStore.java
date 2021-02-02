@@ -26,6 +26,7 @@ import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
 
 import java.net.URL;
+import java.util.Iterator;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -72,6 +73,12 @@ public class BlobStore extends TaskExecutor
 	public Blob blob(BlobHandle handle)
 	{
 		return this.blob(handle.bucket(), handle.name());
+	}
+
+	/** Create new path builder */
+	public static Path path(String first, String... more)
+	{
+		return Path.wrap(first, more);
 	}
 
 	/** Create new client builder */
@@ -160,6 +167,157 @@ public class BlobStore extends TaskExecutor
 			catch (Exception error) {
 				throw new BWFLAException("Initializing MinIO client failed!", error);
 			}
+		}
+	}
+
+	/** Helper class for paths */
+	public static class Path implements Iterable<Path>
+	{
+		// Reuse standard filesystem-based implementation
+		private final java.nio.file.Path value;
+
+		/** Return true if this path begins with given path, else false */
+		public boolean startswith(String other)
+		{
+			other = Path.fixroot(other);
+			return value.startsWith(other);
+		}
+
+		/** Return true if this path begins with given path, else false */
+		public boolean startswith(Path other)
+		{
+			return value.startsWith(other.value);
+		}
+
+		/** Return true if this path ends with given path, else false */
+		public boolean endswith(String other)
+		{
+			other = Path.fixroot(other);
+			return value.endsWith(other);
+		}
+
+		/** Return true if this path ends with given path, else false */
+		public boolean endswith(Path other)
+		{
+			return value.endsWith(other.value);
+		}
+
+		/** Resolve given path against this path */
+		public Path resolve(String other)
+		{
+			other = Path.fixroot(other);
+			return Path.wrap(value.resolve(other));
+		}
+
+		/** Resolve given path against this path */
+		public Path resolve(Path other)
+		{
+			return Path.wrap(value.resolve(other.value));
+		}
+
+		/** Eliminate redundant elements */
+		public Path normalize()
+		{
+			return Path.wrap(value.normalize());
+		}
+
+		/** Return path's first element */
+		public Path first()
+		{
+			return this.element(0);
+		}
+
+		/** Return path's last element */
+		public Path last()
+		{
+			return Path.wrap(value.getFileName());
+		}
+
+		/** Return path's parent if it has one, else null */
+		public Path parent()
+		{
+			return Path.wrap(value.getParent());
+		}
+
+		/** Return i-th element of this path */
+		public Path element(int i)
+		{
+			return Path.wrap(value.getName(i));
+		}
+
+		/** Return subpath of this path */
+		public Path subpath(int begin, int end)
+		{
+			return Path.wrap(value.subpath(begin, end));
+		}
+
+		/** Return number of path elements */
+		public int count()
+		{
+			return value.getNameCount();
+		}
+
+		/** Return iterator over path elements */
+		@Override
+		public Iterator<Path> iterator()
+		{
+			final var iter = value.iterator();
+			return new Iterator<>() {
+				@Override
+				public boolean hasNext()
+				{
+					return iter.hasNext();
+				}
+
+				@Override
+				public Path next()
+				{
+					return Path.wrap(iter.next());
+				}
+			};
+		}
+
+		@Override
+		public boolean equals(Object other)
+		{
+			if (other instanceof Path)
+				return value.equals(((Path) other).value);
+
+			return false;
+		}
+
+		@Override
+		public String toString()
+		{
+			return value.toString();
+		}
+
+
+		// ===== Internal Helpers ====================
+
+		private Path(java.nio.file.Path path)
+		{
+			if (path.isAbsolute())
+				throw new IllegalArgumentException("Absolute paths are not allowed!");
+
+			this.value = path;
+		}
+
+		private static Path wrap(java.nio.file.Path other)
+		{
+			return (other != null) ? new Path(other) : null;
+		}
+
+		private static Path wrap(String first, String... more)
+		{
+			first = Path.fixroot(first);
+			return Path.wrap(java.nio.file.Path.of(first, more));
+		}
+
+		private static String fixroot(String path)
+		{
+			// Absolute paths are not allowed!
+			return (path.startsWith("/")) ? path.substring(1) : path;
 		}
 	}
 
