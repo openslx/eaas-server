@@ -6,7 +6,6 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
-import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
@@ -49,7 +48,6 @@ public class ReplicateImageTask extends BlockingTask<Object>
         public EmilEnvironment emilEnvironment;
         public EmilEnvironmentRepository repository;
         public String username;
-        public ContainerUtil containerUtil;
 
         public void validate() throws BWFLAException
         {

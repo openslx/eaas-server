@@ -26,7 +26,6 @@ import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emil.tasks.BuildContainerImageTask;
 import de.bwl.bwfla.emil.tasks.ImportEmulatorTask;
-import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportContainerTask;
 import de.bwl.bwfla.emucomp.api.*;
@@ -40,9 +39,6 @@ public class EmilContainerData extends EmilRest {
 
     @Inject
     private DatabaseEnvironmentsAdapter envHelper;
-
-    @Inject
-    private ContainerUtil containerUtil;
 
     private List<DataSource> handlers = new ArrayList<>();
 

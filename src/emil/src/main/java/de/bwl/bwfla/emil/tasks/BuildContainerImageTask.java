@@ -8,7 +8,6 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageResult;
-import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.MediumType;
 import de.bwl.bwfla.emucomp.api.PartitionTableType;
