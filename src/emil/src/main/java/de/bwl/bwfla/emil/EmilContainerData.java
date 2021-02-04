@@ -18,11 +18,14 @@ import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.emil.tasks.BuildContainerImageTask;
+import de.bwl.bwfla.emil.tasks.ImportEmulatorTask;
 import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportContainerTask;
@@ -68,6 +71,10 @@ public class EmilContainerData extends EmilRest {
 
     @Inject
     private EmilEnvironmentRepository emilEnvRepo;
+
+    @Inject
+	@AuthenticatedUser
+	private UserContext authenticatedUser = null;
 
     private ObjectArchiveHelper objHelper;
 
@@ -256,8 +263,22 @@ public class EmilContainerData extends EmilRest {
     @Path("/importContainer")
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
-    public TaskStateResponse importEmulator(ImportContainerRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, envHelper, emilEnvRepo)));
+    public TaskStateResponse importContainer(ImportContainerRequest req) {
+
+        String userCtx = null;
+        if (authenticatedUser != null)
+            userCtx = authenticatedUser.getUserId();
+
+        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, envHelper, emilEnvRepo, userCtx)));
+    }
+
+    @Secured(roles={Role.RESTRICTED})
+    @POST
+    @Path("/importEmulator")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public TaskStateResponse importEmulator(ImportEmulatorRequest req) {
+        return new TaskStateResponse(taskManager.submitTask(new ImportEmulatorTask(req, envHelper)));
     }
 
     private String getEmulatorArchive() {

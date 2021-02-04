@@ -166,18 +166,6 @@ public class DatabaseEnvironmentsAdapter {
         environmentsAdapter.delete(archive, envId, deleteMetadata, deleteImage);
     }
 
-    public void commitTempEnvironmentWithCustomType(String archive, String id, String type) throws BWFLAException {
-        try {
-            environmentsAdapter.commitTempEnvironmentWithCustomType(id, type);
-        } catch (Exception e) {
-            throw new BWFLAException(e);
-        }
-
-        Environment environment = environmentsAdapter.getEnvironmentById(archive, id);
-        db.saveDoc(archive, id, metaDataIdKey, environment.jsonValueWithoutRoot(false));
-    }
-
-
     public void updateMetadata(String archive, Environment environment) throws BWFLAException {
         environment.setTimestamp(Instant.now().toString());
         environmentsAdapter.updateMetadata(archive, environment);

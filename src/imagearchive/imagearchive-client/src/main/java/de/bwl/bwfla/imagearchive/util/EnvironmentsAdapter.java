@@ -404,15 +404,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return UUID.randomUUID().toString();
 	}
 
-	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException {
-		this.commitTempEnvironmentWithCustomType(this.getDefaultBackendName(), id, type);
-	}
-
-	public void commitTempEnvironmentWithCustomType(String backend, String id, String type) throws BWFLAException {
-		connectArchive();
-		archive.commitTempEnvironmentWithCustomType(backend, id, type);
-	}
-
 	public void cleanTempEnvironments() throws BWFLAException {
 		this.cleanTempEnvironments(this.getDefaultBackendName());
 	}

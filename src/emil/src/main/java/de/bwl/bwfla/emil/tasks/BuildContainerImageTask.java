@@ -1,5 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
+import de.bwl.bwfla.api.imagearchive.ImageMetadata;
+import de.bwl.bwfla.api.imagebuilder.DockerImport;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilderResult;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -151,7 +153,23 @@ public class BuildContainerImageTask extends BlockingTask<Object> {
 
         CreateContainerImageResult containerImageResult = new CreateContainerImageResult();
         containerImageResult.setContainerUrl(imageUrl.toString());
-        containerImageResult.setMetadata(result.getMetadata());
+        CreateContainerImageResult.ContainerImageMetadata  md = new CreateContainerImageResult.ContainerImageMetadata();
+        containerImageResult.setMetadata(md);
+        
+        if(result != null && req.getContainerType() == CreateContainerImageRequest.ContainerType.DOCKERHUB)
+        {
+            DockerImport dockerImport = (DockerImport)result.getMetadata();
+            if(dockerImport != null)
+            {
+                containerImageResult.getMetadata().setContainerDigest(dockerImport.getDigest());
+                containerImageResult.getMetadata().setContainerSourceUrl(dockerImport.getImageRef());
+                containerImageResult.getMetadata().setEntryProcesses(dockerImport.getEntryProcesses());
+                containerImageResult.getMetadata().setEnvVariables(dockerImport.getEnvVariables());
+                containerImageResult.getMetadata().setWorkingDir(dockerImport.getWorkingDir());
+            }
+            // TODO: other fmts...
+        }
+
         return containerImageResult;
     }
 

@@ -20,13 +20,8 @@ public class ImportContainerRequest extends EmilRequestType {
     @XmlElement
     private CreateContainerImageRequest.ContainerType imageType;
 
-
-
     @XmlElement
     private String imageUrl;
-
-    @XmlElement
-    private ImageBuilderMetadata metadata;
 
     @XmlElement
     private String runtimeId;
@@ -55,10 +50,13 @@ public class ImportContainerRequest extends EmilRequestType {
     @XmlElement
     private String author;
 
-    
+    @XmlElement
+    private String workingDir;
+
     private boolean enableNetwork;
 
     private String customSubdir;
+
     private boolean serviceContainer;
 
     public String getTitle() {
@@ -155,7 +153,7 @@ public class ImportContainerRequest extends EmilRequestType {
         return imageUrl;
     }
 
-    public ImageBuilderMetadata getMetadata() {
-        return metadata;
+    public String getWorkingDir() {
+        return workingDir;
     }
 }

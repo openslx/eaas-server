@@ -212,17 +212,6 @@ public class ImageHandler
 			String id = ImageInformation.getBackingImageId(info.getBackingFile());
 			log.info("Image info: " + image.getAbsolutePath() + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
-			File tmpTarget = getImageTargetPath(ImageType.tmp.name());
-			File tmpImageFile = new File(tmpTarget, id);
-			if(tmpImageFile.exists())
-			{
-				log.info("Backing file is temporary, committing it first...");
-
-				MachineConfiguration mc = getEnvByImageId(ImageType.tmp, id);
-				id = commitTempEnvironment(mc.getId());
-				log.info("Backing file committed as: " + id);
-			}
-
 			boolean hasLocalBackingfile = false;
 			for(ImageType _type : ImageType.values()) {
 				File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
@@ -841,116 +830,6 @@ public class ImageHandler
 			}
 		}
 		return null;
-	}
-
-	private String commitTempEnvironment(String id, String type, ImageArchiveMetadata.ImageType imageType ) throws IOException, BWFLAException
-	{
-		Environment env = getEnvById(id);
-		List<AbstractDataResource> abstractDataResources = null;
-
-		if (env == null) {
-			throw new BWFLAException("cannot commit environment " + id + ": not found");
-		}
-
-		if (env instanceof MachineConfiguration)
-			abstractDataResources = ((MachineConfiguration) env).getAbstractDataResource();
-		else if (env instanceof ContainerConfiguration)
-			abstractDataResources = ((ContainerConfiguration) env).getDataResources();
-
-		if (abstractDataResources == null) {
-			throw new BWFLAException("cannot commit environment: environment type is unknown ");
-		}
-
-
-			log.info("committing env id: " + id);
-
-		File srcImgDir = getImageTargetPath("tmp");
-		File dstImgDir = getImageTargetPath(type);
-		File srcEnvDir = getMetaDataTargetPath("tmp");
-		File dstEnvDir = getMetaDataTargetPath(type);
-		
-		if(srcImgDir == null || dstImgDir == null || srcEnvDir == null || dstEnvDir == null)
-		{
-			throw new BWFLAException("cannot commit environment " + id + ": invalid src/dst path");
-		}
-
-		String newImageId = UUID.randomUUID().toString();
-		for(AbstractDataResource b : abstractDataResources)
-		{
-			if(b instanceof ImageArchiveBinding && (b.getId().equals("main_hdd") || b.getId().equals("rootfs")))
-			{
-				ImageArchiveBinding iab = (ImageArchiveBinding)b;
-				File srcImgFile = new File(srcImgDir, iab.getImageId());
-				if(!srcImgFile.exists())
-				{
-					throw new BWFLAException("cannot commit environment " + id + ": src file not found " + srcImgFile);
-				}
-
-				File destImgFile = new File(dstImgDir, newImageId);
-				log.info("move " + srcImgFile + " to " + destImgFile);
-				if(!srcImgFile.renameTo(destImgFile))
-				{
-					throw new BWFLAException("cannot commit environment " + id + ": dest file not found " + destImgFile);
-				}
-				iab.setImageId(newImageId);
-				iab.setType(type);
-				iab.setUrl(null);
-
-				updateTmpBackingFiles(destImgFile.getAbsolutePath(), dstImgDir);
-				break;
-			}
-		}
-		removeCachedEnv(ImageType.tmp, id);
-		deleteMetaData(id);
-		writeMetaData(env.toString(), id, type, true);
-		addCachedEnvironment(imageType, id, env);
-		return newImageId;
-	}
-
-	public String commitTempEnvironment(String id ) throws IOException, BWFLAException {
-		return commitTempEnvironment(id, "user", ImageType.user);
-	}
-
-	public String commitTempEnvironment(String id, String type) throws IOException, BWFLAException {
-		return commitTempEnvironment(id, type, ImageType.valueOf(type));
-	}
-
-	private void updateTmpBackingFiles(String image, File target) throws IOException, BWFLAException {
-		log.info("Updating temporary backing file for: " + image);
-		ImageInformation info = new ImageInformation(image, log);
-		if (info.getBackingFile() == null) {
-			log.info("No backing file defined!");
-			return;
-		}
-
-		String id = ImageInformation.getBackingImageId(info.getBackingFile());
-		log.info("Image info: " + image + " --> " + info.getBackingFile() + " (ID = " + id + ")");
-
-		File backing = null;
-		for(ImageType _type : ImageType.values()) {
-			backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
-			if(backing.exists()) {
-				log.info("Local backing file found at: " + backing.getAbsolutePath());
-				break;
-			}
-			else backing = null;
-		}
-
-		if (backing == null) {
-			log.info("No local backing file found!");
-			return;
-		}
-
-		String newImageId = UUID.randomUUID().toString();
-		String newBackingFile = getArchivePrefix() + newImageId;
-
-		File destImgFile = new File(target, newImageId);
-		backing.renameTo(destImgFile);
-
-		log.info("Rebasing image: " + image + " --> " + newBackingFile);
-		EmulatorUtils.changeBackingFile(new File(image).toPath(), newBackingFile, log);
-
-		updateTmpBackingFiles(destImgFile.getAbsolutePath(), target);
 	}
 
 	public ConcurrentHashMap<String, Environment> getImages(String type) {

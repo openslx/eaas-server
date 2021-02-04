@@ -222,15 +222,22 @@ public class EmilEnvironmentRepository {
 		return result;
 	}
 
-	private void setPermissions(EmilEnvironment ee) {
-		if (authenticatedUser != null && authenticatedUser.getUserId() != null) {
-			EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
-			owner.setUsername(authenticatedUser.getUserId());
+	private void setPermissions(EmilEnvironment ee, String userCtx)
+	{
+		if(userCtx != null)
+		{	EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
+			owner.setUsername(userCtx);
 			ee.setOwner(owner);
 
 			EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
 			permissions.setUser(EmilEnvironmentPermissions.Permissions.WRITE);
 			ee.setPermissions(permissions);
+		}
+	}
+
+	private void setPermissions(EmilEnvironment ee) {
+		if (authenticatedUser != null && authenticatedUser.getUserId() != null) {
+			setPermissions(ee, authenticatedUser.getUserId());
 		}
 	}
 
@@ -445,6 +452,10 @@ public class EmilEnvironmentRepository {
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
+		save(env, setPermission, getCollectionCtx());
+	}
+
+	public void save(EmilEnvironment env, boolean setPermission, String userCtx) throws BWFLAException {
 
 		env.setTimestamp(Instant.now().toString());
 
@@ -460,7 +471,7 @@ public class EmilEnvironmentRepository {
 		}
 		else {
 			if(setPermission)
-				setPermissions(env);
+				setPermissions(env, userCtx);
 		}
 
 		switch (env.getArchive())
@@ -472,7 +483,7 @@ public class EmilEnvironmentRepository {
 				db.saveDoc(MetadataCollection.REMOTE, env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 				break;
 			default:
-				db.saveDoc(getCollectionCtx(), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
+				db.saveDoc(getCollectionCtx(userCtx), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 		}
 		// LOG.severe(env.toString());
 	}
@@ -779,24 +790,17 @@ public class EmilEnvironmentRepository {
 		return ee.getEnvId();
 	}
 
-	public void saveImportedContainer(String envId, ImportContainerRequest req) throws BWFLAException {
-
-
-		EmilEnvironment newEmilEnv = getEmilEnvironmentById(envId);
-		if (newEmilEnv != null)
-			throw new BWFLAException("import failed: environment with id: " + envId + " exists.");
-
+	public void saveImportedContainer(String envId, ImportContainerRequest req, String userCtx) throws BWFLAException
+	{
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
 		env.setEnvId(envId);
 		env.setTitle(req.getTitle());
 		env.setDescription(req.getDescription());
 		env.setInput(req.getInputFolder());
 		env.setOutput(req.getOutputFolder());
+		env.setArgs(req.getProcessArgs());
+		env.setEnv(req.getProcessEnvs());
 
-		if (req.getImageType() == CreateContainerImageRequest.ContainerType.DOCKERHUB) {
-			env.setArgs(((DockerImport) req.getMetadata()).getEntryProcesses());
-			env.setEnv(((DockerImport) req.getMetadata()).getEnvVariables());
-		}
 		if(req.getRuntimeId() != null)
 			env.setRuntimeId(req.getRuntimeId());
 		if(req.isEnableNetwork())
@@ -808,7 +812,7 @@ public class EmilEnvironmentRepository {
 
 		env.setServiceContainer(req.isServiceContainer());
 		env.setAuthor(req.getAuthor());
-		save(env, true);
+		save(env, true, userCtx);
 	}
 
 	String saveAsRevision(Snapshot snapshot, SaveDerivateRequest req, boolean checkpoint) throws BWFLAException {

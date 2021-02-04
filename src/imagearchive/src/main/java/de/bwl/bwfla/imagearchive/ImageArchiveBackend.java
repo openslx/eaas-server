@@ -293,28 +293,6 @@ public class ImageArchiveBackend implements Comparable<ImageArchiveBackend>
 		}
 	}
 
-	@Deprecated
-	public void commitTempEnvironment(String id) throws BWFLAException
-	{
-		try {
-			imageHandler.commitTempEnvironment(id);
-		}
-		catch (IOException e) {
-			throw new BWFLAException("commit tmp image: ", e);
-		}
-	}
-
-	@Deprecated
-	public void commitTempEnvironmentWithCustomType(String id, String type) throws BWFLAException
-	{
-		try {
-			imageHandler.commitTempEnvironment(id, type);
-		}
-		catch (IOException e) {
-			throw new BWFLAException("commit tmp image: ", e);
-		}
-	}
-
 	public String getRecording(String envId, String traceId) throws BWFLAException
 	{
 		return iwdArchive.getRecording(envId, traceId);
