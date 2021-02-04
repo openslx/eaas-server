@@ -1145,7 +1145,7 @@ public class EnvironmentRepository extends EmilRest
 				importRequest.environmentHelper = envdb;
 				importRequest.destArchive = replicateImagesRequest.getDestArchive();
 				importRequest.imageProposer = imageProposer;
-				importRequest.containerUtil = containerUtil;
+				
 				if (authenticatedUser != null)
 					importRequest.username = authenticatedUser.getUserId();
 
