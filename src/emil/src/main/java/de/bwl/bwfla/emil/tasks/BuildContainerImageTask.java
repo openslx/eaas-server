@@ -160,11 +160,16 @@ public class BuildContainerImageTask extends BlockingTask<Object> {
             DockerImport dockerImport = (DockerImport)result.getMetadata();
             if(dockerImport != null)
             {
+                containerImageResult.getMetadata().setTag(dockerImport.getTag());
                 containerImageResult.getMetadata().setContainerDigest(dockerImport.getDigest());
                 containerImageResult.getMetadata().setContainerSourceUrl(dockerImport.getImageRef());
                 containerImageResult.getMetadata().setEntryProcesses(dockerImport.getEntryProcesses());
                 containerImageResult.getMetadata().setEnvVariables(dockerImport.getEnvVariables());
                 containerImageResult.getMetadata().setWorkingDir(dockerImport.getWorkingDir());
+
+                /* deprecated --- compatlayer */
+                containerImageResult.getMetadata().setEmulatorType(dockerImport.getEmulatorType());
+                containerImageResult.getMetadata().setEmulatorVersion(dockerImport.getEmulatorVersion());
             }
             // TODO: other fmts...
         }

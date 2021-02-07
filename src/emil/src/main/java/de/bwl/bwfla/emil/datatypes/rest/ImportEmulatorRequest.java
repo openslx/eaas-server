@@ -12,7 +12,14 @@ public class ImportEmulatorRequest extends EmilRequestType {
     @XmlElement
     private String imageUrl;
 
+    @XmlElement
+    private CreateContainerImageResult.ContainerImageMetadata metadata;
+
     public String getImageUrl() {
         return imageUrl;
+    }
+
+    public CreateContainerImageResult.ContainerImageMetadata getMetadata() {
+        return metadata;
     }
 }

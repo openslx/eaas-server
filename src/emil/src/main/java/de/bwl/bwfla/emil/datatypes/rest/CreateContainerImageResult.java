@@ -49,6 +49,15 @@ public class CreateContainerImageResult extends JaxbType {
         @XmlElement
         private String containerDigest;
 
+        @XmlElement
+        private String tag;
+
+        @XmlElement
+        private String emulatorType;
+
+        @XmlElement
+        private String emulatorVersion;
+
         public String getContainerSourceUrl() {
             return containerSourceUrl;
         }
@@ -87,6 +96,30 @@ public class CreateContainerImageResult extends JaxbType {
 
         public void setContainerDigest(String containerDigest) {
             this.containerDigest = containerDigest;
+        }
+
+        public String getTag() {
+            return tag;
+        }
+
+        public void setTag(String tag) {
+            this.tag = tag;
+        }
+
+        public String getEmulatorType() {
+            return emulatorType;
+        }
+
+        public void setEmulatorType(String emulatorType) {
+            this.emulatorType = emulatorType;
+        }
+
+        public String getEmulatorVersion() {
+            return emulatorVersion;
+        }
+
+        public void setEmulatorVersion(String emulatorVersion) {
+            this.emulatorVersion = emulatorVersion;
         }
     }
 }
