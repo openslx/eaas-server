@@ -48,7 +48,6 @@ import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
-import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
@@ -98,9 +97,6 @@ public class EnvironmentRepository extends EmilRest
 	private EmilEnvironmentRepository emilEnvRepo = null;
 
 	private ImageProposer imageProposer = null;
-
-	@Inject
-	private ContainerUtil containerUtil = null;
 
 	@Inject
 	private TaskManager taskManager = null;
@@ -1149,7 +1145,7 @@ public class EnvironmentRepository extends EmilRest
 				importRequest.environmentHelper = envdb;
 				importRequest.destArchive = replicateImagesRequest.getDestArchive();
 				importRequest.imageProposer = imageProposer;
-				importRequest.containerUtil = containerUtil;
+				
 				if (authenticatedUser != null)
 					importRequest.username = authenticatedUser.getUserId();
 

@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageType;
+import de.bwl.bwfla.api.imagebuilder.DockerImport;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -24,6 +25,8 @@ import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.common.services.security.UserContext;
+import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageRequest;
+import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.utils.Snapshot;
 import de.bwl.bwfla.emucomp.api.*;
@@ -219,15 +222,22 @@ public class EmilEnvironmentRepository {
 		return result;
 	}
 
-	private void setPermissions(EmilEnvironment ee) {
-		if (authenticatedUser != null && authenticatedUser.getUserId() != null) {
-			EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
-			owner.setUsername(authenticatedUser.getUserId());
+	private void setPermissions(EmilEnvironment ee, String userCtx)
+	{
+		if(userCtx != null)
+		{	EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
+			owner.setUsername(userCtx);
 			ee.setOwner(owner);
 
 			EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
 			permissions.setUser(EmilEnvironmentPermissions.Permissions.WRITE);
 			ee.setPermissions(permissions);
+		}
+	}
+
+	private void setPermissions(EmilEnvironment ee) {
+		if (authenticatedUser != null && authenticatedUser.getUserId() != null) {
+			setPermissions(ee, authenticatedUser.getUserId());
 		}
 	}
 
@@ -442,6 +452,10 @@ public class EmilEnvironmentRepository {
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
+		save(env, setPermission, getCollectionCtx());
+	}
+
+	public void save(EmilEnvironment env, boolean setPermission, String userCtx) throws BWFLAException {
 
 		env.setTimestamp(Instant.now().toString());
 
@@ -457,7 +471,7 @@ public class EmilEnvironmentRepository {
 		}
 		else {
 			if(setPermission)
-				setPermissions(env);
+				setPermissions(env, userCtx);
 		}
 
 		switch (env.getArchive())
@@ -469,7 +483,7 @@ public class EmilEnvironmentRepository {
 				db.saveDoc(MetadataCollection.REMOTE, env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 				break;
 			default:
-				db.saveDoc(getCollectionCtx(), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
+				db.saveDoc(getCollectionCtx(userCtx), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 		}
 		// LOG.severe(env.toString());
 	}
@@ -776,50 +790,17 @@ public class EmilEnvironmentRepository {
 		return ee.getEnvId();
 	}
 
-	@Deprecated
-	String saveImport(Snapshot snapshot, SaveImportRequest request) throws BWFLAException {
-		Environment environment = environmentsAdapter.getEnvironmentById(request.getArchive(), request.getEnvId());
-		EnvironmentDescription description = new EnvironmentDescription();
-		description.setTitle(request.getTitle());
-		environment.setDescription(description);
-
-		environmentsAdapter.updateMetadata("default", environment);
-		environmentsAdapter.commitTempEnvironment("default", request.getEnvId());
-
-		EmilEnvironment newEmilEnv = getEmilEnvironmentById(request.getEnvId());
-
-		if (newEmilEnv != null)
-			throw new BWFLAException("import failed: environment with id: " + request.getEnvId() + " exists.");
-
-		newEmilEnv = new EmilEnvironment();
-		newEmilEnv.setTitle(request.getTitle());
-		newEmilEnv.setEnvId(request.getEnvId());
-		newEmilEnv.setAuthor(request.getAuthor());
-		newEmilEnv.setEnableRelativeMouse(request.isRelativeMouse());
-
-		newEmilEnv.setDescription(request.getMessage());
-		save(newEmilEnv, true);
-
-		return request.getEnvId();
-	}
-
-
-	void saveImportedContainer(SaveImportedContainerRequest req) throws BWFLAException {
-		environmentsAdapter.commitTempEnvironmentWithCustomType("default", req.getId(), "containers");
-
-		EmilEnvironment newEmilEnv = getEmilEnvironmentById(req.getId());
-		if (newEmilEnv != null)
-			throw new BWFLAException("import failed: environment with id: " + req.getId() + " exists.");
-
-		OciContainerConfiguration containerConfiguration = (OciContainerConfiguration) environmentsAdapter.getEnvironmentById("default", req.getId());
-
+	public void saveImportedContainer(String envId, ImportContainerRequest req, String userCtx) throws BWFLAException
+	{
 		EmilContainerEnvironment env = new EmilContainerEnvironment();
-		env.setEnvId(req.getId());
+		env.setEnvId(envId);
 		env.setTitle(req.getTitle());
 		env.setDescription(req.getDescription());
-		env.setInput(containerConfiguration.getInput());
-		env.setOutput(containerConfiguration.getOutputPath());
-		env.setArgs(containerConfiguration.getProcess().getArguments());
+		env.setInput(req.getInputFolder());
+		env.setOutput(req.getOutputFolder());
+		env.setArgs(req.getProcessArgs());
+		env.setEnv(req.getProcessEnvs());
+
 		if(req.getRuntimeId() != null)
 			env.setRuntimeId(req.getRuntimeId());
 		if(req.isEnableNetwork())
@@ -828,12 +809,10 @@ public class EmilEnvironmentRepository {
 			net.setConnectEnvs(true);
 			env.setNetworking(net);
 		}
-		if (containerConfiguration.getProcess().getEnvironmentVariables() != null)
-			env.setEnv(containerConfiguration.getProcess().getEnvironmentVariables());
 
 		env.setServiceContainer(req.isServiceContainer());
 		env.setAuthor(req.getAuthor());
-		save(env, true);
+		save(env, true, userCtx);
 	}
 
 	String saveAsRevision(Snapshot snapshot, SaveDerivateRequest req, boolean checkpoint) throws BWFLAException {

@@ -1489,12 +1489,8 @@ public class Components {
                 final String message = "Creating " + ((checkpoint) ? "checkpoint" : "snapshot") + " failed!";
                 return new SnapshotResponse(new BWFLAException(message));
             }
-
             if (request instanceof SaveObjectEnvironmentRequest) {
                 return new SnapshotResponse(emilEnvRepo.saveAsObjectEnvironment(snapshot, (SaveObjectEnvironmentRequest) request));
-            }
-            else if (request instanceof SaveImportRequest) {
-                return new SnapshotResponse(emilEnvRepo.saveImport(snapshot, (SaveImportRequest) request));
             }
             else if (request instanceof SaveDerivateRequest) { // implies SaveCreatedEnvironmentRequest && newEnvironmentRequest
                 return new SnapshotResponse(emilEnvRepo.saveAsRevision(snapshot, (SaveDerivateRequest) request, checkpoint));
