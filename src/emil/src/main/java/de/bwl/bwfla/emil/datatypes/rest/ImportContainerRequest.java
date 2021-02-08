@@ -3,6 +3,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 import javax.xml.bind.annotation.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import de.bwl.bwfla.api.imagebuilder.ImageBuilderMetadata;
 
 import java.util.ArrayList;
 
@@ -13,39 +14,73 @@ import java.util.ArrayList;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class ImportContainerRequest extends EmilRequestType {
 
-    private String runtimeID;
+    @XmlElement
     private String name;
-    private String urlString;
-    private String customSubdir;
 
-    @XmlElement(required = false)
-    private String tag;
+    @XmlElement
+    private CreateContainerImageRequest.ContainerType imageType;
 
-    @XmlAttribute(required = false)
-    private String digest;
+    @XmlElement
+    private String imageUrl;
 
+    @XmlElement
+    private String runtimeId;
+
+    @XmlElement
     private String outputFolder;
-    private String inputFolder;
-    private ContainerImageType imageType;
-    private boolean guiRequired;
 
+    @XmlElement
+    private String inputFolder;
+
+    @XmlElement
+    private String title;
+
+    @XmlElement
     private ArrayList<String> processArgs;
+
+    @XmlElement
     private ArrayList<String> processEnvs;
 
+    @XmlElement
+    private boolean guiRequired;
 
+    @XmlElement
+    private String description;
 
-    /**
-     * @return the runtimeID
-     */
-    public String getRuntimeID() {
-        return runtimeID;
+    @XmlElement
+    private String author;
+
+    @XmlElement
+    private String workingDir;
+
+    private boolean enableNetwork;
+
+    private String customSubdir;
+
+    private boolean serviceContainer;
+
+    public String getTitle() {
+        return title;
     }
 
-    /**
-     * @param runtimeID the runtimeID to set
-     */
-    public void setRuntimeID(String runtimeID) {
-        this.runtimeID = runtimeID;
+    public String getDescription() {
+        return description;
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    public boolean isEnableNetwork() {
+        return enableNetwork;
+    }
+
+    public String getRuntimeId() {
+        return runtimeId;
+    }
+
+    public boolean isServiceContainer() {
+        return serviceContainer;
     }
 
     /**
@@ -62,44 +97,12 @@ public class ImportContainerRequest extends EmilRequestType {
         this.name = name;
     }
 
-    /**
-     * @return the size
-     */
-//    public String getSize() {
-//        return size;
-//    }
-
-    /**
-     * @param size the size to set
-     */
-//    public void setSize(String size) {
-//        this.size = size;
-//    }
-
-
-    /**
-     * @return the urlString
-     */
-
-
-    public String getUrlString() {
-        return urlString;
-    }
-
-
     public boolean guiRequired() {
         return guiRequired;
     }
 
     public void setGuiRequired(boolean guiRequired) {
         this.guiRequired = guiRequired;
-    }
-
-    /**
-     * @param urlString the urlString to set
-     */
-    public void setUrlString(String urlString) {
-        this.urlString = urlString;
     }
 
     public String getOutputFolder() {
@@ -134,26 +137,6 @@ public class ImportContainerRequest extends EmilRequestType {
         this.inputFolder = inputFolder;
     }
 
-    public String getTag() {
-        return tag;
-    }
-
-    public ContainerImageType getImageType() {
-        return imageType;
-    }
-
-    public void setImageType(ContainerImageType imageType) {
-        this.imageType = imageType;
-    }
-
-    public String getDigest() {
-        return digest;
-    }
-
-    public void setDigest(String digest) {
-        this.digest = digest;
-    }
-
     public String getCustomSubdir() {
         return customSubdir;
     }
@@ -162,34 +145,15 @@ public class ImportContainerRequest extends EmilRequestType {
         this.customSubdir = customSubdir;
     }
 
-    @XmlEnum
-    public enum ContainerImageType {
-        @XmlEnumValue("rootfs")
-        ROOTFS("rootfs"),
-        @XmlEnumValue("simg")
-        SIMG("simg"),
-        @XmlEnumValue("dockerhub")
-        DOCKERHUB("dockerhub"),
-        @XmlEnumValue("readymade")
-        READYMADE("readymade");
+    public CreateContainerImageRequest.ContainerType getImageType() {
+        return imageType;
+    }
 
-        private final String value;
+    public String getImageUrl() {
+        return imageUrl;
+    }
 
-        ContainerImageType(String v) {
-            value = v;
-        }
-
-        public String value() {
-            return value;
-        }
-
-        public static ContainerImageType fromValue(String v) {
-            for (ContainerImageType c: ContainerImageType.values()) {
-                if (c.value.equals(v)) {
-                    return c;
-                }
-            }
-            throw new IllegalArgumentException(v);
-        }
+    public String getWorkingDir() {
+        return workingDir;
     }
 }

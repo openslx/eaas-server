@@ -6,8 +6,6 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
-import de.bwl.bwfla.emil.datatypes.rest.ImportEmulatorRequest;
-import de.bwl.bwfla.emil.utils.ContainerUtil;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
@@ -18,8 +16,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
-
-import static de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest.ContainerImageType.DOCKERHUB;
 
 public class ReplicateImageTask extends BlockingTask<Object>
 {
@@ -52,7 +48,6 @@ public class ReplicateImageTask extends BlockingTask<Object>
         public EmilEnvironment emilEnvironment;
         public EmilEnvironmentRepository repository;
         public String username;
-        public ContainerUtil containerUtil;
 
         public void validate() throws BWFLAException
         {
@@ -118,12 +113,15 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 if(ociSourceUrl == null)
                     throw new BWFLAException("invalid emulator metadata: ociSource is mandatory");
 
+                /*
                 ImportEmulatorRequest importEmulatorRequest = new ImportEmulatorRequest();
                 importEmulatorRequest.setDigest(digest);
                 importEmulatorRequest.setUrlString(ociSourceUrl);
                 importEmulatorRequest.setImageType(DOCKERHUB);
 
                 request.containerUtil.importEmulator(importEmulatorRequest);
+
+                 */
             }
 
         }

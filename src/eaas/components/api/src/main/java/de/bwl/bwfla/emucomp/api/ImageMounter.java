@@ -471,11 +471,6 @@ public class ImageMounter implements AutoCloseable
 
 	private static DeprecatedProcessRunner nbdMount(String imagePath, Path mountpoint, MountOptions options, Logger log) throws BWFLAException {
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo");
-		process.addArgument("unshare");
-		process.addArgument("-p");
-		process.addArgument("-f");
-		process.addArgument("--kill-child");
-		process.addArgument("--");
 		process.addArgument("/libexec/fuseqemu/fuseqemu");
 		process.addArgument(imagePath);
 		process.addArgument(mountpoint.toAbsolutePath().toString());

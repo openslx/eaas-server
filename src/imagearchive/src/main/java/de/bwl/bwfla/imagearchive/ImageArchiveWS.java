@@ -177,18 +177,6 @@ public class ImageArchiveWS
 				.importConfiguration(conf, iaMd, deleteIfExists);
 	}
 
-    public void commitTempEnvironment(String backend, String id) throws BWFLAException
-	{
-		this.lookup(backend)
-				.commitTempEnvironment(id);
-	}
-
-	public void commitTempEnvironmentWithCustomType(String backend, String id, String type) throws BWFLAException
-	{
-		this.lookup(backend)
-				.commitTempEnvironmentWithCustomType(id, type);
-	}
-
 	public String getRecording(String backend, String envId, String traceId) throws BWFLAException
 	{
 		return this.lookup(backend)
