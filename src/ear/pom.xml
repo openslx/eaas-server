@@ -312,5 +312,19 @@
 				</dependency>
 			</dependencies>
 		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>dig-pub-sharing</id>
+			<dependencies>
+				<dependency>
+					<groupId>de.bwl.bwfla</groupId>
+					<artifactId>dig-pub-sharing</artifactId>
+					<type>war</type>
+				</dependency>
+			</dependencies>
+		</profile>
 	</profiles>
 </project>

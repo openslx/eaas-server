@@ -12,6 +12,7 @@
       <module name="deployment.eaas-server.ear.de.bwl.bwfla.eaas-eaas-proxy-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-softwarearchive-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-metadata-oaipmh-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.de.bwl.bwfla-dig-pub-sharing-0.0.1-SNAPSHOT.war" services="import"/>
       <system export="true">
         <paths>
           <path name="jdk/net"/>

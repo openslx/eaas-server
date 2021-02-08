@@ -12,7 +12,8 @@ runners:
 commonconf:
     serverdatadir: /home/bwfla/server-data
     mongodb:
-        address: 'mongodb://localhost:27017'
+        # default unix domain socket, url-encoded
+        address: 'mongodb://%2Ftmp%2Fmongodb-27017.sock'
         dbname: eaas
 
 http_export_servlet:

@@ -20,6 +20,8 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbCollectionReader;
 import de.bwl.bwfla.common.utils.jaxb.JaxbNames;
 import de.bwl.bwfla.emucomp.api.FileCollection;
+import de.bwl.bwfla.objectarchive.api.SeatDescription;
+
 
 public class ObjectArchiveHelper {
 
@@ -190,9 +192,19 @@ public class ObjectArchiveHelper {
 		archive.setNumObjectSeatsForTenant(_archive, object, tenant, seats);
 	}
 
+	public void setNumObjectSeatsForTenant(String _archive, List<SeatDescription> objects, String tenant) throws BWFLAException {
+		connectArchive();
+		archive.setNumObjectSeatsForTenantBatched(_archive, objects, tenant);
+	}
+
 	public void resetNumObjectSeatsForTenant(String _archive, String object, String tenant) throws BWFLAException {
 		connectArchive();
 		archive.resetNumObjectSeatsForTenant(_archive, object, tenant);
+	}
+
+	public void resetNumObjectSeatsForTenant(String _archive, List<String> objects, String tenant) throws BWFLAException {
+		connectArchive();
+		archive.resetNumObjectSeatsForTenantBatched(_archive, objects, tenant);
 	}
 
 	public void resetAllObjectSeatsForTenant(String tenant) throws BWFLAException {

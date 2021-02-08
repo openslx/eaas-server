@@ -1,0 +1,13 @@
+<enunciate xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://enunciate.webcohesion.com/schemas/enunciate-2.0.0-M.4.xsd">
+	<title>EaaS API</title>
+	<description>
+	<![CDATA[
+		<h1>EaaS API</h1><p>Overview of the Emulation-as-a-Service REST API</p>
+	]]>
+	</description>
+	<api-classes>
+		<exclude pattern="**"/>
+		<include pattern="de.bwl.bwfla.digpubsharing.api.**"/>
+		<include pattern="de.bwl.bwfla.digpubsharing.ServiceAPI"/>
+	</api-classes>
+</enunciate>
