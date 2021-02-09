@@ -36,6 +36,7 @@ public class SeatManager
 {
 	private static final Logger LOG = Logger.getLogger("SOFTWARE-SEAT-MANAGER");
 	private DocumentCollection<SeatRecord> entries;
+	private boolean verbose;
 
 
 	public int getNumSeats(String tenant, String resource) throws BWFLAException
@@ -50,7 +51,8 @@ public class SeatManager
 
 	public void setNumSeats(String tenant, String resource, int seats) throws BWFLAException
 	{
-		LOG.info("Storing " + seats + " software seat(s) for '" + resource + " (" + tenant + ")'...");
+		if (verbose)
+			LOG.info("Storing " + seats + " software seat(s) for '" + resource + " (" + tenant + ")'...");
 
 		final var filter = SeatRecord.filter(tenant, resource);
 		entries.replace(filter, new SeatRecord(tenant, resource, seats));
@@ -58,14 +60,16 @@ public class SeatManager
 
 	public void resetNumSeats(String tenant, String resource) throws BWFLAException
 	{
-		LOG.info("Resetting software seats for '" + resource + " (" + tenant + ")'...");
+		if (verbose)
+			LOG.info("Resetting software seats for '" + resource + " (" + tenant + ")'...");
 
 		entries.delete(SeatRecord.filter(tenant, resource));
 	}
 
 	public void resetNumSeats(String tenant) throws BWFLAException
 	{
-		LOG.info("Resetting software seats for tenant '" + tenant + "'...");
+		if (verbose)
+			LOG.info("Resetting software seats for tenant '" + tenant + "'...");
 
 		entries.delete(SeatRecord.filter(tenant));
 	}
@@ -77,6 +81,9 @@ public class SeatManager
 	private void initialize()
 	{
 		this.entries = SeatManager.getSeatCollection();
+
+		this.verbose = ConfigurationProvider.getConfiguration()
+				.getOrDefault("softwarearchive.verbose_logging", Boolean.class, false);
 	}
 
 	private static DocumentCollection<SeatRecord> getSeatCollection()

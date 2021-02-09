@@ -112,6 +112,11 @@
 			<version>4.0.2</version>
 		</dependency>
 		<dependency>
+			<groupId>com.github.jnr</groupId>
+			<artifactId>jnr-unixsocket</artifactId>
+			<version>0.38.3</version>
+		</dependency>
+		<dependency>
 			<groupId>com.auth0</groupId>
 			<artifactId>java-jwt</artifactId>
 		</dependency>

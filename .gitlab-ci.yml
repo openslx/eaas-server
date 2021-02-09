@@ -34,6 +34,7 @@ standalone-server-build:
   - ./ci/scripts/upload-api-docs.sh
         "emil:${PWD}/src/emil/target/apidocs"
         "environment-proposer:${PWD}/src/environment-proposer/target/apidocs"
+        "dig-pub-sharing:${PWD}/src/dig-pub-sharing/target/apidocs"
   <<: *ear-upload
   cache:
     key: maven-repo
