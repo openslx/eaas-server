@@ -64,6 +64,7 @@ public class SoftwarePackage extends JaxbType
 	private String documentation;
 	private boolean isOperatingSystem = false;
 	private boolean isPublic = false;
+	private boolean deleted = false;
 	
 	@XmlElement(required = true)
 	private String archive;
@@ -213,5 +214,13 @@ public class SoftwarePackage extends JaxbType
 
 	public void setPublic(boolean aPublic) {
 		isPublic = aPublic;
+	}
+
+	public boolean isDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(boolean deleted) {
+		this.deleted = deleted;
 	}
 }

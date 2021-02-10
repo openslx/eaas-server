@@ -78,7 +78,13 @@ public class SoftwareArchiveWS implements SoftwareArchiveWSRemote
 		ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
 		return archive.getName();
 	}
-	
+
+	@Override
+	public void delete(String id) {
+		ISoftwareArchive archive = SoftwareArchiveSingleton.getArchiveInstance();
+		archive.deleteSoftware(id);
+	}
+
 	@Override
 	public int getNumSoftwareSeatsById(String id)
 	{

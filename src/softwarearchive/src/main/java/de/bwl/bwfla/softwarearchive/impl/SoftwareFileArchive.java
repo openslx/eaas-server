@@ -60,8 +60,10 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 	@Override
 	public boolean hasSoftwarePackage(String id)
 	{
-		final Path path = archivePath.resolve(id);
-		return Files.exists(path);
+		SoftwarePackage swp = getSoftwarePackageById(id);
+		if(swp == null)
+			return false;
+		return !swp.isDeleted();
 	}
 
 	@Override
@@ -100,7 +102,17 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		SoftwarePackage software = this.getSoftwarePackageById(id);
 		return (software != null) ? software.getNumSeats() : -1;
 	}
-	
+
+	@Override
+	public void deleteSoftware(String id) {
+		SoftwarePackage swp = getSoftwarePackageById(id);
+		if(swp == null)
+			return;
+
+		swp.setDeleted(true);
+		addSoftwarePackage(swp);
+	}
+
 	@Override
 	public SoftwarePackage getSoftwarePackageById(String id)
 	{
@@ -133,8 +145,10 @@ public class SoftwareFileArchive implements Serializable, ISoftwareArchive
 		try {
 			final DirectoryStream<Path> files = Files.newDirectoryStream(archivePath);
 			return StreamSupport.stream(files.spliterator(), false)
-					.map((path) -> path.getFileName().toString())
-					.onClose(() -> {
+					.filter((path) -> {
+						SoftwarePackage swp = getSoftwarePackageByPath(path);
+						return swp != null && !swp.isDeleted();
+					}).map((path) -> path.getFileName().toString()).onClose(() -> {
 						try {
 							files.close();
 						}

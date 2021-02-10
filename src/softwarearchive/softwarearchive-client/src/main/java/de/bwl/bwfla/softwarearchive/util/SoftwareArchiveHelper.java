@@ -145,6 +145,12 @@ public class SoftwareArchiveHelper
 		
 		return archive.getName();
 	}
+
+	public void deleteSoftware(String id) throws BWFLAException
+	{
+		this.connectArchive();
+		archive.delete(id);
+	}
 	
 	public String getHost()
 	{

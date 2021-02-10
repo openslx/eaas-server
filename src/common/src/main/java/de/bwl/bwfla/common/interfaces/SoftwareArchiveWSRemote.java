@@ -30,4 +30,6 @@ public interface SoftwareArchiveWSRemote
 	public DataHandler getSoftwareDescriptions();
 	
 	public String getName();
+
+	public void delete(String id);
 }

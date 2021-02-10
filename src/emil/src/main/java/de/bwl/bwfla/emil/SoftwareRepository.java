@@ -43,13 +43,7 @@ import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.stream.JsonGenerator;
-import javax.ws.rs.Consumes;
-import javax.ws.rs.GET;
-import javax.ws.rs.NotFoundException;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
+import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
@@ -95,7 +89,7 @@ public class SoftwareRepository extends EmilRest
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 		}
 		catch (IllegalArgumentException error) {
-			LOG.log(Level.WARNING, "Initializing sotware-repository failed!", error);
+			LOG.log(Level.WARNING, "Initializing software-repository failed!", error);
 		}
     }
 
@@ -215,6 +209,23 @@ public class SoftwareRepository extends EmilRest
 			}
 		}
 
+		@DELETE
+		@Path("/{softwareId}")
+		@Secured(roles = {Role.RESTRICTED})
+		@Produces(MediaType.APPLICATION_JSON)
+		public Response deleteSoftware(@PathParam("softwareId") String softwareId)
+		{
+			try{
+				swHelper.deleteSoftware(softwareId);
+				return Response.status(Status.OK)
+				.build();
+			}
+			catch (BWFLAException e)
+			{
+				return Emil.internalErrorResponse(e);
+			}
+		}
+
 		/**
 		 * Save or update software object meta data.
 		 * expects a JSON object:
@@ -265,6 +276,7 @@ public class SoftwareRepository extends EmilRest
 				}
 
 				software.setPublic(swo.getIsPublic());
+				software.setDeleted(false);
 				LOG.info("Setting software-package's visibility to: " + ((software.isPublic()) ? "public" : "private"));
 
 				software.setNumSeats(swo.getAllowedInstances());

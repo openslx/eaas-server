@@ -31,6 +31,7 @@ public interface ISoftwareArchive
 	public boolean hasSoftwarePackage(String id);
 	public boolean addSoftwarePackage(SoftwarePackage software);
 	public int getNumSoftwareSeatsById(String id);
+	public void deleteSoftware(String id);
 	public SoftwarePackage getSoftwarePackageById(String id);
 	public Stream<String> getSoftwarePackageIds();
 	public Stream<SoftwarePackage> getSoftwarePackages();
