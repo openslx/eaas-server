@@ -302,16 +302,12 @@ public class Bucket extends TaskExecutor
 					return result.get();
 				}
 				catch (Exception error) {
-					storage.logger()
-							.log(Level.WARNING, "Listing blob failed!", error);
-
-					return null;
+					throw new RuntimeException("Listing blob failed!", error);
 				}
 			};
 
 			return StreamSupport.stream(spliterator, false)
-					.map(unwrapper)
-					.filter(Objects::nonNull);
+					.map(unwrapper);
 		};
 
 		return this.execute(op, "Listing blobs failed!");
