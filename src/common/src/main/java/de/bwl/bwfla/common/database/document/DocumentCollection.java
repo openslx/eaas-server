@@ -20,6 +20,7 @@
 package de.bwl.bwfla.common.database.document;
 
 import com.mongodb.MongoException;
+import com.mongodb.MongoNamespace;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.model.BulkWriteOptions;
@@ -29,6 +30,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Indexes;
 import com.mongodb.client.model.InsertOneModel;
 import com.mongodb.client.model.Projections;
+import com.mongodb.client.model.RenameCollectionOptions;
 import com.mongodb.client.model.ReplaceOneModel;
 import com.mongodb.client.model.ReplaceOptions;
 import com.mongodb.client.model.UpdateManyModel;
@@ -151,8 +153,8 @@ public class DocumentCollection<T>
 		try {
 			// insert all docs as a batch...
 			final int count = collection.insertMany(documents)
-						.getInsertedIds()
-						.size();
+					.getInsertedIds()
+					.size();
 
 			if (count != documents.size())
 				throw new BWFLAException("Inserting documents failed!");
@@ -239,6 +241,30 @@ public class DocumentCollection<T>
 	public long count(Filter filter)
 	{
 		return collection.countDocuments(filter.expression());
+	}
+
+	/** Rename this collection */
+	public void rename(String target) throws BWFLAException
+	{
+		this.rename(target, false);
+	}
+
+	/** Rename this collection, optionally dropping target */
+	public void rename(String target, boolean drop) throws BWFLAException
+	{
+		try {
+			final var dbname = collection.getNamespace()
+					.getDatabaseName();
+
+			final var namespace = new MongoNamespace(dbname, target);
+			final var options = new RenameCollectionOptions()
+					.dropTarget(drop);
+
+			collection.renameCollection(namespace, options);
+		}
+		catch (MongoException error) {
+			throw new BWFLAException("Renaming collection failed!", error);
+		}
 	}
 
 	/** Drop this collection */
