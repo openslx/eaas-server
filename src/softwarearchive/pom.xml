@@ -58,6 +58,11 @@
 			<artifactId>eaas-wikidata</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-jaxb-annotations</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
 			<groupId>jakarta.jws</groupId>
 			<artifactId>jakarta.jws-api</artifactId>
 			<scope>provided</scope>

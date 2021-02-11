@@ -20,14 +20,16 @@
 package de.bwl.bwfla.common.utils.jaxb;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import org.eclipse.persistence.jaxb.JAXBContextFactory;
 import org.eclipse.persistence.jaxb.JAXBContextProperties;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.util.HashMap;
@@ -42,14 +44,47 @@ import javax.xml.transform.stream.StreamSource;
 
 @XmlTransient
 public abstract class JaxbType {
-    public static <T extends JaxbType> T fromValue(final String value,
-                                                   final Class<T> klass) throws JAXBException {
-        JAXBContext jc = JAXBContext.newInstance(klass);
-        Unmarshaller unmarshaller = jc.createUnmarshaller();
-        T result = klass.cast(unmarshaller
-                .unmarshal(new StreamSource(new StringReader(value))));
+    public static <T extends JaxbType> T fromValue(String value, Class<T> klass) throws JAXBException
+    {
+        return JaxbType.from(new StreamSource(new StringReader(value)), klass);
+    }
+
+    public static <T extends JaxbType> T from(StreamSource source, Class<T> clazz) throws JAXBException
+    {
+        final var unmarshaller = JAXBContext.newInstance(clazz)
+                .createUnmarshaller();
+
+        // TODO: does validation still works correctly?
+        final T result = clazz.cast(unmarshaller.unmarshal(source));
         JaxbValidator.validate(result);
         return result;
+    }
+
+    public static <T extends JaxbType> T from(InputStream source, Class<T> clazz) throws Exception
+    {
+        // NOTE: since input stream is always closed() on errors,
+        //       we have to buffer data as array for reuse!
+        final var bytes = source.readAllBytes();
+        source = new ByteArrayInputStream(bytes);
+        source.mark(1024 * 1024);
+        try {
+            // try to deserialize from XML with JAXB first!
+            return JaxbType.fromXml(source, clazz);
+        }
+        catch (Exception error) {
+            source.reset();  // rewind and retry!
+            return JaxbType.fromJson(source, clazz);
+        }
+    }
+
+    public static <T extends JaxbType> T fromXml(InputStream source, Class<T> clazz) throws JAXBException
+    {
+        return JaxbType.from(new StreamSource(source), clazz);
+    }
+
+    public static <T extends JaxbType> T fromJson(InputStream source, Class<T> clazz) throws Exception
+    {
+        return JSON_MAPPER.readValue(source, clazz);
     }
 
     /**
@@ -105,7 +140,7 @@ public abstract class JaxbType {
     //Jaxb object from Json without root element using Jackson as backend
     public static <T extends JaxbType> T fromJsonValueWithoutRoot(final String value,
                                                                   final Class<T> klass) throws BWFLAException {
-        return fromValueJackson(value, klass, new ObjectMapper());
+        return fromValueJackson(value, klass, JSON_MAPPER);
     }
 
     //Jaxb object from Yaml using Jackson as backend
@@ -179,11 +214,9 @@ public abstract class JaxbType {
     }
 
     public String jsonValueWithoutRoot(final boolean prettyPrint) {
-        return jacksonValue(prettyPrint, new ObjectMapper());
+        return jacksonValue(prettyPrint, JSON_MAPPER);
     }
     public String yamlValue(final boolean prettyPrint) {
-        ObjectMapper objectMapper = new ObjectMapper(new YAMLFactory());
-
         return jacksonValue(prettyPrint, new ObjectMapper(new YAMLFactory()));
     }
 
@@ -212,5 +245,11 @@ public abstract class JaxbType {
         } catch (JAXBException e) {
             return "Error converting JAXB type to string: " + e.getMessage();
         }
+    }
+
+    private static final ObjectMapper JSON_MAPPER;
+    static {
+        JSON_MAPPER = new ObjectMapper()
+                .registerModule(new JaxbAnnotationModule());
     }
 }
