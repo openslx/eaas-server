@@ -20,13 +20,16 @@
 package com.openslx.eaas.imagearchive;
 
 import com.openslx.eaas.imagearchive.config.ImageArchiveConfig;
+import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.enterprise.inject.spi.CDI;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -37,11 +40,17 @@ public class ArchiveBackend
 	private static final Logger LOG = Logger.getLogger("IMAGE-ARCHIVE");
 
 	private ImageArchiveConfig config;
+	private StorageRegistry storage;
 
 
 	public ImageArchiveConfig config()
 	{
 		return config;
+	}
+
+	public StorageRegistry storage()
+	{
+		return storage;
 	}
 
 	/** Return global backend-instance */
@@ -80,9 +89,26 @@ public class ArchiveBackend
 	{
 		try {
 			this.config = ImageArchiveConfig.create(LOG);
+			this.storage = StorageRegistry.create(config.getStorageConfig());
 		}
 		catch (Exception error) {
 			throw new RuntimeException(error);
+		}
+	}
+
+	@PreDestroy
+	private void destroy()
+	{
+		ArchiveBackend.close(storage);
+	}
+
+	private static void close(AutoCloseable service)
+	{
+		try {
+			service.close();
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Closing service failed!", error);
 		}
 	}
 }
