@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive;
 
 import com.openslx.eaas.imagearchive.config.ImageArchiveConfig;
+import com.openslx.eaas.imagearchive.indexing.IndexRegistry;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
@@ -41,6 +42,7 @@ public class ArchiveBackend
 
 	private ImageArchiveConfig config;
 	private StorageRegistry storage;
+	private IndexRegistry indexes;
 
 
 	public ImageArchiveConfig config()
@@ -51,6 +53,11 @@ public class ArchiveBackend
 	public StorageRegistry storage()
 	{
 		return storage;
+	}
+
+	public IndexRegistry indexes()
+	{
+		return indexes;
 	}
 
 	/** Return global backend-instance */
@@ -90,6 +97,8 @@ public class ArchiveBackend
 		try {
 			this.config = ImageArchiveConfig.create(LOG);
 			this.storage = StorageRegistry.create(config.getStorageConfig());
+			this.indexes = IndexRegistry.create()
+					.rebuild(storage);
 		}
 		catch (Exception error) {
 			throw new RuntimeException(error);
@@ -99,6 +108,7 @@ public class ArchiveBackend
 	@PreDestroy
 	private void destroy()
 	{
+		ArchiveBackend.close(indexes);
 		ArchiveBackend.close(storage);
 	}
 

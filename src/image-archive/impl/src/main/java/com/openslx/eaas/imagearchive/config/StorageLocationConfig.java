@@ -34,7 +34,7 @@ public class StorageLocationConfig extends BaseConfig<StorageLocationConfig>
 	private String endpoint;
 	private String bucket;
 
-	private final BlobStore.Path[] paths = new BlobStore.Path[BlobKind.values().length];
+	private final BlobStore.Path[] paths = new BlobStore.Path[BlobKind.count()];
 
 
 	@Config("name")

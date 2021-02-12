@@ -45,4 +45,12 @@ public enum BlobKind
 				throw new IllegalArgumentException();
 		}
 	}
+
+	/** Return number of blob-kinds */
+	public static int count()
+	{
+		return COUNT;
+	}
+
+	private static final int COUNT = BlobKind.values().length;
 }
