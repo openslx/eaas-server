@@ -1,0 +1,21 @@
+imagearchive:
+  storage:
+    endpoints:
+    - name: "minio"
+      address: "http://minio:9000"
+      credentials:
+        access_key: "eaas"
+        secret_key: "eaas-secret-key"
+
+    locations:
+    - name: "default"
+      endpoint: "minio"
+      bucket: "image-archive"
+      paths:
+        machine: "/machines"
+        emulator: "/emulators"
+        template: "/templates"
+        image: "/images"
+        rom: "/roms"
+
+    default_location: "default"
