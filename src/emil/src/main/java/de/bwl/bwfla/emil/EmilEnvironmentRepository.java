@@ -452,7 +452,7 @@ public class EmilEnvironmentRepository {
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
-		save(env, setPermission, getCollectionCtx());
+		save(env, setPermission, getUserCtx());
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission, String userCtx) throws BWFLAException {
@@ -494,6 +494,9 @@ public class EmilEnvironmentRepository {
 
 	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
+		if(env == null)
+			throw new BWFLAException("Environment " + envId + " is not available");
+		
 		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
 			throw new BWFLAException("permission denied");
 
@@ -688,7 +691,7 @@ public class EmilEnvironmentRepository {
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(this::isEnvironmentVisible)
-				.filter(e -> (authenticatedUser == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
+				.filter(e -> (userCtx == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
 				.filter(e -> {
 					if (known.contains(e.getEnvId()))
 						return false;
@@ -702,7 +705,6 @@ public class EmilEnvironmentRepository {
 	}
 
 	public Stream<EmilEnvironment> getEmilEnvironments() {
-
 		String userCtx = getUserCtx();
 		return getEmilEnvironments(userCtx);
 	}
