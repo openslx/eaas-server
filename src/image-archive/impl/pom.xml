@@ -21,6 +21,10 @@
 			<artifactId>blobstore-client-v2</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>de.bwl.bwfla.eaas</groupId>
+			<artifactId>eaas-components-api</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>com.openslx.eaas</groupId>
 			<artifactId>image-archive-api</artifactId>
 			<version>${project.version}</version>

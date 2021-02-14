@@ -21,6 +21,8 @@ package com.openslx.eaas.imagearchive.indexing;
 
 import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
+import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.impl.TemplateIndex;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -57,10 +59,15 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this;
 	}
 
+	public TemplateIndex templates()
+	{
+		return this.lookup(BlobKind.TEMPLATE, TemplateIndex.class);
+	}
 
 	public static IndexRegistry create() throws BWFLAException
 	{
 		final var registry = new IndexRegistry();
+		registry.insert(new TemplateIndex());
 		return registry;
 	}
 
