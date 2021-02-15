@@ -53,11 +53,16 @@ public class ImportContainerRequest extends EmilRequestType {
     @XmlElement
     private String workingDir;
 
+    @XmlElement
     private boolean enableNetwork;
 
     private String customSubdir;
 
+    @XmlElement
     private boolean serviceContainer;
+
+    @XmlElement
+    private String serviceContainerId;
 
     public String getTitle() {
         return title;
@@ -155,5 +160,9 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public String getWorkingDir() {
         return workingDir;
+    }
+
+    public String getServiceContainerId() {
+        return serviceContainerId;
     }
 }

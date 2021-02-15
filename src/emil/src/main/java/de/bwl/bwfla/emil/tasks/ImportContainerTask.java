@@ -71,8 +71,13 @@ public class ImportContainerTask extends BlockingTask<Object>
             process.setEnvironmentVariables(containerRequest.getProcessEnvs());
 
         config.setProcess(process);
-        config.setId(UUID.randomUUID().toString());
-        return envHelper.importMetadata("default", config, meta, false);
+        if(containerRequest.isServiceContainer() && containerRequest.getServiceContainerId() != null && !containerRequest.getServiceContainerId().isEmpty()) {
+            config.setId(containerRequest.getServiceContainerId());
+        }
+        else {
+            config.setId(UUID.randomUUID().toString());
+        }
+        return envHelper.importMetadata("default", config, meta, true);
     }
 
     @Override
