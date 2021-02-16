@@ -17,16 +17,24 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive;
+package com.openslx.eaas.imagearchive.api.v2.common;
+
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.SecuredInternal;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
+import javax.ws.rs.QueryParam;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 
-import java.util.logging.Logger;
-
-import javax.enterprise.context.ApplicationScoped;
-
-
-@ApplicationScoped
-public class ImageArchiveAPI implements ImageArchive
+public interface IManyReadable<T> extends IReadable<T>
 {
-	private static final Logger LOG = Logger.getLogger("IMAGE-ARCHIVE");
+	@GET
+	@Path("/all")
+	@SecuredInternal
+	@Produces(MediaType.APPLICATION_JSON)
+	Response fetch(@QueryParam("offset") int offset, @QueryParam("limit") int limit) throws BWFLAException;
 }

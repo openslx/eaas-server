@@ -17,13 +17,17 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive;
+package com.openslx.eaas.imagearchive.api.v2;
+
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 
 
-import javax.ws.rs.Path;
-
-
-@Path("/v1")
-public interface ImageArchive
+public interface ITemplatesV2 extends IListable,
+		IManyReadable<MachineConfigurationTemplate>,
+		IWritable<MachineConfigurationTemplate>
 {
+	// Empty!
 }

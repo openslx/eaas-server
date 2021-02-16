@@ -19,7 +19,8 @@
 
 package com.openslx.eaas.imagearchive;
 
-
+import com.openslx.eaas.imagearchive.api.ImageArchiveApi;
+import com.openslx.eaas.imagearchive.client.endpoint.ImageArchive;
 import de.bwl.bwfla.common.services.security.MachineToken;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
@@ -34,19 +35,20 @@ import java.net.URL;
 
 public class ImageArchiveClient implements Closeable
 {
-	private final ImageArchive archive;
+	private final ImageArchiveApi proxy;
+	private final ImageArchive api;
 
 
-	public ImageArchive instance()
+	public ImageArchive api()
 	{
-		return archive;
+		return api;
 	}
 
 	@Override
 	public void close() throws IOException
 	{
 		// NOTE: according to docs, casting should be safe!
-		((Closeable) archive).close();
+		((Closeable) proxy).close();
 	}
 
 	public static ImageArchiveClient create() throws Exception
@@ -56,20 +58,21 @@ public class ImageArchiveClient implements Closeable
 
 	public static ImageArchiveClient create(String endpoint) throws Exception
 	{
-		final var archive = RestClientBuilder.newBuilder()
+		final var proxy = RestClientBuilder.newBuilder()
 				.baseUrl(new URL(endpoint))
 				.register(new AuthFilter())
-				.build(ImageArchive.class);
+				.build(ImageArchiveApi.class);
 
-		return new ImageArchiveClient(archive);
+		return new ImageArchiveClient(proxy);
 	}
 
 
 	// ===== Internal Helpers ===============
 
-	private ImageArchiveClient(ImageArchive archive)
+	private ImageArchiveClient(ImageArchiveApi proxy)
 	{
-		this.archive = archive;
+		this.proxy = proxy;
+		this.api = new ImageArchive(proxy);
 	}
 
 	private static class AuthFilter implements ClientRequestFilter

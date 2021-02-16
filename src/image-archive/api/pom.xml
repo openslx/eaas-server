@@ -11,4 +11,14 @@
 		<version>0.0.1-SNAPSHOT</version>
 		<relativePath>..</relativePath>
 	</parent>
+	<dependencies>
+		<dependency>
+			<groupId>de.bwl.bwfla</groupId>
+			<artifactId>common</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>de.bwl.bwfla.eaas</groupId>
+			<artifactId>eaas-components-api</artifactId>
+		</dependency>
+	</dependencies>
 </project>
