@@ -137,7 +137,7 @@ public class NetworkEnvironment extends JaxbType {
     public String getStartupEnvId() {
         return startupEnvId;
     }
-    
+
     public void setDnsServiceEnvId(String dnsServiceEnvId) {
         this.dnsServiceEnvId = dnsServiceEnvId;
     }
