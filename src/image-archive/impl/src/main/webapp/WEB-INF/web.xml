@@ -6,7 +6,7 @@
     <display-name>image-archive</display-name>
     <context-param>
         <param-name>resteasy.resources</param-name>
-        <param-value>com.openslx.eaas.imagearchive.ImageArchiveAPI</param-value>
+        <param-value>com.openslx.eaas.imagearchive.endpoint.ImageArchive</param-value>
     </context-param>
     <servlet-mapping>
         <servlet-name>javax.ws.rs.core.Application</servlet-name>
