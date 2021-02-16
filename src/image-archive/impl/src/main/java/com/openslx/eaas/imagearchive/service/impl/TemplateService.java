@@ -17,38 +17,30 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.service;
+package com.openslx.eaas.imagearchive.service.impl;
 
-import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
-import com.openslx.eaas.imagearchive.BlobKind;
-import com.openslx.eaas.imagearchive.service.impl.TemplateService;
+import com.openslx.eaas.imagearchive.indexing.impl.TemplateIndex;
+import com.openslx.eaas.imagearchive.service.DataService;
+import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 
 
-public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
+public class TemplateService extends DataService<MachineConfigurationTemplate, TemplateIndex.Record>
 {
-	public TemplateService templates()
+	public static TemplateService create(ArchiveBackend backend)
 	{
-		return this.lookup(BlobKind.TEMPLATE, TemplateService.class);
-	}
+		final var index = backend.indexes()
+				.templates();
 
-	public static ServiceRegistry create(ArchiveBackend backend)
-	{
-		final var registry = new ServiceRegistry();
-		registry.insert(TemplateService.create(backend));
-		return registry;
+		return new TemplateService(backend.storage(), index);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private ServiceRegistry()
+	private TemplateService(StorageRegistry storage, TemplateIndex index)
 	{
-		super();
-	}
-
-	private void insert(AbstractService<?> service)
-	{
-		super.insert(service.kind(), service);
+		super(storage, index, TemplateIndex.Record::filter);
 	}
 }
