@@ -51,6 +51,9 @@ public class EnvironmentListItem {
     @XmlElement
     private boolean networkEnabled;
 
+    @XmlElement
+    private boolean serviceContainer;
+
     public EnvironmentListItem(EmilEnvironment emilenv) {
 
         this.envId =  emilenv.getEnvId();
@@ -82,6 +85,7 @@ public class EnvironmentListItem {
         if(emilenv instanceof EmilContainerEnvironment)
         {
             this.envType = "container";
+            this.serviceContainer = ((EmilContainerEnvironment) emilenv).isServiceContainer();
         }
     }
 
