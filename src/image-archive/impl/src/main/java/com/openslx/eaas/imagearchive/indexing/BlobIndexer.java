@@ -119,7 +119,7 @@ public class BlobIndexer<T> implements AutoCloseable
 
 		final var logger = context.target().logger();
 		final var blobs = location.bucket()
-				.list(prefix.toString());
+				.list(prefix.toString() + "/");
 
 		// TODO: index each blob in parallel!
 		// TODO: use collection's operation-batching!
