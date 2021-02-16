@@ -20,7 +20,9 @@
 package com.openslx.eaas.imagearchive.indexing;
 
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.blobstore.BlobDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
@@ -44,6 +46,20 @@ public class BlobIndex<T> extends Index<T>
 	{
 		try (final var indexer = new BlobIndexer<>(this)) {
 			indexer.index(storage);
+		}
+		catch (Exception error) {
+			if (error instanceof BWFLAException)
+				throw (BWFLAException) error;
+			else throw new BWFLAException(error);
+		}
+	}
+
+	public void ingest(BlobDescription blob, StorageLocation location) throws BWFLAException
+	{
+		try {
+			// special context where buffer and destination collections are the same!
+			final var context = new BlobIngestorContext<>(this, this.collection());
+			ingestor.ingest(context, blob, location);
 		}
 		catch (Exception error) {
 			if (error instanceof BWFLAException)
