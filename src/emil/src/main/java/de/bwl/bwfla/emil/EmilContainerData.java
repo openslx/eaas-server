@@ -147,7 +147,7 @@ public class EmilContainerData extends EmilRest {
             OciContainerConfiguration.Process process = new OciContainerConfiguration.Process();
             if (req.getProcessEnvs() != null && req.getProcessEnvs().size() > 0)
                 process.setEnvironmentVariables(req.getProcessEnvs());
-            process.setArguments(req.getProcessArgs());
+            process.getArguments().addAll(req.getProcessArgs());
             containerConf.setProcess(process);
 
             containerConf.setOutputPath(req.getOutputFolder());

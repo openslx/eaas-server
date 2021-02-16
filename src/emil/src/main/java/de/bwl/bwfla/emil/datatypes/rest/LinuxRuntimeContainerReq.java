@@ -4,6 +4,7 @@ import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import java.util.List;
 
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
@@ -20,6 +21,9 @@ public class LinuxRuntimeContainerReq {
 
     @XmlElement(required = false, defaultValue = "false")
     private boolean isTelnetEnabled;
+
+    @XmlElement(required = false)
+    private List<String> userEnvironment;
 
     public String getUserContainerEnvironment() {
         return userContainerEnvironment;
@@ -51,5 +55,13 @@ public class LinuxRuntimeContainerReq {
 
     public void setTelnetEnabled(boolean telnetEnabled) {
         isTelnetEnabled = telnetEnabled;
+    }
+
+    public List<String> getUserEnvironment() {
+        return userEnvironment;
+    }
+
+    public void setUserEnvironment(List<String> userEnvironment) {
+        this.userEnvironment = userEnvironment;
     }
 }

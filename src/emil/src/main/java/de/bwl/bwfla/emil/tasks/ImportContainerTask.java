@@ -65,7 +65,7 @@ public class ImportContainerTask extends BlockingTask<Object>
         config.setRootFilesystem("binding://rootfs");
 
         OciContainerConfiguration.Process process = new OciContainerConfiguration.Process();
-        process.setArguments(containerRequest.getProcessArgs());
+        process.getArguments().addAll(containerRequest.getProcessArgs());
         process.setWorkingDir(containerRequest.getWorkingDir());
         if (containerRequest.getProcessEnvs() != null && containerRequest.getProcessEnvs().size() > 0)
             process.setEnvironmentVariables(containerRequest.getProcessEnvs());
