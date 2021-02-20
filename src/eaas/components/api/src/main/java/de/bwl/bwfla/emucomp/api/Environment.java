@@ -87,6 +87,10 @@ public class Environment extends ComponentConfiguration {
 		this.timestamp = value;
 	}
 
+	public void setCurrentTimestamp() {
+		this.timestamp = Instant.now().toString();
+	}
+
 	public EnvironmentDescription getDescription() {
         return description;
     }

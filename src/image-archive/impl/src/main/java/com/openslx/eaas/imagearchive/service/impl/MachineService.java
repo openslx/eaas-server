@@ -17,45 +17,30 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.service;
+package com.openslx.eaas.imagearchive.service.impl;
 
-import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
-import com.openslx.eaas.imagearchive.BlobKind;
-import com.openslx.eaas.imagearchive.service.impl.MachineService;
-import com.openslx.eaas.imagearchive.service.impl.TemplateService;
+import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
+import com.openslx.eaas.imagearchive.service.DataService;
+import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 
-public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
+public class MachineService extends DataService<MachineConfiguration, MachineIndex.Record>
 {
-	public MachineService machines()
+	public static MachineService create(ArchiveBackend backend)
 	{
-		return this.lookup(BlobKind.MACHINE, MachineService.class);
-	}
+		final var index = backend.indexes()
+				.machines();
 
-	public TemplateService templates()
-	{
-		return this.lookup(BlobKind.TEMPLATE, TemplateService.class);
-	}
-
-	public static ServiceRegistry create(ArchiveBackend backend)
-	{
-		final var registry = new ServiceRegistry();
-		registry.insert(MachineService.create(backend));
-		registry.insert(TemplateService.create(backend));
-		return registry;
+		return new MachineService(backend.storage(), index);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private ServiceRegistry()
+	private MachineService(StorageRegistry storage, MachineIndex index)
 	{
-		super();
-	}
-
-	private void insert(AbstractService<?> service)
-	{
-		super.insert(service.kind(), service);
+		super(storage, index, MachineIndex.Record::filter);
 	}
 }
