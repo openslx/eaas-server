@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.service;
 import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.service.impl.ImageService;
 import com.openslx.eaas.imagearchive.service.impl.MachineService;
 import com.openslx.eaas.imagearchive.service.impl.TemplateService;
 
@@ -38,11 +39,17 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.TEMPLATE, TemplateService.class);
 	}
 
+	public ImageService images()
+	{
+		return this.lookup(BlobKind.IMAGE, ImageService.class);
+	}
+
 	public static ServiceRegistry create(ArchiveBackend backend)
 	{
 		final var registry = new ServiceRegistry();
 		registry.insert(MachineService.create(backend));
 		registry.insert(TemplateService.create(backend));
+		registry.insert(ImageService.create(backend));
 		return registry;
 	}
 
