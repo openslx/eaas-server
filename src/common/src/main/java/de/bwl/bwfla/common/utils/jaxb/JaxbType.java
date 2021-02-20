@@ -22,7 +22,7 @@ package de.bwl.bwfla.common.utils.jaxb;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import org.eclipse.persistence.jaxb.JAXBContextFactory;
 import org.eclipse.persistence.jaxb.JAXBContextProperties;
@@ -84,7 +84,8 @@ public abstract class JaxbType {
 
     public static <T extends JaxbType> T fromJson(InputStream source, Class<T> clazz) throws Exception
     {
-        return JSON_MAPPER.readValue(source, clazz);
+        return DataUtils.json()
+                .read(source, clazz);
     }
 
     /**
@@ -140,7 +141,7 @@ public abstract class JaxbType {
     //Jaxb object from Json without root element using Jackson as backend
     public static <T extends JaxbType> T fromJsonValueWithoutRoot(final String value,
                                                                   final Class<T> klass) throws BWFLAException {
-        return fromValueJackson(value, klass, JSON_MAPPER);
+        return fromValueJackson(value, klass, DataUtils.json().mapper());
     }
 
     //Jaxb object from Yaml using Jackson as backend
@@ -214,7 +215,7 @@ public abstract class JaxbType {
     }
 
     public String jsonValueWithoutRoot(final boolean prettyPrint) {
-        return jacksonValue(prettyPrint, JSON_MAPPER);
+        return jacksonValue(prettyPrint, DataUtils.json().mapper());
     }
     public String yamlValue(final boolean prettyPrint) {
         return jacksonValue(prettyPrint, new ObjectMapper(new YAMLFactory()));
@@ -245,11 +246,5 @@ public abstract class JaxbType {
         } catch (JAXBException e) {
             return "Error converting JAXB type to string: " + e.getMessage();
         }
-    }
-
-    private static final ObjectMapper JSON_MAPPER;
-    static {
-        JSON_MAPPER = new ObjectMapper()
-                .registerModule(new JaxbAnnotationModule());
     }
 }

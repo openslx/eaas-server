@@ -23,11 +23,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.JsonSerializer;
 import com.fasterxml.jackson.databind.MappingIterator;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import javax.ws.rs.core.Response;
@@ -155,7 +152,9 @@ public class Streamable<T> implements AutoCloseable
 	{
 		cleanups.add(() -> Streamable.close(input, "input-stream"));
 		try {
-			final MappingIterator<T> iterator = READER.forType(clazz)
+			final MappingIterator<T> iterator = DataUtils.json()
+					.reader()
+					.forType(clazz)
 					.readValues(input);
 
 			cleanups.add(() -> Streamable.close(iterator, "input-parser"));
@@ -186,14 +185,6 @@ public class Streamable<T> implements AutoCloseable
 		// run given tasks in reverse order!
 		for (int i = tasks.size() - 1; i >= 0; --i)
 			tasks.get(i).run();
-	}
-
-	// NOTE: according to docs reader can and should be cached!
-	private static final ObjectReader READER;
-	static {
-		READER = new ObjectMapper()
-				.registerModule(new JaxbAnnotationModule())
-				.reader();
 	}
 
 

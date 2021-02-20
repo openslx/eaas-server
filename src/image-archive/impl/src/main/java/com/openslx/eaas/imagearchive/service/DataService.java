@@ -20,9 +20,7 @@
 package com.openslx.eaas.imagearchive.service;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.ObjectWriter;
-import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
+import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
@@ -57,7 +55,10 @@ public abstract class DataService<D, T extends DataRecord<D>> extends BlobServic
 	{
 		try {
 			// upload serialized data to backend storage...
-			final var bytes = WRITER.writeValueAsBytes(data);
+			final var bytes = DataUtils.json()
+					.writer()
+					.writeValueAsBytes(data);
+
 			final var stream = new ByteArrayInputStream(bytes);
 			if (id == null)
 				id = this.upload(stream, stream.available());
@@ -68,14 +69,5 @@ public abstract class DataService<D, T extends DataRecord<D>> extends BlobServic
 		catch (JsonProcessingException error) {
 			throw new BWFLAException("Serializing data failed!", error);
 		}
-	}
-
-	// NOTE: according to docs, writer can and should be cached!
-	private static final ObjectWriter WRITER;
-	static {
-		WRITER = new ObjectMapper()
-				.registerModule(new JaxbAnnotationModule())
-				.writer()
-				.withDefaultPrettyPrinter();
 	}
 }
