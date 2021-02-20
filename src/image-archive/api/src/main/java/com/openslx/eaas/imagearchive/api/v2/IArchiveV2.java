@@ -29,4 +29,7 @@ public interface IArchiveV2
 
 	@Path("/templates")
 	ITemplatesV2 templates();
+
+	@Path("/images")
+	IImagesV2 images();
 }

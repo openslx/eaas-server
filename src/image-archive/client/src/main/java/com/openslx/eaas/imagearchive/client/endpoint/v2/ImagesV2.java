@@ -17,47 +17,44 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.endpoint.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
-import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
-import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRW;
 
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import java.io.InputStream;
 
 
-@ApplicationScoped
-public class ArchiveV2 implements IArchiveV2
+public class ImagesV2 extends AbstractResourceRW<InputStream>
 {
-	@Inject
-	private MachinesV2 machines;
+	private final IImagesV2 api;
 
-	@Inject
-	private TemplatesV2 templates;
-
-	@Inject
-	private ImagesV2 images;
+	public ImagesV2(IImagesV2 api)
+	{
+		this.api = api;
+	}
 
 
-	// ===== Public API ==============================
+	// ===== Internal Helpers ==============================
 
 	@Override
-	public IMachinesV2 machines()
+	protected IListable listable()
 	{
-		return machines;
+		return api;
 	}
 
 	@Override
-	public ITemplatesV2 templates()
+	protected IReadable<InputStream> readable()
 	{
-		return templates;
+		return api;
 	}
 
 	@Override
-	public IImagesV2 images()
+	protected IWritable<InputStream> writable()
 	{
-		return images;
+		return api;
 	}
 }

@@ -19,45 +19,36 @@
 
 package com.openslx.eaas.imagearchive.endpoint.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
+import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
-import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
-import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
+import com.openslx.eaas.imagearchive.endpoint.v2.common.BlobResource;
+import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
+import com.openslx.eaas.imagearchive.service.impl.ImageService;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 
 @ApplicationScoped
-public class ArchiveV2 implements IArchiveV2
+public class ImagesV2 extends BlobResource<ImageIndex.Record>
+		implements IImagesV2
 {
-	@Inject
-	private MachinesV2 machines;
-
-	@Inject
-	private TemplatesV2 templates;
-
-	@Inject
-	private ImagesV2 images;
+	private ImageService service;
 
 
-	// ===== Public API ==============================
+	// ===== Internal Helpers ==============================
 
-	@Override
-	public IMachinesV2 machines()
+	@PostConstruct
+	private void initialize()
 	{
-		return machines;
+		this.service = ArchiveBackend.instance()
+				.services()
+				.images();
 	}
 
 	@Override
-	public ITemplatesV2 templates()
+	protected ImageService service()
 	{
-		return templates;
-	}
-
-	@Override
-	public IImagesV2 images()
-	{
-		return images;
+		return service;
 	}
 }

@@ -26,11 +26,13 @@ public class ArchiveV2
 {
 	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
+	private final ImagesV2 images;
 
 	public ArchiveV2(IArchiveV2 api)
 	{
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
+		this.images = new ImagesV2(api.images());
 	}
 
 
@@ -44,5 +46,10 @@ public class ArchiveV2
 	public TemplatesV2 templates()
 	{
 		return templates;
+	}
+
+	public ImagesV2 images()
+	{
+		return images;
 	}
 }
