@@ -19,44 +19,33 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
+import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.api.v2.ILocationsV2;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public class ArchiveV2
+public class LocationsV2
 {
-	private final MachinesV2 machines;
-	private final TemplatesV2 templates;
-	private final ImagesV2 images;
-	private final StorageV2 storage;
+	private final ILocationsV2 api;
 
-	public ArchiveV2(IArchiveV2 api)
+	public LocationsV2(ILocationsV2 api)
 	{
-		this.machines = new MachinesV2(api.machines());
-		this.templates = new TemplatesV2(api.templates());
-		this.images = new ImagesV2(api.images());
-		this.storage = new StorageV2(api.storage());
+		this.api = api;
 	}
 
-
-	// ===== Public API ==============================
-
-	public MachinesV2 machines()
+	public boolean exists(String id)
 	{
-		return machines;
+		try {
+			api.exists(id);
+			return true;
+		}
+		catch (Exception error) {
+			return false;
+		}
 	}
 
-	public TemplatesV2 templates()
+	public Streamable<String> list() throws BWFLAException
 	{
-		return templates;
-	}
-
-	public ImagesV2 images()
-	{
-		return images;
-	}
-
-	public StorageV2 storage()
-	{
-		return storage;
+		return Streamable.of(api.list(), String.class);
 	}
 }

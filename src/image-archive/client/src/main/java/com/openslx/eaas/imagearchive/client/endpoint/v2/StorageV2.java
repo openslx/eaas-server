@@ -17,57 +17,25 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.endpoint.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
-import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
-import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
 import com.openslx.eaas.imagearchive.api.v2.IStorageV2;
-import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 
-@ApplicationScoped
-public class ArchiveV2 implements IArchiveV2
+public class StorageV2
 {
-	@Inject
-	private MachinesV2 machines;
+	private final LocationsV2 locations;
 
-	@Inject
-	private TemplatesV2 templates;
-
-	@Inject
-	private ImagesV2 images;
-
-	@Inject
-	private StorageV2 storage;
+	public StorageV2(IStorageV2 api)
+	{
+		this.locations = new LocationsV2(api.locations());
+	}
 
 
 	// ===== Public API ==============================
 
-	@Override
-	public IMachinesV2 machines()
+	public LocationsV2 locations()
 	{
-		return machines;
-	}
-
-	@Override
-	public ITemplatesV2 templates()
-	{
-		return templates;
-	}
-
-	@Override
-	public IImagesV2 images()
-	{
-		return images;
-	}
-
-	@Override
-	public IStorageV2 storage()
-	{
-		return storage;
+		return locations;
 	}
 }

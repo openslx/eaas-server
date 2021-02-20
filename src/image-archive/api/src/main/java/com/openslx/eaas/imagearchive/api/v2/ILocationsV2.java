@@ -17,46 +17,29 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
+package com.openslx.eaas.imagearchive.api.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.SecuredInternal;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 
-public class ArchiveV2
+public interface ILocationsV2
 {
-	private final MachinesV2 machines;
-	private final TemplatesV2 templates;
-	private final ImagesV2 images;
-	private final StorageV2 storage;
+	@GET
+	@SecuredInternal
+	@Produces(MediaType.APPLICATION_JSON)
+	Response list() throws BWFLAException;
 
-	public ArchiveV2(IArchiveV2 api)
-	{
-		this.machines = new MachinesV2(api.machines());
-		this.templates = new TemplatesV2(api.templates());
-		this.images = new ImagesV2(api.images());
-		this.storage = new StorageV2(api.storage());
-	}
-
-
-	// ===== Public API ==============================
-
-	public MachinesV2 machines()
-	{
-		return machines;
-	}
-
-	public TemplatesV2 templates()
-	{
-		return templates;
-	}
-
-	public ImagesV2 images()
-	{
-		return images;
-	}
-
-	public StorageV2 storage()
-	{
-		return storage;
-	}
+	@HEAD
+	@Path("/{id}")
+	@SecuredInternal
+	void exists(@PathParam("id") String id) throws BWFLAException;
 }

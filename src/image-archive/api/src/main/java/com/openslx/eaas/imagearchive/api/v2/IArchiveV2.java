@@ -32,4 +32,7 @@ public interface IArchiveV2
 
 	@Path("/images")
 	IImagesV2 images();
+
+	@Path("/storage")
+	IStorageV2 storage();
 }

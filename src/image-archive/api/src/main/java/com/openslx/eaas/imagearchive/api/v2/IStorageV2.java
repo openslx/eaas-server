@@ -17,46 +17,13 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
+package com.openslx.eaas.imagearchive.api.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
+import javax.ws.rs.Path;
 
 
-public class ArchiveV2
+public interface IStorageV2
 {
-	private final MachinesV2 machines;
-	private final TemplatesV2 templates;
-	private final ImagesV2 images;
-	private final StorageV2 storage;
-
-	public ArchiveV2(IArchiveV2 api)
-	{
-		this.machines = new MachinesV2(api.machines());
-		this.templates = new TemplatesV2(api.templates());
-		this.images = new ImagesV2(api.images());
-		this.storage = new StorageV2(api.storage());
-	}
-
-
-	// ===== Public API ==============================
-
-	public MachinesV2 machines()
-	{
-		return machines;
-	}
-
-	public TemplatesV2 templates()
-	{
-		return templates;
-	}
-
-	public ImagesV2 images()
-	{
-		return images;
-	}
-
-	public StorageV2 storage()
-	{
-		return storage;
-	}
+	@Path("/locations")
+	ILocationsV2 locations();
 }

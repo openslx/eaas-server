@@ -19,55 +19,49 @@
 
 package com.openslx.eaas.imagearchive.endpoint.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
-import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
-import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
-import com.openslx.eaas.imagearchive.api.v2.IStorageV2;
-import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
+import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.ArchiveBackend;
+import com.openslx.eaas.imagearchive.api.v2.ILocationsV2;
+import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
+import javax.ws.rs.NotFoundException;
+import javax.ws.rs.core.Response;
 
 
 @ApplicationScoped
-public class ArchiveV2 implements IArchiveV2
+public class LocationsV2 implements ILocationsV2
 {
-	@Inject
-	private MachinesV2 machines;
+	private StorageRegistry storage;
 
-	@Inject
-	private TemplatesV2 templates;
-
-	@Inject
-	private ImagesV2 images;
-
-	@Inject
-	private StorageV2 storage;
-
-
-	// ===== Public API ==============================
 
 	@Override
-	public IMachinesV2 machines()
+	public Response list() throws BWFLAException
 	{
-		return machines;
+		final var locations = storage.locations()
+				.keySet();
+
+		return Response.ok(Streamable.of(locations))
+				.build();
 	}
 
 	@Override
-	public ITemplatesV2 templates()
+	public void exists(String id) throws BWFLAException
 	{
-		return templates;
+		final var locations = storage.locations();
+		if (!locations.containsKey(id))
+			throw new NotFoundException();
 	}
 
-	@Override
-	public IImagesV2 images()
-	{
-		return images;
-	}
 
-	@Override
-	public IStorageV2 storage()
+	// ===== Internal Helpers ==============================
+
+	@PostConstruct
+	private void initialize()
 	{
-		return storage;
+		this.storage = ArchiveBackend.instance()
+				.storage();
 	}
 }
