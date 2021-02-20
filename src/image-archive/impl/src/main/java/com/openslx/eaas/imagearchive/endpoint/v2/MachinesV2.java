@@ -19,35 +19,37 @@
 
 package com.openslx.eaas.imagearchive.endpoint.v2;
 
-import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
+import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
-import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
+import com.openslx.eaas.imagearchive.endpoint.v2.common.DataResource;
+import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
+import com.openslx.eaas.imagearchive.service.impl.MachineService;
+import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.inject.Inject;
 
 
 @ApplicationScoped
-public class ArchiveV2 implements IArchiveV2
+public class MachinesV2 extends DataResource<MachineConfiguration, MachineIndex.Record>
+		implements IMachinesV2
 {
-	@Inject
-	private MachinesV2 machines;
-
-	@Inject
-	private TemplatesV2 templates;
+	private MachineService service;
 
 
-	// ===== Public API ==============================
+	// ===== Internal Helpers ==============================
 
-	@Override
-	public IMachinesV2 machines()
+	@PostConstruct
+	private void initialize()
 	{
-		return machines;
+		this.service = ArchiveBackend.instance()
+				.services()
+				.machines();
 	}
 
 	@Override
-	public ITemplatesV2 templates()
+	protected MachineService service()
 	{
-		return templates;
+		return service;
 	}
 }

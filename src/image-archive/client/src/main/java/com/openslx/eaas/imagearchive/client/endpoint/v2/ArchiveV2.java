@@ -24,15 +24,22 @@ import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 
 public class ArchiveV2
 {
+	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
 
 	public ArchiveV2(IArchiveV2 api)
 	{
+		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
 	}
 
 
 	// ===== Public API ==============================
+
+	public MachinesV2 machines()
+	{
+		return machines;
+	}
 
 	public TemplatesV2 templates()
 	{

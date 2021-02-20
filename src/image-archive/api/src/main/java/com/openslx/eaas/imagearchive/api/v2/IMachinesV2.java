@@ -19,14 +19,15 @@
 
 package com.openslx.eaas.imagearchive.api.v2;
 
-import javax.ws.rs.Path;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 
-public interface IArchiveV2
+public interface IMachinesV2 extends IListable,
+		IManyReadable<MachineConfiguration>,
+		IWritable<MachineConfiguration>
 {
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
+	// Empty!
 }
