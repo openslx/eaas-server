@@ -19,8 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.datatypes.SoftwareDescription;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
@@ -156,14 +155,20 @@ public class SoftwareRepository extends EmilRest
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
-					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
-						final ObjectMapper mapper = new ObjectMapper();
+					final var jsonfactory = DataUtils.json()
+							.mapper()
+							.getFactory();
+
+					try (com.fasterxml.jackson.core.JsonGenerator json = jsonfactory.createGenerator(ostream)) {
+						final var writer = DataUtils.json()
+								.writer();
+
 						json.writeStartObject();
 						json.writeStringField("status", "0");
 						json.writeArrayFieldStart("packages");
 						packages.forEach((pkg) -> {
 							try {
-								mapper.writeValue(json, SoftwareRepository.toEmilSoftwareObject(pkg));
+								writer.writeValue(json, SoftwareRepository.toEmilSoftwareObject(pkg));
 							}
 							catch (Exception error) {
 								LOG.log(Level.WARNING, "Serializing software-package failed!", error);

@@ -19,8 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
@@ -317,12 +316,18 @@ public class EnvironmentRepository extends EmilRest
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
-					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
-						final ObjectMapper mapper = new ObjectMapper();
+					final var jsonfactory = DataUtils.json()
+							.mapper()
+							.getFactory();
+
+					try (com.fasterxml.jackson.core.JsonGenerator json = jsonfactory.createGenerator(ostream)) {
+						final var writer = DataUtils.json()
+								.writer();
+
 						json.writeStartArray();
 						entries.forEach((entry) -> {
 							try {
-								mapper.writeValue(json, entry);
+								writer.writeValue(json, entry);
 							}
 							catch (Exception error) {
 								LOG.log(Level.WARNING, "Serializing environment failed!", error);
