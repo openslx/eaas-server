@@ -44,7 +44,7 @@ class DockerTools {
         if(ds.digest == null || ds.digest.isEmpty())
             ds.digest = getDigest();
 
-        if(ds.digest == null)
+        if(ds.digest.isEmpty())
             throw new BWFLAException("could not determine digest");
 
         log.info("Copying digest " + ds.digest + "...");
@@ -135,7 +135,7 @@ class DockerTools {
         runner.addArguments("-c", "skopeo inspect \"$1\":\"$2\" | jq -r .Digest", "", ds.imageRef, ds.tag);
         runner.setLogger(log);
         try {
-            final DeprecatedProcessRunner.Result result = runner.executeWithResult(false)
+            final DeprecatedProcessRunner.Result result = runner.executeWithResult(true)
                     .orElse(null);
 
             if (result == null || !result.successful())
