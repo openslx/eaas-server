@@ -270,18 +270,6 @@ public class EmulationEnvironmentHelper {
 		return uuid;
 	}
 
-	public static String getMainHddRef(MachineConfiguration env) {
-		if (env == null)
-			return null;
-		for (AbstractDataResource ab : env.getAbstractDataResource()) {
-			if (ab.getId().equals("main_hdd")) {
-				Binding b = (Binding) ab;
-				return b.getUrl();
-			}
-		}
-		return null;
-	}
-
 	/** Replaces current binding in machine-config with specified binding */
 	public static void replace(MachineConfiguration env, ImageArchiveBinding replacement, boolean keepBindingId)
 			throws BWFLAException
