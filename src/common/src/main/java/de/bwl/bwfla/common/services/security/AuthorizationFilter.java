@@ -32,7 +32,7 @@ public class AuthorizationFilter implements ContainerRequestFilter {
     private UserContext authenticatedUser = null;
 
     @Inject
-    @Config(value = "emil.authEnabled")
+    @Config(value = "authentication.authEnabled")
     private boolean authEnabled;
 
     @Override

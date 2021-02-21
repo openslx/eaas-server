@@ -121,7 +121,7 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
     private static JwkProvider createJwkProvider()
     {
         final String authJwksUri = ConfigurationProvider.getConfiguration()
-                .get("emil.authJwksUri");
+                .get("authentication.authJwksUri");
 
         if (authJwksUri.isEmpty())
             return null;
