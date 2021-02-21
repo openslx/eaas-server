@@ -52,6 +52,9 @@ public class EnvironmentListItem {
     private boolean networkEnabled;
 
     @XmlElement
+    private boolean internetEnabled;
+
+    @XmlElement
     private boolean serviceContainer;
 
     public EnvironmentListItem(EmilEnvironment emilenv) {
@@ -65,8 +68,12 @@ public class EnvironmentListItem {
         this.operatingSystem = emilenv.getOs();
         this.description = emilenv.getDescription();
 
-        if (emilenv.getNetworking() != null)
+        if (emilenv.getNetworking() != null) {
             this.networkEnabled = (emilenv.getNetworking().isConnectEnvs() || emilenv.getNetworking().isEnableInternet() || emilenv.getNetworking().isServerMode() || emilenv.getNetworking().isLocalServerMode());
+
+            if(emilenv.getNetworking().isEnableInternet())
+                this.internetEnabled = true;
+        }
         else this.networkEnabled = false;
 
         if( emilenv.getOwner() != null)
@@ -183,5 +190,13 @@ public class EnvironmentListItem {
 
     public void setOperatingSystem(String operatingSystem) {
         this.operatingSystem = operatingSystem;
+    }
+
+    public boolean isInternetEnabled() {
+        return internetEnabled;
+    }
+
+    public boolean isServiceContainer() {
+        return serviceContainer;
     }
 }
