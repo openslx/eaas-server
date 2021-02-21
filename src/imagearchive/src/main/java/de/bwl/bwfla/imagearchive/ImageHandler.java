@@ -121,8 +121,11 @@ public class ImageHandler
 		imageNameIndex.addNameIndexesEntry(entry, alias);
 
 		// compat hack
+		/*
 		if(iaConfig.getName().equals("emulators"))
 			createLocalEmulatorQcow(entry.getImage().getId());
+
+		 */
 	}
 
 	public void deleteNameIndexesEntry(String id, String version) {
@@ -132,9 +135,6 @@ public class ImageHandler
 	public void updateLatestEmulator(String emulator, String version) {
 		imageNameIndex.updateLatest(emulator, version);
 	}
-
-
-
 
 	private String getArchivePrefix()
 	{
@@ -212,31 +212,15 @@ public class ImageHandler
 			String id = ImageInformation.getBackingImageId(info.getBackingFile());
 			log.info("Image info: " + image.getAbsolutePath() + " --> " + info.getBackingFile() + " (ID = " + id + ")");
 
-			boolean hasLocalBackingfile = false;
-			for(ImageType _type : ImageType.values()) {
-				File backing = new File(iaConfig.getImagePath() + "/" + _type.name() + "/" + id);
-				if(backing.exists()) {
-					log.info("Local backing file found at: " + backing.getAbsolutePath());
-					hasLocalBackingfile = true;
-					break;
-				}
-			}
-
-			if (!hasLocalBackingfile) {
-				log.info("Backing file not found locally!");
-				return info.getBackingFile();
-			}
-
-			final String newBackingFile = this.getArchivePrefix() + id;
-			if (newBackingFile.equals(info.getBackingFile())) {
+			if (id.equals(info.getBackingFile())) {
 				log.info("Local backing file reference is up-to-date!");
 			}
 			else {
-				log.info("Rebasing image: " + image.getAbsolutePath() + " --> " + newBackingFile);
-				EmulatorUtils.changeBackingFile(image.toPath(), newBackingFile, log);
+				log.info("Rebasing image: " + image.getAbsolutePath() + " --> " + id);
+				EmulatorUtils.changeBackingFile(image.toPath(), id, log);
 			}
 
-			return newBackingFile;
+			return id;
 		}
 		catch (IOException|BWFLAException e) {
 			log.log(Level.SEVERE, "Updating backing file failed!", e);
@@ -259,7 +243,7 @@ public class ImageHandler
 				if (fileEntry.isDirectory())
 					continue;
 
-				if (fileEntry.getName().startsWith(".fuse"))
+					if (fileEntry.getName().startsWith(".fuse"))
 					continue;
 
 				this.updateBackingFileUrl(fileEntry);
@@ -275,10 +259,14 @@ public class ImageHandler
 			}
 		}
 
+		/*
 		if(iaConfig.getName().equals("emulators"))
 			createLocalEmulatorQcowFiles();
+
+		 */
 	}
 
+	/*
 	private void createLocalEmulatorQcow(String id) throws BWFLAException
 	{
 		File dir = new File(iaConfig.getImagePath() + "/base");
@@ -288,7 +276,10 @@ public class ImageHandler
 		createLocalEmulatorQcow(image);
 	}
 
+	 */
 
+
+	/*
 	private void createLocalEmulatorQcow(File file) throws BWFLAException
 	{
 		File localCowDir = new File(iaConfig.getImagePath() + "/fakeqcow");
@@ -328,7 +319,7 @@ public class ImageHandler
 			}
 		}
 	}
-
+*/
 //	private List<ImageExport.ImageFileInfo> processBindingForExport(ImageArchiveBinding iab) throws BWFLAException, IOException {
 //		List<ImageExport.ImageFileInfo> fileInfos = new ArrayList<>();
 //
@@ -700,7 +691,7 @@ public class ImageHandler
 			}
 	
 			if (uri.isOpaque() && uri.getScheme().equalsIgnoreCase(IA_URI_SCHEME)) {
-				ImageArchiveBinding iaBinding = new ImageArchiveBinding(iaConfig.getName(), "", uri.getSchemeSpecificPart(), t.toString());
+				ImageArchiveBinding iaBinding = new ImageArchiveBinding(iaConfig.getName(), uri.getSchemeSpecificPart(), t.toString());
 				iaBinding.setId(b.getId());
 				addList.add(iaBinding);
 				iter.remove();	
@@ -801,7 +792,6 @@ public class ImageHandler
 
 		final ImageDescription image = entry.getImage();
 		final ImageArchiveBinding binding = new ImageArchiveBinding();
-		binding.setUrlPrefix((image.url() != null && !image.url().isEmpty()) ? image.url() : this.getExportPrefix());
 		binding.setBackendName(iaConfig.getName());
 		binding.setAccess(Binding.AccessType.COW);
 		binding.setFileSystemType(image.fstype());
@@ -1204,7 +1194,7 @@ public class ImageHandler
 				// EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), options);
 
 				if(!destImgFile.exists()) {
-					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath(), null);
+					EmulatorUtils.copyRemoteUrl(b, destImgFile.toPath());
 				}
 				ImageInformation info = new ImageInformation(destImgFile.toPath().toString(), log);
 				ImageInformation.QemuImageFormat fmt = info.getFileFormat();

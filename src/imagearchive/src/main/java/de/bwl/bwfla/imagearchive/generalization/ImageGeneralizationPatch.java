@@ -85,12 +85,12 @@ public class ImageGeneralizationPatch {
 	public URL applyto(String backingFile, Logger log) throws BWFLAException
 	{
 		log.info("Patching image: " + backingFile);
+		final Path workdir = ImageMounter.createWorkingDirectory();
+		Path image = prepareCow(workdir, backingFile);
+		boolean patchSuccessful = false;
+
 		try (final ImageMounter mounter = new ImageMounter(log)) {
-			final Path workdir = ImageMounter.createWorkingDirectory();
 			mounter.addWorkingDirectory(workdir);
-
-			Path image = prepareCow(workdir, backingFile);
-
 			// Mount image and try to find available partitions...
 			ImageMounter.Mount rawmnt = mounter.mount(image, workdir.resolve(image.getFileName() + ".fuse"));
 			final DiskDescription disk = DiskDescription.read(rawmnt.getTargetImage(), log);
@@ -105,10 +105,16 @@ public class ImageGeneralizationPatch {
 					log.info("Partition " + partition.getIndex() + " is unformatted, skip");
 					continue;
 				}
-
 				// Mount partition's filesystem and check...
 				rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
-				final FileSystemType fstype = FileSystemType.fromString(partition.getFileSystemType());
+				FileSystemType fstype = null;
+				try {
+					fstype = FileSystemType.fromString(partition.getFileSystemType());
+				} catch (IllegalArgumentException illegalArgumentException)
+				{
+					log.info("partition / fs type " + partition.getFileSystemType() + " unknown");
+					continue;
+				}
 				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs.fuse"), fstype);
 				for (Script script : scripts) {
 					if (!script.check(partition) || !script.check(fsmnt.getMountPoint()))
@@ -119,14 +125,15 @@ public class ImageGeneralizationPatch {
 						throw new BWFLAException("Applying patch failed!");
 
 					log.info("Patching was successful!");
-					return publishImage(image);
+					patchSuccessful = true;
+					break;
 				}
-
 				log.info("Partition " + partition.getIndex() + " does not match selectors, skip");
-
 				fsmnt.unmount(false);
-			}
 
+				if(patchSuccessful)
+					return publishImage(image);
+			}
 			throw new BWFLAException("Patching image failed! No matching partition was found!");
 		}
 		catch (IOException error) {

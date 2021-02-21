@@ -88,7 +88,7 @@ public class ImportImageTask extends BlockingTask<String>
         try {
             log.info("Downloading backing file " + nextid + " from: " + nexturl);
 
-            if (Files.exists(layer)) {
+            if (Files.exists(layer) || !nexturl.startsWith("http")) {
                 log.info("Backing file exists locally, skip downloading...");
             }
             else {
@@ -105,7 +105,7 @@ public class ImportImageTask extends BlockingTask<String>
 
                     log.warning("Backing file handle found, retrying: " + handle);
                     binding.setUrl(handle);
-                    EmulatorUtils.copyRemoteUrl(binding, layer, null);
+                    EmulatorUtils.copyRemoteUrl(binding, layer);
                 }
             }
         }

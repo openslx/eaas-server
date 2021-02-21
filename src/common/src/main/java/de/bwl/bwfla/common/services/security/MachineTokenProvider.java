@@ -20,6 +20,11 @@ public class MachineTokenProvider {
             apiSecret = null;
     }
 
+    public static String getAuthProxy()
+    {
+        return authProxy;
+    }
+
     static String getApiSecret()
     {
         return apiSecret;
@@ -63,29 +68,12 @@ public class MachineTokenProvider {
         }
     }
 
-    public static String getAuthProxy()
-    {
-        if(authProxy != null && (authProxy.isEmpty() || authProxy.equals("null")))
-            return null;
-        if(!authProxy.endsWith("/"))
-            authProxy += "/";
-        return authProxy;
-    }
-
     public static String getAuthenticationProxy()
     {
-        if( getApiKey() != null && getAuthProxy() != null)
-            return "http://jwt:" + getApiKey() + "@" + getAuthProxy();
+        if( getApiKey() != null )
+            return "http://jwt:" + getApiKey() + "@" + authProxy;
         else
-            return null;
-    }
-
-    public static String getProxy()
-    {
-        if( getAuthProxy() != null)
-            return "http://" + getAuthProxy();
-        else
-            return null;
+            return "http://" + authProxy;
     }
 
     public static String getProxyAuthenticationHeader()
