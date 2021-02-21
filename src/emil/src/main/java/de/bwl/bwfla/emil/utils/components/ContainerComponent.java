@@ -125,8 +125,10 @@ public class ContainerComponent {
             args.add("--mount");
             args.add(getMountStr(inputDir, config.getInput(), true));
         }
-        args.add("--mount");
-        args.add(getMountStr(outputDir, config.getOutputPath(), false));
+        if(config.getOutputPath() != null) {
+            args.add("--mount");
+            args.add(getMountStr(outputDir, config.getOutputPath(), false));
+        }
 
         if (config.getCustomSubdir() != null) {
             args.add("--rootfs");
