@@ -421,7 +421,7 @@ public class EnvironmentRepository extends EmilRest
 				// TODO: refactor
 				if(envReq.getRomId() != null && envReq.getRomLabel() != null)
 				{
-					ImageArchiveBinding romBinding = new ImageArchiveBinding("default", null, envReq.getRomId(), ImageType.ROMS.value());
+					ImageArchiveBinding romBinding = new ImageArchiveBinding("default", envReq.getRomId(), ImageType.ROMS.value());
 					romBinding.setId("rom-" + envReq.getRomId());
 					romBinding.setAccess(Binding.AccessType.COPY);
 					env.getAbstractDataResource().add(romBinding);
@@ -1195,7 +1195,6 @@ public class EnvironmentRepository extends EmilRest
 							.build());
 			} else if (ds.getImageId() != null && ds.getImageArchive() != null) {
 				ImageArchiveBinding binding = new ImageArchiveBinding(ds.getImageArchive(),
-						"",
 						ds.getImageId(),
 						ImageType.USER.value());
 				binding.setId(ds.getImageId());

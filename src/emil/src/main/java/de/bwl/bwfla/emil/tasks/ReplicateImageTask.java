@@ -157,7 +157,6 @@ public class ReplicateImageTask extends BlockingTask<Object>
                     iab.setUrl(null);
                     iab.setBackendName(binding.getBackendName());
                     iab.setType(binding.getType());
-                    iab.setUrlPrefix(null);
                     iab.setImageId(binding.getImageId());
                 } else
                     log.severe("not an imagearchive binding");

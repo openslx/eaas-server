@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emucomp.api;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import javax.xml.bind.JAXBException;
@@ -15,7 +16,7 @@ import javax.xml.bind.annotation.XmlType;
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class ImageArchiveBinding extends Binding
 {
-	// transient
+	@Deprecated
 	protected String urlPrefix = null;
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
@@ -38,16 +39,16 @@ public class ImageArchiveBinding extends Binding
 		type = null;
 		fileSystemType = null;
 	}
-	
-	public ImageArchiveBinding(String backend, String urlPrefix, String imageId, String type)
+
+	public ImageArchiveBinding(String backend, String imageId, String type)
 	{
-		this(backend, urlPrefix, imageId, type,null);
+		this(backend, imageId, type,null);
 	}
 
-	public ImageArchiveBinding(String backend, String urlPrefix, String imageId, String type, String fileSystemType)
+	public ImageArchiveBinding(String backend, String imageId, String type, String fileSystemType)
 	{
 		this.backendName = backend;
-		this.urlPrefix = urlPrefix;
+		this.urlPrefix = null;
 		this.imageId = imageId;
 		this.type = type;
 		this.fileSystemType = fileSystemType;
@@ -92,17 +93,6 @@ public class ImageArchiveBinding extends Binding
 		this.backendName = name;
 	}
 
-	public String getUrlPrefix() {
-		return urlPrefix;
-	}
-
-	public void setUrlPrefix(String host) {
-		if (host != null && !host.endsWith("/"))
-			host += "/";
-
-		this.urlPrefix = host;
-	}
-
 	public String getImageId() {
 		return imageId;
 	}
@@ -125,12 +115,6 @@ public class ImageArchiveBinding extends Binding
 
 	public void setFileSystemType(String type) {
 		this.fileSystemType = type;
-	}
-
-	@Override
-	public String getUrl()
-	{
-		return urlPrefix + imageId;
 	}
 
 	public static ImageArchiveBinding fromValue(String value) throws JAXBException

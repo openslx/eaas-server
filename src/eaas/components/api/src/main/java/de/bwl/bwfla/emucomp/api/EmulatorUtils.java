@@ -15,7 +15,6 @@ import org.apache.tamaya.ConfigurationProvider;
 
 public class EmulatorUtils {
 	protected static final Logger log = Logger.getLogger("EmulatorUtils");
-	private static String curlProxySo = ConfigurationProvider.getConfiguration().get("emucomp.curl_proxy");
 
 	public enum XmountOutputFormat {
 		RAW("raw"),
@@ -47,8 +46,6 @@ public class EmulatorUtils {
 			return this.format;
 		}
 	}
-
-
 
 	public static void copyRemoteUrl(Binding resource, Path dest) throws BWFLAException {
 		EmulatorUtils.copyRemoteUrl(resource, dest, log);
@@ -88,7 +85,10 @@ public class EmulatorUtils {
 				throw new BWFLAException(e);
 			}
 		}
-		else throw new BWFLAException("unsupported operation " + resUrl);
+		else {
+			throw new BWFLAException(
+					"Cannot create local copy of the binding's data, unsupported url schema: " + resUrl);
+		}
 	}
 
 	/**
@@ -125,14 +125,6 @@ public class EmulatorUtils {
 		process.addArgument(cowPath.toString());
 		if(options != null && options.getSize() != null) {
 			process.addArgument(options.getSize());
-		}
-
-		if(options.getProxyUrl() != null) {
-			log.severe("using proxy " +  options.getProxyUrl());
-			// process.addEnvVariable("no_proxy", "localhost,127.0.0.1,.internal");
-			// process.addEnvVariable("http_proxy", options.getProxyUrl());
-			process.addEnvVariable("LD_PRELOAD", curlProxySo);
-			process.addEnvVariable("prefix_proxy", options.getProxyUrl());
 		}
 
 		if (!process.execute()) {
@@ -177,7 +169,5 @@ public class EmulatorUtils {
 			throw new BWFLAException("converting " + inFile.toString() + " failed");
 		}
 	}
-
-
-
+	
 }

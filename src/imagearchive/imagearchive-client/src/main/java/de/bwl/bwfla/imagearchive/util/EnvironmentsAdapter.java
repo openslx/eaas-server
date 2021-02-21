@@ -44,7 +44,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 			if (emuEnv == null)
 				continue;
 
-			this.updateUrlPrefix(backend, emuEnv);
 			out.add(emuEnv);
 		}
 
@@ -67,28 +66,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 
 		return null;
-	}
-
-	public void updateUrlPrefix(String backend, Environment env) throws BWFLAException
-	{
-		if (env instanceof MachineConfiguration) {
-			final MachineConfiguration config = (MachineConfiguration) env;
-			for (AbstractDataResource r : config.getAbstractDataResource()) {
-				if (r instanceof ImageArchiveBinding) {
-					ImageArchiveBinding iaBinding = (ImageArchiveBinding) r;
-					iaBinding.setUrlPrefix(this.getExportPrefix(backend));
-				}
-			}
-		}
-		else if (env instanceof ContainerConfiguration) {
-			final ContainerConfiguration config = (ContainerConfiguration) env;
-			for (AbstractDataResource r : config.getDataResources()) {
-				if (r instanceof ImageArchiveBinding) {
-					ImageArchiveBinding iaBinding = (ImageArchiveBinding) r;
-					iaBinding.setUrlPrefix(this.getExportPrefix(backend));
-				}
-			}
-		}
 	}
 
 	public void sync() throws BWFLAException {
@@ -134,7 +111,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 					log.info("DescriptionTag is mandatory: " + emuEnv.getId());
 					continue;
 				}
-				updateUrlPrefix(backend, emuEnv);
 				_templates.add(emuEnv);
 			} catch (Throwable t) {
 				log.info("loadTemplates2: failed to parse environment: " + t.getMessage());
@@ -163,7 +139,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		} catch (Exception e) {
 			throw new BWFLAException("can't load image with id " + id + ": " + e.getMessage());
 		}
-		updateUrlPrefix(backend, env);
 		return env;
 	}
 
@@ -368,7 +343,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
 	public void updateMetadata(String backend, Environment conf) throws BWFLAException {
 		connectArchive();
-		updateUrlPrefix(backend, conf);
 		archive.updateConfiguration(backend, conf.toString());
 	}
 
@@ -436,7 +410,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 			if (result == null)
 				throw new ImportNoFinishedException();
 
-			return new ImageArchiveBinding(backend, result.getUrlPrefix(), result.getImageId(), type.value());
+			return new ImageArchiveBinding(backend, result.getImageId(), type.value());
 		}
 
 		public ImageArchiveBinding getBinding(long timeout /* seconds */ ) throws BWFLAException {

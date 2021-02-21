@@ -156,6 +156,31 @@ public class BindingsManager
 				.filter((id) -> id.startsWith(prefix));
 	}
 
+	private static void prepareResourceBinding(Binding resource) throws IllegalArgumentException
+	{
+		/*
+			ImageArchive Bindings contain no valid URLs, just image IDs
+			We delegate the resolving image IDs to the proxy.
+			Other resources may contain valid URLs.
+		 */
+		if (resource instanceof ImageArchiveBinding)
+		{
+			String proxy = MachineTokenProvider.getAuthenticationProxy();
+			ImageArchiveBinding iab = (ImageArchiveBinding)resource;
+			iab.setUrl(proxy + "/" + iab.getImageId());
+		}
+
+		if (resource.getId() == null
+				|| resource.getId().isEmpty()
+				|| resource.getUrl() == null
+				|| resource.getUrl().isEmpty())
+			throw new IllegalArgumentException(
+					"Given resource is null, has invalid id or empty url.");
+
+		if (resource.getAccess() == null)
+			resource.setAccess(Binding.AccessType.COW);
+	}
+
 	/**
 	 * Resolves and mounts a binding location of either the form
 	 * binding://<binding_id>> or <binding_id>.
@@ -207,20 +232,11 @@ public class BindingsManager
 				resource.setAccess(Binding.AccessType.COPY);
 		}
 
+		prepareResourceBinding(resource);
+
 		final MountOptions mountOpts = new MountOptions();
 		if (resource.getFileSize() > 0)
 			mountOpts.setSize(resource.getFileSize());
-
-		if (resource.getAccess() == null)
-			resource.setAccess(Binding.AccessType.COW);
-
-		if (resource == null
-				|| resource.getId() == null
-				|| resource.getId().isEmpty()
-				|| resource.getUrl() == null
-				|| resource.getUrl().isEmpty())
-			throw new IllegalArgumentException(
-					"Given resource is null, has invalid id or empty url.");
 
 		Path imgPath = null;
 		ImageMounter.Mount mount = null;
@@ -230,11 +246,6 @@ public class BindingsManager
 
 				QcowOptions qcowOptions = new QcowOptions();
 				qcowOptions.setBackingFile(resource.getUrl());
-
-				if(MachineTokenProvider.getAuthenticationProxy() != null)
-					qcowOptions.setProxyUrl(MachineTokenProvider.getAuthenticationProxy());
-				else
-					qcowOptions.setProxyUrl(MachineTokenProvider.getProxy());
 
 				EmulatorUtils.createCowFile(imgPath, qcowOptions);
 
