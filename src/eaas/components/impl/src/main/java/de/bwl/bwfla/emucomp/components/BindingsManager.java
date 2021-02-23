@@ -219,6 +219,8 @@ public class BindingsManager
 
 		log.info("Mounting binding '" + binding + "'...");
 
+		prepareResourceBinding(resource);
+
 		// TODO: we need to resolve the full path here or earlier to
 		// ensure that all access options use the same path:
 		if(binding.startsWith("rom-")) // old rom bindings do not have COPY access by default
@@ -231,8 +233,6 @@ public class BindingsManager
 			if(fmt != ImageInformation.QemuImageFormat.QCOW2)
 				resource.setAccess(Binding.AccessType.COPY);
 		}
-
-		prepareResourceBinding(resource);
 
 		final MountOptions mountOpts = new MountOptions();
 		if (resource.getFileSize() > 0)
