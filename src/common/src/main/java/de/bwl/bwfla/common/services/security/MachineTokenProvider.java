@@ -73,6 +73,8 @@ public class MachineTokenProvider {
         if( getApiKey() != null )
             return "http://jwt:" + getApiKey() + "@" + authProxy;
         else
+            if(authProxy.startsWith("http"))
+                return authProxy;
             return "http://" + authProxy;
     }
 
