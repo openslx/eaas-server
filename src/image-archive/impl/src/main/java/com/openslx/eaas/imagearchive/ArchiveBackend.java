@@ -28,9 +28,12 @@ import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.annotation.Resource;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.enterprise.inject.spi.CDI;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.ScheduledExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -41,11 +44,27 @@ public class ArchiveBackend
 {
 	private static final Logger LOG = Logger.getLogger("IMAGE-ARCHIVE");
 
+	@Resource(lookup = "java:jboss/ee/concurrency/scheduler/default")
+	private ScheduledExecutorService scheduler;
+
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
+
 	private ImageArchiveConfig config;
 	private StorageRegistry storage;
 	private IndexRegistry indexes;
 	private ServiceRegistry services;
 
+
+	public ScheduledExecutorService scheduler()
+	{
+		return scheduler;
+	}
+
+	public ExecutorService executor()
+	{
+		return executor;
+	}
 
 	public ImageArchiveConfig config()
 	{
