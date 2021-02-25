@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
+import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.TemplateIndex;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
@@ -76,17 +77,25 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.IMAGE, ImageIndex.class);
 	}
 
+	public ImportIndex imports()
+	{
+		return imports;
+	}
+
 	public static IndexRegistry create() throws BWFLAException
 	{
 		final var registry = new IndexRegistry();
 		registry.insert(new MachineIndex());
 		registry.insert(new TemplateIndex());
 		registry.insert(new ImageIndex());
+		registry.insert(new ImportIndex());
 		return registry;
 	}
 
 
 	// ===== Internal Helpers ==============================
+
+	private ImportIndex imports;
 
 	private IndexRegistry()
 	{
@@ -96,5 +105,10 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 	private void insert(BlobIndex<?> index)
 	{
 		super.insert(index.kind(), index);
+	}
+
+	private void insert(ImportIndex index)
+	{
+		this.imports = index;
 	}
 }
