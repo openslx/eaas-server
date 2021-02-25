@@ -1476,8 +1476,9 @@ public class Components {
         }
         catch (BWFLAException e)
         {
-            LOG.warning("failed to retrieve snapshot. assuming floppy env...");
-            return new Snapshot(config);
+            e.printStackTrace();
+            LOG.warning("failed to retrieve snapshot.");
+            return null;
         }
     }
 
