@@ -109,6 +109,12 @@ public class ArchiveBackend
 		return new PrefixLogger(LOG.getName(), context);
 	}
 
+	/** Return current timestamp */
+	public static long now()
+	{
+		return System.currentTimeMillis();
+	}
+
 
 	// ===== Internal Helpers ==============================
 
