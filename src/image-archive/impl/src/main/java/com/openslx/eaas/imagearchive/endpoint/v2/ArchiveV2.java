@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
+import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
 import com.openslx.eaas.imagearchive.api.v2.IStorageV2;
 import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
@@ -40,6 +41,9 @@ public class ArchiveV2 implements IArchiveV2
 
 	@Inject
 	private ImagesV2 images;
+
+	@Inject
+	private ImportsV2 imports;
 
 	@Inject
 	private StorageV2 storage;
@@ -63,6 +67,12 @@ public class ArchiveV2 implements IArchiveV2
 	public IImagesV2 images()
 	{
 		return images;
+	}
+
+	@Override
+	public IImportsV2 imports()
+	{
+		return imports;
 	}
 
 	@Override

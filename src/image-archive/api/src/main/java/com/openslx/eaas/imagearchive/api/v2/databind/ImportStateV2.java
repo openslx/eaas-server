@@ -17,25 +17,43 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.api.v2.databind;
 
-import javax.ws.rs.Path;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 
-public interface IArchiveV2
+public enum ImportStateV2
 {
-	@Path("/machines")
-	IMachinesV2 machines();
+	PENDING,
+	RUNNING,
+	FINISHED,
+	ABORTED,
+	FAILED;
 
-	@Path("/templates")
-	ITemplatesV2 templates();
+	@JsonValue
+	public String value()
+	{
+		return this.name()
+				.toLowerCase();
+	}
 
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	@JsonCreator
+	public static ImportStateV2 from(String value)
+	{
+		switch (value) {
+			case "pending":
+				return PENDING;
+			case "running":
+				return RUNNING;
+			case "finished":
+				return FINISHED;
+			case "aborted":
+				return ABORTED;
+			case "failed":
+				return FAILED;
+			default:
+				throw new IllegalArgumentException();
+		}
+	}
 }
