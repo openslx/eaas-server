@@ -85,7 +85,6 @@ public class BlobIndex<T> extends Index<T>
 
 	protected static String toName(BlobKind kind)
 	{
-		return kind.toString()
-				.toLowerCase() + "s";
+		return kind.value() + "s";
 	}
 }

@@ -28,6 +28,12 @@ public enum BlobKind
 	IMAGE,
 	ROM;
 
+	public String value()
+	{
+		return this.name()
+				.toLowerCase();
+	}
+
 	public static BlobKind from(String kind)
 	{
 		switch (kind) {
