@@ -23,8 +23,10 @@ import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.service.impl.ImageService;
+import com.openslx.eaas.imagearchive.service.impl.ImportService;
 import com.openslx.eaas.imagearchive.service.impl.MachineService;
 import com.openslx.eaas.imagearchive.service.impl.TemplateService;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
 public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
@@ -44,17 +46,25 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.IMAGE, ImageService.class);
 	}
 
-	public static ServiceRegistry create(ArchiveBackend backend)
+	public ImportService imports()
+	{
+		return imports;
+	}
+
+	public static ServiceRegistry create(ArchiveBackend backend) throws BWFLAException
 	{
 		final var registry = new ServiceRegistry();
 		registry.insert(MachineService.create(backend));
 		registry.insert(TemplateService.create(backend));
 		registry.insert(ImageService.create(backend));
+		registry.insert(ImportService.create(backend));
 		return registry;
 	}
 
 
 	// ===== Internal Helpers ==============================
+
+	private ImportService imports;
 
 	private ServiceRegistry()
 	{
@@ -64,5 +74,10 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 	private void insert(AbstractService<?> service)
 	{
 		super.insert(service.kind(), service);
+	}
+
+	private void insert(ImportService service)
+	{
+		this.imports = service;
 	}
 }

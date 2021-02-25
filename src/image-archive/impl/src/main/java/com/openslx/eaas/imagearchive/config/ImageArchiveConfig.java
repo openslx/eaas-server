@@ -29,6 +29,7 @@ import java.util.logging.Logger;
 public class ImageArchiveConfig extends BaseConfig<ImageArchiveConfig>
 {
 	private StorageRegistryConfig storage = new StorageRegistryConfig();
+	private ImporterConfig importer = new ImporterConfig();
 
 
 	// ===== Getters and Setters ====================
@@ -42,6 +43,17 @@ public class ImageArchiveConfig extends BaseConfig<ImageArchiveConfig>
 	public StorageRegistryConfig getStorageConfig()
 	{
 		return storage;
+	}
+
+	public void setImporterConfig(ImporterConfig importer)
+	{
+		ConfigHelpers.check(importer, "Importer config is invalid!");
+		this.importer = importer;
+	}
+
+	public ImporterConfig getImporterConfig()
+	{
+		return importer;
 	}
 
 
@@ -66,6 +78,7 @@ public class ImageArchiveConfig extends BaseConfig<ImageArchiveConfig>
 	{
 		log.info("Loading image-archive's configuration...");
 		storage.load(ConfigHelpers.filter(config,"imagearchive.storage."), log);
+		importer.load(ConfigHelpers.filter(config,"imagearchive.importer."), log);
 		return super.load(config, log);
 	}
 }

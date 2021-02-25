@@ -19,3 +19,9 @@ imagearchive:
         rom: "/roms"
 
     default_location: "default"
+
+  importer:
+    num_workers: 4
+    gc_interval: 6 hours
+    max_record_age: 7 days
+    base_directory: "/eaas/import"
