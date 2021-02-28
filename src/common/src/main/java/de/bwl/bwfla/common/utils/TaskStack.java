@@ -30,13 +30,28 @@ public class TaskStack
 	private final Deque<Task> tasks;
 	private final Logger log;
 
+	public TaskStack()
+	{
+		this(16);
+	}
+
+	public TaskStack(int capacity)
+	{
+		this(capacity, Logger.getLogger(TaskStack.class.getSimpleName()));
+	}
+
 	public TaskStack(Logger log)
 	{
-		this.tasks = new ArrayDeque<>();
+		this(16, log);
+	}
+
+	public TaskStack(int capacity, Logger log)
+	{
+		this.tasks = new ArrayDeque<>(capacity);
 		this.log = log;
 	}
 
-	public void push(String name, Runnable task)
+	public void push(String name, IRunnable task)
 	{
 		this.push(new Task(name, task, log));
 	}
@@ -67,13 +82,19 @@ public class TaskStack
 		return result;
 	}
 
+	@FunctionalInterface
+	public interface IRunnable
+	{
+		void run() throws Exception;
+	}
+
 	public static class Task
 	{
 		private final Logger log;
 		private final String name;
-		private final Runnable runnable;
+		private final IRunnable runnable;
 
-		private Task(String name, Runnable runnable, Logger log)
+		private Task(String name, IRunnable runnable, Logger log)
 		{
 			this.log = log;
 			this.name = name;
@@ -85,14 +106,13 @@ public class TaskStack
 			return name;
 		}
 
-		public Runnable runnable()
+		public IRunnable runnable()
 		{
 			return runnable;
 		}
 
 		public boolean run()
 		{
-			log.info("Running task '" + name + "'...");
 			try {
 				runnable.run();
 				return true;

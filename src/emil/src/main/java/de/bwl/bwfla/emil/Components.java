@@ -486,7 +486,7 @@ public class Components {
                 final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
 
 
-                    final Runnable cleanup = () -> {
+                    final TaskStack.IRunnable cleanup = () -> {
                         try {
                             blobstore.delete(blob);
                         } catch (Exception error) {
@@ -597,7 +597,7 @@ public class Components {
         // Build input image
         final BlobHandle blob = ImageBuilderClient.build(imagebuilder, description, imageBuilderTimeout, imageBuilderDelay).getBlobHandle();
         {
-            final Runnable cleanup = () -> {
+            final TaskStack.IRunnable cleanup = () -> {
                 try {
                     blobstore.delete(blob);
                 } catch (Exception error) {
