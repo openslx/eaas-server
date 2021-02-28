@@ -34,6 +34,7 @@ public class ImporterConfig extends BaseConfig<ImporterConfig>
 	private Duration gcInterval;
 	private Duration maxRecordAge;
 	private Path basedir;
+	private Path tmpdir;
 
 
 	// ===== Getters and Setters ====================
@@ -86,5 +87,17 @@ public class ImporterConfig extends BaseConfig<ImporterConfig>
 	public Path getBaseDirectory()
 	{
 		return basedir;
+	}
+
+	@Config("temp_directory")
+	public void setTempDirectory(Path dir)
+	{
+		ConfigHelpers.check(dir, "Temporary directory is invalid!");
+		this.tmpdir = dir;
+	}
+
+	public Path getTempDirectory()
+	{
+		return tmpdir;
 	}
 }

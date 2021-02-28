@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.service.impl;
 
 import com.openslx.eaas.imagearchive.ArchiveBackend;
+import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.config.ImporterConfig;
 import com.openslx.eaas.imagearchive.databind.ImportFailure;
 import com.openslx.eaas.imagearchive.databind.ImportRecord;
@@ -30,6 +31,9 @@ import com.openslx.eaas.imagearchive.databind.ImportTask;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.service.BlobService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.ImageInformation;
+import de.bwl.bwfla.common.utils.TaskStack;
+import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 
 import javax.ws.rs.RedirectionException;
 import javax.ws.rs.client.Client;
@@ -40,7 +44,9 @@ import java.io.InputStream;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Queue;
 import java.util.concurrent.CompletableFuture;
@@ -58,6 +64,7 @@ public class ImportService
 	private final Logger logger;
 	private final AtomicInteger idgen;
 	private final Queue<Integer> tasks;
+	private final List<IPreprocessor> preprocessors;
 	private final Map<Integer, CompletableFuture<ImportStatus>> watchers;
 	private final ArchiveBackend backend;
 	private final ImporterConfig config;
@@ -187,12 +194,24 @@ public class ImportService
 		this.imports = index;
 		this.idgen = new AtomicInteger(1 + index.lastid());
 		this.tasks = new LinkedList<>();
+		this.preprocessors = new ArrayList<>(BlobKind.count());
 		this.watchers = new ConcurrentHashMap<>();
 		this.numIdleWorkers = config.getNumWorkers();
+
+		// initialize all preprocessors
+		for (int i = 0; i < BlobKind.count(); ++i)
+			preprocessors.add(null);
+
+		this.insert(BlobKind.IMAGE, new ImagePreprocessor());
 
 		final var executor = backend.executor();
 		executor.execute(new CleanupTask());
 		executor.execute(this::resume);
+	}
+
+	private void insert(BlobKind kind, IPreprocessor preprocessor)
+	{
+		preprocessors.set(kind.ordinal(), preprocessor);
 	}
 
 	private synchronized boolean submit(int taskid)
@@ -241,6 +260,39 @@ public class ImportService
 		}
 	}
 
+	@FunctionalInterface
+	private interface IPreprocessor
+	{
+		void prepare(ImportRecord record, TaskStack cleanups) throws Exception;
+	}
+
+	private class ImagePreprocessor implements IPreprocessor
+	{
+		@Override
+		public void prepare(ImportRecord record, TaskStack cleanups) throws Exception
+		{
+			final var task = record.task();
+			final var source = task.source();
+			final var info = new ImageInformation(source.url(), logger);
+			switch (info.getFileFormat()) {
+				case VMDK:
+				case VHD:
+					final var tmpfile = config.getTempDirectory()
+							.resolve("image-" + record.taskid());
+
+					cleanups.push("temp-import-image", () -> Files.deleteIfExists(tmpfile));
+
+					// convert remote or local image, storing result locally
+					final var format = ImageInformation.QemuImageFormat.QCOW2;
+					EmulatorUtils.convertImage(source.url(), tmpfile, format, logger);
+
+					// converted image should now be available locally,
+					// so we need to update import-source accordingly!
+					source.setUrl("file://" + tmpfile.toString());
+			}
+		}
+	}
+
 	private class Worker implements Runnable
 	{
 		private final ImportService self = ImportService.this;
@@ -272,8 +324,11 @@ public class ImportService
 				return;  // task seems to be aborted!
 
 			record.setStartedAtTime(ArchiveBackend.now());
+
+			final var cleanups = new TaskStack(logger);
 			try {
-				this.process(record);
+				this.prepare(record, cleanups);
+				this.process(record, cleanups);
 			}
 			catch (Exception error) {
 				logger.log(Level.WARNING, "Executing import-task " + taskid + " failed!", error);
@@ -282,6 +337,10 @@ public class ImportService
 						.setDetail(error.getMessage());
 
 				record.setFailure(failure);
+			}
+			finally {
+				if (!cleanups.execute())
+					logger.warning("Cleaning up after import-task failed!");
 			}
 
 			record.setFinishedAtTime(ArchiveBackend.now());
@@ -293,7 +352,18 @@ public class ImportService
 				watcher.complete(ImportStatus.from(record));
 		}
 
-		private void process(ImportRecord record) throws Exception
+		private void prepare(ImportRecord record, TaskStack cleanups) throws Exception
+		{
+			final var kind = record.task()
+					.target()
+					.kind();
+
+			final var preprocessor = preprocessors.get(kind.ordinal());
+			if (preprocessor != null)
+				preprocessor.prepare(record, cleanups);
+		}
+
+		private void process(ImportRecord record, TaskStack cleanups) throws Exception
 		{
 			final var task = record.task();
 			final var source = task.source();
@@ -316,7 +386,7 @@ public class ImportService
 				throws BWFLAException, IOException
 		{
 			final var file = Path.of(uri).normalize();
-			if (!file.startsWith(config.getBaseDirectory()))
+			if (!file.startsWith(config.getBaseDirectory()) && !file.startsWith(config.getTempDirectory()))
 				throw new IllegalArgumentException("Invalid file path!");
 
 			final var size = Files.size(file);

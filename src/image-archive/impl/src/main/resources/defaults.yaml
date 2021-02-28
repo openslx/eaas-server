@@ -25,3 +25,4 @@ imagearchive:
     gc_interval: 6 hours
     max_record_age: 7 days
     base_directory: "/eaas/import"
+    temp_directory: "/tmp-storage/imports"
