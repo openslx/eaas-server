@@ -26,15 +26,13 @@ import com.fasterxml.jackson.databind.MappingIterator;
 import com.fasterxml.jackson.databind.SerializerProvider;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.TaskStack;
 
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Collections;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Spliterators;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -50,7 +48,7 @@ import java.util.stream.StreamSupport;
 @JsonSerialize(using = Streamable.Serializer.class)
 public class Streamable<T> implements AutoCloseable
 {
-	private final List<Runnable> cleanups;
+	private final TaskStack cleanups;
 	private final Stream<T> stream;
 	private Collection<T> collection;
 
@@ -88,12 +86,18 @@ public class Streamable<T> implements AutoCloseable
 		if (stream != null)
 			stream.close();
 
-		Streamable.cleanup(cleanups);
+		if (cleanups != null)
+			cleanups.execute();
 	}
 
 	public static <T> Streamable<T> of(Stream<T> stream)
 	{
-		return new Streamable<>(stream, Collections.emptyList());
+		return new Streamable<>(stream, null);
+	}
+
+	public static <T> Streamable<T> of(Stream<T> stream, TaskStack cleanups)
+	{
+		return new Streamable<>(stream, cleanups);
 	}
 
 	@JsonCreator
@@ -102,24 +106,24 @@ public class Streamable<T> implements AutoCloseable
 		// NOTE: it is currently not possible to lazily deserialize data as a Stream<T>,
 		//       so let Jackson eagerly parse it as a collection instead and wrap that!
 
-		return new Streamable<>(collection, Collections.emptyList());
+		return new Streamable<>(collection, null);
 	}
 
 	public static <T> Streamable<T> of(InputStream input, Class<T> clazz) throws BWFLAException
 	{
-		return Streamable.of(input, clazz, new ArrayList<>(2));
+		return Streamable.of(input, clazz, new TaskStack(2));
 	}
 
 	public static <T> Streamable<T> of(Response response, Class<T> clazz) throws BWFLAException
 	{
-		final var cleanups = new ArrayList<Runnable>(4);
-		cleanups.add(() -> Streamable.close(response, "response"));
+		final var cleanups = new TaskStack(4);
+		cleanups.push("close-response", () -> Streamable.close(response, "response"));
 		try {
 			final var input = response.readEntity(InputStream.class);
 			return Streamable.of(input, clazz, cleanups);
 		}
 		catch (BWFLAException error) {
-			Streamable.cleanup(cleanups);
+			cleanups.execute();
 			throw error;
 		}
 	}
@@ -127,7 +131,7 @@ public class Streamable<T> implements AutoCloseable
 
 	// ===== Internal Helpers ==============================
 
-	private Streamable(Stream<T> stream, List<Runnable> cleanups)
+	private Streamable(Stream<T> stream, TaskStack cleanups)
 	{
 		if (stream == null)
 			throw new IllegalArgumentException();
@@ -137,7 +141,7 @@ public class Streamable<T> implements AutoCloseable
 		this.collection = null;
 	}
 
-	private Streamable(Collection<T> collection, List<Runnable> cleanups)
+	private Streamable(Collection<T> collection, TaskStack cleanups)
 	{
 		if (collection == null)
 			throw new IllegalArgumentException();
@@ -147,24 +151,24 @@ public class Streamable<T> implements AutoCloseable
 		this.stream = null;
 	}
 
-	private static <T> Streamable<T> of(InputStream input, Class<T> clazz, List<Runnable> cleanups)
+	private static <T> Streamable<T> of(InputStream input, Class<T> clazz, TaskStack cleanups)
 			throws BWFLAException
 	{
-		cleanups.add(() -> Streamable.close(input, "input-stream"));
+		cleanups.push("close-input-stream", () -> Streamable.close(input, "input-stream"));
 		try {
 			final MappingIterator<T> iterator = DataUtils.json()
 					.reader()
 					.forType(clazz)
 					.readValues(input);
 
-			cleanups.add(() -> Streamable.close(iterator, "input-parser"));
+			cleanups.push("close-input-parser", () -> Streamable.close(iterator, "input-parser"));
 
 			final var spliterator = Spliterators.spliteratorUnknownSize(iterator, 0);
 			final var stream = StreamSupport.stream(spliterator, false);
 			return new Streamable<>(stream, cleanups);
 		}
 		catch (Exception error) {
-			Streamable.cleanup(cleanups);
+			cleanups.execute();
 			throw new BWFLAException("Preparing streamable failed!", error);
 		}
 	}
@@ -178,13 +182,6 @@ public class Streamable<T> implements AutoCloseable
 			final var logger = Logger.getLogger(Streamable.class.getSimpleName());
 			logger.log(Level.WARNING, "Closing " + name + " failed!", error);
 		}
-	}
-
-	private static void cleanup(List<Runnable> tasks)
-	{
-		// run given tasks in reverse order!
-		for (int i = tasks.size() - 1; i >= 0; --i)
-			tasks.get(i).run();
 	}
 
 
