@@ -69,6 +69,13 @@ public abstract class AbstractService<T> implements AutoCloseable
 				.lookup(idfilter.apply(id));
 	}
 
+	/** Remove record by ID */
+	public boolean remove(String id) throws BWFLAException
+	{
+		return index.collection()
+				.delete(idfilter.apply(id));
+	}
+
 	@Override
 	public void close() throws Exception
 	{

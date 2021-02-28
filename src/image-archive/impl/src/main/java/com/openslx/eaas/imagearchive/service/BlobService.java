@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.blobstore.BlobStore;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -36,19 +37,28 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 	private final StorageRegistry storage;
 
 
-	/** Download indexed blob from backend storage */
-	public InputStream download(String id) throws BWFLAException
+	/** Look up blob for given ID */
+	public Blob blob(String id) throws BWFLAException
 	{
 		final var descriptor = this.lookup(id);
 		if (descriptor == null)
 			return null;
 
-		// start downloading directly from storage...
 		final var location = this.location(descriptor.location());
 		final var path = this.path(location, descriptor.name());
 		return location.bucket()
-				.blob(path.toString())
-				.downloader()
+				.blob(path.toString());
+	}
+
+	/** Download indexed blob from backend storage */
+	public InputStream download(String id) throws BWFLAException
+	{
+		final var blob = this.blob(id);
+		if (blob == null)
+			return null;
+
+		// start downloading directly from storage...
+		return blob.downloader()
 				.download();
 	}
 
@@ -105,6 +115,19 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 			blob.remove();  // blob seems to be invalid, cleanup!
 			throw new BWFLAException("Indexing uploaded blob failed!", error);
 		}
+	}
+
+	/** Remove indexed blob from backend storage */
+	public boolean remove(String id) throws BWFLAException
+	{
+		final var blob = this.blob(id);
+		if (blob == null)
+			return false;
+
+		blob.remove();
+
+		// remove blob's record from index
+		return super.remove(id);
 	}
 
 
