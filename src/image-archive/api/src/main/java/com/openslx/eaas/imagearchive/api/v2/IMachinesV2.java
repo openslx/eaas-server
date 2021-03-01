@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.api.v2;
 
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
@@ -27,7 +28,8 @@ import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 public interface IMachinesV2 extends IListable,
 		IManyReadable<MachineConfiguration>,
-		IWritable<MachineConfiguration>
+		IWritable<MachineConfiguration>,
+		IDeletable
 {
 	// Empty!
 }

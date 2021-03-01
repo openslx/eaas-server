@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
@@ -61,6 +62,12 @@ public class MachinesV2 extends AbstractResourceRWM<MachineConfiguration>
 
 	@Override
 	protected IWritable<MachineConfiguration> writable()
+	{
+		return api;
+	}
+
+	@Override
+	protected IDeletable deletable()
 	{
 		return api;
 	}

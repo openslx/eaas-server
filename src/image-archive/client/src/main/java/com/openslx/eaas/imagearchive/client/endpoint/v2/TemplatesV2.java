@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
@@ -61,6 +62,12 @@ public class TemplatesV2 extends AbstractResourceRWM<MachineConfigurationTemplat
 
 	@Override
 	protected IWritable<MachineConfigurationTemplate> writable()
+	{
+		return api;
+	}
+
+	@Override
+	protected IDeletable deletable()
 	{
 		return api;
 	}

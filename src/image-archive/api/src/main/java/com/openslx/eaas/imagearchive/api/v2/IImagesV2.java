@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.api.v2;
 
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
@@ -28,7 +29,8 @@ import java.io.InputStream;
 
 public interface IImagesV2 extends IListable,
 		IReadable<InputStream>,
-		IWritable<InputStream>
+		IWritable<InputStream>,
+		IDeletable
 {
 	// Empty!
 }

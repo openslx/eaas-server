@@ -58,6 +58,18 @@ public abstract class BlobResource<T extends BlobDescriptor> extends AbstractRes
 	}
 
 
+	// ===== IDeletable API ==============================
+
+	public void delete(String id) throws BWFLAException
+	{
+		final var deleted = this.service()
+				.remove(id);
+
+		if (!deleted)
+			throw new NotFoundException();
+	}
+
+
 	// ===== Internal Helpers ==============================
 
 	protected abstract BlobService<T> service();

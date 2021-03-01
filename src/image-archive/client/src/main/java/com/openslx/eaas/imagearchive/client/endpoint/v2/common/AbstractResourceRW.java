@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -40,7 +41,17 @@ public abstract class AbstractResourceRW<T> extends AbstractResourceRO<T>
 	}
 
 
+	// ===== IDeletable API ==============================
+
+	public void delete(String id) throws BWFLAException
+	{
+		this.deletable()
+				.delete(id);
+	}
+
+
 	// ===== Internal Helpers ==============================
 
 	protected abstract IWritable<T> writable();
+	protected abstract IDeletable deletable();
 }

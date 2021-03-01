@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
@@ -54,6 +55,12 @@ public class ImagesV2 extends AbstractResourceRW<InputStream>
 
 	@Override
 	protected IWritable<InputStream> writable()
+	{
+		return api;
+	}
+
+	@Override
+	protected IDeletable deletable()
 	{
 		return api;
 	}

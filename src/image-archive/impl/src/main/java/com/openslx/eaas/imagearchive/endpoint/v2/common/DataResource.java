@@ -69,6 +69,18 @@ public abstract class DataResource<D, T extends DataRecord<D>> extends AbstractR
 	}
 
 
+	// ===== IDeletable API ==============================
+
+	public void delete(String id) throws BWFLAException
+	{
+		final var deleted = this.service()
+				.remove(id);
+
+		if (!deleted)
+			throw new NotFoundException();
+	}
+
+
 	// ===== Internal Helpers ==============================
 
 	protected abstract DataService<D, T> service();
