@@ -880,7 +880,6 @@ public class ImageHandler
 
 			if (md.getContainerDigest() == null) {
 				Path hashRefPath = metadata.resolve("repo-digest");
-				String hashRef = null;
 				try {
 					md.setContainerDigest(new String(Files.readAllBytes(hashRefPath)));
 				} catch (IOException e) {
