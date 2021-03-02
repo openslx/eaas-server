@@ -878,13 +878,15 @@ public class ImageHandler
 				return null;
 			}
 
-			Path hashRefPath = metadata.resolve("repo-digest");
-			String hashRef = null;
-			try {
-				md.setContainerDigest(new String(Files.readAllBytes(hashRefPath)));
-			} catch (IOException e) {
-				log.info("container ref not available");
-				return null;
+			if (md.getContainerDigest() == null) {
+				Path hashRefPath = metadata.resolve("repo-digest");
+				String hashRef = null;
+				try {
+					md.setContainerDigest(new String(Files.readAllBytes(hashRefPath)));
+				} catch (IOException e) {
+					log.info("container ref not available");
+					return null;
+				}
 			}
 
 			log.info("completing unmount");
