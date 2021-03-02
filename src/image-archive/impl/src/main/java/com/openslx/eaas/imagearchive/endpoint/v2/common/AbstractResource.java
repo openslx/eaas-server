@@ -20,7 +20,11 @@
 package com.openslx.eaas.imagearchive.endpoint.v2.common;
 
 import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.FilterOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ListOptionsV2;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
+import com.openslx.eaas.imagearchive.indexing.FilterOptions;
 import com.openslx.eaas.imagearchive.service.AbstractService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -32,10 +36,10 @@ public abstract class AbstractResource<T extends BlobDescriptor>
 {
 	// ===== IListable API ==============================
 
-	public long count()
+	public long count(CountOptionsV2 options)
 	{
 		return this.service()
-				.count();
+				.count(AbstractResource.convert(options));
 	}
 
 	public void exists(String id) throws BWFLAException
@@ -47,10 +51,10 @@ public abstract class AbstractResource<T extends BlobDescriptor>
 			throw new NotFoundException();
 	}
 
-	public Response list(int offset, int limit) throws BWFLAException
+	public Response list(ListOptionsV2 options) throws BWFLAException
 	{
 		final var result = this.service()
-				.list(offset, limit)
+				.list(AbstractResource.convert(options), options.offset(), options.limit())
 				.map(T::name);
 
 		return Response.ok(Streamable.of(result))
@@ -61,4 +65,12 @@ public abstract class AbstractResource<T extends BlobDescriptor>
 	// ===== Internal Helpers ==============================
 
 	protected abstract AbstractService<T> service();
+
+	public static FilterOptions convert(FilterOptionsV2<?> options)
+	{
+		return new FilterOptions()
+				.setLocation(options.location())
+				.setFromTime(options.from())
+				.setUntilTime(options.until());
+	}
 }

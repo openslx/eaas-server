@@ -17,24 +17,46 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2.common;
-
-import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.SecuredInternal;
-import org.jboss.resteasy.annotations.Form;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+package com.openslx.eaas.imagearchive.indexing;
 
 
-public interface IManyReadable<T> extends IReadable<T>
+public class FilterOptions
 {
-	@GET
-	@Path("/all")
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	Response fetch(@Form FetchOptionsV2 options) throws BWFLAException;
+	private String location;
+	private long fromts = -1L;
+	private long untilts = -1L;
+
+
+	public FilterOptions setLocation(String location)
+	{
+		this.location = location;
+		return this;
+	}
+
+	public String location()
+	{
+		return location;
+	}
+
+	public FilterOptions setFromTime(long timestamp)
+	{
+		this.fromts = timestamp;
+		return this;
+	}
+
+	public long from()
+	{
+		return fromts;
+	}
+
+	public FilterOptions setUntilTime(long timestamp)
+	{
+		this.untilts = timestamp;
+		return this;
+	}
+
+	public long until()
+	{
+		return untilts;
+	}
 }

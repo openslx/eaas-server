@@ -23,6 +23,9 @@ import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ListOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportFailureV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportSourceV2;
@@ -55,7 +58,7 @@ public class ImportsV2 implements IImportsV2
 	// ===== IListable API ==============================
 
 	@Override
-	public long count()
+	public long count(CountOptionsV2 options)
 	{
 		return service.count();
 	}
@@ -69,9 +72,9 @@ public class ImportsV2 implements IImportsV2
 	}
 
 	@Override
-	public Response list(int offset, int limit) throws BWFLAException
+	public Response list(ListOptionsV2 options) throws BWFLAException
 	{
-		final var result = service.list(offset, limit);
+		final var result = service.list(options.offset(), options.limit());
 		return Response.ok(Streamable.of(result))
 				.build();
 	}
@@ -90,9 +93,9 @@ public class ImportsV2 implements IImportsV2
 	}
 
 	@Override
-	public Response fetch(int offset, int limit) throws BWFLAException
+	public Response fetch(FetchOptionsV2 options) throws BWFLAException
 	{
-		final var response = service.fetch(offset, limit)
+		final var response = service.fetch(options.offset(), options.limit())
 				.map(ImportsV2::convert);
 
 		return Response.ok(Streamable.of(response))

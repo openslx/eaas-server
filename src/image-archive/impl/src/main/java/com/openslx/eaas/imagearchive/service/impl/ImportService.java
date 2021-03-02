@@ -428,8 +428,8 @@ public class ImportService
 					.lookup(target.kind());
 
 			if (target.name() != null)
-				service.upload(target.name(), data, size);
-			else target.setName(service.upload(data, size));
+				service.upload(target.location(), target.name(), data, size);
+			else target.setName(service.upload(target.location(), data, size));
 		}
 	}
 

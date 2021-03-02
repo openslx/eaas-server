@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
@@ -45,12 +46,12 @@ public class ImportsV2 extends AbstractResourceRO<ImportStatusV2>
 
 	public Streamable<ImportStatusV2> fetch() throws BWFLAException
 	{
-		return this.fetch(0, Integer.MAX_VALUE);
+		return this.fetch((FetchOptionsV2) null);
 	}
 
-	public Streamable<ImportStatusV2> fetch(int offset, int limit) throws BWFLAException
+	public Streamable<ImportStatusV2> fetch(FetchOptionsV2 options) throws BWFLAException
 	{
-		final var response = api.fetch(offset, limit);
+		final var response = api.fetch(options);
 		return Streamable.of(response, ImportStatusV2.class);
 	}
 

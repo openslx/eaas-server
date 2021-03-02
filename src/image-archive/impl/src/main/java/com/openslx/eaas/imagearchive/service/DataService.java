@@ -23,6 +23,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
+import com.openslx.eaas.imagearchive.indexing.FilterOptions;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -34,25 +35,40 @@ public abstract class DataService<D, T extends DataRecord<D>> extends BlobServic
 	/** Insert a new record into service */
 	public String insert(D data) throws BWFLAException
 	{
-		return this.update(null, data);
+		return this.insert(UNKNOWN_LOCATION, data);
+	}
+
+	/** Insert new record into service */
+	public String insert(String location, D data) throws BWFLAException
+	{
+		return this.update(location, null, data);
 	}
 
 	/** Replace record with given data */
 	public void replace(String id, D data) throws BWFLAException
 	{
-		this.update(id, data);
+		this.replace(UNKNOWN_LOCATION, id, data);
+	}
+
+	/** Replace record with given data */
+	public void replace(String location, String id, D data) throws BWFLAException
+	{
+		this.update(location, id, data);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	protected DataService(StorageRegistry storage, BlobIndex<T> index, IdentifierFilter idfilter)
+	protected DataService(StorageRegistry storage, BlobIndex<T> index, Filter<String> idfilter, Filter<FilterOptions> optfilter)
 	{
-		super(storage, index, idfilter);
+		super(storage, index, idfilter, optfilter);
 	}
 
-	private String update(String id, D data) throws BWFLAException
+	protected String update(String location, String id, D data) throws BWFLAException
 	{
+		if (id == null)
+			id = this.nextid();
+
 		try {
 			// upload serialized data to backend storage...
 			final var bytes = DataUtils.json()
@@ -60,10 +76,7 @@ public abstract class DataService<D, T extends DataRecord<D>> extends BlobServic
 					.writeValueAsBytes(data);
 
 			final var stream = new ByteArrayInputStream(bytes);
-			if (id == null)
-				id = this.upload(stream, stream.available());
-			else this.upload(id, stream, stream.available());
-
+			this.upload(location, id, stream, stream.available());
 			return id;
 		}
 		catch (JsonProcessingException error) {

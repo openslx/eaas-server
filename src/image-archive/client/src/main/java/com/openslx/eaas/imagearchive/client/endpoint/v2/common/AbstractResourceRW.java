@@ -21,6 +21,8 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
 import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
@@ -30,14 +32,24 @@ public abstract class AbstractResourceRW<T> extends AbstractResourceRO<T>
 
 	public String insert(T value) throws BWFLAException
 	{
+		return this.insert(value, null);
+	}
+
+	public String insert(T value, InsertOptionsV2 options) throws BWFLAException
+	{
 		return this.writable()
-				.insert(value);
+				.insert(value, options);
 	}
 
 	public void replace(String id, T value) throws BWFLAException
 	{
+		this.replace(id, value, null);
+	}
+
+	public void replace(String id, T value, ReplaceOptionsV2 options) throws BWFLAException
+	{
 		this.writable()
-				.replace(id, value);
+				.replace(id, value, options);
 	}
 
 

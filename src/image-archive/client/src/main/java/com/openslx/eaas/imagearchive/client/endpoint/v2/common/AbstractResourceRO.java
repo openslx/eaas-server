@@ -20,8 +20,10 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
 import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.ListOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
@@ -31,8 +33,13 @@ public abstract class AbstractResourceRO<T>
 
 	public long count() throws BWFLAException
 	{
+		return this.count(null);
+	}
+
+	public long count(CountOptionsV2 options) throws BWFLAException
+	{
 		return this.listable()
-				.count();
+				.count(options);
 	}
 
 	public boolean exists(String id)
@@ -50,13 +57,13 @@ public abstract class AbstractResourceRO<T>
 
 	public Streamable<String> list() throws BWFLAException
 	{
-		return this.list(0, Integer.MAX_VALUE);
+		return this.list(null);
 	}
 
-	public Streamable<String> list(int offset, int limit) throws BWFLAException
+	public Streamable<String> list(ListOptionsV2 options) throws BWFLAException
 	{
 		final var response = this.listable()
-				.list(offset, limit);
+				.list(options);
 
 		return Streamable.of(response, String.class);
 	}

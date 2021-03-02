@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.service;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
+import com.openslx.eaas.imagearchive.indexing.FilterOptions;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -33,15 +34,25 @@ import java.util.stream.Stream;
 public abstract class AbstractService<T> implements AutoCloseable
 {
 	private final Logger logger;
-	private final IdentifierFilter idfilter;
+	private final Filter<String> idfilter;
+	private final Filter<FilterOptions> optfilter;
 	private final BlobIndex<T> index;
+
+	public static final String UNKNOWN_LOCATION = null;
 
 
 	/** Count currently indexed records */
 	public long count()
 	{
-		return index.collection()
-				.count();
+		return this.count(null);
+	}
+
+	/** Count currently indexed records */
+	public long count(FilterOptions options)
+	{
+		final var collection = index.collection();
+		return (options == null) ? collection.count()
+				: collection.count(optfilter.apply(options));
 	}
 
 	/** List all indexed records */
@@ -55,9 +66,17 @@ public abstract class AbstractService<T> implements AutoCloseable
 	/** List all indexed records within given range */
 	public Stream<T> list(int offset, int limit) throws BWFLAException
 	{
-		return index.collection()
-				.list()
-				.skip(offset)
+		return this.list(null, offset, limit);
+	}
+
+	/** List all indexed records within given range */
+	public Stream<T> list(FilterOptions options, int offset, int limit) throws BWFLAException
+	{
+		final var collection = index.collection();
+		final var result = (options == null) ? collection.list()
+				: collection.find(optfilter.apply(options));
+
+		return result.skip(offset)
 				.limit(limit)
 				.stream();
 	}
@@ -90,15 +109,16 @@ public abstract class AbstractService<T> implements AutoCloseable
 
 	// ===== Internal Helpers ==============================
 
-	protected interface IdentifierFilter extends Function<String, DocumentCollection.Filter>
+	protected interface Filter<U> extends Function<U, DocumentCollection.Filter>
 	{
 		// Empty!
 	}
 
-	protected AbstractService(BlobIndex<T> index, IdentifierFilter idfilter)
+	protected AbstractService(BlobIndex<T> index, Filter<String> idfilter, Filter<FilterOptions> optfilter)
 	{
 		this.logger = ArchiveBackend.logger("service", index.name());
 		this.idfilter = idfilter;
+		this.optfilter = optfilter;
 		this.index = index;
 	}
 

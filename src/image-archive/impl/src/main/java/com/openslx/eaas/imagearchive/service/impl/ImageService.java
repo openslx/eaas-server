@@ -40,6 +40,6 @@ public class ImageService extends BlobService<ImageIndex.Record>
 
 	private ImageService(StorageRegistry storage, ImageIndex index)
 	{
-		super(storage, index, ImageIndex.Record::filter);
+		super(storage, index, ImageIndex.Record::filter, ImageIndex.Record::filter);
 	}
 }

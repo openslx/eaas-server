@@ -41,6 +41,7 @@ public class MachineService extends DataService<MachineConfiguration, MachineInd
 
 	private MachineService(StorageRegistry storage, MachineIndex index)
 	{
-		super(storage, index, MachineIndex.Record::filter);
+		super(storage, index, MachineIndex.Record::filter, MachineIndex.Record::filter);
+	}
 	}
 }

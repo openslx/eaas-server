@@ -86,6 +86,21 @@ public class BlobDescriptor
 				.eq(Fields.NAME, name);
 	}
 
+	public static DocumentCollection.Filter filter(FilterOptions options)
+	{
+		final var filter = DocumentCollection.filter();
+		if (options.location() != null)
+			filter.eq(Fields.LOCATION, options.location());
+
+		if (options.from() > 0L)
+			filter.gte(Fields.MTIME, options.from());
+
+		if (options.until() > 0L)
+			filter.lt(Fields.MTIME, options.until());
+
+		return filter;
+	}
+
 	public static <T extends BlobDescriptor> void index(DocumentCollection<T> entries)
 			throws BWFLAException
 	{

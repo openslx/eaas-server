@@ -41,6 +41,7 @@ public class TemplateService extends DataService<MachineConfigurationTemplate, T
 
 	private TemplateService(StorageRegistry storage, TemplateIndex index)
 	{
-		super(storage, index, TemplateIndex.Record::filter);
+		super(storage, index, TemplateIndex.Record::filter, TemplateIndex.Record::filter);
+	}
 	}
 }

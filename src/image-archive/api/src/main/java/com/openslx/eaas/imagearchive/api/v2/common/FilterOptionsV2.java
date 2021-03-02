@@ -19,34 +19,38 @@
 
 package com.openslx.eaas.imagearchive.api.v2.common;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.SecuredInternal;
-import org.jboss.resteasy.annotations.Form;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.QueryParam;
 
 
-public interface IListable
+public class FilterOptionsV2<T extends FilterOptionsV2<T>>
+	extends BasicOptionsV2<T>
 {
-	@GET
-	@Path("/all/count")
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	long count(@Form CountOptionsV2 options) throws BWFLAException;
+	@QueryParam("from-time")
+	private long fromts = 0L;
 
-	@HEAD
-	@Path("/{id}")
-	@SecuredInternal
-	void exists(@PathParam("id") String id) throws BWFLAException;
+	@QueryParam("until-time")
+	private long untilts = 0L;
 
-	@GET
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	Response list(@Form ListOptionsV2 options) throws BWFLAException;
+
+	public T setFromTime(long timestamp)
+	{
+		this.fromts = timestamp;
+		return (T) this;
+	}
+
+	public long from()
+	{
+		return fromts;
+	}
+
+	public T setUntilTime(long timestamp)
+	{
+		this.untilts = timestamp;
+		return (T) this;
+	}
+
+	public long until()
+	{
+		return untilts;
+	}
 }

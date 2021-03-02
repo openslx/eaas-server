@@ -19,6 +19,8 @@
 
 package com.openslx.eaas.imagearchive.endpoint.v2.common;
 
+import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.service.BlobService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -45,16 +47,16 @@ public abstract class BlobResource<T extends BlobDescriptor> extends AbstractRes
 
 	// ===== IWritable API ==============================
 
-	public String insert(InputStream value) throws BWFLAException
+	public String insert(InputStream value, InsertOptionsV2 options) throws BWFLAException
 	{
 		return this.service()
-				.upload(value);
+				.upload(options.location(), value);
 	}
 
-	public void replace(String id, InputStream value) throws BWFLAException
+	public void replace(String id, InputStream value, ReplaceOptionsV2 options) throws BWFLAException
 	{
 		this.service()
-				.upload(id, value);
+				.upload(options.location(), id, value, BlobService.UNKNOWN_SIZE);
 	}
 
 

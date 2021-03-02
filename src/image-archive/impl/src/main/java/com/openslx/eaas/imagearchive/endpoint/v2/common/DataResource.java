@@ -20,6 +20,9 @@
 package com.openslx.eaas.imagearchive.endpoint.v2.common;
 
 import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
 import com.openslx.eaas.imagearchive.service.DataService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -43,10 +46,10 @@ public abstract class DataResource<D, T extends DataRecord<D>> extends AbstractR
 		return result.data();
 	}
 
-	public Response fetch(int offset, int limit) throws BWFLAException
+	public Response fetch(FetchOptionsV2 options) throws BWFLAException
 	{
 		final var result = this.service()
-				.list(offset, limit)
+				.list(DataResource.convert(options), options.offset(), options.limit())
 				.map(T::data);
 
 		return Response.ok(Streamable.of(result))
@@ -56,16 +59,16 @@ public abstract class DataResource<D, T extends DataRecord<D>> extends AbstractR
 
 	// ===== IWritable API ==============================
 
-	public String insert(D value) throws BWFLAException
+	public String insert(D value, InsertOptionsV2 options) throws BWFLAException
 	{
 		return this.service()
-				.insert(value);
+				.insert(options.location(), value);
 	}
 
-	public void replace(String id, D value) throws BWFLAException
+	public void replace(String id, D value, ReplaceOptionsV2 options) throws BWFLAException
 	{
 		this.service()
-				.replace(id, value);
+				.replace(options.location(), id, value);
 	}
 
 

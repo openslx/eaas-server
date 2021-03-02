@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.api.v2.common;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
+import org.jboss.resteasy.annotations.Form;
 
 import javax.ws.rs.Consumes;
 import javax.ws.rs.POST;
@@ -40,7 +41,7 @@ public interface IWritable<T>
 			MediaType.APPLICATION_JSON,
 			MediaType.APPLICATION_OCTET_STREAM
 	})
-	String insert(T value) throws BWFLAException;
+	String insert(T value, @Form InsertOptionsV2 options) throws BWFLAException;
 
 	@PUT
 	@Path("/{id}")
@@ -49,5 +50,5 @@ public interface IWritable<T>
 			MediaType.APPLICATION_JSON,
 			MediaType.APPLICATION_OCTET_STREAM
 	})
-	void replace(@PathParam("id") String id, T value) throws BWFLAException;
+	void replace(@PathParam("id") String id, T value, @Form ReplaceOptionsV2 options) throws BWFLAException;
 }

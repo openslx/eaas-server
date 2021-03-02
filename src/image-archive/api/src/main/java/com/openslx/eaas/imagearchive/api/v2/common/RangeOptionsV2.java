@@ -19,34 +19,38 @@
 
 package com.openslx.eaas.imagearchive.api.v2.common;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.SecuredInternal;
-import org.jboss.resteasy.annotations.Form;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
+import javax.ws.rs.QueryParam;
 
 
-public interface IListable
+public class RangeOptionsV2<T extends RangeOptionsV2<T>>
+		extends FilterOptionsV2<T>
 {
-	@GET
-	@Path("/all/count")
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	long count(@Form CountOptionsV2 options) throws BWFLAException;
+	@QueryParam("offset")
+	private int offset = 0;
 
-	@HEAD
-	@Path("/{id}")
-	@SecuredInternal
-	void exists(@PathParam("id") String id) throws BWFLAException;
+	@QueryParam("limit")
+	private int limit = Integer.MAX_VALUE;
 
-	@GET
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	Response list(@Form ListOptionsV2 options) throws BWFLAException;
+
+	public T setOffset(int offset)
+	{
+		this.offset = offset;
+		return (T) this;
+	}
+
+	public int offset()
+	{
+		return offset;
+	}
+
+	public T setLimit(int limit)
+	{
+		this.limit = limit;
+		return (T) this;
+	}
+
+	public int limit()
+	{
+		return limit;
+	}
 }

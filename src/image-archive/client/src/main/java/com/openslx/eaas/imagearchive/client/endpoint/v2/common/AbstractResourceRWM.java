@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
 import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -33,13 +34,13 @@ public abstract class AbstractResourceRWM<T> extends AbstractResourceRW<T>
 
 	public Streamable<T> fetch() throws BWFLAException
 	{
-		return this.fetch(0, Integer.MAX_VALUE);
+		return this.fetch((FetchOptionsV2) null);
 	}
 
-	public Streamable<T> fetch(int offset, int limit) throws BWFLAException
+	public Streamable<T> fetch(FetchOptionsV2 options) throws BWFLAException
 	{
 		final var response = this.manyreadable()
-				.fetch(offset, limit);
+				.fetch(options);
 
 		return Streamable.of(response, clazz);
 	}

@@ -19,34 +19,8 @@
 
 package com.openslx.eaas.imagearchive.api.v2.common;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.SecuredInternal;
-import org.jboss.resteasy.annotations.Form;
 
-import javax.ws.rs.GET;
-import javax.ws.rs.HEAD;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
-import javax.ws.rs.core.Response;
-
-
-public interface IListable
+public class CountOptionsV2 extends FilterOptionsV2<CountOptionsV2>
 {
-	@GET
-	@Path("/all/count")
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	long count(@Form CountOptionsV2 options) throws BWFLAException;
-
-	@HEAD
-	@Path("/{id}")
-	@SecuredInternal
-	void exists(@PathParam("id") String id) throws BWFLAException;
-
-	@GET
-	@SecuredInternal
-	@Produces(MediaType.APPLICATION_JSON)
-	Response list(@Form ListOptionsV2 options) throws BWFLAException;
+	// Empty!
 }

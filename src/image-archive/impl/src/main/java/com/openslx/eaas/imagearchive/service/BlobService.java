@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.service;
 
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
+import com.openslx.eaas.imagearchive.indexing.FilterOptions;
 import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.blobstore.Blob;
@@ -35,6 +36,8 @@ import java.util.UUID;
 public abstract class BlobService<T extends BlobDescriptor> extends AbstractService<T>
 {
 	private final StorageRegistry storage;
+
+	public static final long UNKNOWN_SIZE = -1L;
 
 
 	/** Look up blob for given ID */
@@ -65,34 +68,48 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 	/** Upload a new blob to backend storage */
 	public String upload(InputStream data) throws BWFLAException
 	{
-		return this.upload(data, -1L);
+		return this.upload(data, UNKNOWN_SIZE);
 	}
 
 	/** Upload a new blob to backend storage */
 	public String upload(InputStream data, long size) throws BWFLAException
 	{
-		final var id = UUID.randomUUID()
-				.toString();
+		return this.upload(UNKNOWN_LOCATION, data, size);
+	}
 
-		this.upload(id, data, size);
+	/** Upload new blob to given storage location */
+	public String upload(String location, InputStream data) throws BWFLAException
+	{
+		return this.upload(location, data, UNKNOWN_SIZE);
+	}
+
+	/** Upload new blob to given storage location */
+	public String upload(String location, InputStream data, long size) throws BWFLAException
+	{
+		final var id = this.nextid();
+		this.upload(location, id, data, size);
 		return id;
 	}
 
-	/** Upload blob with given ID to backend storage */
-	public void upload(String id, InputStream data) throws BWFLAException
+	/** Upload blob with given ID to storage location */
+	public void upload(String locname, String id, InputStream data, long size) throws BWFLAException
 	{
-		this.upload(id, data, -1L);
-	}
+		if (id == null)
+			throw new IllegalArgumentException("Invalid blob ID!");
 
-	/** Upload blob with given ID to backend storage */
-	public void upload(String id, InputStream data, long size) throws BWFLAException
-	{
 		// NOTE: upload given data to blob's storage location if known,
 		//       else just use default storage location from config!
 
 		final var descriptor = this.lookup(id);
-		final var locname = (descriptor != null) ? descriptor.location()
+		final var curlocname = (descriptor != null) ? descriptor.location()
 				: storage.config().getDefaultLocation();
+
+		if (locname == null)
+			locname = curlocname;
+
+		// should blob's location change?
+		if (!locname.equals(curlocname))
+			this.remove(id);
 
 		final var location = this.location(locname);
 		final var path = this.path(location, id);
@@ -133,9 +150,9 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 
 	// ===== Internal Helpers ==============================
 
-	protected BlobService(StorageRegistry storage, BlobIndex<T> index, IdentifierFilter idfilter)
+	protected BlobService(StorageRegistry storage, BlobIndex<T> index, Filter<String> idfilter, Filter<FilterOptions> optfilter)
 	{
-		super(index, idfilter);
+		super(index, idfilter, optfilter);
 		this.storage = storage;
 	}
 
@@ -157,5 +174,12 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 		return location.config()
 				.getPathPrefix(this.kind())
 				.resolve(blob);
+	}
+
+	/** Generate new blob ID */
+	protected String nextid()
+	{
+		return UUID.randomUUID()
+			.toString();
 	}
 }
