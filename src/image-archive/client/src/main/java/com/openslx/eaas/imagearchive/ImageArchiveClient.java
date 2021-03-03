@@ -31,10 +31,12 @@ import javax.ws.rs.core.HttpHeaders;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
+import java.util.logging.Logger;
 
 
 public class ImageArchiveClient implements Closeable
 {
+	private final Logger logger;
 	private final ImageArchiveApi proxy;
 	private final ImageArchive api;
 
@@ -42,6 +44,11 @@ public class ImageArchiveClient implements Closeable
 	public ImageArchive api()
 	{
 		return api;
+	}
+
+	public Logger logger()
+	{
+		return logger;
 	}
 
 	@Override
@@ -71,8 +78,9 @@ public class ImageArchiveClient implements Closeable
 
 	private ImageArchiveClient(ImageArchiveApi proxy)
 	{
+		this.logger = Logger.getLogger("IMAGE-ARCHIVE-CLIENT");
 		this.proxy = proxy;
-		this.api = new ImageArchive(proxy);
+		this.api = new ImageArchive(proxy, logger);
 	}
 
 	private static class AuthFilter implements ClientRequestFilter

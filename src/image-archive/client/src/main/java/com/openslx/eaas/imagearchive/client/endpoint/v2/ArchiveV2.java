@@ -21,6 +21,8 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 
+import java.util.logging.Logger;
+
 
 public class ArchiveV2
 {
@@ -30,13 +32,18 @@ public class ArchiveV2
 	private final ImportsV2 imports;
 	private final StorageV2 storage;
 
-	public ArchiveV2(IArchiveV2 api)
+	// virtual endpoints
+	private final EnvironmentsV2 environments;
+
+
+	public ArchiveV2(IArchiveV2 api, Logger logger)
 	{
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
 		this.images = new ImagesV2(api.images());
 		this.imports = new ImportsV2(api.imports());
 		this.storage = new StorageV2(api.storage());
+		this.environments = new EnvironmentsV2(this, logger);
 	}
 
 
@@ -65,5 +72,10 @@ public class ArchiveV2
 	public StorageV2 storage()
 	{
 		return storage;
+	}
+
+	public EnvironmentsV2 environments()
+	{
+		return environments;
 	}
 }

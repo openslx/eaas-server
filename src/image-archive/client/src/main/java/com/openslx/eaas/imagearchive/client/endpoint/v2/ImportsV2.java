@@ -25,11 +25,14 @@ import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.ImportStateV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportStatusV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRO;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 
 public class ImportsV2 extends AbstractResourceRO<ImportStatusV2>
@@ -69,6 +72,27 @@ public class ImportsV2 extends AbstractResourceRO<ImportStatusV2>
 	{
 		return api.watch(id)
 				.toCompletableFuture();
+	}
+
+	/** Submit import-request and wait for result or timeout */
+	public String await(ImportRequestV2 request, long timeout, TimeUnit unit) throws Exception
+	{
+		final var taskid = this.insert(request);
+		try {
+			final var status = this.watch(taskid)
+					.get(timeout, unit);
+
+			if (status.state() != ImportStateV2.FINISHED)
+				throw new BWFLAException("Importing image failed!");
+
+			return status.target()
+					.name();
+		}
+		catch (TimeoutException error) {
+			// try to abort task!
+			this.delete(taskid);
+			throw error;
+		}
 	}
 
 
