@@ -435,20 +435,20 @@ public class EmilEnvironmentRepository {
 						LOG.severe("fix me");
 					}
 					p.setArchive(destArchive);
-					save(p, false);
+					save(p, false, userctx);
 					lastPrivateChild = p.getEnvId();
 					parent = p.getParentEnvId();
 				}
 				else // first parent in dest archive, connecting
 				{
 					p.addChildEnvId(lastPrivateChild);
-					save(p, false);
+					save(p, false, userctx);
 					parent  = null;
 				}
 			}
 		}
 		env.setArchive(destArchive);
-		save(env, false);
+		save(env, false, userctx);
 	}
 
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
