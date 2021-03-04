@@ -59,21 +59,21 @@ public class MachineConfiguration
     extends Environment
 {
 
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false, nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected String arch;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true , nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
     protected EmulatorSpec emulator;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false , nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected String model;
-    @XmlElement(name = "ui_options", namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    @XmlElement(name = "ui_options", namespace = "http://bwfla.bwl.de/common/datatypes")
     protected UiOptions uiOptions;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
     protected List<Drive> drive;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
     protected List<Nic> nic;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
     protected String outputBindingId;
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
     protected boolean isLinuxRuntime;
 
     @XmlElementRefs({
@@ -81,17 +81,17 @@ public class MachineConfiguration
   	 @XmlElementRef(name="objectArchiveBinding", type=ObjectArchiveBinding.class, namespace = "http://bwfla.bwl.de/common/datatypes")})
     protected List<AbstractDataResource> abstractDataResource;
 
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes")
     protected MachineConfiguration.NativeConfig nativeConfig;
 
     /*
      software environment
      */
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false , nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected String operatingSystemId;
 
     /** ID of the checkpoint binding */
-    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false, nillable = true)
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected String checkpointBindingId;
 
     // must only be used for serialization
