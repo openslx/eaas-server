@@ -30,6 +30,7 @@ public class ArchiveV2
 	private final TemplatesV2 templates;
 	private final CheckpointsV2 checkpoints;
 	private final ImagesV2 images;
+	private final RomsV2 roms;
 	private final ImportsV2 imports;
 	private final StorageV2 storage;
 
@@ -43,6 +44,7 @@ public class ArchiveV2
 		this.templates = new TemplatesV2(api.templates());
 		this.checkpoints = new CheckpointsV2(api.checkpoints());
 		this.images = new ImagesV2(api.images());
+		this.roms = new RomsV2(api.roms());
 		this.imports = new ImportsV2(api.imports());
 		this.storage = new StorageV2(api.storage());
 		this.environments = new EnvironmentsV2(this, logger);
@@ -69,6 +71,11 @@ public class ArchiveV2
 	public ImagesV2 images()
 	{
 		return images;
+	}
+
+	public RomsV2 roms()
+	{
+		return roms;
 	}
 
 	public ImportsV2 imports()

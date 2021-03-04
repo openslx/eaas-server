@@ -17,31 +17,29 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.service.impl;
 
-import javax.ws.rs.Path;
+import com.openslx.eaas.imagearchive.ArchiveBackend;
+import com.openslx.eaas.imagearchive.indexing.impl.RomIndex;
+import com.openslx.eaas.imagearchive.service.BlobService;
+import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 
 
-public interface IArchiveV2
+public class RomService extends BlobService<RomIndex.Record>
 {
-	@Path("/machines")
-	IMachinesV2 machines();
+	public static RomService create(ArchiveBackend backend)
+	{
+		final var index = backend.indexes()
+				.roms();
 
-	@Path("/templates")
-	ITemplatesV2 templates();
+		return new RomService(backend.storage(), index);
+	}
 
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
 
-	@Path("/images")
-	IImagesV2 images();
+	// ===== Internal Helpers ==============================
 
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	private RomService(StorageRegistry storage, RomIndex index)
+	{
+		super(storage, index, RomIndex.Record::filter, RomIndex.Record::filter);
+	}
 }

@@ -26,6 +26,7 @@ import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
+import com.openslx.eaas.imagearchive.indexing.impl.RomIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.TemplateIndex;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -83,6 +84,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.IMAGE, ImageIndex.class);
 	}
 
+	public RomIndex roms()
+	{
+		return this.lookup(BlobKind.ROM, RomIndex.class);
+	}
+
 	public ImportIndex imports()
 	{
 		return imports;
@@ -95,6 +101,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		registry.insert(new TemplateIndex());
 		registry.insert(new CheckpointIndex());
 		registry.insert(new ImageIndex());
+		registry.insert(new RomIndex());
 		registry.insert(new ImportIndex());
 		return registry;
 	}

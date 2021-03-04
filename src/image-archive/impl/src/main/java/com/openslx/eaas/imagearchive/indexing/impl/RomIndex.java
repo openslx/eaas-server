@@ -17,31 +17,23 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.indexing.impl;
 
-import javax.ws.rs.Path;
+import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
+import com.openslx.eaas.imagearchive.indexing.BlobIndex;
+import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 
 
-public interface IArchiveV2
+public class RomIndex extends BlobIndex<RomIndex.Record>
 {
-	@Path("/machines")
-	IMachinesV2 machines();
+	public static class Record extends BlobDescriptor
+	{
+		// Empty!
+	}
 
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	public RomIndex()
+	{
+		super(BlobKind.ROM, Record.class, Record::index, BlobIngestors.descriptors(Record::new));
+	}
 }

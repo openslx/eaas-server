@@ -26,6 +26,7 @@ import com.openslx.eaas.imagearchive.service.impl.CheckpointService;
 import com.openslx.eaas.imagearchive.service.impl.ImageService;
 import com.openslx.eaas.imagearchive.service.impl.ImportService;
 import com.openslx.eaas.imagearchive.service.impl.MachineService;
+import com.openslx.eaas.imagearchive.service.impl.RomService;
 import com.openslx.eaas.imagearchive.service.impl.TemplateService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -52,6 +53,11 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.IMAGE, ImageService.class);
 	}
 
+	public RomService roms()
+	{
+		return this.lookup(BlobKind.ROM, RomService.class);
+	}
+
 	public ImportService imports()
 	{
 		return imports;
@@ -64,6 +70,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		registry.insert(TemplateService.create(backend));
 		registry.insert(CheckpointService.create(backend));
 		registry.insert(ImageService.create(backend));
+		registry.insert(RomService.create(backend));
 		registry.insert(ImportService.create(backend));
 		return registry;
 	}

@@ -76,7 +76,8 @@ public class ImportTargetV2
 	public enum Kind
 	{
 		CHECKPOINT,
-		IMAGE;
+		IMAGE,
+		ROM;
 
 		@JsonValue
 		public String value()
@@ -93,6 +94,8 @@ public class ImportTargetV2
 					return CHECKPOINT;
 				case "image":
 					return IMAGE;
+				case "rom":
+					return ROM;
 				default:
 					throw new IllegalArgumentException();
 			}
