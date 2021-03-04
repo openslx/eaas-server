@@ -60,10 +60,6 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.createPatchedImage(archive, id, imageType, patchId);
     }
 
-    public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
-        return environmentsAdapter.getTemplate(id);
-    }
-
     @Deprecated
     public EnvironmentsAdapter.ImportImageHandle importImage(String archive, URL url, ImageArchiveMetadata iaMd, boolean b) throws BWFLAException {
         return environmentsAdapter.importImage(archive, url, iaMd, b);
@@ -130,10 +126,6 @@ public class DatabaseEnvironmentsAdapter {
 
     public TaskState importImage(URL ref, ImageArchiveMetadata iaMd, boolean deleteIfExists) throws BWFLAException {
         return environmentsAdapter.importImageAsync(ref, iaMd, deleteIfExists);
-    }
-
-    public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException, JAXBException {
-      return environmentsAdapter.getTemplates();
     }
 
     public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches() throws BWFLAException {

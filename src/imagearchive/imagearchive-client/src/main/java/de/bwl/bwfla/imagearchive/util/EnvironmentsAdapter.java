@@ -54,20 +54,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return archive.getEnvironments(backend, type);
 	}
 
-	public MachineConfigurationTemplate getTemplate(String id) throws BWFLAException {
-		return this.getTemplate(EMULATOR_DEFAULT_ARCHIVE, id);
-	}
-
-	public MachineConfigurationTemplate getTemplate(String backend, String id) throws BWFLAException {
-		List<MachineConfigurationTemplate> envs = this.getTemplates(backend);
-		for (MachineConfigurationTemplate e : envs) {
-			if (e.getId().equals(id))
-				return e;
-		}
-
-		return null;
-	}
-
 	public void sync() throws BWFLAException {
 		connectArchive();
 		Collection<String> archives = listBackendNames();
@@ -80,47 +66,9 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		archive.reload(backend);
 	}
 
-	public List<MachineConfigurationTemplate> getTemplates() throws BWFLAException {
-		archive.reload(EMULATOR_DEFAULT_ARCHIVE);
-		return this.getTemplates(EMULATOR_DEFAULT_ARCHIVE);
-	}
-
 	public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches() throws BWFLAException {
 		connectArchive();
 		return archive.getImageGeneralizationPatches();
-	}
-
-	public List<MachineConfigurationTemplate> getTemplates(String backend) throws BWFLAException {
-		connectArchive();
-
-		List<MachineConfigurationTemplate> _templates = new ArrayList<MachineConfigurationTemplate>();
-		List<String> envlist = archive.getEnvironments(backend, "template");
-
-		for (String env : envlist) {
-			try {
-				MachineConfigurationTemplate emuEnv = MachineConfigurationTemplate.fromValue(env);
-				if (emuEnv == null)
-					continue;
-
-				if (emuEnv.getEmulator() == null) {
-					log.info("no emu " + emuEnv.getDescription().getTitle());
-					continue;
-				}
-
-				if (emuEnv.getDescription() == null) {
-					log.info("DescriptionTag is mandatory: " + emuEnv.getId());
-					continue;
-				}
-				_templates.add(emuEnv);
-			} catch (Throwable t) {
-				log.info("loadTemplates2: failed to parse environment: " + t.getMessage());
-				log.info(env);
-				log.log(Level.SEVERE, t.getMessage(), t);
-			}
-		}
-
-		log.info("found " + _templates.size() + " templates");
-		return _templates;
 	}
 
 	public Environment getEnvironmentById(String id) throws BWFLAException {

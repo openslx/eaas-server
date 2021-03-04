@@ -21,6 +21,7 @@ package de.bwl.bwfla.emil;
 
 import com.fasterxml.jackson.core.JsonFactory;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -57,6 +58,7 @@ import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.Json;
@@ -74,6 +76,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
@@ -82,6 +85,8 @@ import java.util.stream.Stream;
 @Path("/environment-repository")
 public class EnvironmentRepository extends EmilRest
 {
+	private ImageArchiveClient imagearchive = null;
+
 	@Inject
 	private DatabaseEnvironmentsAdapter envdb = null;
 
@@ -117,12 +122,24 @@ public class EnvironmentRepository extends EmilRest
 	private void initialize()
 	{
 		try {
+			imagearchive = ImageArchiveClient.create();
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
-
 		}
-		catch (IllegalArgumentException error) {
-			LOG.log(Level.WARNING, "Initializing image-proposer failed!", error);
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
+		}
+	}
+
+	@PreDestroy
+	private void destroy()
+	{
+		try {
+			if (imagearchive != null)
+				imagearchive.close();
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Closing image-archive client failed!", error);
 		}
 	}
 
@@ -379,8 +396,12 @@ public class EnvironmentRepository extends EmilRest
 				return EnvironmentRepository.errorMessageResponse("invalid template id");
 
 			try {
-				MachineConfiguration pEnv = envdb.getTemplate(envReq.getTemplateId());
-				if (pEnv == null) {
+				final var template = imagearchive.api()
+						.v2()
+						.templates()
+						.fetch(envReq.getTemplateId());
+
+				if (template == null) {
 					LOG.severe("invalid template id: " + envReq.getTemplateId());
 					throw new BadRequestException(Response
 							.status(Response.Status.BAD_REQUEST)
@@ -390,7 +411,7 @@ public class EnvironmentRepository extends EmilRest
 
 
 
-				MachineConfiguration env = pEnv.copy(); // don't modify the real template
+				MachineConfiguration env = template.copy(); // don't modify the real template
 				LOG.severe(env.toString());
 				env.getDescription().setTitle(envReq.getLabel());
 				if (env.getNativeConfig() == null)
@@ -887,20 +908,25 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Listing environment templates...");
 			try {
+				final var templates = imagearchive.api()
+						.v2()
+						.templates()
+						.fetch();
+
 				if(compat.equals("newStyle")) {
-					List<MachineConfigurationTemplate> templates = envdb.getTemplates();
 					return Response.status(Status.OK)
 							.entity(templates)
 							.build();
 				}
 				else {
-					try {
+					try (templates) {
 						final StringWriter output = new StringWriter();
 						final JsonGenerator json = Json.createGenerator(output);
 						json.writeStartObject();
 						json.write("status", "0");
 						json.writeStartArray("systems");
-						for (MachineConfiguration machine : envdb.getTemplates()) {
+
+						final Consumer<MachineConfiguration> writer = (machine) -> {
 							json.writeStartObject();
 							json.write("id", machine.getId());
 							json.write("label", machine.getDescription().getTitle());
@@ -926,7 +952,10 @@ public class EnvironmentRepository extends EmilRest
 
 							json.writeEnd();
 							json.writeEnd();
-						}
+						};
+
+						templates.stream()
+								.forEach(writer);
 
 						json.writeEnd();
 						json.writeEnd();

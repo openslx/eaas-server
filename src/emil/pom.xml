@@ -45,6 +45,11 @@
 			<artifactId>imagearchive-client</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.openslx.eaas</groupId>
+			<artifactId>image-archive-client</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>de.bwl.bwfla</groupId>
 			<artifactId>softwarearchive-client</artifactId>
 		</dependency>
