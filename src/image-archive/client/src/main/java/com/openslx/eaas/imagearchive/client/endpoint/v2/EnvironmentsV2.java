@@ -35,6 +35,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.BindingDataHandler;
+import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 import de.bwl.bwfla.emucomp.api.EmulationEnvironmentHelper;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
@@ -68,6 +69,7 @@ public class EnvironmentsV2
 
 		// initialize compatible resources
 		resources.add(archive.machines());
+		resources.add(archive.containers());
 	}
 
 
@@ -175,6 +177,10 @@ public class EnvironmentsV2
 			return archive.machines()
 					.insert((MachineConfiguration) environment, options);
 		}
+		else if (environment.getClass() == ContainerConfiguration.class) {
+			return archive.containers()
+					.insert((ContainerConfiguration) environment, options);
+		}
 
 		throw EnvironmentsV2.unsupported(environment);
 	}
@@ -189,6 +195,10 @@ public class EnvironmentsV2
 		if (environment.getClass() == MachineConfiguration.class) {
 			archive.machines()
 					.replace(id, (MachineConfiguration) environment, options);
+		}
+		else if (environment.getClass() == ContainerConfiguration.class) {
+			archive.containers()
+					.replace(id, (ContainerConfiguration) environment);
 		}
 
 		throw EnvironmentsV2.unsupported(environment);

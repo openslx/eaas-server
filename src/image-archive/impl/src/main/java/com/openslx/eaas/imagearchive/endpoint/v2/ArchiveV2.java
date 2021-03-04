@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.ICheckpointsV2;
+import com.openslx.eaas.imagearchive.api.v2.IContainersV2;
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
@@ -35,6 +36,9 @@ import javax.inject.Inject;
 @ApplicationScoped
 public class ArchiveV2 implements IArchiveV2
 {
+	@Inject
+	private ContainersV2 containers;
+
 	@Inject
 	private MachinesV2 machines;
 
@@ -58,6 +62,12 @@ public class ArchiveV2 implements IArchiveV2
 
 
 	// ===== Public API ==============================
+
+	@Override
+	public IContainersV2 containers()
+	{
+		return containers;
+	}
 
 	@Override
 	public IMachinesV2 machines()

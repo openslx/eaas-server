@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
+import com.openslx.eaas.imagearchive.indexing.impl.ContainerIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
@@ -64,6 +65,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this;
 	}
 
+	public ContainerIndex containers()
+	{
+		return this.lookup(BlobKind.CONTAINER, ContainerIndex.class);
+	}
+
 	public MachineIndex machines()
 	{
 		return this.lookup(BlobKind.MACHINE, MachineIndex.class);
@@ -97,6 +103,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 	public static IndexRegistry create() throws BWFLAException
 	{
 		final var registry = new IndexRegistry();
+		registry.insert(new ContainerIndex());
 		registry.insert(new MachineIndex());
 		registry.insert(new TemplateIndex());
 		registry.insert(new CheckpointIndex());

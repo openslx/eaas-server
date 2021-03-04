@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 
 public class ArchiveV2
 {
+	private final ContainersV2 containers;
 	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
 	private final CheckpointsV2 checkpoints;
@@ -40,6 +41,7 @@ public class ArchiveV2
 
 	public ArchiveV2(IArchiveV2 api, Logger logger)
 	{
+		this.containers = new ContainersV2(api.containers());
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
 		this.checkpoints = new CheckpointsV2(api.checkpoints());
@@ -52,6 +54,11 @@ public class ArchiveV2
 
 
 	// ===== Public API ==============================
+
+	public ContainersV2 containers()
+	{
+		return containers;
+	}
 
 	public MachinesV2 machines()
 	{

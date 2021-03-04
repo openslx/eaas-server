@@ -17,52 +17,19 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive;
+package com.openslx.eaas.imagearchive.api.v2;
+
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 
 
-public enum BlobKind
+public interface IContainersV2 extends IListable,
+		IManyReadable<ContainerConfiguration>,
+		IWritable<ContainerConfiguration>,
+		IDeletable
 {
-	MACHINE,
-	CONTAINER,
-	EMULATOR,
-	TEMPLATE,
-	CHECKPOINT,
-	IMAGE,
-	ROM;
-
-	public String value()
-	{
-		return this.name()
-				.toLowerCase();
-	}
-
-	public static BlobKind from(String kind)
-	{
-		switch (kind) {
-			case "machine":
-				return BlobKind.MACHINE;
-			case "container":
-				return BlobKind.CONTAINER;
-			case "emulator":
-				return BlobKind.EMULATOR;
-			case "template":
-				return BlobKind.TEMPLATE;
-			case "checkpoint":
-				return BlobKind.CHECKPOINT;
-			case "image":
-				return BlobKind.IMAGE;
-			case "rom":
-				return BlobKind.ROM;
-			default:
-				throw new IllegalArgumentException();
-		}
-	}
-
-	/** Return number of blob-kinds */
-	public static int count()
-	{
-		return COUNT;
-	}
-
-	private static final int COUNT = BlobKind.values().length;
+	// Empty!
 }

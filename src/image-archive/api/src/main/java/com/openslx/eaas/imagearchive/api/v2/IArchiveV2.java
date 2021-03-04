@@ -24,6 +24,9 @@ import javax.ws.rs.Path;
 
 public interface IArchiveV2
 {
+	@Path("/containers")
+	IContainersV2 containers();
+
 	@Path("/machines")
 	IMachinesV2 machines();
 
