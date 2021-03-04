@@ -30,6 +30,9 @@ public interface IArchiveV2
 	@Path("/templates")
 	ITemplatesV2 templates();
 
+	@Path("/checkpoints")
+	ICheckpointsV2 checkpoints();
+
 	@Path("/images")
 	IImagesV2 images();
 

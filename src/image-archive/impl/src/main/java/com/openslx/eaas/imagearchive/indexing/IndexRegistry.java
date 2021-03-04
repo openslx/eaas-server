@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.indexing;
 import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
@@ -72,6 +73,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.TEMPLATE, TemplateIndex.class);
 	}
 
+	public CheckpointIndex checkpoints()
+	{
+		return this.lookup(BlobKind.CHECKPOINT, CheckpointIndex.class);
+	}
+
 	public ImageIndex images()
 	{
 		return this.lookup(BlobKind.IMAGE, ImageIndex.class);
@@ -87,6 +93,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		final var registry = new IndexRegistry();
 		registry.insert(new MachineIndex());
 		registry.insert(new TemplateIndex());
+		registry.insert(new CheckpointIndex());
 		registry.insert(new ImageIndex());
 		registry.insert(new ImportIndex());
 		return registry;

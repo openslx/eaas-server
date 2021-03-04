@@ -17,49 +17,29 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive;
+package com.openslx.eaas.imagearchive.service.impl;
+
+import com.openslx.eaas.imagearchive.ArchiveBackend;
+import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
+import com.openslx.eaas.imagearchive.service.BlobService;
+import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 
 
-public enum BlobKind
+public class CheckpointService extends BlobService<CheckpointIndex.Record>
 {
-	MACHINE,
-	EMULATOR,
-	TEMPLATE,
-	CHECKPOINT,
-	IMAGE,
-	ROM;
-
-	public String value()
+	public static CheckpointService create(ArchiveBackend backend)
 	{
-		return this.name()
-				.toLowerCase();
+		final var index = backend.indexes()
+				.checkpoints();
+
+		return new CheckpointService(backend.storage(), index);
 	}
 
-	public static BlobKind from(String kind)
-	{
-		switch (kind) {
-			case "machine":
-				return BlobKind.MACHINE;
-			case "emulator":
-				return BlobKind.EMULATOR;
-			case "template":
-				return BlobKind.TEMPLATE;
-			case "checkpoint":
-				return BlobKind.CHECKPOINT;
-			case "image":
-				return BlobKind.IMAGE;
-			case "rom":
-				return BlobKind.ROM;
-			default:
-				throw new IllegalArgumentException();
-		}
-	}
 
-	/** Return number of blob-kinds */
-	public static int count()
-	{
-		return COUNT;
-	}
+	// ===== Internal Helpers ==============================
 
-	private static final int COUNT = BlobKind.values().length;
+	private CheckpointService(StorageRegistry storage, CheckpointIndex index)
+	{
+		super(storage, index, CheckpointIndex.Record::filter, CheckpointIndex.Record::filter);
+	}
 }

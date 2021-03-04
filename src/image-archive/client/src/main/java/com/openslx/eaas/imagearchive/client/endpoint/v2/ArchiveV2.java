@@ -28,6 +28,7 @@ public class ArchiveV2
 {
 	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
+	private final CheckpointsV2 checkpoints;
 	private final ImagesV2 images;
 	private final ImportsV2 imports;
 	private final StorageV2 storage;
@@ -40,6 +41,7 @@ public class ArchiveV2
 	{
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
+		this.checkpoints = new CheckpointsV2(api.checkpoints());
 		this.images = new ImagesV2(api.images());
 		this.imports = new ImportsV2(api.imports());
 		this.storage = new StorageV2(api.storage());
@@ -57,6 +59,11 @@ public class ArchiveV2
 	public TemplatesV2 templates()
 	{
 		return templates;
+	}
+
+	public CheckpointsV2 checkpoints()
+	{
+		return checkpoints;
 	}
 
 	public ImagesV2 images()

@@ -75,6 +75,7 @@ public class ImportTargetV2
 
 	public enum Kind
 	{
+		CHECKPOINT,
 		IMAGE;
 
 		@JsonValue
@@ -88,6 +89,8 @@ public class ImportTargetV2
 		public static Kind from(String kind)
 		{
 			switch (kind) {
+				case "checkpoint":
+					return CHECKPOINT;
 				case "image":
 					return IMAGE;
 				default:

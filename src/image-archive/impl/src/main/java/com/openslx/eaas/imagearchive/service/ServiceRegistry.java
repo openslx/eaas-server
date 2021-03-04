@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.service;
 import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.service.impl.CheckpointService;
 import com.openslx.eaas.imagearchive.service.impl.ImageService;
 import com.openslx.eaas.imagearchive.service.impl.ImportService;
 import com.openslx.eaas.imagearchive.service.impl.MachineService;
@@ -41,6 +42,11 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.TEMPLATE, TemplateService.class);
 	}
 
+	public CheckpointService checkpoints()
+	{
+		return this.lookup(BlobKind.CHECKPOINT, CheckpointService.class);
+	}
+
 	public ImageService images()
 	{
 		return this.lookup(BlobKind.IMAGE, ImageService.class);
@@ -56,6 +62,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		final var registry = new ServiceRegistry();
 		registry.insert(MachineService.create(backend));
 		registry.insert(TemplateService.create(backend));
+		registry.insert(CheckpointService.create(backend));
 		registry.insert(ImageService.create(backend));
 		registry.insert(ImportService.create(backend));
 		return registry;

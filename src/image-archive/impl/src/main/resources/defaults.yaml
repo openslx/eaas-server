@@ -15,6 +15,7 @@ imagearchive:
         machine: "/machines"
         emulator: "/emulators"
         template: "/templates"
+        checkpoint: "/checkpoints"
         image: "/images"
         rom: "/roms"
 

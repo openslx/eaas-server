@@ -17,49 +17,20 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive;
+package com.openslx.eaas.imagearchive.api.v2;
+
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+
+import java.io.InputStream;
 
 
-public enum BlobKind
+public interface ICheckpointsV2 extends IListable,
+		IReadable<InputStream>,
+		IWritable<InputStream>,
+		IDeletable
 {
-	MACHINE,
-	EMULATOR,
-	TEMPLATE,
-	CHECKPOINT,
-	IMAGE,
-	ROM;
-
-	public String value()
-	{
-		return this.name()
-				.toLowerCase();
-	}
-
-	public static BlobKind from(String kind)
-	{
-		switch (kind) {
-			case "machine":
-				return BlobKind.MACHINE;
-			case "emulator":
-				return BlobKind.EMULATOR;
-			case "template":
-				return BlobKind.TEMPLATE;
-			case "checkpoint":
-				return BlobKind.CHECKPOINT;
-			case "image":
-				return BlobKind.IMAGE;
-			case "rom":
-				return BlobKind.ROM;
-			default:
-				throw new IllegalArgumentException();
-		}
-	}
-
-	/** Return number of blob-kinds */
-	public static int count()
-	{
-		return COUNT;
-	}
-
-	private static final int COUNT = BlobKind.values().length;
+	// Empty!
 }

@@ -17,49 +17,23 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive;
+package com.openslx.eaas.imagearchive.indexing.impl;
+
+import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
+import com.openslx.eaas.imagearchive.indexing.BlobIndex;
+import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 
 
-public enum BlobKind
+public class CheckpointIndex extends BlobIndex<CheckpointIndex.Record>
 {
-	MACHINE,
-	EMULATOR,
-	TEMPLATE,
-	CHECKPOINT,
-	IMAGE,
-	ROM;
-
-	public String value()
+	public static class Record extends BlobDescriptor
 	{
-		return this.name()
-				.toLowerCase();
+		// Empty!
 	}
 
-	public static BlobKind from(String kind)
+	public CheckpointIndex()
 	{
-		switch (kind) {
-			case "machine":
-				return BlobKind.MACHINE;
-			case "emulator":
-				return BlobKind.EMULATOR;
-			case "template":
-				return BlobKind.TEMPLATE;
-			case "checkpoint":
-				return BlobKind.CHECKPOINT;
-			case "image":
-				return BlobKind.IMAGE;
-			case "rom":
-				return BlobKind.ROM;
-			default:
-				throw new IllegalArgumentException();
-		}
+		super(BlobKind.CHECKPOINT, Record.class, Record::index, BlobIngestors.descriptors(Record::new));
 	}
-
-	/** Return number of blob-kinds */
-	public static int count()
-	{
-		return COUNT;
-	}
-
-	private static final int COUNT = BlobKind.values().length;
 }
