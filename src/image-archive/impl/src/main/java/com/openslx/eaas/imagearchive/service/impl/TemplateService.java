@@ -53,6 +53,7 @@ public class TemplateService extends DataService<MachineConfigurationTemplate, T
 
 		// update templates's metadata
 		template.setId(id);
+		template.setCurrentTimestamp();
 
 		return super.update(location, id, template);
 	}

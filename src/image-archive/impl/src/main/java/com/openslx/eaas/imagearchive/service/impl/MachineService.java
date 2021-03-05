@@ -53,6 +53,7 @@ public class MachineService extends DataService<MachineConfiguration, MachineInd
 
 		// update machine's metadata
 		machine.setId(id);
+		machine.setCurrentTimestamp();
 
 		return super.update(location, id, machine);
 	}

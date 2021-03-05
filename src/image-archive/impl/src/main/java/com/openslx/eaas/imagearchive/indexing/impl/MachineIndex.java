@@ -36,9 +36,7 @@ public class MachineIndex extends BlobIndex<MachineIndex.Record>
 		public DataRecord<MachineConfiguration> setData(InputStream data) throws Exception
 		{
 			final var machine = MachineConfiguration.from(data, MachineConfiguration.class);
-			if (machine.getTimestamp() == null)
-				machine.setCurrentTimestamp();
-
+			machine.setTimestamp(this.mtime());
 			return this.setData(machine);
 		}
 	}

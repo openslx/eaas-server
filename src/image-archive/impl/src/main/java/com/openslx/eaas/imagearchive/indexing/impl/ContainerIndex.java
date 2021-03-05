@@ -36,9 +36,7 @@ public class ContainerIndex extends BlobIndex<ContainerIndex.Record>
 		public DataRecord<ContainerConfiguration> setData(InputStream data) throws Exception
 		{
 			final var container = ContainerConfiguration.from(data, ContainerConfiguration.class);
-			if (container.getTimestamp() == null)
-				container.setCurrentTimestamp();
-
+			container.setTimestamp(this.mtime());
 			return this.setData(container);
 		}
 	}

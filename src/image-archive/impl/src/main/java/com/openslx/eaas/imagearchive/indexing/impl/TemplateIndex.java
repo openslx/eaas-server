@@ -35,7 +35,9 @@ public class TemplateIndex extends BlobIndex<TemplateIndex.Record>
 		@Override
 		public DataRecord<MachineConfigurationTemplate> setData(InputStream data) throws Exception
 		{
-			return this.setData(MachineConfigurationTemplate.from(data, MachineConfigurationTemplate.class));
+			final var template = MachineConfigurationTemplate.from(data, MachineConfigurationTemplate.class);
+			template.setTimestamp(this.mtime());
+			return this.setData(template);
 		}
 	}
 

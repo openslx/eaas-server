@@ -87,6 +87,11 @@ public class Environment extends ComponentConfiguration {
 		this.timestamp = value;
 	}
 
+	public void setTimestamp(long time) {
+		this.timestamp = Instant.ofEpochMilli(time)
+				.toString();
+	}
+
 	public void setCurrentTimestamp() {
 		this.timestamp = Instant.now().toString();
 	}
