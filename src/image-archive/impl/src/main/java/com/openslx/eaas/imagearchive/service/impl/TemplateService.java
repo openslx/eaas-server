@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.TemplateIndex;
 import com.openslx.eaas.imagearchive.service.DataService;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 
 
@@ -43,5 +44,16 @@ public class TemplateService extends DataService<MachineConfigurationTemplate, T
 	{
 		super(storage, index, TemplateIndex.Record::filter, TemplateIndex.Record::filter);
 	}
+
+	@Override
+	protected String update(String location, String id, MachineConfigurationTemplate template) throws BWFLAException
+	{
+		if (id == null)
+			id = this.nextid();
+
+		// update templates's metadata
+		template.setId(id);
+
+		return super.update(location, id, template);
 	}
 }

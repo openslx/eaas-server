@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
 import com.openslx.eaas.imagearchive.service.DataService;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 
@@ -43,5 +44,16 @@ public class MachineService extends DataService<MachineConfiguration, MachineInd
 	{
 		super(storage, index, MachineIndex.Record::filter, MachineIndex.Record::filter);
 	}
+
+	@Override
+	protected String update(String location, String id, MachineConfiguration machine) throws BWFLAException
+	{
+		if (id == null)
+			id = this.nextid();
+
+		// update machine's metadata
+		machine.setId(id);
+
+		return super.update(location, id, machine);
 	}
 }
