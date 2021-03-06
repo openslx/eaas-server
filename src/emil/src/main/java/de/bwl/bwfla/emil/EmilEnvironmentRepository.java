@@ -17,14 +17,11 @@ import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.DockerImport;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.*;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.ContainerNetworkingType;
-import de.bwl.bwfla.common.services.security.AuthenticatedUser;
-import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
-import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
-import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageRequest;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
@@ -128,17 +125,26 @@ public class EmilEnvironmentRepository {
 		return authenticatedUser.getUserId();
 	}
 
+	private Role getUserRole() {
+		if(authenticatedUser == null)
+			return null;
+		return authenticatedUser.getRole();
+	}
+
 	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted) {
 
 		String userCtx = getUserCtx();
 		if(userCtx == null)
 			return true;
 
-		return checkPermissions(env, wanted, getUserCtx());
+		return checkPermissions(env, wanted, getUserCtx(), getUserRole());
 	}
 
-	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted, String userCtx) {
+	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted, String userCtx, Role role) {
 		if (env == null)
+			return true;
+
+		if(role == Role.ADMIN)
 			return true;
 
 		EmilEnvironmentPermissions permissions = env.getPermissions();
@@ -350,7 +356,7 @@ public class EmilEnvironmentRepository {
 		try {
 			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(getCollectionCtx(userCtx), "type", envid, "envId");
 
-			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx))
+			if (!checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx, null))
 				return getSharedEmilEnvironmentById(envid);
 
 			return env;
@@ -386,7 +392,7 @@ public class EmilEnvironmentRepository {
 		List<EmilObjectEnvironment> all = loadEmilObjectEnvironments(userCtx);
 		for (EmilObjectEnvironment objEnv : all) {
 			if (objEnv.getObjectId().equals(objectId) && isEnvironmentVisible(objEnv)
-					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ, userCtx))
+					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ, userCtx, null))
 				result.add(objEnv);
 		}
 		return result;
@@ -691,7 +697,7 @@ public class EmilEnvironmentRepository {
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(this::isEnvironmentVisible)
-				.filter(e -> (userCtx == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
+				.filter(e -> (userCtx == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx, null)))
 				.filter(e -> {
 					if (known.contains(e.getEnvId()))
 						return false;

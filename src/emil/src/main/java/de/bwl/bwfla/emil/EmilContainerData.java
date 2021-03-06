@@ -224,6 +224,7 @@ public class EmilContainerData extends EmilRest {
         try {
             emilEnvRepo.delete(desc.getEnvId(), desc.getDeleteMetaData(), desc.getDeleteImage());
         } catch (BWFLAException e1) {
+            e1.printStackTrace();
             return Emil.internalErrorResponse(e1);
         }
 
