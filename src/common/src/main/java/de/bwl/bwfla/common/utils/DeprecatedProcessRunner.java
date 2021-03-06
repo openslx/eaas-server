@@ -568,18 +568,29 @@ public class DeprecatedProcessRunner
 	 */
 	public boolean start()
 	{
+		return this.start(true);
+	}
+
+	/**
+	 * Start the process, that is represented by this runner.
+	 * @return true when the start was successful, else false.
+	 */
+	public boolean start(boolean redirect)
+	{
 		if (state != State.READY)
 			throw new IllegalStateException("Process not ready to start!");
 
-		// Create the temp-directory for process' output
-		try {
-			outdir = Files.createTempDirectory(PROPERTY_TMPDIR_BASE, PROPERTY_TMPDIR_PREFIX).toAbsolutePath();
-			stdout = new ProcessOutput(outdir.resolve(PROPERTY_STDOUT_FILENAME));
-			stderr = new ProcessOutput(outdir.resolve(PROPERTY_STDERR_FILENAME));
-		}
-		catch (IOException exception) {
-			String message = "Could not create a temporary directory for a new subprocess.";
-			throw new RuntimeException(message, exception);
+		if (redirect) {
+			// Create the temp-directory for process' output
+			try {
+				outdir = Files.createTempDirectory(PROPERTY_TMPDIR_BASE, PROPERTY_TMPDIR_PREFIX).toAbsolutePath();
+				stdout = new ProcessOutput(outdir.resolve(PROPERTY_STDOUT_FILENAME));
+				stderr = new ProcessOutput(outdir.resolve(PROPERTY_STDERR_FILENAME));
+			}
+			catch (IOException exception) {
+				String message = "Could not create a temporary directory for a new subprocess.";
+				throw new RuntimeException(message, exception);
+			}
 		}
 
 		// Prepare the process to run
@@ -591,8 +602,11 @@ public class DeprecatedProcessRunner
 			builder.directory(workdir.toFile());
 
 		// Setup stdout + stderr redirection
-		builder.redirectOutput(stdout.file());
-		builder.redirectError(stderr.file());
+		if (redirect) {
+			builder.redirectOutput(stdout.file());
+			builder.redirectError(stderr.file());
+		}
+
 		if (redirectStdErrToStdOut)
 			builder.redirectErrorStream(true);
 
@@ -601,6 +615,11 @@ public class DeprecatedProcessRunner
 			process = builder.start();
 			pid = DeprecatedProcessRunner.lookupUnixPid(process);
 			log.info("Subprocess " + pid + " started:  " + this.getCommandString());
+
+			if (!redirect) {
+				stdout = new ProcessOutput(process.getInputStream());
+				stderr = new ProcessOutput(process.getErrorStream());
+			}
 		}
 		catch (IOException exception) {
 			log.log(Level.SEVERE, "Starting new subprocess failed! CMD was: " + this.getCommandString(), exception);
@@ -767,7 +786,7 @@ public class DeprecatedProcessRunner
 	 */
 	public boolean execute(boolean verbose)
 	{
-		if (!this.start())
+		if (!this.start(false))
 			return false;
 
 		final int retcode = this.waitUntilFinished();
@@ -799,7 +818,7 @@ public class DeprecatedProcessRunner
 	 */
 	public Optional<Result> executeWithResult(boolean verbose) throws IOException
 	{
-		if (!this.start())
+		if (!this.start(false))
 			return Optional.empty();
 
 		try {
@@ -964,6 +983,12 @@ final class ProcessOutput
 		this.outstream = null;
 	}
 
+	ProcessOutput(InputStream stream)
+	{
+		this.outpath = null;
+		this.outstream = stream;
+	}
+
 	public Path path()
 	{
 		return outpath;
@@ -971,6 +996,9 @@ final class ProcessOutput
 
 	public File file()
 	{
+		if (outpath == null)
+			throw new IllegalStateException();
+
 		return outpath.toFile();
 	}
 
@@ -1013,11 +1041,15 @@ final class ProcessOutput
 
 	public void cleanup() throws IOException
 	{
-		Files.deleteIfExists(outpath);
+		if (outpath != null)
+			Files.deleteIfExists(outpath);
 	}
 
 	public boolean exists()
 	{
+		if (outpath == null)
+			return false;
+
 		return Files.exists(outpath);
 	}
 }
