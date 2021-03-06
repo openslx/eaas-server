@@ -132,7 +132,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		Environment env = null;
 		String imageConf = archive.getEnvironmentById(backend, id);
 		if (imageConf == null)
-			throw new BWFLAException("image with the following id cannot be located in the image archive: " + id);
+			throw new BWFLAException("image with the following id cannot be located in the image archive: " + id + " archive " + backend);
 
 		try {
 			env = Environment.fromValue(imageConf);
