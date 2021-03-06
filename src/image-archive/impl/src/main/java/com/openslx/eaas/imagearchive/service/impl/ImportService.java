@@ -31,14 +31,11 @@ import com.openslx.eaas.imagearchive.databind.ImportTask;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.service.BlobService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 
-import javax.ws.rs.RedirectionException;
-import javax.ws.rs.client.Client;
-import javax.ws.rs.client.ClientBuilder;
-import javax.ws.rs.core.MediaType;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URI;
@@ -296,7 +293,6 @@ public class ImportService
 	private class Worker implements Runnable
 	{
 		private final ImportService self = ImportService.this;
-		private final Client webclient = ClientBuilder.newClient();
 
 		@Override
 		public void run()
@@ -310,8 +306,6 @@ public class ImportService
 					logger.log(Level.WARNING, "Executing import-task " + taskid + " failed!", error);
 				}
 			}
-
-			webclient.close();
 		}
 
 		private void execute(int taskid) throws Exception
@@ -398,28 +392,42 @@ public class ImportService
 		private void webdata(URI uri, ImportSource source, ImportTarget target)
 				throws BWFLAException, IOException
 		{
-			// follow redirects...
-			for (int i = 0; i < 5; ++i) {
-				try {
-					final var request = webclient.target(uri)
-							.request(MediaType.APPLICATION_OCTET_STREAM);
+			final var process = new DeprecatedProcessRunner()
+					.setLogger(logger)
+					.setCommand("curl")
+					.addArgument("--fail")
+					.addArgument("--globoff")
+					.addArgument("--silent")
+					.addArgument("--show-error")
+					.addArgument("--location");
 
-					final var headers = source.headers();
-					if (headers != null)
-						headers.forEach(request::header);
-
-					try (final var data = request.get(InputStream.class)) {
-						this.upload(target, data, -1L);
-					}
-
-					return;
-				}
-				catch (RedirectionException redirection) {
-					uri = redirection.getLocation();
-				}
+			final var headers = source.headers();
+			if (headers != null) {
+				headers.forEach((name, value) -> {
+					process.addArgument("--header");
+					process.addArgument(name + ": " + value);
+				});
 			}
 
-			throw new BWFLAException("Max. number of redirects reached!");
+			// let curl write to stdout!
+			process.addArgument("--output")
+					.addArgument("-")
+					.addArgument(uri.toString());
+
+			try {
+				if (!process.start(false))
+					throw new BWFLAException("Starting download failed!");
+
+				try (final var data = process.getStdOutStream()) {
+					this.upload(target, data, -1L);
+				}
+
+				process.waitUntilFinished();
+				process.printStdErr();
+			}
+			finally {
+				process.cleanup();
+			}
 		}
 
 		private void upload(ImportTarget target, InputStream data, long size) throws BWFLAException
