@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.api.ImageArchiveApi;
 import com.openslx.eaas.imagearchive.client.endpoint.ImageArchive;
 import de.bwl.bwfla.common.services.security.MachineToken;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
+import org.apache.tamaya.ConfigurationProvider;
 import org.eclipse.microprofile.rest.client.RestClientBuilder;
 
 import javax.ws.rs.client.ClientRequestContext;
@@ -60,7 +61,10 @@ public class ImageArchiveClient implements Closeable
 
 	public static ImageArchiveClient create() throws Exception
 	{
-		return ImageArchiveClient.create("http://localhost:8080/image-archive");
+		final var endpoint = ConfigurationProvider.getConfiguration()
+				.get("imagearchive.endpoint");
+
+		return ImageArchiveClient.create(endpoint);
 	}
 
 	public static ImageArchiveClient create(String endpoint) throws Exception
