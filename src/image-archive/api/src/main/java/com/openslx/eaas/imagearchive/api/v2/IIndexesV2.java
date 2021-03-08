@@ -19,14 +19,38 @@
 
 package com.openslx.eaas.imagearchive.api.v2;
 
+import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.SecuredInternal;
+
+import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.POST;
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.Produces;
+import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
 
 
-public interface IStorageV2
+public interface IIndexesV2
 {
-	@Path("/locations")
-	ILocationsV2 locations();
+	@GET
+	@SecuredInternal
+	@Produces(MediaType.APPLICATION_JSON)
+	Response list() throws BWFLAException;
 
-	@Path("/indexes")
-	IIndexesV2 indexes();
+	@HEAD
+	@Path("/{name}")
+	@SecuredInternal
+	void exists(@PathParam("name") String name) throws BWFLAException;
+
+	@POST
+	@Path("/{name}/build")
+	@SecuredInternal
+	void rebuild(@PathParam("name") String name) throws BWFLAException;
+
+	@POST
+	@Path("/all/build")
+	@SecuredInternal
+	void rebuild() throws BWFLAException;
 }

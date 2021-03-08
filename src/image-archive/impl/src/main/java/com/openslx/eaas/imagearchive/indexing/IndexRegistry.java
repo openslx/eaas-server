@@ -32,11 +32,20 @@ import com.openslx.eaas.imagearchive.indexing.impl.TemplateIndex;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.Objects;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 
 
 public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 {
+	public Stream<BlobKind> list()
+	{
+		return entries.stream()
+				.filter(Objects::nonNull)
+				.map(BlobIndex::kind);
+	}
+
 	public IndexRegistry rebuild(StorageRegistry storage) throws BWFLAException
 	{
 		int numFailures = 0;

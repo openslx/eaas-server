@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.api.v2.IIndexesV2;
 import com.openslx.eaas.imagearchive.api.v2.ILocationsV2;
 import com.openslx.eaas.imagearchive.api.v2.IStorageV2;
 
@@ -32,6 +33,9 @@ public class StorageV2 implements IStorageV2
 	@Inject
 	private LocationsV2 locations;
 
+	@Inject
+	private IndexesV2 indexes;
+
 
 	// ===== Public API ==============================
 
@@ -39,5 +43,11 @@ public class StorageV2 implements IStorageV2
 	public ILocationsV2 locations()
 	{
 		return locations;
+	}
+
+	@Override
+	public IIndexesV2 indexes()
+	{
+		return indexes;
 	}
 }

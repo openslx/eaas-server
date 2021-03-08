@@ -17,16 +17,45 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
-import javax.ws.rs.Path;
+import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.api.v2.IIndexesV2;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public interface IStorageV2
+public class IndexesV2
 {
-	@Path("/locations")
-	ILocationsV2 locations();
+	private final IIndexesV2 api;
 
-	@Path("/indexes")
-	IIndexesV2 indexes();
+	public IndexesV2(IIndexesV2 api)
+	{
+		this.api = api;
+	}
+
+	public boolean exists(String name)
+	{
+		try {
+			api.exists(name);
+			return true;
+		}
+		catch (Exception error) {
+			return false;
+		}
+	}
+
+	public Streamable<String> list() throws BWFLAException
+	{
+		return Streamable.of(api.list(), String.class);
+	}
+
+	public void rebuild(String name) throws BWFLAException
+	{
+		api.rebuild(name);
+	}
+
+	public void rebuild() throws BWFLAException
+	{
+		api.rebuild();
+	}
 }
