@@ -1,53 +1,56 @@
 package de.bwl.bwfla.emil.tasks;
 
-import de.bwl.bwfla.api.imagearchive.*;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
-import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
-import de.bwl.bwfla.emucomp.api.FileSystemType;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
-import org.apache.tamaya.ConfigurationProvider;
 
-import java.net.MalformedURLException;
-import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
+
 
 public class ImportContainerTask extends BlockingTask<Object>
 {
-    private final DatabaseEnvironmentsAdapter envHelper;
+    private final ImageArchiveClient archive;
     private final ImportContainerRequest containerRequest;
     private final EmilEnvironmentRepository emilEnvironmentRepository;
     private final String collectionCtx;
 
 
-    public ImportContainerTask(ImportContainerRequest containerRequest, DatabaseEnvironmentsAdapter envHelper,
+    public ImportContainerTask(ImportContainerRequest containerRequest,
                                EmilEnvironmentRepository environmentRepository, String collectionCtx) {
         this.containerRequest = containerRequest;
-        this.envHelper = envHelper;
+        this.archive = environmentRepository.getImageArchive();
         this.emilEnvironmentRepository = environmentRepository;
         this.collectionCtx = collectionCtx;
     }
 
-    private String importContainer(ImportContainerRequest containerRequest) throws BWFLAException, MalformedURLException {
+    private String importContainer(ImportContainerRequest containerRequest) throws Exception
+    {
+        final var importRequest = new ImportRequestV2();
+        importRequest.source()
+                .setUrl(containerRequest.getImageUrl());
 
-        URL containerImageUrl = new URL(containerRequest.getImageUrl());
+        importRequest.target()
+                .setKind(ImportTargetV2.Kind.IMAGE);
 
-        ImageArchiveMetadata meta = new ImageArchiveMetadata();
-        meta.setType(ImageType.CONTAINERS);
+        final var imageid = archive.api()
+                .v2()
+                .imports()
+                .await(importRequest, 1L, TimeUnit.HOURS);
 
-        EnvironmentsAdapter.ImportImageHandle importState = null;
-        ImageArchiveBinding binding;
-        importState = envHelper.importImage("default", containerImageUrl, meta, true);
-        binding = importState.getBinding(60 * 60 * 60); //wait an hour
 
+        final var binding = new ImageArchiveBinding();
         binding.setId("rootfs");
+        binding.setImageId(imageid);
+        binding.setBackendName("default");
         binding.setFileSystemType("ext4");
 
         OciContainerConfiguration config = new OciContainerConfiguration();
@@ -77,7 +80,14 @@ public class ImportContainerTask extends BlockingTask<Object>
         else {
             config.setId(UUID.randomUUID().toString());
         }
-        return envHelper.importMetadata("default", config, meta, true);
+
+        final var id = config.getId();
+        archive.api()
+                .v2()
+                .containers()
+                .replace(id, config);
+
+        return id;
     }
 
     @Override

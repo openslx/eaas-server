@@ -63,8 +63,6 @@ import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
 import de.bwl.bwfla.api.eaas.SessionOptions;
 import de.bwl.bwfla.api.emucomp.Container;
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageType;
 import de.bwl.bwfla.api.imagebuilder.ImageBuilder;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
@@ -120,10 +118,6 @@ public class Components {
     @Inject
     @Config(value = "ws.eaasgw")
     private String eaasGw;
-    
-    @Inject
-    @Config(value = "ws.imagearchive")
-    private String imageArchive;
 
     @Inject
     @Config(value = "ws.objectarchive")
@@ -172,8 +166,6 @@ public class Components {
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration maxSessionDuration = null;
 
-    @Inject
-    private DatabaseEnvironmentsAdapter envHelper;
     private SoftwareArchiveHelper swHelper;
 
     @Inject
@@ -432,7 +424,12 @@ public class Components {
         }
 
         try {
-            final Environment chosenEnv = envHelper.getEnvironmentById(desc.getArchive(), desc.getEnvironment());
+            final Environment chosenEnv = emilEnvRepo.getImageArchive()
+                    .api()
+                    .v2()
+                    .containers()
+                    .fetch(desc.getEnvironment());
+
             if (chosenEnv == null || !(chosenEnv instanceof ContainerConfiguration)) {
                 throw new BadRequestException(Response
                         .status(Response.Status.BAD_REQUEST)
@@ -665,7 +662,11 @@ public class Components {
 
         try {
             EmilEnvironment emilEnv = this.emilEnvRepo.getEmilEnvironmentById(machineDescription.getEnvironment());
-            Environment chosenEnv = envHelper.getEnvironmentById(machineDescription.getArchive(), machineDescription.getEnvironment());
+            Environment chosenEnv = emilEnvRepo.getImageArchive()
+                    .api()
+                    .v2()
+                    .environments()
+                    .fetch(machineDescription.getEnvironment());
 
             if (chosenEnv == null) {
                 throw new BadRequestException(Response
@@ -690,8 +691,13 @@ public class Components {
 
             if(machineDescription.getLinuxRuntimeData() != null && machineDescription.getLinuxRuntimeData().getUserContainerEnvironment() != null && !machineDescription.getLinuxRuntimeData().getUserContainerEnvironment().isEmpty())
             {
-                OciContainerConfiguration ociConf = (OciContainerConfiguration)envHelper.getEnvironmentById(machineDescription.getLinuxRuntimeData().getUserContainerArchive(),
-                        machineDescription.getLinuxRuntimeData().getUserContainerEnvironment());
+                final var runtime = machineDescription.getLinuxRuntimeData();
+                final var ociConf = (OciContainerConfiguration) emilEnvRepo.getImageArchive()
+                        .api()
+                        .v2()
+                        .containers()
+                        .fetch(runtime.getUserContainerEnvironment());
+
                 LOG.warning(ociConf.jsonValueWithoutRoot(true));
 
                 ImageDescription imageDescription = null;
@@ -893,7 +899,7 @@ public class Components {
         }
 
         FileCollection fc = objects.getFileCollection(archiveId, objectId);
-        ObjectArchiveBinding binding = new ObjectArchiveBinding(envHelper.toString(), archiveId, objectId);
+        ObjectArchiveBinding binding = new ObjectArchiveBinding(objectArchive, archiveId, objectId);
 
         int driveId = EmulationEnvironmentHelper.addArchiveBinding((MachineConfiguration) chosenEnv, binding, fc);
         return driveId;
@@ -1432,17 +1438,25 @@ public class Components {
             }
 
             // Import checkpoint data into archive
-            final DataHandler checkpointData = machine.checkpoint(componentId);
-            final ImageArchiveMetadata metadata = new ImageArchiveMetadata();
-            metadata.setImageId(UUID.randomUUID().toString());
-            metadata.setType(ImageType.CHECKPOINTS);
-
-            LOG.info("Saving checkpointed environment in image-archive...");
-
-            final ImageArchiveBinding binding = envHelper.importImage("default", checkpointData, metadata).getBinding(15);
+            final DataHandler data = machine.checkpoint(componentId);
+            final ImageArchiveBinding binding = new ImageArchiveBinding();
             binding.setId("checkpoint");
             binding.setLocalAlias("checkpoint.tar.gz");
             binding.setAccess(Binding.AccessType.COPY);
+
+            LOG.info("Saving checkpointed environment in image-archive...");
+            try (final var stream = data.getInputStream()) {
+                final var imagearchive = emilEnvRepo.getImageArchive();
+                final var imageid = imagearchive.api()
+                        .v2()
+                        .checkpoints()
+                        .insert(stream);
+
+                binding.setImageId(imageid);
+            }
+            catch (IOException error) {
+                throw new BWFLAException("Saving checkpoint failed!", error);
+            }
 
             // Update machine's configuration
             config.setCheckpointBindingId("binding://" + binding.getId());
