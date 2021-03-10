@@ -90,5 +90,9 @@
             <groupId>de.bwl.bwfla</groupId>
             <artifactId>blobstore-client</artifactId>
         </dependency>
+		<dependency>
+			<groupId>com.openslx.eaas</groupId>
+			<artifactId>image-archive-client</artifactId>
+		</dependency>
     </dependencies>
 </project>
