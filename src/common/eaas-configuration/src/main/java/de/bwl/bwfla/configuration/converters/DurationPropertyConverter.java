@@ -69,6 +69,9 @@ public class DurationPropertyConverter implements PropertyConverter<Duration>
 	        
 	        for (String suffix : new String[] { "h", "hour", "hours" })
 	            units.put(suffix, TimeUnit.HOURS);
+
+			for (String suffix : new String[] { "d", "day", "days" })
+				units.put(suffix, TimeUnit.DAYS);
 	    }
 	    
 	    public long parse(String value, TimeUnit outunit)
