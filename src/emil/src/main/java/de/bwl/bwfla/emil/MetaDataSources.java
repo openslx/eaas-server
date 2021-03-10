@@ -118,16 +118,18 @@ public class MetaDataSources
 			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 
-		public CompletableFuture<Integer> count()
+		public CompletableFuture<Integer> count(QueryOptions options)
 		{
 			final Supplier<Integer> supplier = () -> {
-				final var options = new CountOptionsV2()
-						.setLocation(archive);
+				final var copts = new CountOptionsV2()
+						.setLocation(archive)
+						.setFromTime(options.from())
+						.setUntilTime(options.until());
 
 				return (int) imagearchive.api()
 					.v2()
 					.environments()
-					.count(options);
+					.count(copts);
 			};
 
 			return CompletableFuture.supplyAsync(supplier, executor);
@@ -177,9 +179,15 @@ public class MetaDataSources
 			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 
-		public CompletableFuture<Integer> count()
+		public CompletableFuture<Integer> count(QueryOptions options)
 		{
 			final MongodbEaasConnector.FilterBuilder filter = new MongodbEaasConnector.FilterBuilder();
+			if (options.hasFrom())
+				filter.withFromTime(Environment.Fields.TIMESTAMP, options.from());
+
+			if (options.hasUntil())
+				filter.withUntilTime(Environment.Fields.TIMESTAMP, options.until(), true);
+
 			filter.eq("archive", "public");
 			return CompletableFuture.supplyAsync(() -> (int) environmentRepository.countPublicEnvironments(filter), executor);
 		}
@@ -338,8 +346,9 @@ public class MetaDataSources
 			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 
-		public CompletableFuture<Integer> count()
+		public CompletableFuture<Integer> count(QueryOptions options)
 		{
+			// FIXME: we are currently returning always the full stream
 			return CompletableFuture.supplyAsync(() -> softwareData.getSoftwareCollection().size());
 		}
 	}
