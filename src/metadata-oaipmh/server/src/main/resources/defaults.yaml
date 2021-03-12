@@ -5,10 +5,10 @@ metadata_provider:
 
         # Repository information (see http://www.openarchives.org/OAI/2.0/openarchivesprotocol.htm#Identify)
         identity:
-            repository_name: 'EaaS image-metadata dummy repository'
+            repository_name: 'EaaS image-metadata example repository'
             # Date format according to https://docs.oracle.com/javase/8/docs/api/java/util/Date.html
             earliest_date: '2018-11-01T00:00:00Z'
-            admin_email: 'admin@dummy.com'
+            admin_email: 'admin@example.invalid'
 
         # Source for item+set lookups
         source:
@@ -23,10 +23,10 @@ metadata_provider:
 
           # Repository information (see http://www.openarchives.org/OAI/2.0/openarchivesprotocol.htm#Identify)
         identity:
-            repository_name: 'EaaS image-metadata dummy repository'
+            repository_name: 'EaaS image-metadata example repository'
             # Date format according to https://docs.oracle.com/javase/8/docs/api/java/util/Date.html
             earliest_date: '2018-11-01T00:00:00Z'
-            admin_email: 'admin@dummy.com'
+            admin_email: 'admin@example.invalid'
 
           # Source for item+set lookups
         source:
@@ -44,7 +44,7 @@ metadata_provider:
           repository_name: 'EaaS software repository'
           # Date format according to https://docs.oracle.com/javase/8/docs/api/java/util/Date.html
           earliest_date: '2018-11-01T00:00:00Z'
-          admin_email: 'admin@dummy.com'
+          admin_email: 'admin@example.invalid'
 
           # Source for item+set lookups
         source:
