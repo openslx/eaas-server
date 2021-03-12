@@ -1,5 +1,9 @@
 package de.bwl.bwfla.emil.tasks;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.ImportStatusV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.CompletableTask;
@@ -8,9 +12,7 @@ import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.TimeUnit;
 import java.util.function.BiFunction;
-import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ImportImageTask extends CompletableTask<Object>
@@ -30,8 +32,9 @@ public class ImportImageTask extends CompletableTask<Object>
         public URL url;
         public ImageType type;
 
+        @Deprecated
         public DatabaseEnvironmentsAdapter environmentHelper;
-
+        public ImageArchiveClient imagearchive;
         public String destArchive;
 
         public void validate() throws BWFLAException
@@ -50,92 +53,71 @@ public class ImportImageTask extends CompletableTask<Object>
     @Override
     protected CompletableFuture<Object> execute() throws Exception
     {
-        try {
-            ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-            iaMd.setType(request.type);
+        final var ireq = new ImportRequestV2();
+        ireq.source()
+                .setUrl(request.url.toString());
 
-            final TaskState importState = request.environmentHelper.importImage(request.url, iaMd, true);
-            final ImportStatePoller poller = new ImportStatePoller(importState);
-            this.schedule(poller);
+        final var target = ireq.target()
+                .setLocation(request.destArchive);
 
-            final BiFunction<TaskState, Throwable, Object> handler = (state, error) -> {
-                if (error != null)
-                    return (error instanceof BWFLAException) ? error : new BWFLAException(error);
-
-                if (state.isFailed())
-                    return new BWFLAException("task failed");
-
-                final String imageId = state.getResult();
-
-                try {
-                    ImageMetadata entry = new ImageMetadata();
-                    entry.setName(imageId);
-                    entry.setLabel(request.label);
-                    ImageDescription description = new ImageDescription();
-                    description.setType(request.type.value());
-                    description.setId(imageId);
-                    entry.setImage(description);
-
-                    request.environmentHelper.addNameIndexesEntry(request.destArchive, entry, null);
-                }
-                catch (BWFLAException exception) {
-                    return exception;
-                }
-
-                Map<String, String> userData = new HashMap<>();
-                userData.put("imageId", imageId);
-                return userData;
-            };
-
-            return poller.completion()
-                    .handle(handler);
-        }
-        catch (BWFLAException error) {
-            log.log(Level.SEVERE, "Importing image failed!", error);
-            return CompletableFuture.completedFuture(error);
-        }
-    }
-
-    private class ImportStatePoller implements Runnable
-    {
-        private final CompletableFuture<TaskState> completion;
-        private TaskState state;
-
-        public ImportStatePoller(TaskState state)
-        {
-            this.completion = new CompletableFuture<>();
-            this.state = state;
+        switch (request.type) {
+            case ROMS:
+                target.setKind(ImportTargetV2.Kind.ROM);
+                break;
+            default:
+                target.setKind(ImportTargetV2.Kind.IMAGE);
+                break;
         }
 
-        public CompletableFuture<TaskState> completion()
-        {
-            return completion;
-        }
+        final BiFunction<ImportStatusV2, Throwable, Object> handler = (status, error) -> {
+            if (error != null)
+                return (error instanceof BWFLAException) ? error : new BWFLAException(error);
 
-        @Override
-        public void run()
-        {
+            switch (status.state()) {
+                case ABORTED:
+                    return new BWFLAException("Image import was aborted!");
+
+                case FAILED:
+                    final var failure = status.failure();
+                    if (failure != null && failure.detail() != null)
+                        log.warning("Importing image failed! " + failure.detail());
+
+                    return new BWFLAException("Importing image failed!");
+            }
+
+            final String imageId = status.target()
+                    .name();
+
             try {
-                state = request.environmentHelper.getState(state.getTaskId());
+                ImageMetadata entry = new ImageMetadata();
+                entry.setName(imageId);
+                entry.setLabel(request.label);
+                ImageDescription description = new ImageDescription();
+                description.setType(request.type.value());
+                description.setId(imageId);
+                entry.setImage(description);
+
+                request.environmentHelper.addNameIndexesEntry(request.destArchive, entry, null);
             }
-            catch (Exception error) {
-                completion.completeExceptionally(error);
-                return;
+            catch (BWFLAException exception) {
+                return exception;
             }
 
-            if (state.isDone()) {
-                completion.complete(state);
-                return;
-            }
+            Map<String, String> userData = new HashMap<>();
+            userData.put("imageId", imageId);
+            return userData;
+        };
 
-            // Import is not finished, retry later...
-            ImportImageTask.this.schedule(this);
-        }
-    }
+        final var archive = request.imagearchive;
+        final var taskid = archive.api()
+                .v2()
+                .imports()
+                .insert(ireq);
 
-    private void schedule(Runnable task)
-    {
-        CompletableFuture.delayedExecutor(2L, TimeUnit.SECONDS, this.executor())
-                .execute(task);
+        return archive.api()
+                .v2()
+                .imports()
+                .watch(taskid)
+                .handle(handler);
     }
 }

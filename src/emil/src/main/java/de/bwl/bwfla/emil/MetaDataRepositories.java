@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.emil;
 
-import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.SecuredInternal;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.metadata.repository.IMetaDataRepositoryAPI;
@@ -49,9 +48,6 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 
 	@Inject
 	private MetaDataRepositoryAPI mdrepo = null;
-
-	@Inject
-	private DatabaseEnvironmentsAdapter envdb = null;
 
 	@Inject
 	private EmilEnvironmentRepository environmentRepository = null;
@@ -141,11 +137,12 @@ public class MetaDataRepositories implements IMetaDataRepositoryAPI
 
 	public void registerImagesRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)
 	{
+		final var archive = environmentRepository.getImageArchive();
 		if (mode.equalsIgnoreCase(AccessMode.READ_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
-			sources.register(name, MetaDataSources.images("public", envdb, executor));
+			sources.register(name, MetaDataSources.images("public", archive, executor));
 
 		if (mode.equalsIgnoreCase(AccessMode.WRITE_ONLY) || mode.equalsIgnoreCase(AccessMode.READ_WRITE))
-			sinks.register(name, MetaDataSinks.images("remote", envdb));
+			sinks.register(name, MetaDataSinks.images("remote", archive));
 	}
 
 	public void registerEnvironmentsRepository(String name, String mode, MetaDataSourceRegistry sources, MetaDataSinkRegistry sinks)

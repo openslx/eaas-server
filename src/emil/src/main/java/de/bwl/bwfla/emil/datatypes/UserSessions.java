@@ -7,7 +7,6 @@ import com.auth0.jwt.exceptions.JWTVerificationException;
 import com.auth0.jwt.interfaces.DecodedJWT;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import org.apache.tamaya.inject.api.Config;
 
@@ -17,7 +16,6 @@ import javax.inject.Inject;
 import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Executors;
@@ -39,7 +37,7 @@ public class UserSessions {
     Logger LOG = Logger.getLogger(UserSessions.class.getName());
 
     @Inject
-    private DatabaseEnvironmentsAdapter environmentsAdapter;
+    private EmilEnvironmentRepository emilEnvRepo;
 
     @Inject
     @Config(value = "emil.usersessionretention")
@@ -137,7 +135,17 @@ public class UserSessions {
 
         userMap.remove(session.objectId);
 
-        environmentsAdapter.delete(session.getArchive(), session.envId, true, true);
+        try {
+            emilEnvRepo.getImageArchive()
+                    .api()
+                    .v2()
+                    .environments()
+                    .delete(session.envId, true, true);
+        }
+        catch (Exception error) {
+            LOG.log(Level.WARNING, "Deleting environment failed!", error);
+        }
+
         db.deleteDoc(emilDbCollectionName, session.envId, session.getIdDBkey());
         if (session.getParentEnvId() != null) {
             EmilSessionEnvironment p = userMap.values()

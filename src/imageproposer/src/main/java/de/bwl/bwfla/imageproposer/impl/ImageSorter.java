@@ -19,12 +19,12 @@
 
 package de.bwl.bwfla.imageproposer.impl;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.configuration.BaseConfigurationPropertySourceProvider;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.tamaya.ConfigException;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.ConfigurationProvider;
@@ -52,7 +52,7 @@ public class ImageSorter
 {
 	private final Logger log = Logger.getLogger(this.getClass().getName());
 
-	private EnvironmentsAdapter imageArchive;
+	private ImageArchiveClient imageArchive;
 
 	private final List<RankComparator> comparators = new ArrayList<RankComparator>();
 	private final Map<FieldName, FieldRankIndex> ranks = new LinkedHashMap<FieldName, FieldRankIndex>();
@@ -76,8 +76,14 @@ public class ImageSorter
 		// Slow path: download all environment descriptions and sort!
 
 		final ArrayList<Environment> environments = new ArrayList<Environment>(imageIds.size());
-		for (String id : imageIds)
-			environments.add(imageArchive.getEnvironmentById(id));
+		for (String id : imageIds) {
+			final var environment = imageArchive.api()
+					.v2()
+					.environments()
+					.fetch(id);
+
+			environments.add(environment);
+		}
 
 		environments.sort((e1, e2) -> this.compare(e1, e2));
 		return environments.stream()
@@ -92,8 +98,12 @@ public class ImageSorter
 	protected void initialize()
 	{
 		final Configuration config = ConfigurationProvider.getConfiguration();
-
-		this.imageArchive = new EnvironmentsAdapter(config.get("ws.imagearchive"));
+		try {
+			this.imageArchive = ImageArchiveClient.create();
+		}
+		catch (Exception error) {
+			throw new RuntimeException("Initializing image-archive client failed!", error);
+		}
 
 		// Load configuration for image-sorting, if possible...
 		final String sortingConfigFile = config.get("imageproposer.sorting_config_file");

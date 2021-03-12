@@ -5,6 +5,7 @@
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-blobstore-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla.eaas-eaas-components-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-imagearchive-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.com.openslx.eaas-image-archive-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <system export="true">
         <paths>
           <path name="jdk/net"/>

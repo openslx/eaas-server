@@ -19,6 +19,9 @@
 
 package de.bwl.bwfla.emil;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
@@ -40,11 +43,11 @@ import java.util.stream.Stream;
 
 public class MetaDataSources
 {
-	public static MetaDataSource images(String archive, DatabaseEnvironmentsAdapter db, Executor executor)
+	public static MetaDataSource images(String archive, ImageArchiveClient imagearchive, Executor executor)
 	{
 		return new MetaDataSource()
-				.set(new EnvironmentIdentifierSource(archive, db, executor))
-				.set(new EnvironmentSource(archive, db, executor));
+				.set(new EnvironmentIdentifierSource(archive, imagearchive, executor))
+				.set(new EnvironmentSource(archive, imagearchive, executor));
 	}
 
     public static MetaDataSource environments(EmilEnvironmentRepository environmentRepository, Executor executor) {
@@ -67,20 +70,23 @@ public class MetaDataSources
 	{
 		private final String archive;
 		private final Executor executor;
-		private final DatabaseEnvironmentsAdapter db;
+		private final ImageArchiveClient imagearchive;
 
-		protected AbstractEnvironmentSource(String archive, DatabaseEnvironmentsAdapter db, Executor executor)
+		protected AbstractEnvironmentSource(String archive, ImageArchiveClient imagearchive, Executor executor)
 		{
 			this.archive = archive;
 			this.executor = executor;
-			this.db = db;
+			this.imagearchive = imagearchive;
 		}
 
 		protected CompletableFuture<Environment> findEnvironment(String id)
 		{
 			final Supplier<Environment> supplier = () -> {
 				try {
-					return db.getEnvironmentById(archive, id);
+					return imagearchive.api()
+							.v2()
+							.environments()
+							.fetch(id);
 				}
 				catch (Exception error) {
 					throw new CompletionException("Finding environment failed!", error);
@@ -93,22 +99,40 @@ public class MetaDataSources
 		protected CompletableFuture<Stream<Environment>> listEnvironments(QueryOptions options)
 		{
 			final Supplier<Stream<Environment>> supplier = () -> {
-				final MongodbEaasConnector.FilterBuilder filter = new MongodbEaasConnector.FilterBuilder();
-				if (options.hasFrom())
-					filter.withFromTime(Environment.Fields.TIMESTAMP, options.from());
+				final var fopts = new FetchOptionsV2()
+						.setLocation(archive)
+						.setOffset(options.offset())
+						.setLimit(options.count())
+						.setFromTime(options.from())
+						.setUntilTime(options.until());
 
-				if (options.hasUntil())
-					filter.withUntilTime(Environment.Fields.TIMESTAMP, options.until(), true);
+				final var result = imagearchive.api()
+						.v2()
+						.environments()
+						.fetch(fopts);
 
-				return db.listEnvironments(archive, options.offset(), options.count(), filter);
+				return result.stream()
+						.onClose(result::close);
 			};
 
 			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 
-		public CompletableFuture<Integer> count()
+		public CompletableFuture<Integer> count(QueryOptions options)
 		{
-			return CompletableFuture.supplyAsync(() -> (int) db.countEnvironments(archive), executor);
+			final Supplier<Integer> supplier = () -> {
+				final var copts = new CountOptionsV2()
+						.setLocation(archive)
+						.setFromTime(options.from())
+						.setUntilTime(options.until());
+
+				return (int) imagearchive.api()
+					.v2()
+					.environments()
+					.count(copts);
+			};
+
+			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 	}
 
@@ -155,9 +179,15 @@ public class MetaDataSources
 			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 
-		public CompletableFuture<Integer> count()
+		public CompletableFuture<Integer> count(QueryOptions options)
 		{
 			final MongodbEaasConnector.FilterBuilder filter = new MongodbEaasConnector.FilterBuilder();
+			if (options.hasFrom())
+				filter.withFromTime(Environment.Fields.TIMESTAMP, options.from());
+
+			if (options.hasUntil())
+				filter.withUntilTime(Environment.Fields.TIMESTAMP, options.until(), true);
+
 			filter.eq("archive", "public");
 			return CompletableFuture.supplyAsync(() -> (int) environmentRepository.countPublicEnvironments(filter), executor);
 		}
@@ -195,9 +225,9 @@ public class MetaDataSources
 					.setTimestamp(environment.getTimestamp());
 		};
 
-		public EnvironmentIdentifierSource(String archive, DatabaseEnvironmentsAdapter db, Executor executor)
+		public EnvironmentIdentifierSource(String archive, ImageArchiveClient imagearchive, Executor executor)
 		{
-			super(archive, db, executor);
+			super(archive, imagearchive, executor);
 		}
 
 		@Override
@@ -227,9 +257,9 @@ public class MetaDataSources
 			}
 		};
 
-		public EnvironmentSource(String archive, DatabaseEnvironmentsAdapter db, Executor executor)
+		public EnvironmentSource(String archive, ImageArchiveClient imagearchive, Executor executor)
 		{
-			super(archive, db, executor);
+			super(archive, imagearchive, executor);
 		}
 
 		@Override
@@ -316,8 +346,9 @@ public class MetaDataSources
 			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 
-		public CompletableFuture<Integer> count()
+		public CompletableFuture<Integer> count(QueryOptions options)
 		{
+			// FIXME: we are currently returning always the full stream
 			return CompletableFuture.supplyAsync(() -> softwareData.getSoftwareCollection().size());
 		}
 	}

@@ -26,6 +26,7 @@ import org.junit.Test;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Arrays;
 import java.util.HashMap;
 
 
@@ -197,5 +198,132 @@ public class BlobTest extends BaseTest
 		Assert.assertEquals(numentries, desc.userdata().size());
 		desc.userdata()
 				.forEach((name, value) -> Assert.assertEquals(expdata.get(name), value));
+	}
+
+	@Test
+	public void testPathBuilder()
+	{
+		final String[] elements = { "root", "dir-a", "dir-b", "dir-c", "blob" };
+		final var fullpath = Arrays.stream(elements)
+				.skip(1)
+				.reduce(elements[0], (lhs,rhs) -> lhs + "/" + rhs);
+
+		// construction
+		{
+			var abspath = BlobStore.path("/root");
+			Assert.assertEquals(BlobStore.path("root"), abspath);
+			Assert.assertEquals("root", abspath.toString());
+
+			abspath = BlobStore.path("/", elements);
+			Assert.assertEquals(BlobStore.path("", elements), abspath);
+			Assert.assertEquals(fullpath, abspath.toString());
+		}
+
+		// starts-with
+		{
+			final var prefix = BlobStore.path(elements[0], elements[1]);
+			var path = BlobStore.path(elements[0]);
+			Assert.assertFalse(path.startswith(prefix));
+			Assert.assertFalse(path.startswith(prefix.toString()));
+
+			path = path.resolve(elements[1]).resolve(elements[2]);
+			Assert.assertTrue(path.startswith(prefix));
+			Assert.assertTrue(path.startswith(prefix.toString()));
+		}
+
+		// ends-with
+		{
+			final var count = elements.length;
+			final var suffix = BlobStore.path(elements[count-2], elements[count-1]);
+			var path = BlobStore.path(elements[0], elements[1]);
+			Assert.assertFalse(path.endswith(suffix));
+			Assert.assertFalse(path.endswith(suffix.toString()));
+
+			path = BlobStore.path(fullpath);
+			Assert.assertTrue(path.endswith(suffix));
+			Assert.assertTrue(path.endswith(suffix.toString()));
+		}
+
+		// resolving
+		{
+			final var expected = BlobStore.path(elements[0], elements[1], elements[2]);
+			var path = BlobStore.path(elements[0])
+					.resolve(elements[1])
+					.resolve(elements[2]);
+
+			Assert.assertEquals(expected, path);
+
+			path = BlobStore.path(elements[0])
+					.resolve(BlobStore.path("/", elements[1]))
+					.resolve(BlobStore.path(elements[2]));
+
+			Assert.assertEquals(expected, path);
+		}
+
+		// normalizing
+		{
+			final var expected = BlobStore.path(elements[0], elements[1], elements[2]);
+			final var path = BlobStore.path(elements[0])
+					.resolve(".")
+					.resolve(elements[1])
+					.resolve("..")
+					.resolve(elements[1])
+					.resolve(elements[2])
+					.resolve("..")
+					.resolve("/xyz")
+					.resolve("..")
+					.resolve("..")
+					.resolve(elements[1])
+					.resolve(elements[2])
+					.normalize();
+
+			Assert.assertEquals(expected, path);
+		}
+
+		// siblings
+		{
+			final var count = elements.length;
+			final var path = BlobStore.path(fullpath);
+			Assert.assertEquals(elements[0], path.first().toString());
+			Assert.assertEquals(elements[count-1], path.last().toString());
+			Assert.assertEquals(path.subpath(0, count-1), path.parent());
+			Assert.assertNull(BlobStore.path("blob").parent());
+		}
+
+		// element access
+		{
+			final var count = elements.length;
+			final var path = BlobStore.path(fullpath);
+			final var iter = path.iterator();
+			Assert.assertEquals(count, path.count());
+			for (int i = 0; i < count; ++i) {
+				Assert.assertTrue(iter.hasNext());
+				Assert.assertEquals(elements[i], iter.next().toString());
+				Assert.assertEquals(elements[i], path.element(i).toString());
+			}
+		}
+
+		// subpaths
+		{
+			final var maxcount = elements.length;
+			final var path = BlobStore.path(fullpath);
+
+			// prefixes
+			for (int count = 1; count <= maxcount; ++count) {
+				final var subpath = path.subpath(0, count);
+				Assert.assertEquals(count, subpath.count());
+				for (int i = 0; i < count; ++i)
+					Assert.assertEquals(elements[i], subpath.element(i).toString());
+			}
+
+			// suffixes
+			for (int start = 0; start < maxcount; ++start) {
+				final var count = maxcount - start;
+				final var subpath = path.subpath(start, maxcount);
+				Assert.assertEquals(count, subpath.count());
+				for (int i = 0; i < count; ++i)
+					Assert.assertEquals(elements[start+i], subpath.element(i).toString());
+			}
+		}
 	}
 }

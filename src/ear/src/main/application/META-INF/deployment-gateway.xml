@@ -5,6 +5,7 @@
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-blobstore-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-emil-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-imagearchive-0.0.1-SNAPSHOT.war" services="import"/>
+      <module name="deployment.eaas-server.ear.com.openslx.eaas-image-archive-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-imagebuilder-impl-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-imageclassifier-0.0.1-SNAPSHOT.war" services="import"/>
       <module name="deployment.eaas-server.ear.de.bwl.bwfla-objectarchive-0.0.1-SNAPSHOT.war" services="import"/>

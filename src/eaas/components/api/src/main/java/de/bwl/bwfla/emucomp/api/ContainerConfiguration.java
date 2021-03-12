@@ -19,6 +19,8 @@
 
 package de.bwl.bwfla.emucomp.api;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import javax.xml.bind.JAXBException;
@@ -38,6 +40,11 @@ import java.util.List;
 		"output",
 		"input",
 		"dataResources",
+})
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "configurationType")
+@JsonSubTypes({
+		@JsonSubTypes.Type(value = DockerContainerConfiguration.class, name = ContainerConfiguration.Names.DOCKER),
+		@JsonSubTypes.Type(value = OciContainerConfiguration.class, name = ContainerConfiguration.Names.OCI)
 })
 public class ContainerConfiguration extends Environment
 {
@@ -145,5 +152,13 @@ public class ContainerConfiguration extends Environment
 		{
 			return destination;
 		}
+	}
+
+
+	/** Class names to use as type-information (compile-time constants) */
+	public static class Names
+	{
+		public static final String DOCKER = "de.bwl.bwfla.emucomp.api.DockerContainerConfiguration";
+		public static final String OCI    = "de.bwl.bwfla.emucomp.api.OciContainerConfiguration";
 	}
 }

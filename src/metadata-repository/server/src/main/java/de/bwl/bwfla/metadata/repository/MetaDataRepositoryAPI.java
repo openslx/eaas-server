@@ -102,7 +102,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 
 	// ========== Subresources ==============================
 
-	public class Sets
+	public static class Sets
 	{
 		private final SetSource sets;
 
@@ -177,7 +177,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 	}
 
 
-	public class ItemIdentifiers
+	public static class ItemIdentifiers
 	{
 		private final ItemIdentifierSource ids;
 
@@ -223,11 +223,11 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 
 			// Count and list identifier-descriptions in parallel
 			return ids.list(options)
-					.thenCombine(ids.count(), responder);
+					.thenCombine(ids.count(options), responder);
 		}
 	}
 
-	public class Items
+	public static class Items
 	{
 		private ItemSource source;
 		private ItemSink sink;
@@ -280,7 +280,7 @@ public class MetaDataRepositoryAPI implements IMetaDataRepositoryAPI
 
 			// Count and list item-descriptions in parallel
 			return source.list(options)
-					.thenCombine(source.count(), responder);
+					.thenCombine(source.count(options), responder);
 		}
 
 		@POST

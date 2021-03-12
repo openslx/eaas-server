@@ -3,7 +3,6 @@ package de.bwl.bwfla.emucomp.api;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,7 +10,7 @@ import de.bwl.bwfla.common.utils.ImageInformation;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
-import org.apache.tamaya.ConfigurationProvider;
+
 
 public class EmulatorUtils {
 	protected static final Logger log = Logger.getLogger("EmulatorUtils");
@@ -76,12 +75,15 @@ public class EmulatorUtils {
 						"Cannot create local copy of " + resUrl + " the binding's data.");
 			}
 		}
-		else if(resUrl.startsWith("file:") && Files.exists(Paths.get(resUrl.replace("file:", "")))) // shortcut to copy the file
+		else if(resUrl.startsWith("file:")) // shortcut to copy the file
 		{
+			// handle legacy 'file:/some/file' and new 'file:///some/file' URLs
+			final var prefix = (resUrl.startsWith("file://")) ? "file://" : "file:";
+			final var source = Path.of(resUrl.substring(prefix.length()));
 			try {
-				Files.copy(Paths.get(resUrl.replace("file:", "")), dest);
+				Files.copy(source, dest);
 			} catch (IOException e) {
-				log.log(Level.SEVERE, e.getMessage(), e);
+				log.log(Level.SEVERE, "Copying local file failed!", e);
 				throw new BWFLAException(e);
 			}
 		}
@@ -153,6 +155,12 @@ public class EmulatorUtils {
 	}
 
 	public static void convertImage(Path inFile, Path outFile, ImageInformation.QemuImageFormat fmt, Logger log) throws BWFLAException {
+		EmulatorUtils.convertImage(inFile.toString(), outFile, fmt, log);
+	}
+
+	public static void convertImage(String source, Path target, ImageInformation.QemuImageFormat fmt, Logger log)
+			throws BWFLAException
+	{
 		// NOTE: our patched qemu-img is relatively old and seems to silently produce
 		//       images with incorrect size when applied to some newer VHD files!
 		//       As a workaround, use upstream qemu-img just for converting.
@@ -162,12 +170,9 @@ public class EmulatorUtils {
 		process.setCommand("/eaas/workarounds/qemu-utils/usr/bin/qemu-img");
 		process.addArguments("convert");
 		process.addArguments("-O", fmt.toString());
-		process.addArgument(inFile.toString());
-		process.addArgument(outFile.toString());
-
-		if (!process.execute()) {
-			throw new BWFLAException("converting " + inFile.toString() + " failed");
-		}
+		process.addArgument(source);
+		process.addArgument(target.toString());
+		if (!process.execute())
+			throw new BWFLAException("Converting '" + source + "' failed!");
 	}
-	
 }

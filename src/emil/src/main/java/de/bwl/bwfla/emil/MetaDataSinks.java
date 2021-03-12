@@ -19,9 +19,8 @@
 
 package de.bwl.bwfla.emil;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageType;
-import de.bwl.bwfla.common.datatypes.SoftwarePackage;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
@@ -40,10 +39,10 @@ import java.util.stream.Stream;
 
 public class MetaDataSinks
 {
-	public static MetaDataSink images(String archive, DatabaseEnvironmentsAdapter db)
+	public static MetaDataSink images(String archive, ImageArchiveClient imagearchive)
 	{
 		return new MetaDataSink()
-				.set(new EnvironmentSink(archive, db));
+				.set(new EnvironmentSink(archive, imagearchive));
 	}
 
 	public static MetaDataSink environments(EmilEnvironmentRepository environmentRepository)
@@ -64,13 +63,13 @@ public class MetaDataSinks
 	private static class EnvironmentSink implements ItemSink
 	{
 		private final Logger log = Logger.getLogger(this.getClass().getName());
-		private final DatabaseEnvironmentsAdapter db;
+		private final ImageArchiveClient imagearchive;
 		private final String archive;
 
-		public EnvironmentSink(String archive, DatabaseEnvironmentsAdapter db)
+		public EnvironmentSink(String archive, ImageArchiveClient imagearchive)
 		{
 			this.archive = archive;
-			this.db = db;
+			this.imagearchive = imagearchive;
 		}
 
 		@Override
@@ -78,10 +77,13 @@ public class MetaDataSinks
 		{
 			try {
 				final Environment environment = Environment.fromValue(item.getMetaData());
-				final ImageArchiveMetadata iamd = new ImageArchiveMetadata();
-				iamd.setType(ImageType.BASE);  // TODO: how should this type be supplied?
-				// log.info("inserting item " + environment.getId());
-				db.importMetadata(archive, environment, iamd, true);
+				final var options = new ReplaceOptionsV2()
+						.setLocation(archive);
+
+				imagearchive.api()
+						.v2()
+						.environments()
+						.replace(environment.getId(), environment, options);
 			}
 			catch (JAXBException error) {
 				throw new BWFLAException(error);

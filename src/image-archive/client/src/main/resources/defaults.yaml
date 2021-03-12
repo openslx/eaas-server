@@ -1,0 +1,2 @@
+imagearchive:
+  endpoint: "http://eaas:8080/image-archive"

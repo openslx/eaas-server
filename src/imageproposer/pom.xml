@@ -26,6 +26,10 @@
 			<artifactId>imagearchive-client</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.openslx.eaas</groupId>
+			<artifactId>image-archive-client</artifactId>
+		</dependency>
+		<dependency>
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-components-api</artifactId>
 		</dependency>
