@@ -271,6 +271,7 @@
 		<module>blobstore-client-v2</module>
 		<module>dig-pub-sharing</module>
 		<module>environment-proposer</module>
+		<module>image-archive</module>
 		<module>imagearchive</module>
 		<module>imagearchive/imagearchive-client</module>
 		<module>imagebuilder</module>
@@ -435,6 +436,12 @@
 			</dependency>
 			<dependency>
 				<groupId>org.jboss.resteasy</groupId>
+				<artifactId>resteasy-client-microprofile</artifactId>
+				<version>${resteasy.version}</version>
+				<scope>provided</scope>
+			</dependency>
+			<dependency>
+				<groupId>org.jboss.resteasy</groupId>
 				<artifactId>resteasy-jackson2-provider</artifactId>
 				<version>${resteasy.version}</version>
 				<scope>provided</scope>
@@ -539,6 +546,24 @@
 				<artifactId>imagearchive-client</artifactId>
 				<version>${project.version}</version>
 				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>com.openslx.eaas</groupId>
+				<artifactId>image-archive-api</artifactId>
+				<version>${project.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>com.openslx.eaas</groupId>
+				<artifactId>image-archive-client</artifactId>
+				<version>${project.version}</version>
+				<type>jar</type>
+			</dependency>
+			<dependency>
+				<groupId>com.openslx.eaas</groupId>
+				<artifactId>image-archive-impl</artifactId>
+				<version>${project.version}</version>
+				<type>war</type>
 			</dependency>
 			<dependency>
 				<groupId>de.bwl.bwfla</groupId>

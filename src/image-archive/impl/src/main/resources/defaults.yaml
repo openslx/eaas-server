@@ -1,0 +1,30 @@
+imagearchive:
+  storage:
+    endpoints:
+    - name: "minio"
+      address: "http://minio:9000"
+      credentials:
+        access_key: "eaas"
+        secret_key: "eaas-secret-key"
+
+    locations:
+    - name: "default"
+      endpoint: "minio"
+      bucket: "image-archive"
+      paths:
+        container: "/containers"
+        machine: "/machines"
+        emulator: "/emulators"
+        template: "/templates"
+        checkpoint: "/checkpoints"
+        image: "/images"
+        rom: "/roms"
+
+    default_location: "default"
+
+  importer:
+    num_workers: 4
+    gc_interval: 6 hours
+    max_record_age: 7 days
+    base_directory: "/eaas/import"
+    temp_directory: "/tmp-storage/imports"

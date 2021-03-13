@@ -20,7 +20,7 @@
 package de.bwl.bwfla.emil.utils.components;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
+import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.rest.ComponentWithExternalFilesRequest;
 import de.bwl.bwfla.emil.datatypes.rest.MachineComponentRequest;
 import de.bwl.bwfla.emil.datatypes.rest.UviComponentRequest;
@@ -44,7 +44,7 @@ import java.util.logging.Logger;
 public class UviComponent
 {
     @Inject
-    private DatabaseEnvironmentsAdapter envHelper;
+    private EmilEnvironmentRepository envrepo;
 
     @Inject
     private AutoRunScripts scripts = null;
@@ -66,7 +66,12 @@ public class UviComponent
 
     private String getOperatingSystemId(UviComponentRequest request) throws BWFLAException
     {
-        final Environment env = envHelper.getEnvironmentById(request.getArchive(), request.getEnvironment());
+        final Environment env = envrepo.getImageArchive()
+                .api()
+                .v2()
+                .environments()
+                .fetch(request.getEnvironment());
+
         final String osid = ((MachineConfiguration) env).getOperatingSystemId();
         return (osid != null) ? osid : "UNKNOWN";
     }

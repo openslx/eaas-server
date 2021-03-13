@@ -63,6 +63,11 @@
 			<artifactId>commons-io</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.fasterxml.jackson.module</groupId>
+			<artifactId>jackson-module-jaxb-annotations</artifactId>
+			<scope>provided</scope>
+		</dependency>
+		<dependency>
 			<groupId>com.sun.activation</groupId>
 			<artifactId>jakarta.activation</artifactId>
 			<scope>provided</scope>
@@ -85,5 +90,9 @@
             <groupId>de.bwl.bwfla</groupId>
             <artifactId>blobstore-client</artifactId>
         </dependency>
+		<dependency>
+			<groupId>com.openslx.eaas</groupId>
+			<artifactId>image-archive-client</artifactId>
+		</dependency>
     </dependencies>
 </project>

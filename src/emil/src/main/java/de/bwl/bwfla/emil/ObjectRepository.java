@@ -19,8 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
@@ -275,8 +274,14 @@ public class ObjectRepository extends EmilRest
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
-					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
-						final ObjectMapper mapper = new ObjectMapper();
+					final var jsonfactory = DataUtils.json()
+							.mapper()
+							.getFactory();
+
+					try (com.fasterxml.jackson.core.JsonGenerator json = jsonfactory.createGenerator(ostream)) {
+						final var writer = DataUtils.json()
+								.writer();
+
 						json.writeStartArray();
 						objects.forEach((object) -> {
 							try {
@@ -297,7 +302,7 @@ public class ObjectRepository extends EmilRest
 //									item.setDescription(object.getDescription());
 //								}
 
-								mapper.writeValue(json, item);
+								writer.writeValue(json, item);
 							}
 							catch (Exception error) {
 								LOG.log(Level.WARNING, "Serializing object's metadata failed!", error);

@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emil.tasks;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
@@ -37,6 +38,7 @@ public class ClassificationTask extends BlockingTask<Object>
         this.request = req;
         this.emilEnvRepo = req.metadata;
         this.envHelper = req.environments;
+        this.imagearchive = req.imagearchive;
         this.imageClassifier = req.classification.imageClassifier();
         this.imageProposer = req.classification.imageProposer();
         this.classification = req.classification;
@@ -44,7 +46,10 @@ public class ClassificationTask extends BlockingTask<Object>
 
     private final EmilEnvironmentRepository emilEnvRepo;
     private final ClassifyObjectRequest request;
+
+    @Deprecated
     private final DatabaseEnvironmentsAdapter envHelper;
+    private final ImageArchiveClient imagearchive;
     private final ImageClassifier imageClassifier;
     private final ImageProposer imageProposer;
     private final ObjectClassification classification;
@@ -52,7 +57,10 @@ public class ClassificationTask extends BlockingTask<Object>
     public static class ClassifyObjectRequest
     {
         public ObjectClassification classification;
+
+        @Deprecated
         public DatabaseEnvironmentsAdapter environments;
+        public ImageArchiveClient imagearchive;
         public EmilEnvironmentRepository metadata;
         public ClassificationResult input;
         public FileCollection fileCollection;
@@ -74,12 +82,14 @@ public class ClassificationTask extends BlockingTask<Object>
 //        }
         HashSet<String> knownEnvironments = new HashSet<>();
         for (String envId : proposedEnvironments) {
-            try {
-                envHelper.getEnvironmentById(envId);
-            } catch (BWFLAException e)
-            {
+            final var exists = imagearchive.api()
+                    .v2()
+                    .machines()
+                    .exists(envId);
+
+            if (!exists)
                 continue;
-            }
+
             List<EmilEnvironment> emilEnvironments = emilEnvRepo.getChildren(envId, environments, request.userCtx);
             List<EmilEnvironment> resultList = new ArrayList<>();
             for(EmilEnvironment emilEnv : emilEnvironments) {

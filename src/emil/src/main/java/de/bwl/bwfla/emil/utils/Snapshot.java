@@ -1,9 +1,8 @@
 package de.bwl.bwfla.emil.utils;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageType;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.snapshot.SaveDerivateRequest;
 import de.bwl.bwfla.emil.datatypes.snapshot.SaveNewEnvironmentRequest;
@@ -86,7 +85,7 @@ public class Snapshot
         }
     }
 
-    public EmilEnvironment createEnvironment(DatabaseEnvironmentsAdapter environmentsAdapter,
+    public EmilEnvironment createEnvironment(ImageArchiveClient archive,
                                              SaveDerivateRequest req,
                                              EmilEnvironment parentEnv,
                                              boolean checkpoint) throws BWFLAException {
@@ -101,23 +100,19 @@ public class Snapshot
         else
             machineConfiguration = configuration.copy();
         
-        ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
         if (parentEnv instanceof EmilSessionEnvironment) {
-            iaMd.setType(ImageType.SESSIONS);
             newEnv = new EmilSessionEnvironment((EmilSessionEnvironment)parentEnv);
         } else if (parentEnv instanceof EmilObjectEnvironment) {
-            iaMd.setType(ImageType.OBJECT);
-            MachineConfiguration oldEnv = (MachineConfiguration) environmentsAdapter.getEnvironmentById(req.getArchive(), req.getEnvId());
+            final var oldEnv = archive.api()
+                    .v2()
+                    .machines()
+                    .fetch(req.getEnvId());
+
             copyBinding(oldEnv, machineConfiguration, ((EmilObjectEnvironment) parentEnv).getObjectId());
             newEnv = new EmilObjectEnvironment((EmilObjectEnvironment) parentEnv);
         } else {
-            iaMd.setType(ImageType.DERIVATE);
             newEnv = new EmilEnvironment(parentEnv);
         }
-
-        if(checkpoint)
-            iaMd.setType(ImageType.CHECKPOINTS);
-
 
         if (req.getSoftwareId() != null)
             addSoftwareId(machineConfiguration, req.getSoftwareId());
@@ -139,7 +134,11 @@ public class Snapshot
             }
         }
 
-        String newId = environmentsAdapter.importMachineEnvironment("default", machineConfiguration, data, iaMd);
+        final var newId = archive.api()
+                .v2()
+                .environments()
+                .insert(machineConfiguration, data);
+
         if(newId == null)
             throw new BWFLAException("create revision: importMachineEnvironment failed");
 
@@ -153,7 +152,7 @@ public class Snapshot
         return newEnv;
     }
 
-    public String saveUserSession(DatabaseEnvironmentsAdapter environmentsAdapter,
+    public String saveUserSession(ImageArchiveClient imagearchive,
                                   ObjectArchiveHelper objectArchiveHelper,
                                   SaveUserSessionRequest request) throws BWFLAException
     {
@@ -164,11 +163,7 @@ public class Snapshot
         MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration, true);
         env.getDescription().setTitle("user session: " + request.getUserId());
 
-        ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-        iaMd.setType(ImageType.SESSIONS);
-        iaMd.setUserId(request.getUserId());
-
-        String objectId = request.getObjectId();
+//        String objectId = request.getObjectId();
 //        if(objectId != null)
 //        {
 //            String archiveName = request.getObjectArchiveId();
@@ -197,14 +192,19 @@ public class Snapshot
                 it.remove();
             }
         }
-        String newId = environmentsAdapter.importMachineEnvironment("default", env, data, iaMd);
+
+        final var newId = imagearchive.api()
+                .v2()
+                .environments()
+                .insert(env, data);
+
         if (newId == null)
             throw new BWFLAException("importMachineEnvironment failed");
 
         return newId;
     }
 
-    public EmilObjectEnvironment createObjectEnvironment(DatabaseEnvironmentsAdapter environmentsAdapter,
+    public EmilObjectEnvironment createObjectEnvironment(ImageArchiveClient imagearchive,
                                                          ObjectArchiveHelper objectArchiveHelper,
                                                          SaveObjectEnvironmentRequest request) throws BWFLAException {
 
@@ -217,9 +217,6 @@ public class Snapshot
         MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration, true);
         env.getDescription().setTitle(request.getTitle());
 
-        ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-        iaMd.setType(ImageType.OBJECT);
-
         int driveId = request.getDriveId();
 
         if(request.isEmbeddedObject()) {
@@ -227,7 +224,7 @@ public class Snapshot
             if (archiveName == null)
                 archiveName = "default";
 
-            ObjectArchiveBinding binding = new ObjectArchiveBinding(environmentsAdapter.toString(), archiveName, request.getObjectId());
+            ObjectArchiveBinding binding = new ObjectArchiveBinding(objectArchiveHelper.getHost(), archiveName, request.getObjectId());
             FileCollection fc = objectArchiveHelper.getObjectReference(request.getObjectArchiveId(), request.getObjectId());
 
             if (fc == null)
@@ -240,8 +237,6 @@ public class Snapshot
                 LOG.log(Level.WARNING, e.getMessage(), e);
             }
         }
-
-        String newId = null;
         if (data != null) {
             for (Iterator<BindingDataHandler> it = data.iterator(); it.hasNext();)
             {
@@ -250,10 +245,15 @@ public class Snapshot
                     it.remove();
                 }
             }
-            newId = environmentsAdapter.importMachineEnvironment(request.getArchive(), env, data, iaMd);
         }
-        else
-            newId = environmentsAdapter.importMetadata(request.getArchive(), env, iaMd, false);
+
+        final var options = new InsertOptionsV2()
+                .setLocation(request.getArchive());
+
+        final var newId = imagearchive.api()
+                .v2()
+                .environments()
+                .insert(env, data, options);
 
         if (newId == null)
             throw new BWFLAException("importMachineEnvironment failed");

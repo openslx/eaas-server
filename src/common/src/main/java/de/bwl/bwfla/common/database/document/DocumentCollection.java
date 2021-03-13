@@ -23,6 +23,7 @@ import com.mongodb.MongoException;
 import com.mongodb.MongoNamespace;
 import com.mongodb.client.FindIterable;
 import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoCursor;
 import com.mongodb.client.model.BulkWriteOptions;
 import com.mongodb.client.model.DeleteManyModel;
 import com.mongodb.client.model.DeleteOneModel;
@@ -302,10 +303,12 @@ public class DocumentCollection<T>
 	public static class FindResult<T> implements Iterable<T>, AutoCloseable
 	{
 		private FindIterable<T> result;
+		private MongoCursor<T> cursor;
 
 		private FindResult(FindIterable<T> iterable)
 		{
 			this.result = iterable;
+			this.cursor = null;
 		}
 
 		/** Number of documents to skip */
@@ -325,20 +328,25 @@ public class DocumentCollection<T>
 		/** Return documents as stream */
 		public Stream<T> stream()
 		{
-			return StreamSupport.stream(result.spliterator(), false);
+			return StreamSupport.stream(this.spliterator(), false)
+					.onClose(this::close);
 		}
 
 		@NotNull
 		@Override
 		public Iterator<T> iterator()
 		{
-			return result.iterator();
+			if (cursor == null)
+				cursor = result.cursor();
+
+			return cursor;
 		}
 
 		@Override
-		public void close() throws Exception
+		public void close()
 		{
-			result.cursor().close();
+			if (cursor != null)
+				cursor.close();
 		}
 	}
 

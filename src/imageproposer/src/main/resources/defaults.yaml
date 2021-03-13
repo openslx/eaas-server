@@ -1,5 +1,5 @@
 imageproposer:
     rebuildinterval:  300000
+
 ws:
-    imagearchive: http://eaas:8080
     softwarearchive:  http://eaas:8080

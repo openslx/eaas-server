@@ -41,7 +41,7 @@ public class ObjectArchiveBinding extends AbstractDataResource{
 	}
 
 	public ObjectArchiveBinding(String host, String archive, String objectId) throws BWFLAException {
-		if (host == null || objectId == null) {
+		if (objectId == null) {
 			throw new BWFLAException("invalid arguments: " + host + " " + archive + " " + objectId);
 		}
 

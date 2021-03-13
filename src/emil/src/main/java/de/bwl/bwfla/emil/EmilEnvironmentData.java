@@ -243,7 +243,7 @@ public class EmilEnvironmentData
 	@GET
 	@Path("/sync")
 	@Produces(MediaType.APPLICATION_JSON)
-	public Response sync() {
+	public Response sync() throws BWFLAException {
 		return envrepo.actions()
 				.sync();
 	}

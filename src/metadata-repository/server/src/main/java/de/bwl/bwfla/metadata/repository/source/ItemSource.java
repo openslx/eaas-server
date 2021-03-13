@@ -31,5 +31,5 @@ public interface ItemSource
 
 	CompletableFuture<Stream<ItemDescription>> list(QueryOptions options);
 
-	CompletableFuture<Integer> count();
+	CompletableFuture<Integer> count(QueryOptions options);
 }

@@ -1,5 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
@@ -8,13 +10,12 @@ import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ReplicateImageTask extends BlockingTask<Object>
@@ -41,7 +42,9 @@ public class ReplicateImageTask extends BlockingTask<Object>
 
     public static class ReplicateImageTaskRequest {
 
+        @Deprecated
         public DatabaseEnvironmentsAdapter environmentHelper;
+        public ImageArchiveClient imagearchive;
         public ImageProposer imageProposer;
         public String destArchive;
         public Environment env;
@@ -60,10 +63,6 @@ public class ReplicateImageTask extends BlockingTask<Object>
     }
     @Override
     protected Object execute() throws Exception {
-        ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-        iaMd.setType(ImageType.USER);
-
-        System.out.println("REPLICATING IMAGE");
         EmulatorSpec emulatorSpec = null;
         if(request.env instanceof MachineConfiguration) {
             emulatorSpec = ((MachineConfiguration)request.env).getEmulator();
@@ -134,42 +133,21 @@ public class ReplicateImageTask extends BlockingTask<Object>
         else if (request.env instanceof OciContainerConfiguration)
             resources = ((OciContainerConfiguration) request.env).getDataResources();
 
-        for (AbstractDataResource abr : resources) {
-                if (abr instanceof ImageArchiveBinding) {
-                    List<String> images = new ArrayList<>();
-                    ImageArchiveBinding iab = (ImageArchiveBinding) abr;
-                    images.add(iab.getUrl());
-
-                    List<EnvironmentsAdapter.ImportImageHandle> sessions =
-                            request.environmentHelper.replicateImages(request.destArchive, images);
-
-                    if (sessions.size() != 1) {
-                        log.severe("replicate images failed: session creation failed");
-                        continue;
-                    }
-
-                    ImageArchiveBinding binding = sessions.get(0).getBinding(60 * 60);
-                    if (binding == null) {
-                        log.severe("binding null: " + iab.getImageId());
-                        throw new BWFLAException("ImportImageTask: import image failed. Could not create binding");
-                    }
-
-                    iab.setUrl(null);
-                    iab.setBackendName(binding.getBackendName());
-                    iab.setType(binding.getType());
-                    iab.setImageId(binding.getImageId());
-                } else
-                    log.severe("not an imagearchive binding");
-            }
-        // }
         try {
-            request.environmentHelper.importMetadata(request.destArchive, request.env, iaMd, true);
+            final var options = new ReplaceOptionsV2()
+                    .setLocation(request.destArchive);
+
+            request.imagearchive.api()
+                    .v2()
+                    .environments()
+                    .replicate(request.env, resources, options);
+
             request.repository.replicate(request.emilEnvironment, request.destArchive, request.username);
         }
-        catch (Throwable e)
-        {
-            e.printStackTrace();
+        catch (Throwable error) {
+            log.log(Level.WARNING, "Replicating environment failed!", error);
         }
+
         return request.env;
     }
 }

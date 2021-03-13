@@ -19,11 +19,13 @@ import java.util.stream.Stream;
 
 import javax.activation.DataHandler;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.common.services.guacplay.io.Metadata;
 import de.bwl.bwfla.common.services.handle.HandleClient;
 import de.bwl.bwfla.common.services.handle.HandleException;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.*;
+import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.ImageIndex.Alias;
 import de.bwl.bwfla.imagearchive.ImageIndex.ImageMetadata;
@@ -860,13 +862,13 @@ public class ImageHandler
 				log.severe("no metadata directory found");
 				return null;
 			}
-			try {
-				copyTemplates(metadata, "templates", ImageType.template.name());
-				copyEnvironments(metadata, ImageType.base);
+
+			try (final var archive = ImageArchiveClient.create()) {
+				this.copyEnvironments(metadata.resolve("environments"), archive);
+				this.copyTemplates(metadata.resolve("templates"), archive);
 			}
-			catch (BWFLAException e)
-			{
-				e.printStackTrace();
+			catch (Exception error) {
+				log.log(Level.WARNING, "Importing emulator's metadata failed!", error);
 			}
 
 			EmulatorMetadata md;
@@ -893,58 +895,59 @@ public class ImageHandler
 		}
 	}
 
-	private void copyEnvironments(Path metadata, ImageType t) throws BWFLAException {
-		Path environments = metadata.resolve("environments");
-		if(Files.exists(environments)) {
-			Path dst = null;
-			List<Path> envPaths = new ArrayList<>();
-			try {
-				dst = Files.createTempDirectory("environment-templates");
-				FileUtils.copyDirectory(environments.toFile(), dst.toFile());
+	private void copyEnvironments(Path srcdir, ImageArchiveClient archive) throws IOException
+	{
+		if (!Files.exists(srcdir))
+			return;  // nothing to copy!
 
-				Files.list(dst).forEach(path -> envPaths.add(path));
-				for (Path p : envPaths) {
-					ImageArchiveMetadata idMd = new ImageArchiveMetadata(t);
-					if (p.getFileName().endsWith("xml")) {
-						byte[] encoded = Files.readAllBytes(p);
-						String conf = new String(encoded, StandardCharsets.UTF_8);
-						iaConfig.getRegistry().getDefaultBackend().importConfiguration(conf, idMd, true);
-					}
-				}
-			} catch (IOException e) {
-				log.log(Level.SEVERE, "Failed to copy environments", e);
-				throw new BWFLAException(e);
-			} finally {
-				if (dst != null) {
-					try (final Stream<Path> stream = Files.walk(dst)) {
-						final Consumer<Path> deleter = (path) -> {
-							try {
-								Files.delete(path);
-							} catch (IOException e) {
-								e.printStackTrace();
-							}
-						};
-						stream.sorted(Comparator.reverseOrder())
-								.forEach(deleter);
-					} catch (IOException e) {
-						e.printStackTrace();
-					}
-				}
+		final var machines = archive.api()
+				.v2()
+				.machines();
+
+		final Consumer<Path> uploader = (path) -> {
+			if (Files.isDirectory(path))
+				return;
+
+			try (final var input = Files.newInputStream(path)) {
+				final var machine = JaxbType.from(input, MachineConfiguration.class);
+				machines.replace(machine.getId(), machine);
+				log.info("Imported machine '" + machine.getId() + "'");
 			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Importing machine failed!", error);
+			}
+		};
+
+		try (final var files = Files.list(srcdir)) {
+			files.forEach(uploader);
 		}
 	}
 
-	private void copyTemplates(Path metadata, String metadataType, String metadataTarget) throws BWFLAException {
-		Path environments = metadata.resolve(metadataType);
-		if(Files.exists(environments))
-		{
-			File dst = getMetaDataTargetPath(metadataTarget);
-			try {
-				FileUtils.copyDirectory(environments.toFile(), dst);
-			} catch (IOException e) {
-				log.log(Level.SEVERE, "Failed to copy templates", e);
-				throw new BWFLAException(e);
+	private void copyTemplates(Path srcdir, ImageArchiveClient archive) throws IOException
+	{
+		if (!Files.exists(srcdir))
+			return;  // nothing to copy!
+
+		final var templates = archive.api()
+				.v2()
+				.templates();
+
+		final Consumer<Path> uploader = (path) -> {
+			if (Files.isDirectory(path))
+				return;
+
+			try (final var input = Files.newInputStream(path)) {
+				final var template = JaxbType.from(input, MachineConfigurationTemplate.class);
+				templates.replace(template.getId(), template);
+				log.info("Imported machine-template '" + template.getId() + "'");
 			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Importing machine-template failed!", error);
+			}
+		};
+
+		try (final var files = Files.list(srcdir)) {
+			files.forEach(uploader);
 		}
 	}
 

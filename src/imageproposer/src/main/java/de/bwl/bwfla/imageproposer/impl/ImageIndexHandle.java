@@ -21,6 +21,7 @@ package de.bwl.bwfla.imageproposer.impl;
 
 import java.io.*;
 import java.nio.file.Files;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
@@ -31,16 +32,16 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 
+import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystemInformation;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
-import de.bwl.bwfla.emucomp.api.Environment;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import de.bwl.bwfla.softwarearchive.util.SoftwareArchiveHelper;
 
 
@@ -52,10 +53,6 @@ public class ImageIndexHandle
 	@Inject
 	@Config(value="imageproposer.rebuildinterval")
 	private long  rebuildInterval;
-	
-	@Inject
-	@Config(value="ws.imagearchive")
-	private String imageArchive;
 	
 	@Inject
 	@Config(value="ws.softwarearchive")
@@ -72,11 +69,9 @@ public class ImageIndexHandle
 	@PostConstruct
 	public void init() {
 		// this.stopwatch = new StopWatch();
-		this.rebuildInterval = rebuildInterval;
-		this.builder = new ImageIndexBuilder(imageArchive, softwareArchive);
+		this.builder = new ImageIndexBuilder(softwareArchive);
 		this.builder.loadDefaultsFromResource("ImagesMetaDataDefaults.json");
 		this.index = builder.build();
-		System.out.println("building from init");
 	}
 
 	public String refreshAsTask()
@@ -150,33 +145,30 @@ public class ImageIndexHandle
 	{
 		private final Logger log = Logger.getLogger(ImageIndexBuilder.class.getName());
 
-		private final EnvironmentsAdapter envHelper;
+		private final ImageArchiveClient imagearchive;
 		private final SoftwareArchiveHelper swHelper;
 		private final HashMap<String, OperatingSystemInformation> operatingSystems;
 
-		public ImageIndexBuilder(String imageArchive, String softwareArchive)
+		public ImageIndexBuilder(String softwareArchive)
 		{
-			this.envHelper = new EnvironmentsAdapter(imageArchive);
+			try {
+				this.imagearchive = ImageArchiveClient.create();
+			}
+			catch (Exception error) {
+				throw new RuntimeException(error);
+			}
+
 			this.swHelper = new SoftwareArchiveHelper(softwareArchive);
 			this.operatingSystems = new HashMap<>();
 		}
 
 		public ImageIndex build()
 		{
-			try {
+			try (final var machines = this.fetch()) {
 				ImageIndex index = new ImageIndex(operatingSystems);
-				List<Environment> environments = envHelper.getEnvironments(null);
-				if (environments == null || environments.isEmpty()) {
-					log.info("No environments found! Skip image index rebuilding.");
-					return index;  // Nothing to do!
-				}
-
-				for (Environment environment : environments) {
-					if (!(environment instanceof MachineConfiguration))
-						continue;
-
-					final MachineConfiguration config = (MachineConfiguration) environment;
-					final String image = environment.getId();
+				for (var iter = machines.iterator(); iter.hasNext();) {
+					final MachineConfiguration config = iter.next();
+					final String image = config.getId();
 					
 					// adding base fmts first
 					String osId = config.getOperatingSystemId();
@@ -220,8 +212,7 @@ public class ImageIndexHandle
 				return index;
 			}
 			catch (Exception exception) {
-				log.warning("Image index rebuilding for ImageProposer service failed!");
-				log.log(Level.WARNING, exception.getMessage(), exception);
+				log.log(Level.WARNING, "Image index rebuilding for ImageProposer service failed!", exception);
 			}
 			
 			return null;
@@ -256,6 +247,20 @@ public class ImageIndexHandle
 				for (OperatingSystemInformation os : metaData.getOperatingSystemInformations()) {
 					operatingSystems.put(os.getId(), os);
 				}
+			}
+		}
+
+		private Streamable<MachineConfiguration> fetch()
+		{
+			try {
+				return imagearchive.api()
+						.v2()
+						.machines()
+						.fetch();
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Fetching machines failed!", error);
+				return Streamable.of(Collections.emptyList());
 			}
 		}
 	}

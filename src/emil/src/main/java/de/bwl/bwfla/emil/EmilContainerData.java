@@ -13,8 +13,7 @@ import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
-import de.bwl.bwfla.api.imagearchive.ImageArchiveMetadata;
-import de.bwl.bwfla.api.imagearchive.ImageType;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
@@ -139,7 +138,12 @@ public class EmilContainerData extends EmilRest {
 
         OciContainerConfiguration containerConf;
         try {
-            containerConf = (OciContainerConfiguration) envHelper.getEnvironmentById(newEmilEnv.getArchive(), req.getId());
+            containerConf = (OciContainerConfiguration) emilEnvRepo.getImageArchive()
+                    .api()
+                    .v2()
+                    .containers()
+                    .fetch(req.getId());
+
             EnvironmentDescription description = containerConf.getDescription();
             description.setTitle(req.getTitle());
             containerConf.setDescription(description);
@@ -154,16 +158,27 @@ public class EmilContainerData extends EmilRest {
             EmilContainerEnvironment newEnv = new EmilContainerEnvironment();
             if (!env.getArchive().equals("default")) {
                 // we need to import / duplicate the env
-                ImageArchiveMetadata md = new ImageArchiveMetadata();
-                md.setType(ImageType.USER);
+                final var id = emilEnvRepo.getImageArchive()
+                        .api()
+                        .v2()
+                        .containers()
+                        .insert(containerConf);
+
                 newEnv.setArchive("default");
-                String id = envHelper.importMetadata("default", containerConf, md, false);
                 newEnv.setEnvId(id);
                 newEnv.setParentEnvId(env.getEnvId());
                 env.addChildEnvId(newEnv.getEnvId());
                 imported = true;
             } else {
-                envHelper.updateMetadata(env.getArchive(), containerConf);
+                final var options = new ReplaceOptionsV2()
+                        .setLocation(env.getArchive());
+
+                emilEnvRepo.getImageArchive()
+                        .api()
+                        .v2()
+                        .containers()
+                        .replace(containerConf.getId(), containerConf, options);
+
                 newEnv = env;
             }
 
@@ -266,7 +281,7 @@ public class EmilContainerData extends EmilRest {
         if (authenticatedUser != null)
             userCtx = authenticatedUser.getUserId();
 
-        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, envHelper, emilEnvRepo, userCtx)));
+        return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, emilEnvRepo, userCtx)));
     }
 
     @Secured(roles={Role.RESTRICTED})

@@ -205,7 +205,12 @@ public class ExportEnvironmentTask extends BlockingTask<Object>
 
         while(true) {
 
-            Environment abstractEnv = environmentHelper.getEnvironmentById(request.archive, request.envId);
+            final Environment abstractEnv = environmentRepository.getImageArchive()
+                    .api()
+                    .v2()
+                    .environments()
+                    .fetch(request.envId);
+
             if (abstractEnv == null)
                 throw new BWFLAException("could not find environment: " + request.envId);
 

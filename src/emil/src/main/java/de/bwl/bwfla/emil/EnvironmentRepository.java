@@ -19,8 +19,10 @@
 
 package de.bwl.bwfla.emil;
 
-import com.fasterxml.jackson.core.JsonFactory;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openslx.eaas.common.databind.DataUtils;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -74,6 +76,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
@@ -82,6 +85,8 @@ import java.util.stream.Stream;
 @Path("/environment-repository")
 public class EnvironmentRepository extends EmilRest
 {
+	private ImageArchiveClient imagearchive = null;
+
 	@Inject
 	private DatabaseEnvironmentsAdapter envdb = null;
 
@@ -117,12 +122,12 @@ public class EnvironmentRepository extends EmilRest
 	private void initialize()
 	{
 		try {
+			imagearchive = emilEnvRepo.getImageArchive();
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
-
 		}
-		catch (IllegalArgumentException error) {
-			LOG.log(Level.WARNING, "Initializing image-proposer failed!", error);
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
 		}
 	}
 
@@ -300,12 +305,18 @@ public class EnvironmentRepository extends EmilRest
 
 				// Construct response (in streaming-mode)
 				final StreamingOutput output = (ostream) -> {
-					try (com.fasterxml.jackson.core.JsonGenerator json = new JsonFactory().createGenerator(ostream)) {
-						final ObjectMapper mapper = new ObjectMapper();
+					final var jsonfactory = DataUtils.json()
+							.mapper()
+							.getFactory();
+
+					try (com.fasterxml.jackson.core.JsonGenerator json = jsonfactory.createGenerator(ostream)) {
+						final var writer = DataUtils.json()
+								.writer();
+
 						json.writeStartArray();
 						entries.forEach((entry) -> {
 							try {
-								mapper.writeValue(json, entry);
+								writer.writeValue(json, entry);
 							}
 							catch (Exception error) {
 								LOG.log(Level.WARNING, "Serializing environment failed!", error);
@@ -379,8 +390,12 @@ public class EnvironmentRepository extends EmilRest
 				return EnvironmentRepository.errorMessageResponse("invalid template id");
 
 			try {
-				MachineConfiguration pEnv = envdb.getTemplate(envReq.getTemplateId());
-				if (pEnv == null) {
+				final var template = imagearchive.api()
+						.v2()
+						.templates()
+						.fetch(envReq.getTemplateId());
+
+				if (template == null) {
 					LOG.severe("invalid template id: " + envReq.getTemplateId());
 					throw new BadRequestException(Response
 							.status(Response.Status.BAD_REQUEST)
@@ -388,9 +403,7 @@ public class EnvironmentRepository extends EmilRest
 							.build());
 				}
 
-
-
-				MachineConfiguration env = pEnv.copy(); // don't modify the real template
+				MachineConfiguration env = template.copy(); // don't modify the real template
 				LOG.severe(env.toString());
 				env.getDescription().setTitle(envReq.getLabel());
 				if (env.getNativeConfig() == null)
@@ -398,9 +411,6 @@ public class EnvironmentRepository extends EmilRest
 
 				env.setOperatingSystemId(envReq.getOperatingSystemId());
 				env.getNativeConfig().setValue(envReq.getNativeConfig());
-				ImageArchiveMetadata iaMd = new ImageArchiveMetadata();
-				iaMd.setType(ImageType.USER);
-
 				driveUpdateHelper(env, envReq.getDriveSettings(), objects);
 
 				if (env.getUiOptions() == null)
@@ -427,11 +437,14 @@ public class EnvironmentRepository extends EmilRest
 					env.getAbstractDataResource().add(romBinding);
 				}
 
-				String id;
+				final var iopts = new InsertOptionsV2();
 				if(env.isLinuxRuntime())
-					id = envdb.importMetadata("public", env, iaMd, false);
-				else
-					id = envdb.importMetadata("default", env, iaMd, false);
+					iopts.setLocation("public");
+
+				final var id = imagearchive.api()
+						.v2()
+						.machines()
+						.insert(env);
 
 				EmilEnvironment newEmilEnv = emilEnvRepo.getEmilEnvironmentById(id);
 
@@ -516,7 +529,11 @@ public class EnvironmentRepository extends EmilRest
 			EmilEnvironment newenv;
 
 			try {
-				final Environment environment = envdb.getEnvironmentById(oldenv.getArchive(), envId);
+				final Environment environment = imagearchive.api()
+						.v2()
+						.environments()
+						.fetch(envId);
+
 				if (environment instanceof MachineConfiguration) {
 					final MachineConfiguration machineConfiguration = (MachineConfiguration) environment;
 					machineConfiguration.setOperatingSystemId(desc.getOs());
@@ -572,17 +589,27 @@ public class EnvironmentRepository extends EmilRest
 						newenv = new EmilObjectEnvironment(oldenv);
 					else newenv = new EmilEnvironment(oldenv);
 
-					ImageArchiveMetadata md = new ImageArchiveMetadata();
-					md.setType(ImageType.USER);
 					newenv.setArchive("default");
-					String id = envdb.importMetadata("default", environment, md, false);
+
+					final var id = imagearchive.api()
+							.v2()
+							.environments()
+							.insert(environment);
+
 					newenv.setEnvId(id);
 					newenv.setParentEnvId(oldenv.getEnvId());
 					oldenv.addChildEnvId(newenv.getEnvId());
 					imported = true;
 				}
 				else {
-					envdb.updateMetadata(oldenv.getArchive(), environment);
+					final var options  = new ReplaceOptionsV2()
+							.setLocation(oldenv.getArchive());
+
+					imagearchive.api()
+							.v2()
+							.environments()
+							.replace(environment.getId(), environment, options);
+
 					newenv = oldenv;
 				}
 
@@ -709,7 +736,11 @@ public class EnvironmentRepository extends EmilRest
 
 		private EnvironmentDetails addEnvironmentDetails(EmilEnvironment emilenv) throws BWFLAException
 		{
-			Environment env = envdb.getEnvironmentById(emilenv.getArchive(), emilenv.getEnvId());
+			final Environment env = imagearchive.api()
+					.v2()
+					.environments()
+					.fetch(emilenv.getEnvId());
+
 			MachineConfiguration machine = (env instanceof MachineConfiguration) ? (MachineConfiguration) env : null;
 			List<EmilEnvironment> parents = emilEnvRepo.getParents(emilenv.getEnvId());
 			return new EnvironmentDetails(emilenv, machine, parents, swHelper);
@@ -812,10 +843,16 @@ public class EnvironmentRepository extends EmilRest
 				return EnvironmentRepository.internalErrorResponse("not found: " + envId);  // TODO: throw NotFoundException!
 
 			try {
-				Environment environment = envdb.getEnvironmentById(emilEnv.getArchive(), envId);
-				ImageArchiveMetadata md = new ImageArchiveMetadata();
-				md.setType(ImageType.USER);
-				String id = envdb.importMetadata("default", environment, md, false);
+				final Environment environment = imagearchive.api()
+						.v2()
+						.environments()
+						.fetch(envId);
+
+				final String id = imagearchive.api()
+						.v2()
+						.environments()
+						.insert(environment);
+
 				EmilEnvironment newEmilEnv = new EmilEnvironment(emilEnv);
 				newEmilEnv.setEnvId(id);
 				newEmilEnv.setTitle("[fork]: " + newEmilEnv.getTitle() + " " + newEmilEnv.getEnvId());
@@ -887,20 +924,25 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Listing environment templates...");
 			try {
+				final var templates = imagearchive.api()
+						.v2()
+						.templates()
+						.fetch();
+
 				if(compat.equals("newStyle")) {
-					List<MachineConfigurationTemplate> templates = envdb.getTemplates();
 					return Response.status(Status.OK)
 							.entity(templates)
 							.build();
 				}
 				else {
-					try {
+					try (templates) {
 						final StringWriter output = new StringWriter();
 						final JsonGenerator json = Json.createGenerator(output);
 						json.writeStartObject();
 						json.write("status", "0");
 						json.writeStartArray("systems");
-						for (MachineConfiguration machine : envdb.getTemplates()) {
+
+						final Consumer<MachineConfiguration> writer = (machine) -> {
 							json.writeStartObject();
 							json.write("id", machine.getId());
 							json.write("label", machine.getDescription().getTitle());
@@ -926,7 +968,10 @@ public class EnvironmentRepository extends EmilRest
 
 							json.writeEnd();
 							json.writeEnd();
-						}
+						};
+
+						templates.stream()
+								.forEach(writer);
 
 						json.writeEnd();
 						json.writeEnd();
@@ -1029,17 +1074,22 @@ public class EnvironmentRepository extends EmilRest
 			}
 		}
 
-		/** Synchronize internal database with the image archives. */
+		/** Rebuild archive storage indexes */
 		@POST
 		@Path("/sync")
 		@Secured(roles={Role.RESTRICTED})
 		@Produces(MediaType.APPLICATION_JSON)
-		public Response sync()
+		public Response sync() throws BWFLAException
 		{
-			LOG.info("Syncing internal DB...");
-			envdb.sync();
+			LOG.info("Updating archive indexes...");
+			imagearchive.api()
+					.v2()
+					.storage()
+					.indexes()
+					.rebuild();
+
 			emilEnvRepo.init();
-			return Emil.successMessageResponse("syncing archives ");
+			return Emil.successMessageResponse("Archive indexes updated!");
 		}
 
 
@@ -1087,9 +1137,11 @@ public class EnvironmentRepository extends EmilRest
 					return new TaskStateResponse(new BWFLAException(e));
 				}
 			}
+
 			request.url = url;
 			request.destArchive = "default";
 			request.environmentHelper = envdb;
+			request.imagearchive = imagearchive;
 			request.label = imageReq.getLabel();
 
 			if(imageReq.getImageType() != null && imageReq.getImageType().equalsIgnoreCase(ImageType.ROMS.value()))
@@ -1134,15 +1186,20 @@ public class EnvironmentRepository extends EmilRest
 					continue;
 				}
 				try {
-					importRequest.env = envdb.getEnvironmentById(emilEnvironment.getArchive(), envId);
+					importRequest.env = imagearchive.api()
+							.v2()
+							.environments()
+							.fetch(envId);
+
 					importRequest.repository = emilEnvRepo;
 					importRequest.emilEnvironment = emilEnvironment;
 				}
-				catch (BWFLAException error) {
+				catch (Exception error) {
 					LOG.log(Level.WARNING, "Looking up environment failed!", error);
 				}
 
 				importRequest.environmentHelper = envdb;
+				importRequest.imagearchive = imagearchive;
 				importRequest.destArchive = replicateImagesRequest.getDestArchive();
 				importRequest.imageProposer = imageProposer;
 				
