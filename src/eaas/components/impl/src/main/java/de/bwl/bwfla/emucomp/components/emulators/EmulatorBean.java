@@ -948,7 +948,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			final EmuCompState curstate = emuBeanState.get();
 			if (curstate != EmuCompState.EMULATOR_RUNNING) {
 				LOG.warning("Cannot stop emulator! Wrong state detected: " + curstate.value());
-				return null;
+				return this.getEmulatorOutputLocation();
 			}
 
 			emuBeanState.set(EmuCompState.EMULATOR_BUSY);
@@ -962,11 +962,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	private boolean isOutputAvailable()
 	{
+		LOG.severe("output is available: " +  (emuEnvironment.getOutputBindingId() != null));
 		return emuEnvironment.getOutputBindingId() != null;
 	}
 
 	private void processEmulatorOutput() throws BWFLAException
 	{
+		LOG.severe("processing emulator output ...");
 		final String bindingId = emuEnvironment.getOutputBindingId();
 		final BlobStoreBinding binding = (BlobStoreBinding) bindings.get(bindingId);
 		final FileSystemType fsType = binding.getFileSystemType();
