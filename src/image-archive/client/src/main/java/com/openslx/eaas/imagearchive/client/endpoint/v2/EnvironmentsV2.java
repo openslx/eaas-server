@@ -142,7 +142,7 @@ public class EnvironmentsV2
 			}
 		}
 
-		throw new NotFoundException();
+		throw new NotFoundException("Environment '" + id + "' is missing!");
 	}
 
 
