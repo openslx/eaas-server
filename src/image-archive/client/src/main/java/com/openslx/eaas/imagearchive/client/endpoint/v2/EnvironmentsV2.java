@@ -142,7 +142,7 @@ public class EnvironmentsV2
 			}
 		}
 
-		throw new NotFoundException();
+		throw new NotFoundException("Environment '" + id + "' is missing!");
 	}
 
 
@@ -173,11 +173,11 @@ public class EnvironmentsV2
 
 	public String insert(Environment environment, InsertOptionsV2 options) throws BWFLAException
 	{
-		if (environment.getClass() == MachineConfiguration.class) {
+		if (environment instanceof MachineConfiguration) {
 			return archive.machines()
 					.insert((MachineConfiguration) environment, options);
 		}
-		else if (environment.getClass() == ContainerConfiguration.class) {
+		else if (environment instanceof ContainerConfiguration) {
 			return archive.containers()
 					.insert((ContainerConfiguration) environment, options);
 		}
@@ -192,16 +192,15 @@ public class EnvironmentsV2
 
 	public void replace(String id, Environment environment, ReplaceOptionsV2 options) throws BWFLAException
 	{
-		if (environment.getClass() == MachineConfiguration.class) {
+		if (environment instanceof MachineConfiguration) {
 			archive.machines()
 					.replace(id, (MachineConfiguration) environment, options);
 		}
-		else if (environment.getClass() == ContainerConfiguration.class) {
+		else if (environment instanceof ContainerConfiguration) {
 			archive.containers()
 					.replace(id, (ContainerConfiguration) environment);
 		}
-
-		throw EnvironmentsV2.unsupported(environment);
+		else throw EnvironmentsV2.unsupported(environment);
 	}
 
 
