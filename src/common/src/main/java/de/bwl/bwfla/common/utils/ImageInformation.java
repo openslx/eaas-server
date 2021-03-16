@@ -41,7 +41,7 @@ public class ImageInformation {
                 .orElse(null);
 
         if (result == null || !result.successful())
-            throw new BWFLAException("qemu-img info " + imageFile.toString() + " failed");
+            throw new BWFLAException("qemu-img info '" + imageFile + "' failed!");
 
         imageInfo = QemuImage.fromJsonValueWithoutRoot(result.stdout(), QemuImage.class);
         process.cleanup();

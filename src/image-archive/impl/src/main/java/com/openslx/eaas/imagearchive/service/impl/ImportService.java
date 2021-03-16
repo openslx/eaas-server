@@ -195,6 +195,13 @@ public class ImportService
 		this.watchers = new ConcurrentHashMap<>();
 		this.numIdleWorkers = config.getNumWorkers();
 
+		try {
+			Files.createDirectories(config.getTempDirectory());
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Creating temp-directory failed!", error);
+		}
+
 		// initialize all preprocessors
 		for (int i = 0; i < BlobKind.count(); ++i)
 			preprocessors.add(null);
@@ -270,7 +277,7 @@ public class ImportService
 		{
 			final var task = record.task();
 			final var source = task.source();
-			final var info = new ImageInformation(source.url(), logger);
+			final var info = this.info(record, source, cleanups);
 			switch (info.getFileFormat()) {
 				case VMDK:
 				case VHD:
@@ -287,6 +294,61 @@ public class ImportService
 					// so we need to update import-source accordingly!
 					source.setUrl("file://" + tmpfile.toString());
 			}
+		}
+
+		private ImageInformation info(ImportRecord record, ImportSource source, TaskStack cleanups) throws Exception
+		{
+			try {
+				// fetch info directly from remote location...
+				return new ImageInformation(source.url(), logger);
+			}
+			catch (Exception error) {
+				final var uri = new URI(source.url());
+				switch (uri.getScheme()) {
+					case "http":
+					case "https":
+						logger.log(Level.WARNING, "Fetching remote image-info failed!", error);
+						break;
+					default:
+						throw error;
+				}
+			}
+
+			final var outfile = config.getTempDirectory()
+					.resolve("image-" + record.taskid() + ".orig");
+
+			cleanups.push("orig-import-image", () -> Files.deleteIfExists(outfile));
+
+			// fetching from remote URL failed, byte-ranges might be not supported!
+			// try downloading image completely one more time and process locally!
+			final var process = new DeprecatedProcessRunner()
+					.setLogger(logger)
+					.setCommand("curl")
+					.addArgument("--fail")
+					.addArgument("--globoff")
+					.addArgument("--silent")
+					.addArgument("--show-error")
+					.addArgument("--location");
+
+			final var headers = source.headers();
+			if (headers != null) {
+				headers.forEach((name, value) -> {
+					process.addArgument("--header");
+					process.addArgument(name + ": " + value);
+				});
+			}
+
+			final var downloaded = process.addArgument("--output")
+					.addArgument(outfile.toString())
+					.addArgument(source.url())
+					.execute();
+
+			if (!downloaded)
+				throw new BWFLAException("Downloading remote image failed!");
+
+			// try to get info from local file this time
+			source.setUrl("file://" + outfile.toString());
+			return new ImageInformation(source.url(), logger);
 		}
 	}
 
