@@ -94,7 +94,6 @@ public abstract class AbstractAuthenticationFilter implements ContainerRequestFi
         if (key == null || key.isEmpty())
             throw new JWTVerificationException("Private key is invalid!");
 
-        LOG.info("Authenticating using private secret...");
         return this.verify(token, Algorithm.HMAC256(key));
     }
 
