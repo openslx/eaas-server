@@ -200,8 +200,7 @@ public class EnvironmentsV2
 			archive.containers()
 					.replace(id, (ContainerConfiguration) environment);
 		}
-
-		throw EnvironmentsV2.unsupported(environment);
+		else throw EnvironmentsV2.unsupported(environment);
 	}
 
 
