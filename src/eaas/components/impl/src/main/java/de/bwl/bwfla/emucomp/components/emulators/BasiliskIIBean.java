@@ -188,35 +188,39 @@ public class BasiliskIIBean extends EmulatorBean
 		return true;
 	}
 
-    private HashMap prepareConfig(String config)
+    private HashMap<String, String> prepareConfig(String config)
     {
         HashMap<String,String> confValues = loadDefaults();
+        this.parseConfig(config, confValues);
 
-        if(config == null)
-            return confValues;
+        if (this.getEmuBeanMode() == EmulatorBeanMode.XPRA) {
+            String screenConf = confValues.get("screen");
+            if (screenConf != null)
+                screenConf = screenConf.replace("dga", "win");
+            confValues.put("screen", screenConf);
+        }
+
+        return confValues;
+    }
+
+	private void parseConfig(String config, HashMap<String, String> confValues)
+    {
+        if (config == null || config.isBlank())
+            return;
 
         String[] tokens = config.trim().split("\n");
         for (String token : tokens) {
             String[] args = token.trim().split("\\s+");
-            if (args.length < 1 || args.length > 2) {
-                LOG.warning("check your native config file, some 'param-value' pairs are malformed");
+            if (args.length != 2) {
+                LOG.warning("Native config is malformed! Skipping '" + token + "'!");
                 continue;
             }
 
             confValues.put(args[0], args[1]);
-            EmulatorBeanMode mode = this.getEmuBeanMode();
-            if(mode == EmulatorBeanMode.XPRA)
-            {
-                String screenConf = confValues.get("screen");
-                if(screenConf != null)
-                    screenConf = screenConf.replace("dga", "win");
-                confValues.put("screen", screenConf);
-            }
         }
-        return confValues;
     }
 
-    private HashMap loadDefaults()
+    private HashMap<String, String> loadDefaults()
     {
         HashMap<String, String> defValues = new HashMap<String,String>();
         final String defaultsName = "basiliskii.defaults";
