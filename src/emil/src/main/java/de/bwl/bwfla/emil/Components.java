@@ -58,6 +58,7 @@ import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
@@ -958,6 +959,53 @@ public class Components {
                     e);
         }
     }
+
+    private Response resolveResource(String componentId, String resourceId, String method)
+    {
+
+        final var _options = new ResolveOptionsV2()
+                .setLifetime(1L, TimeUnit.HOURS)
+                .setMethod(method);
+
+        try {
+            String location = emilEnvRepo.getImageArchive()
+           .api()
+           .v2()
+           .images()
+           .resolve(resourceId, _options);
+
+            LOG.severe("resolving " + resourceId + " to " + location + " method " + method );
+
+            final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
+                    .header("Location", new URI(location))
+                    .build();
+
+            return response;
+
+        } catch (BWFLAException | URISyntaxException e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+    }
+
+    @GET
+    @Secured(roles={Role.PUBLIC})
+    @Path("/resolve/{componentId}/{resource}")
+    public Response resolveResourceGET(@PathParam("componentId") String componentId,
+                                        @PathParam("resource") String resource)
+    {
+        return resolveResource(componentId, resource, "GET");
+    }
+
+    @HEAD
+    @Secured(roles={Role.PUBLIC})
+    @Path("/resolve/{componentId}/{resource}")
+    public Response resolveResourceHEAD(@PathParam("componentId") String componentId,
+                                        @PathParam("resource") String resource)
+    {
+        return resolveResource(componentId, resource, "HEAD");
+    }
+
 
     public boolean hasComponentSession(String componentId)
     {

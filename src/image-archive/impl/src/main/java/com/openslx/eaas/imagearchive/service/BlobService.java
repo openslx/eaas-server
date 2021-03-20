@@ -27,6 +27,7 @@ import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.blobstore.BlobStore;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import io.minio.http.Method;
 
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
@@ -152,11 +153,16 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 	/** Return blob's download URL */
 	public String resolve(String id) throws BWFLAException
 	{
-		return this.resolve(id, null);
+		return this.resolve(id, null, Method.GET);
+	}
+
+	public String resolve(String id, Duration lifetime) throws BWFLAException
+	{
+		return this.resolve(id, lifetime, Method.GET);
 	}
 
 	/** Return blob's download URL with given lifetime */
-	public String resolve(String id, Duration lifetime) throws BWFLAException
+	public String resolve(String id, Duration lifetime, Method method) throws BWFLAException
 	{
 		final var blob = this.blob(id);
 		if (blob == null)
@@ -166,7 +172,7 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 			lifetime = Duration.ofHours(1L);
 
 		final var seconds = (int) lifetime.toSeconds();
-		return blob.newPreSignedGetUrl(seconds, TimeUnit.SECONDS);
+		return blob.newPreSignedGetUrl(seconds, TimeUnit.SECONDS, method);
 	}
 
 

@@ -29,6 +29,15 @@ public class ResolveOptionsV2 extends BasicOptionsV2<ResolveOptionsV2>
 	@QueryParam("lifetime")
 	private long lifetime;
 
+	@QueryParam("method")
+	private String method;
+
+
+	public ResolveOptionsV2 setMethod(String method)
+	{
+		this.method = method;
+		return this;
+	}
 
 	public ResolveOptionsV2 setLifetime(long lifetime, TimeUnit unit)
 	{
@@ -44,6 +53,11 @@ public class ResolveOptionsV2 extends BasicOptionsV2<ResolveOptionsV2>
 	{
 		this.lifetime = lifetime;
 		return this;
+	}
+
+	public String getMethod()
+	{
+		return method;
 	}
 
 	public Duration lifetime()

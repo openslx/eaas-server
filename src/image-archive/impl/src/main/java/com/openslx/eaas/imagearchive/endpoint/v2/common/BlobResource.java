@@ -25,6 +25,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.service.BlobService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import io.minio.http.Method;
 
 import javax.ws.rs.NotFoundException;
 import java.io.InputStream;
@@ -36,8 +37,13 @@ public abstract class BlobResource<T extends BlobDescriptor> extends AbstractRes
 
 	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
 	{
+		Method method = Method.GET; // default
+		String methodName = options.getMethod();
+		if(methodName != null && methodName.equalsIgnoreCase("head"))
+			method = Method.HEAD;
+
 		return this.service()
-				.resolve(id, options.lifetime());
+				.resolve(id, options.lifetime(), method);
 	}
 
 	public InputStream fetch(String id) throws BWFLAException

@@ -173,7 +173,7 @@ public abstract class ContainerBean extends EaasComponentBean implements Contain
 			// Resolve and mount all bindings
 			if (config.hasInputs()) {
 				for (ContainerConfiguration.Input input : config.getInputs())
-					bindings.mount(input.getBinding(), outdir);
+					bindings.mount(this.getComponentId(), input.getBinding(), outdir);
 			}
 
 			this.prepare();

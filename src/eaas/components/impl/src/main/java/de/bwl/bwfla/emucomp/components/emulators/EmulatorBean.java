@@ -2296,7 +2296,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	{
 		String mountpoint = bindings.lookup(binding);
 		if (mountpoint == null)
-			mountpoint = bindings.mount(binding, this.getBindingsDir());
+			mountpoint = bindings.mount(this.getComponentId(), binding, this.getBindingsDir());
 
 		return mountpoint;
 	}

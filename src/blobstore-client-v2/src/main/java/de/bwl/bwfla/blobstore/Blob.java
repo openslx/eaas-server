@@ -188,6 +188,11 @@ public class Blob extends TaskExecutor
 		return this.newPreSignedUrl(Method.GET, expiry, unit, "downloading");
 	}
 
+	public String newPreSignedGetUrl(int expiry, TimeUnit unit, Method method) throws BWFLAException
+	{
+		return this.newPreSignedUrl(method, expiry, unit, "downloading");
+	}
+
 	/** Generate URL for pre-signed PUT operation */
 	public String newPreSignedPutUrl() throws BWFLAException
 	{
