@@ -26,6 +26,7 @@ import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ListOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportFailureV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportSourceV2;
@@ -43,6 +44,7 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.core.Response;
@@ -81,6 +83,13 @@ public class ImportsV2 implements IImportsV2
 
 
 	// ===== IManyReadable API ==============================
+
+	@Override
+	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
+	{
+		// NOTE: access via URL is not supported!
+		throw new BadRequestException();
+	}
 
 	@Override
 	public ImportStatusV2 fetch(String id) throws BWFLAException

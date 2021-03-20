@@ -24,6 +24,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.ListOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
@@ -70,6 +71,17 @@ public abstract class AbstractResourceRO<T>
 
 
 	// ===== IReadable API ==============================
+
+	public String resolve(String id) throws BWFLAException
+	{
+		return this.resolve(id, null);
+	}
+
+	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
+	{
+		return this.readable()
+				.resolve(id, options);
+	}
 
 	public T fetch(String id) throws BWFLAException
 	{

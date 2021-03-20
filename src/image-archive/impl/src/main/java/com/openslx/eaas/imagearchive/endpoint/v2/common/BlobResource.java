@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.endpoint.v2.common;
 
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.service.BlobService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -32,6 +33,12 @@ import java.io.InputStream;
 public abstract class BlobResource<T extends BlobDescriptor> extends AbstractResource<T>
 {
 	// ===== IReadable API ==============================
+
+	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
+	{
+		return this.service()
+				.resolve(id, options.lifetime());
+	}
 
 	public InputStream fetch(String id) throws BWFLAException
 	{

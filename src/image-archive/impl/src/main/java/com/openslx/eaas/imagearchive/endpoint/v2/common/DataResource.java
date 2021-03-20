@@ -23,6 +23,7 @@ import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
 import com.openslx.eaas.imagearchive.service.DataService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -34,6 +35,12 @@ import javax.ws.rs.core.Response;
 public abstract class DataResource<D, T extends DataRecord<D>> extends AbstractResource<T>
 {
 	// ===== IManyReadable API ==============================
+
+	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
+	{
+		return this.service()
+				.resolve(id, options.lifetime());
+	}
 
 	public D fetch(String id) throws BWFLAException
 	{

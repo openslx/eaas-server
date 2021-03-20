@@ -19,31 +19,35 @@
 
 package com.openslx.eaas.imagearchive.api.v2.common;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.SecuredInternal;
-import org.jboss.resteasy.annotations.Form;
-
-import javax.ws.rs.GET;
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
-import javax.ws.rs.Produces;
-import javax.ws.rs.core.MediaType;
+import javax.ws.rs.QueryParam;
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 
 
-public interface IReadable<T>
+public class ResolveOptionsV2 extends BasicOptionsV2<ResolveOptionsV2>
 {
-	@GET
-	@SecuredInternal
-	@Path("/{id}/url")
-	@Produces(MediaType.APPLICATION_JSON)
-	String resolve(@PathParam("id") String id, @Form ResolveOptionsV2 options) throws BWFLAException;
+	@QueryParam("lifetime")
+	private long lifetime;
 
-	@GET
-	@Path("/{id}")
-	@SecuredInternal
-	@Produces({
-			MediaType.APPLICATION_JSON,
-			MediaType.APPLICATION_OCTET_STREAM
-	})
-	T fetch(@PathParam("id") String id) throws BWFLAException;
+
+	public ResolveOptionsV2 setLifetime(long lifetime, TimeUnit unit)
+	{
+		return this.setLifetime(unit.toSeconds(lifetime));
+	}
+
+	public ResolveOptionsV2 setLifetime(Duration lifetime)
+	{
+		return this.setLifetime(lifetime.toSeconds());
+	}
+
+	public ResolveOptionsV2 setLifetime(long lifetime)
+	{
+		this.lifetime = lifetime;
+		return this;
+	}
+
+	public Duration lifetime()
+	{
+		return (lifetime > 0) ? Duration.ofSeconds(lifetime) : null;
+	}
 }

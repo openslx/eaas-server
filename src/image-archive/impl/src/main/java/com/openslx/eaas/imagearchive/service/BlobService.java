@@ -30,7 +30,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import javax.ws.rs.core.MediaType;
 import java.io.InputStream;
+import java.time.Duration;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 
 
 public abstract class BlobService<T extends BlobDescriptor> extends AbstractService<T>
@@ -145,6 +147,26 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 
 		// remove blob's record from index
 		return super.remove(id);
+	}
+
+	/** Return blob's download URL */
+	public String resolve(String id) throws BWFLAException
+	{
+		return this.resolve(id, null);
+	}
+
+	/** Return blob's download URL with given lifetime */
+	public String resolve(String id, Duration lifetime) throws BWFLAException
+	{
+		final var blob = this.blob(id);
+		if (blob == null)
+			return null;
+
+		if (lifetime == null)
+			lifetime = Duration.ofHours(1L);
+
+		final var seconds = (int) lifetime.toSeconds();
+		return blob.newPreSignedGetUrl(seconds, TimeUnit.SECONDS);
 	}
 
 
