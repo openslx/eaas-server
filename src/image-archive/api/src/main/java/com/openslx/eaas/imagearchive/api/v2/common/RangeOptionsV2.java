@@ -29,7 +29,7 @@ public class RangeOptionsV2<T extends RangeOptionsV2<T>>
 	private int offset = 0;
 
 	@QueryParam("limit")
-	private int limit = Integer.MAX_VALUE;
+	private int limit = 0;
 
 
 	public T setOffset(int offset)
@@ -51,6 +51,6 @@ public class RangeOptionsV2<T extends RangeOptionsV2<T>>
 
 	public int limit()
 	{
-		return limit;
+		return (limit == 0) ? Integer.MAX_VALUE : limit;
 	}
 }

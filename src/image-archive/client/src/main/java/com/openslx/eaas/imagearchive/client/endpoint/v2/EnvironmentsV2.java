@@ -448,7 +448,7 @@ public class EnvironmentsV2
 				// update range on access
 				options.setOffset(0);
 				return streamable.stream()
-						.peek((record) -> options.setLimit(options.limit() - 1))
+						.peek(this::update)
 						.map((record) -> (T) record);
 			}
 			catch (Exception error) {
@@ -459,6 +459,15 @@ public class EnvironmentsV2
 		public TaskStack cleanups()
 		{
 			return cleanups;
+		}
+
+		private void update(T record)
+		{
+			var limit = options.limit() - 1;
+			if (limit == 0)
+				limit = -1;  // 0 is a special default!
+
+			options.setLimit(limit);
 		}
 	}
 
