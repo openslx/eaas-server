@@ -963,6 +963,11 @@ public class Components {
 
     private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
     {
+        if (!sessions.containsKey(componentId))
+            throw new NotFoundException();
+
+        // TODO: check if requested resource is allowed for given component!
+
         final var options = new ResolveOptionsV2()
                 .setLifetime(1L, TimeUnit.HOURS)
                 .setMethod(method);
