@@ -974,7 +974,7 @@ public class Components {
            .images()
            .resolve(resourceId, _options);
 
-            LOG.severe("resolving " + resourceId + " to " + location + " method " + method );
+            LOG.info("Resolving '" + resourceId + "' -> " + method.name() + " " + location);
 
             final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
                     .header("Location", new URI(location))
@@ -982,8 +982,9 @@ public class Components {
 
             return response;
 
-        } catch (BWFLAException | URISyntaxException e) {
-            e.printStackTrace();
+        }
+        catch (Exception error) {
+            LOG.log(Level.WARNING, "Resolving '" + resourceId + "' failed!", error);
             return Response.status(Response.Status.NOT_FOUND).build();
         }
     }
