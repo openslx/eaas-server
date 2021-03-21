@@ -185,12 +185,7 @@ public class Blob extends TaskExecutor
 	/** Generate URL for pre-signed GET operation */
 	public String newPreSignedGetUrl(int expiry, TimeUnit unit) throws BWFLAException
 	{
-		return this.newPreSignedUrl(Method.GET, expiry, unit, "downloading");
-	}
-
-	public String newPreSignedGetUrl(int expiry, TimeUnit unit, Method method) throws BWFLAException
-	{
-		return this.newPreSignedUrl(method, expiry, unit, "downloading");
+		return this.newPreSignedUrl(Method.GET, expiry, unit);
 	}
 
 	/** Generate URL for pre-signed PUT operation */
@@ -202,7 +197,19 @@ public class Blob extends TaskExecutor
 	/** Generate URL for pre-signed PUT operation */
 	public String newPreSignedPutUrl(int expiry, TimeUnit unit) throws BWFLAException
 	{
-		return this.newPreSignedUrl(Method.PUT, expiry, unit, "uploading");
+		return this.newPreSignedUrl(Method.PUT, expiry, unit);
+	}
+
+	/** Generate URL for pre-signed operation */
+	public String newPreSignedUrl(AccessMethod method) throws BWFLAException
+	{
+		return this.newPreSignedUrl(method, 7, TimeUnit.DAYS);
+	}
+
+	/** Generate URL for pre-signed operation */
+	public String newPreSignedUrl(AccessMethod method, int expiry, TimeUnit unit) throws BWFLAException
+	{
+		return this.newPreSignedUrl(method.convert(), expiry, unit);
 	}
 
 	/** Return builder for copy-sources */
@@ -211,6 +218,33 @@ public class Blob extends TaskExecutor
 		return new CopySourceBuilder();
 	}
 
+
+	public enum AccessMethod
+	{
+		HEAD,
+		GET,
+		PUT,
+		POST,
+		DELETE;
+
+		private Method convert()
+		{
+			switch (this) {
+				case HEAD:
+					return Method.HEAD;
+				case GET:
+					return Method.GET;
+				case PUT:
+					return Method.PUT;
+				case POST:
+					return Method.POST;
+				case DELETE:
+					return Method.DELETE;
+				default:
+					throw new IllegalArgumentException();
+			}
+		}
+	}
 
 	public interface RangeBuilder<D extends RangeBuilder<D>>
 	{
@@ -561,7 +595,7 @@ public class Blob extends TaskExecutor
 		this.blob = blob;
 	}
 
-	private String newPreSignedUrl(Method method, int expiry, TimeUnit unit, String action) throws BWFLAException
+	private String newPreSignedUrl(Method method, int expiry, TimeUnit unit) throws BWFLAException
 	{
 		final SupplierTask<String> op = () -> {
 			final var args = GetPresignedObjectUrlArgs.builder()
@@ -574,6 +608,6 @@ public class Blob extends TaskExecutor
 			return minio.getPresignedObjectUrl(args);
 		};
 
-		return this.execute(op, "Generating pre-signed URL for " + action + " failed!");
+		return this.execute(op, "Generating pre-signed URL for " + method.name() + " failed!");
 	}
 }
