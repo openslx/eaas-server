@@ -59,6 +59,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
@@ -960,9 +961,8 @@ public class Components {
         }
     }
 
-    private Response resolveResource(String componentId, String resourceId, String method)
+    private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
     {
-
         final var _options = new ResolveOptionsV2()
                 .setLifetime(1L, TimeUnit.HOURS)
                 .setMethod(method);
@@ -994,7 +994,7 @@ public class Components {
     public Response resolveResourceGET(@PathParam("componentId") String componentId,
                                         @PathParam("resource") String resource)
     {
-        return resolveResource(componentId, resource, "GET");
+        return this.resolveResource(componentId, resource, AccessMethodV2.GET);
     }
 
     @HEAD
@@ -1003,7 +1003,7 @@ public class Components {
     public Response resolveResourceHEAD(@PathParam("componentId") String componentId,
                                         @PathParam("resource") String resource)
     {
-        return resolveResource(componentId, resource, "HEAD");
+        return this.resolveResource(componentId, resource, AccessMethodV2.HEAD);
     }
 
 
