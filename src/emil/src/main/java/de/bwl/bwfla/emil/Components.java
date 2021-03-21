@@ -963,29 +963,24 @@ public class Components {
 
     private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
     {
-        final var _options = new ResolveOptionsV2()
+        final var options = new ResolveOptionsV2()
                 .setLifetime(1L, TimeUnit.HOURS)
                 .setMethod(method);
 
         try {
-            String location = emilEnvRepo.getImageArchive()
-           .api()
-           .v2()
-           .images()
-           .resolve(resourceId, _options);
+            final var location = emilEnvRepo.getImageArchive()
+                    .api()
+                    .v2()
+                    .images()
+                    .resolve(resourceId, options);
 
             LOG.info("Resolving '" + resourceId + "' -> " + method.name() + " " + location);
-
-            final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
-                    .header("Location", new URI(location))
+            return Response.temporaryRedirect(new URI(location))
                     .build();
-
-            return response;
-
         }
         catch (Exception error) {
             LOG.log(Level.WARNING, "Resolving '" + resourceId + "' failed!", error);
-            return Response.status(Response.Status.NOT_FOUND).build();
+            throw new NotFoundException();
         }
     }
 
