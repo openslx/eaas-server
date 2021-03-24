@@ -39,8 +39,13 @@ public abstract class BlobResource<T extends BlobDescriptor> extends AbstractRes
 	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
 	{
 		final var method = BlobResource.convert(options.method());
-		return this.service()
+		final var result = this.service()
 				.resolve(id, options.lifetime(), method);
+
+		if (result == null)
+			throw new NotFoundException();
+
+		return result;
 	}
 
 	public InputStream fetch(String id) throws BWFLAException
