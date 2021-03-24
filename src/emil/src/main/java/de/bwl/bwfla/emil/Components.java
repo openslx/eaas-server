@@ -963,8 +963,10 @@ public class Components {
 
     private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
     {
-        if (!sessions.containsKey(componentId))
-            throw new NotFoundException();
+        // FIXME: currently, components access images already during session
+        //        initialization and before we know their component IDs here!
+        //if (!sessions.containsKey(componentId)) {
+        //    throw new NotFoundException();
 
         // TODO: check if requested resource is allowed for given component!
 
