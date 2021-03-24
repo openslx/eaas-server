@@ -38,8 +38,9 @@ public abstract class DataResource<D, T extends DataRecord<D>> extends AbstractR
 
 	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
 	{
+		final var method = BlobResource.convert(options.method());
 		return this.service()
-				.resolve(id, options.lifetime());
+				.resolve(id, options.lifetime(), method);
 	}
 
 	public D fetch(String id) throws BWFLAException

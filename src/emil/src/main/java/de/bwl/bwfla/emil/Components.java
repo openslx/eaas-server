@@ -59,6 +59,7 @@ import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
 import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
@@ -960,31 +961,31 @@ public class Components {
         }
     }
 
-    private Response resolveResource(String componentId, String resourceId, String method)
+    private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
     {
+        if (!sessions.containsKey(componentId))
+            throw new NotFoundException();
 
-        final var _options = new ResolveOptionsV2()
+        // TODO: check if requested resource is allowed for given component!
+
+        final var options = new ResolveOptionsV2()
                 .setLifetime(1L, TimeUnit.HOURS)
                 .setMethod(method);
 
         try {
-            String location = emilEnvRepo.getImageArchive()
-           .api()
-           .v2()
-           .images()
-           .resolve(resourceId, _options);
+            final var location = emilEnvRepo.getImageArchive()
+                    .api()
+                    .v2()
+                    .images()
+                    .resolve(resourceId, options);
 
-            LOG.severe("resolving " + resourceId + " to " + location + " method " + method );
-
-            final Response response = Response.status(Response.Status.TEMPORARY_REDIRECT)
-                    .header("Location", new URI(location))
+            LOG.info("Resolving '" + resourceId + "' -> " + method.name() + " " + location);
+            return Response.temporaryRedirect(new URI(location))
                     .build();
-
-            return response;
-
-        } catch (BWFLAException | URISyntaxException e) {
-            e.printStackTrace();
-            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        catch (Exception error) {
+            LOG.log(Level.WARNING, "Resolving '" + resourceId + "' failed!", error);
+            throw new NotFoundException();
         }
     }
 
@@ -994,7 +995,7 @@ public class Components {
     public Response resolveResourceGET(@PathParam("componentId") String componentId,
                                         @PathParam("resource") String resource)
     {
-        return resolveResource(componentId, resource, "GET");
+        return this.resolveResource(componentId, resource, AccessMethodV2.GET);
     }
 
     @HEAD
@@ -1003,7 +1004,7 @@ public class Components {
     public Response resolveResourceHEAD(@PathParam("componentId") String componentId,
                                         @PathParam("resource") String resource)
     {
-        return resolveResource(componentId, resource, "HEAD");
+        return this.resolveResource(componentId, resource, AccessMethodV2.HEAD);
     }
 
 
