@@ -961,6 +961,36 @@ public class Components {
         }
     }
 
+    private interface IResolver
+    {
+        String resolve(String id, ResolveOptionsV2 options) throws BWFLAException;
+    }
+
+    private String resolveResource(String resourceId, ResolveOptionsV2 options)
+    {
+        final var archive = emilEnvRepo.getImageArchive()
+                .api()
+                .v2();
+
+        // resource can be located at any of the following endpoints
+        final var resolvers = new IResolver[] {
+                archive.images()::resolve,
+                archive.roms()::resolve,
+                archive.checkpoints()::resolve,
+        };
+
+        for (var resolver : resolvers) {
+            try {
+                return resolver.resolve(resourceId, options);
+            }
+            catch (Exception error) {
+                // Try next one!
+            }
+        }
+
+        throw new NotFoundException();
+    }
+
     private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
     {
         // FIXME: currently, components access images already during session
@@ -975,12 +1005,7 @@ public class Components {
                 .setMethod(method);
 
         try {
-            final var location = emilEnvRepo.getImageArchive()
-                    .api()
-                    .v2()
-                    .images()
-                    .resolve(resourceId, options);
-
+            final var location = this.resolveResource(resourceId, options);
             LOG.info("Resolving '" + resourceId + "' -> " + method.name() + " " + location);
             return Response.temporaryRedirect(new URI(location))
                     .build();
