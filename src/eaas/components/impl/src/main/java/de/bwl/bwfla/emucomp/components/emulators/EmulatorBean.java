@@ -962,8 +962,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	private boolean isOutputAvailable()
 	{
-		LOG.severe("output is available: " +  (emuEnvironment.getOutputBindingId() != null));
-		return emuEnvironment.getOutputBindingId() != null;
+		boolean hasOutput = (emuEnvironment.getOutputBindingId() != null && !emuEnvironment.getOutputBindingId().isEmpty());
+		LOG.severe("output is available: " +  hasOutput);
+		return hasOutput;
 	}
 
 	private void processEmulatorOutput() throws BWFLAException
