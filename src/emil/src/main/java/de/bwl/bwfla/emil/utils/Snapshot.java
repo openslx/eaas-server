@@ -134,13 +134,10 @@ public class Snapshot
             }
         }
 
-        final var options = new InsertOptionsV2()
-                .setCheckpoint(checkpoint);
-
         final var newId = archive.api()
                 .v2()
                 .environments()
-                .insert(machineConfiguration, data, options);
+                .insert(machineConfiguration, data, checkpoint);
 
         if(newId == null)
             throw new BWFLAException("create revision: importMachineEnvironment failed");

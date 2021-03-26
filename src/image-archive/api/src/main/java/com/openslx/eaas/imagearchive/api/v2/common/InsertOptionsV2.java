@@ -20,22 +20,7 @@
 package com.openslx.eaas.imagearchive.api.v2.common;
 
 
-import javax.ws.rs.QueryParam;
-
 public class InsertOptionsV2 extends BasicOptionsV2<InsertOptionsV2>
 {
-	@QueryParam("checkpoint")
-	private boolean checkpoint = false;
-
-
-	public InsertOptionsV2 setCheckpoint(boolean isCheckpoint)
-	{
-		this.checkpoint = isCheckpoint;
-		return this;
-	}
-
-	public boolean isCheckpoint()
-	{
-		return checkpoint;
-	}
+	// Empty!
 }
