@@ -277,7 +277,7 @@ public class EnvironmentsV2
 					binding.setId(handler.getId());
 					binding.setImageId(imageid);
 
-					EmulationEnvironmentHelper.replace(machine, binding, false);
+					EmulationEnvironmentHelper.replace(machine, binding, options.isCheckpoint());
 					logger.info("Imported image '" + handler.getId() + "' as '" + imageid + "'");
 				}
 			}

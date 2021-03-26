@@ -291,7 +291,7 @@ public class EmulationEnvironmentHelper {
 				if (d != null) {
 					d.setData("binding://" + replacement.getImageId());
 				} else {
-					log.severe("XXX: replace(): drive not found");
+					log.severe("XXX: replace(): drive not found " + replacement.getImageId() + " " + replacement.getImageId());
 				}
 				current.setId(replacement.getImageId());
 			}
