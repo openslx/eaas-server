@@ -257,10 +257,22 @@ public class EnvironmentsV2
 
 	public String insert(MachineConfiguration machine, Collection<BindingDataHandler> data) throws BWFLAException
 	{
-		return this.insert(machine, data, null);
+		return this.insert(machine, data, false);
 	}
 
 	public String insert(MachineConfiguration machine, Collection<BindingDataHandler> data, InsertOptionsV2 options)
+			throws BWFLAException
+	{
+		return this.insert(machine, data, false, options);
+	}
+
+	public String insert(MachineConfiguration machine, Collection<BindingDataHandler> data, boolean checkpoint)
+			throws BWFLAException
+	{
+		return this.insert(machine, data, checkpoint, null);
+	}
+
+	public String insert(MachineConfiguration machine, Collection<BindingDataHandler> data, boolean checkpoint, InsertOptionsV2 options)
 			throws BWFLAException
 	{
 		logger.info("Importing new machine-environment...");
@@ -277,7 +289,7 @@ public class EnvironmentsV2
 					binding.setId(handler.getId());
 					binding.setImageId(imageid);
 
-					EmulationEnvironmentHelper.replace(machine, binding, options.isCheckpoint());
+					EmulationEnvironmentHelper.replace(machine, binding, checkpoint);
 					logger.info("Imported image '" + handler.getId() + "' as '" + imageid + "'");
 				}
 			}
