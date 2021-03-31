@@ -260,8 +260,19 @@ public class Blob extends TaskExecutor
 
 	public static class MetaDataBuilder<D extends MetaDataBuilder<D>>
 	{
+		protected Map<String, String> headers;
 		protected Map<String, String> userdata;
 		protected Map<String, String> tags;
+
+		/** Add a new header */
+		public D header(String name, String value)
+		{
+			if (headers == null)
+				headers = new HashMap<>();
+
+			headers.put(name, value);
+			return (D) this;
+		}
 
 		/** Add a new user-data entry */
 		public D userdata(String name, String value)
@@ -378,6 +389,7 @@ public class Blob extends TaskExecutor
 							.object(self.name())
 							.contentType(contentType)
 							.userMetadata(userdata)
+							.headers(headers)
 							.tags(tags)
 							.build();
 
@@ -390,6 +402,7 @@ public class Blob extends TaskExecutor
 							.object(self.name())
 							.contentType(contentType)
 							.userMetadata(userdata)
+							.headers(headers)
 							.tags(tags)
 							.build();
 
@@ -472,6 +485,11 @@ public class Blob extends TaskExecutor
 							.userMetadata(userdata);
 				}
 
+				if (headers != null) {
+					args.taggingDirective(Directive.REPLACE)
+							.headers(headers);
+				}
+
 				if (tags != null) {
 					args.taggingDirective(Directive.REPLACE)
 							.tags(tags);
@@ -499,6 +517,9 @@ public class Blob extends TaskExecutor
 
 				if (userdata != null)
 					args.userMetadata(userdata);
+
+				if (headers != null)
+					args.headers(headers);
 
 				if (tags != null)
 					args.tags(tags);
