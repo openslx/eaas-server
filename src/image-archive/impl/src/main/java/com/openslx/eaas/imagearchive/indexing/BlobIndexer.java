@@ -110,16 +110,17 @@ public class BlobIndexer<T> implements AutoCloseable
 		final int MAX_NUM_FAILURES = 5;
 		final var result = new Result();
 
-		final var prefix = location.config()
+		final var path = location.config()
 				.getPathPrefix(context.target().kind());
 
 		// should data be available there?
-		if (prefix == null)
+		if (path == null)
 			return result;
 
+		final var prefix = path.toString() + "/";
 		final var logger = context.target().logger();
 		final var blobs = location.bucket()
-				.list(prefix.toString() + "/");
+				.list(prefix);
 
 		// TODO: index each blob in parallel!
 		// TODO: use collection's operation-batching!
@@ -128,9 +129,13 @@ public class BlobIndexer<T> implements AutoCloseable
 			// process each blob stored at given location...
 			for (final var iter = blobs.iterator(); iter.hasNext();) {
 				try {
+					final var blob = iter.next();
+					if (prefix.equals(blob.name()))
+						continue;  // skip base-dir!
+
 					context.target()
 							.ingestor()
-							.ingest(context, iter.next(), location);
+							.ingest(context, blob, location);
 
 					result.onInsertion();
 				}
