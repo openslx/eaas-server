@@ -21,9 +21,8 @@ public class BrowserBean extends EmulatorBean {
             DeprecatedProcessRunner pr = new DeprecatedProcessRunner("sudo");
             pr.addArguments("runc", "exec", this.getContainerId(), "stat", "/tmp/eaas-proxy.run/run");
             isReady = pr.execute();
-            return isReady;
         }
-        else return false;
+        return isReady;
     }
 
     @Override
