@@ -182,6 +182,15 @@
 					<artifactId>imagearchive</artifactId>
 					<type>war</type>
 				</dependency>
+			</dependencies>
+		</profile>
+
+		<profile>
+			<activation>
+				<activeByDefault>true</activeByDefault>
+			</activation>
+			<id>imagearchive-v2</id>
+			<dependencies>
 				<dependency>
 					<groupId>com.openslx.eaas</groupId>
 					<artifactId>image-archive-api</artifactId>

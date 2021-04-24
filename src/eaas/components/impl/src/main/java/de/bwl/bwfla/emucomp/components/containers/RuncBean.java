@@ -56,7 +56,7 @@ public class RuncBean extends ContainerBean
 
 		// Resolve and mount runc-specific bindings
 		{
-			bindings.mount(config.getRootFilesystem(), this.getBindingsDir());
+			bindings.mount(this.getComponentId(), config.getRootFilesystem(), this.getBindingsDir());
 		}
 
 		// Generate container's config

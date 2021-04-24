@@ -158,6 +158,12 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 	/** Return blob's download URL with given lifetime */
 	public String resolve(String id, Duration lifetime) throws BWFLAException
 	{
+		return this.resolve(id, lifetime, null);
+	}
+
+	/** Return blob's access URL with given lifetime */
+	public String resolve(String id, Duration lifetime, Blob.AccessMethod method) throws BWFLAException
+	{
 		final var blob = this.blob(id);
 		if (blob == null)
 			return null;
@@ -165,8 +171,19 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 		if (lifetime == null)
 			lifetime = Duration.ofHours(1L);
 
+		if (method == null)
+			method = Blob.AccessMethod.GET;
+
+		switch (method) {
+			case HEAD:
+			case GET:
+				break;
+			default:
+				throw new IllegalArgumentException();
+		}
+
 		final var seconds = (int) lifetime.toSeconds();
-		return blob.newPreSignedGetUrl(seconds, TimeUnit.SECONDS);
+		return blob.newPreSignedUrl(method, seconds, TimeUnit.SECONDS);
 	}
 
 

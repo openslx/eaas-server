@@ -185,7 +185,7 @@ public class Blob extends TaskExecutor
 	/** Generate URL for pre-signed GET operation */
 	public String newPreSignedGetUrl(int expiry, TimeUnit unit) throws BWFLAException
 	{
-		return this.newPreSignedUrl(Method.GET, expiry, unit, "downloading");
+		return this.newPreSignedUrl(Method.GET, expiry, unit);
 	}
 
 	/** Generate URL for pre-signed PUT operation */
@@ -197,7 +197,19 @@ public class Blob extends TaskExecutor
 	/** Generate URL for pre-signed PUT operation */
 	public String newPreSignedPutUrl(int expiry, TimeUnit unit) throws BWFLAException
 	{
-		return this.newPreSignedUrl(Method.PUT, expiry, unit, "uploading");
+		return this.newPreSignedUrl(Method.PUT, expiry, unit);
+	}
+
+	/** Generate URL for pre-signed operation */
+	public String newPreSignedUrl(AccessMethod method) throws BWFLAException
+	{
+		return this.newPreSignedUrl(method, 7, TimeUnit.DAYS);
+	}
+
+	/** Generate URL for pre-signed operation */
+	public String newPreSignedUrl(AccessMethod method, int expiry, TimeUnit unit) throws BWFLAException
+	{
+		return this.newPreSignedUrl(method.convert(), expiry, unit);
 	}
 
 	/** Return builder for copy-sources */
@@ -206,6 +218,33 @@ public class Blob extends TaskExecutor
 		return new CopySourceBuilder();
 	}
 
+
+	public enum AccessMethod
+	{
+		HEAD,
+		GET,
+		PUT,
+		POST,
+		DELETE;
+
+		private Method convert()
+		{
+			switch (this) {
+				case HEAD:
+					return Method.HEAD;
+				case GET:
+					return Method.GET;
+				case PUT:
+					return Method.PUT;
+				case POST:
+					return Method.POST;
+				case DELETE:
+					return Method.DELETE;
+				default:
+					throw new IllegalArgumentException();
+			}
+		}
+	}
 
 	public interface RangeBuilder<D extends RangeBuilder<D>>
 	{
@@ -221,8 +260,19 @@ public class Blob extends TaskExecutor
 
 	public static class MetaDataBuilder<D extends MetaDataBuilder<D>>
 	{
+		protected Map<String, String> headers;
 		protected Map<String, String> userdata;
 		protected Map<String, String> tags;
+
+		/** Add a new header */
+		public D header(String name, String value)
+		{
+			if (headers == null)
+				headers = new HashMap<>();
+
+			headers.put(name, value);
+			return (D) this;
+		}
 
 		/** Add a new user-data entry */
 		public D userdata(String name, String value)
@@ -339,6 +389,7 @@ public class Blob extends TaskExecutor
 							.object(self.name())
 							.contentType(contentType)
 							.userMetadata(userdata)
+							.headers(headers)
 							.tags(tags)
 							.build();
 
@@ -351,6 +402,7 @@ public class Blob extends TaskExecutor
 							.object(self.name())
 							.contentType(contentType)
 							.userMetadata(userdata)
+							.headers(headers)
 							.tags(tags)
 							.build();
 
@@ -433,6 +485,11 @@ public class Blob extends TaskExecutor
 							.userMetadata(userdata);
 				}
 
+				if (headers != null) {
+					args.taggingDirective(Directive.REPLACE)
+							.headers(headers);
+				}
+
 				if (tags != null) {
 					args.taggingDirective(Directive.REPLACE)
 							.tags(tags);
@@ -460,6 +517,9 @@ public class Blob extends TaskExecutor
 
 				if (userdata != null)
 					args.userMetadata(userdata);
+
+				if (headers != null)
+					args.headers(headers);
 
 				if (tags != null)
 					args.tags(tags);
@@ -556,7 +616,7 @@ public class Blob extends TaskExecutor
 		this.blob = blob;
 	}
 
-	private String newPreSignedUrl(Method method, int expiry, TimeUnit unit, String action) throws BWFLAException
+	private String newPreSignedUrl(Method method, int expiry, TimeUnit unit) throws BWFLAException
 	{
 		final SupplierTask<String> op = () -> {
 			final var args = GetPresignedObjectUrlArgs.builder()
@@ -569,6 +629,6 @@ public class Blob extends TaskExecutor
 			return minio.getPresignedObjectUrl(args);
 		};
 
-		return this.execute(op, "Generating pre-signed URL for " + action + " failed!");
+		return this.execute(op, "Generating pre-signed URL for " + method.name() + " failed!");
 	}
 }

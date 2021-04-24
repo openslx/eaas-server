@@ -58,6 +58,8 @@ import javax.ws.rs.sse.SseEventSink;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.annotation.XmlElement;
 
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
@@ -958,6 +960,80 @@ public class Components {
                     e);
         }
     }
+
+    private interface IResolver
+    {
+        String resolve(String id, ResolveOptionsV2 options) throws BWFLAException;
+    }
+
+    private String resolveResource(String resourceId, ResolveOptionsV2 options)
+    {
+        final var archive = emilEnvRepo.getImageArchive()
+                .api()
+                .v2();
+
+        // resource can be located at any of the following endpoints
+        final var resolvers = new IResolver[] {
+                archive.images()::resolve,
+                archive.roms()::resolve,
+                archive.checkpoints()::resolve,
+        };
+
+        for (var resolver : resolvers) {
+            try {
+                return resolver.resolve(resourceId, options);
+            }
+            catch (Exception error) {
+                // Try next one!
+            }
+        }
+
+        throw new NotFoundException();
+    }
+
+    private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
+    {
+        // FIXME: currently, components access images already during session
+        //        initialization and before we know their component IDs here!
+        //if (!sessions.containsKey(componentId)) {
+        //    throw new NotFoundException();
+
+        // TODO: check if requested resource is allowed for given component!
+
+        final var options = new ResolveOptionsV2()
+                .setLifetime(1L, TimeUnit.HOURS)
+                .setMethod(method);
+
+        try {
+            final var location = this.resolveResource(resourceId, options);
+            LOG.info("Resolving '" + resourceId + "' -> " + method.name() + " " + location);
+            return Response.temporaryRedirect(new URI(location))
+                    .build();
+        }
+        catch (Exception error) {
+            LOG.log(Level.WARNING, "Resolving '" + resourceId + "' failed!", error);
+            throw new NotFoundException();
+        }
+    }
+
+    @GET
+    @Secured(roles={Role.PUBLIC})
+    @Path("/resolve/{componentId}/{resource}")
+    public Response resolveResourceGET(@PathParam("componentId") String componentId,
+                                        @PathParam("resource") String resource)
+    {
+        return this.resolveResource(componentId, resource, AccessMethodV2.GET);
+    }
+
+    @HEAD
+    @Secured(roles={Role.PUBLIC})
+    @Path("/resolve/{componentId}/{resource}")
+    public Response resolveResourceHEAD(@PathParam("componentId") String componentId,
+                                        @PathParam("resource") String resource)
+    {
+        return this.resolveResource(componentId, resource, AccessMethodV2.HEAD);
+    }
+
 
     public boolean hasComponentSession(String componentId)
     {

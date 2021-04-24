@@ -156,7 +156,7 @@ public class BindingsManager
 				.filter((id) -> id.startsWith(prefix));
 	}
 
-	private static void prepareResourceBinding(Binding resource) throws IllegalArgumentException
+	private static void prepareResourceBinding(String componentId, Binding resource) throws IllegalArgumentException
 	{
 		/*
 			ImageArchive Bindings contain no valid URLs, just image IDs
@@ -167,7 +167,7 @@ public class BindingsManager
 		{
 			String proxy = MachineTokenProvider.getAuthenticationProxy();
 			ImageArchiveBinding iab = (ImageArchiveBinding)resource;
-			iab.setUrl(proxy + "/" + iab.getImageId());
+			iab.setUrl(proxy + "/" + componentId + "/" + iab.getImageId());
 		}
 
 		if (resource.getId() == null
@@ -190,7 +190,7 @@ public class BindingsManager
 	 * @param binding  A binding location
 	 * @return The resolved path or null, if the binding cannot be found
 	 */
-	public String mount(String binding, Path outdir)
+	public String mount(String componentId, String binding, Path outdir)
 			throws BWFLAException, IOException, IllegalArgumentException
 	{
 		if (binding == null || binding.isEmpty())
@@ -219,7 +219,7 @@ public class BindingsManager
 
 		log.info("Mounting binding '" + binding + "'...");
 
-		prepareResourceBinding(resource);
+		prepareResourceBinding(componentId, resource);
 
 		// TODO: we need to resolve the full path here or earlier to
 		// ensure that all access options use the same path:

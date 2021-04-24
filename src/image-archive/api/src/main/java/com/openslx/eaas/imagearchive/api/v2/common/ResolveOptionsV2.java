@@ -19,6 +19,8 @@
 
 package com.openslx.eaas.imagearchive.api.v2.common;
 
+import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
+
 import javax.ws.rs.QueryParam;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +31,20 @@ public class ResolveOptionsV2 extends BasicOptionsV2<ResolveOptionsV2>
 	@QueryParam("lifetime")
 	private long lifetime;
 
+	@QueryParam("method")
+	private AccessMethodV2 method;
+
+
+	public ResolveOptionsV2 setMethod(AccessMethodV2 method)
+	{
+		this.method = method;
+		return this;
+	}
+
+	public AccessMethodV2 method()
+	{
+		return method;
+	}
 
 	public ResolveOptionsV2 setLifetime(long lifetime, TimeUnit unit)
 	{

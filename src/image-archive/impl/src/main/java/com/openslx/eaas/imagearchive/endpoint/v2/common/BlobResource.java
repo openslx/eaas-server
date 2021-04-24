@@ -22,8 +22,10 @@ package com.openslx.eaas.imagearchive.endpoint.v2.common;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.service.BlobService;
+import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import javax.ws.rs.NotFoundException;
@@ -36,8 +38,14 @@ public abstract class BlobResource<T extends BlobDescriptor> extends AbstractRes
 
 	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
 	{
-		return this.service()
-				.resolve(id, options.lifetime());
+		final var method = BlobResource.convert(options.method());
+		final var result = this.service()
+				.resolve(id, options.lifetime(), method);
+
+		if (result == null)
+			throw new NotFoundException();
+
+		return result;
 	}
 
 	public InputStream fetch(String id) throws BWFLAException
@@ -82,4 +90,19 @@ public abstract class BlobResource<T extends BlobDescriptor> extends AbstractRes
 	// ===== Internal Helpers ==============================
 
 	protected abstract BlobService<T> service();
+
+	public static Blob.AccessMethod convert(AccessMethodV2 method)
+	{
+		if (method == null)
+			return null;
+
+		switch (method) {
+			case HEAD:
+				return Blob.AccessMethod.HEAD;
+			case GET:
+				return Blob.AccessMethod.GET;
+			default:
+				throw new IllegalArgumentException();
+		}
+	}
 }

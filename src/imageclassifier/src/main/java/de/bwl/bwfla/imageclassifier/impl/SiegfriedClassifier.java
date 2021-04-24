@@ -52,7 +52,7 @@ public class SiegfriedClassifier extends Classifier<Siegfried.File> {
             Siegfried sf = runSiegfried(p);
             if(sf == null || sf.getFiles() == null)
             {
-                log.severe("running siegfried faild");
+                log.severe("running siegfried failed");
                 continue;
             }
             index.add(sf.getFiles());
