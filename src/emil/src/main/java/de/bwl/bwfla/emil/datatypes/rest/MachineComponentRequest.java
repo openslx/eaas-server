@@ -170,6 +170,10 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         return userMedia;
     }
 
+    public List<ImageModificationRequest> getImageModificationRequestList() {
+        return imageModificationRequestList;
+    }
+
     @XmlRootElement
     @XmlAccessorType(XmlAccessType.NONE)
     public static class UserMedium extends JaxbType
