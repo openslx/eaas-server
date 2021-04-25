@@ -27,13 +27,8 @@
 
 package de.bwl.bwfla.emucomp.api;
 
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlEnum;
-import javax.xml.bind.annotation.XmlEnumValue;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlType;
+import javax.xml.bind.annotation.*;
+import java.util.List;
 
 
 /**
@@ -81,7 +76,8 @@ import javax.xml.bind.annotation.XmlType;
     "filesize",
     "imageType",
     "username",
-    "password"
+    "password",
+    "modificationRequests"
 })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class Binding extends AbstractDataResource {
@@ -126,6 +122,10 @@ public class Binding extends AbstractDataResource {
 	public void setLocalAlias(String localAlias) {
 		this.localAlias = localAlias;
 	}
+
+	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "modificationRequest")
+	protected List<ImageModificationRequest> modificationRequests;
+
 
 	/**
      * Gets the value of the url property.
@@ -198,6 +198,14 @@ public class Binding extends AbstractDataResource {
     public void setAccess(Binding.AccessType value) {
         this.access = value;
     }
+
+    public List<ImageModificationRequest> getModificationRequests() {
+		return modificationRequests;
+	}
+
+	public void setModificationRequests(List<ImageModificationRequest> modificationRequests) {
+		this.modificationRequests = modificationRequests;
+	}
 
     /**
      * <p>Java class for null.

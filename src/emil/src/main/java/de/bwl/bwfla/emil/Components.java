@@ -795,6 +795,12 @@ public class Components {
             if (authenticatedUser.getTenantId() != null)
                 options.setTenantId(authenticatedUser.getTenantId());
 
+            if(machineDescription.getImageModificationRequestList() != null)
+            {
+                Binding resource = (Binding) EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
+                resource.setModificationRequests(machineDescription.getImageModificationRequestList());
+            }
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()

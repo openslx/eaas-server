@@ -63,6 +63,6 @@ public enum FileSystemType
 			if (type.name().equalsIgnoreCase(str))
 				return type;
 		}
-		throw new IllegalArgumentException();
+		throw new IllegalArgumentException("unknown filesystem " + str);
 	}
 }

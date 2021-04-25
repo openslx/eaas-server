@@ -21,6 +21,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emucomp.api.Binding;
+import de.bwl.bwfla.emucomp.api.ImageModificationRequest;
 import de.bwl.bwfla.emucomp.api.MediumType;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -29,6 +30,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
+import java.util.List;
 
 
 @XmlType(name = "machine")
@@ -67,6 +69,9 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     @XmlElement(required = false)
     private LinuxRuntimeContainerReq linuxRuntimeData;
+
+    @XmlElement
+    private List<ImageModificationRequest> imageModificationRequestList;
 
     @XmlElement
     private ArrayList<UserMedium> userMedia;
