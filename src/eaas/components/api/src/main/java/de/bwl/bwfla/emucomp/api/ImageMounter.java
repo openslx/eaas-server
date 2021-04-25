@@ -583,6 +583,9 @@ public class ImageMounter implements AutoCloseable
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 
+		if(fsType.equalsIgnoreCase("iso9660"))
+			isReadOnly = true;
+
 		process.setCommand("lklfuse");
 		process.addArguments("-f");
 		if (fsType != null) {
