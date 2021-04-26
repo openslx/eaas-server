@@ -4,6 +4,7 @@ import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
@@ -21,15 +22,15 @@ public class ImportContainerTask extends BlockingTask<Object>
     private final ImageArchiveClient archive;
     private final ImportContainerRequest containerRequest;
     private final EmilEnvironmentRepository emilEnvironmentRepository;
-    private final String collectionCtx;
+    private final UserContext userCtx;
 
 
     public ImportContainerTask(ImportContainerRequest containerRequest,
-                               EmilEnvironmentRepository environmentRepository, String collectionCtx) {
+                               EmilEnvironmentRepository environmentRepository, UserContext userCtx) {
         this.containerRequest = containerRequest;
         this.archive = environmentRepository.getImageArchive();
         this.emilEnvironmentRepository = environmentRepository;
-        this.collectionCtx = collectionCtx;
+        this.userCtx = userCtx;
     }
 
     private String importContainer(ImportContainerRequest containerRequest) throws Exception
@@ -96,7 +97,7 @@ public class ImportContainerTask extends BlockingTask<Object>
         String newEnvironmentId = importContainer(containerRequest);
         Map<String, String> userData = new HashMap<>();
         userData.put("environmentId", newEnvironmentId);
-        emilEnvironmentRepository.saveImportedContainer(newEnvironmentId, containerRequest, this.collectionCtx);
+        emilEnvironmentRepository.saveImportedContainer(newEnvironmentId, containerRequest, this.userCtx);
         return userData;
     }
 }

@@ -157,10 +157,7 @@ public class ObjectClassification {
         request.environments = environments;
         request.metadata = metadata;
         request.input = null;
-        request.userCtx = null;
-
-        if(authenticatedUser != null)
-            request.userCtx = authenticatedUser.getUserId();
+        request.userCtx = this.getUserContext();
 
         return taskManager.submitTask(new ClassificationTask(request));
     }
@@ -168,12 +165,12 @@ public class ObjectClassification {
     public String getEnvironmentsForObject(FileCollection fc, boolean forceCharacterization,
                 boolean forceProposal, boolean noUpdate) throws BWFLAException
     {
-        final String userid = (authenticatedUser != null) ? authenticatedUser.getUserId() : null;
-        return taskManager.submitTask(this.newClassificationTask(fc, forceCharacterization, forceProposal, noUpdate, userid));
+        final var userctx = this.getUserContext();
+        return taskManager.submitTask(this.newClassificationTask(fc, forceCharacterization, forceProposal, noUpdate, userctx));
     }
 
     public ClassificationTask newClassificationTask(FileCollection fc, boolean forceCharacterization,
-                boolean forceProposal, boolean noUpdate, String userid) throws BWFLAException
+                boolean forceProposal, boolean noUpdate, UserContext userctx) throws BWFLAException
     {
         ClassificationTask.ClassifyObjectRequest request = new ClassificationTask.ClassifyObjectRequest();
         request.fileCollection = fc;
@@ -183,7 +180,7 @@ public class ObjectClassification {
         request.input = null;
         request.noUpdate = noUpdate;
         request.forceProposal = forceProposal;
-        request.userCtx = userid;
+        request.userCtx = userctx;
 
         if(!forceCharacterization || noUpdate)
             try {
@@ -307,5 +304,9 @@ public class ObjectClassification {
 
     public ImageClassifier imageClassifier() {
         return imageClassifier;
+    }
+
+    private UserContext getUserContext() {
+        return (authenticatedUser != null) ? authenticatedUser : new UserContext();
     }
 }

@@ -25,6 +25,7 @@ import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import de.bwl.bwfla.emil.ObjectClassification;
@@ -66,7 +67,7 @@ import java.util.stream.Stream;
 
 public class ProposalTask extends BlockingTask<Object>
 {
-	private final String userid;
+	private final UserContext userctx;
 	private final ProposalRequest request;
 	private final ImageBuilder imagebuilder;
 	private final ObjectClassification classifier;
@@ -77,9 +78,9 @@ public class ProposalTask extends BlockingTask<Object>
 	private static final MediumType PREPARED_IMAGE_TYPE = MediumType.CDROM;
 
 
-	public ProposalTask(ProposalRequest request, ObjectClassification classifier, String userid) throws BWFLAException
+	public ProposalTask(ProposalRequest request, ObjectClassification classifier, UserContext userctx) throws BWFLAException
 	{
-		this.userid = userid;
+		this.userctx = userctx;
 		this.request = request;
 		this.classifier = classifier;
 
@@ -304,7 +305,7 @@ public class ProposalTask extends BlockingTask<Object>
 		log.info("Proposing environments...");
 
 		final FileCollection fc = this.newFileCollection(imageurl);
-		final ClassificationTask classification = classifier.newClassificationTask(fc, true, true, false, userid);
+		final ClassificationTask classification = classifier.newClassificationTask(fc, true, true, false, userctx);
 		classification.run();
 
 		return new Proposal()

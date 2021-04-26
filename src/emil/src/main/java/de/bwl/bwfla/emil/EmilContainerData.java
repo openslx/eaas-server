@@ -277,10 +277,7 @@ public class EmilContainerData extends EmilRest {
     @Produces(MediaType.APPLICATION_JSON)
     public TaskStateResponse importContainer(ImportContainerRequest req) {
 
-        String userCtx = null;
-        if (authenticatedUser != null)
-            userCtx = authenticatedUser.getUserId();
-
+        final var userCtx = (authenticatedUser != null) ? authenticatedUser : new UserContext();
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, emilEnvRepo, userCtx)));
     }
 

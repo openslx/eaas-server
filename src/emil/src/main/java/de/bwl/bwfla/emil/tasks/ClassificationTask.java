@@ -3,6 +3,7 @@ package de.bwl.bwfla.emil.tasks;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
@@ -68,7 +69,7 @@ public class ClassificationTask extends BlockingTask<Object>
         public String filename;
         public boolean noUpdate;
         public boolean forceProposal;
-        public String userCtx;
+        public UserContext userCtx;
     }
 
     private List<EnvironmentInfo> resolveEmilEnvironments(String objectId, Collection<String> proposedEnvironments) throws IOException, BWFLAException {

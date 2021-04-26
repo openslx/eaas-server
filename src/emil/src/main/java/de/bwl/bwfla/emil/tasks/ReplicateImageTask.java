@@ -4,6 +4,7 @@ import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
@@ -50,7 +51,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
         public Environment env;
         public EmilEnvironment emilEnvironment;
         public EmilEnvironmentRepository repository;
-        public String username;
+        public UserContext userctx;
 
         public void validate() throws BWFLAException
         {
@@ -142,7 +143,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
                     .environments()
                     .replicate(request.env, resources, options);
 
-            request.repository.replicate(request.emilEnvironment, request.destArchive, request.username);
+            request.repository.replicate(request.emilEnvironment, request.destArchive, request.userctx);
         }
         catch (Throwable error) {
             log.log(Level.WARNING, "Replicating environment failed!", error);
