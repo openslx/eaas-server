@@ -4,6 +4,8 @@ import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
+import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
@@ -60,8 +62,18 @@ public class ReplicateImageTask extends BlockingTask<Object>
 
             if(environmentHelper == null || imageProposer == null)
                 throw new BWFLAException("missing dependencies");
+
+            if (!repository.checkPermissions(emilEnvironment, EmilEnvironmentPermissions.Permissions.WRITE, userctx))
+                throw new BWFLAException("Access denied!");
+
+            if (userctx.getTenantId() != null) {
+                // only node-admin can make an environment public!
+                if (destArchive.equals(EmilEnvironmentRepository.MetadataCollection.PUBLIC) && userctx.getRole() != Role.ADMIN)
+                    throw new BWFLAException("Access denied!");
+            }
         }
     }
+
     @Override
     protected Object execute() throws Exception {
         EmulatorSpec emulatorSpec = null;

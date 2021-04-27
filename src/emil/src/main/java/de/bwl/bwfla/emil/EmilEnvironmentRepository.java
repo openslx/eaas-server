@@ -94,7 +94,7 @@ public class EmilEnvironmentRepository {
 		return initialized;
 	}
 
-	public final class MetadataCollection {
+	public static final class MetadataCollection {
 		public static final String PUBLIC = "public";
 		public static final String REMOTE = "remote";
 		public static final String DEFAULT = "default";
@@ -102,6 +102,8 @@ public class EmilEnvironmentRepository {
 
 	private String getDataCollection(UserContext userctx) {
 		if (userctx != null) {
+			if (userctx.getTenantId() != null)
+				return userctx.getTenantId();
 
 			if (userctx.getUserId() != null)
 				return userctx.getUserId();
@@ -123,10 +125,11 @@ public class EmilEnvironmentRepository {
 		return this.checkPermissions(env, wanted, this.getUserContext());
 	}
 
-	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted, UserContext userctx) {
+	public boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted, UserContext userctx) {
 		if (env == null)
 			return true;
 
+		final var tenantid = userctx.getTenantId();
 		final var userid = userctx.getUserId();
 		final var role = userctx.getRole();
 
@@ -140,24 +143,41 @@ public class EmilEnvironmentRepository {
 			return true;
 		}
 
-		EmilEnvironmentOwner owner = env.getOwner();
-		if (owner != null && owner.getUsername() != null) {
-			if (userid == null) {
-				LOG.severe("environment " + env.getEnvId() + " access denied to unknown user " + owner.getUsername());
-				return false;
-			}
+		final var message = "Access denied for user '%s' to %s environment '%s'!";
 
-			if (!userid.equals(owner.getUsername())) {
-				LOG.warning("access denied to environment " + env.getEnvId()
-						+ ". Reason username mismatch: owner " + owner.getUsername() + " ctx " + userid);
-				return false;
+		EmilEnvironmentOwner owner = env.getOwner();
+		if (owner != null) {
+			if (owner.getUsergroup() != null && tenantid != null) {
+				// looks like a node-private environment...
+				if (!tenantid.equals(owner.getUsergroup())) {
+					LOG.warning(String.format(message, userid, "node-private", env.getEnvId()));
+					return false;
+				}
+			}
+			else {
+				// looks like a user-private environment...
+				if (userid == null) {
+					LOG.warning(String.format(message, "UNKNOWN", "private", env.getEnvId()));
+					return false;
+				}
+
+				if (!userid.equals(owner.getUsername())) {
+					LOG.warning(String.format(message, userid, "private", env.getEnvId()));
+					return false;
+				}
 			}
 		}
 
-		// TODO: check org-level permissions!
+		// check node-level permissions first
+		if (permissions.getGroup() != null) {
+			if (wanted.getValue() <= permissions.getGroup().getValue())
+				return true;
+		}
 
-		if (wanted.getValue() > permissions.getUser().getValue()) {
-			LOG.info("permission missmatch: got " + permissions.getUser().getValue() + " wanted: " + wanted.getValue());
+		final var allowed = permissions.getUser();
+		if (wanted.getValue() > allowed.getValue()) {
+			final var reason = " Permissions mismatch: " + wanted.name() + " > " + allowed.name();
+			LOG.warning(String.format(message + reason, userid, "private", env.getEnvId()));
 			return false;
 		}
 
@@ -408,6 +428,20 @@ public class EmilEnvironmentRepository {
 	}
 
 	synchronized public void replicate(EmilEnvironment env, String destArchive, UserContext userctx) throws JAXBException, BWFLAException {
+
+		// FIXME: permissions are currently checked externally!
+
+		if (destArchive.equals(MetadataCollection.DEFAULT) && destArchive.equals(env.getArchive())) {
+			// change ownership from user-private to node-private
+			final var owner = env.getOwner();
+			if (owner != null)
+				owner.setUsergroup(userctx.getTenantId());
+
+			final var permissions = env.getPermissions();
+			if (permissions != null)
+				permissions.setGroup(EmilEnvironmentPermissions.Permissions.READ);
+		}
+
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
 			final var collection = this.getDataCollection(userctx);
 			db.deleteDoc(collection, env.getEnvId(), env.getIdDBkey());
