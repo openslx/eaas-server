@@ -139,12 +139,18 @@ public class ReplicateImageTask extends BlockingTask<Object>
         }
 
         // disable for now. for default items we only need to create a HDL. TODO
-        // if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
+
         List<AbstractDataResource> resources = null;
         if (request.env instanceof MachineConfiguration)
             resources = ((MachineConfiguration) request.env).getAbstractDataResource();
         else if (request.env instanceof OciContainerConfiguration)
             resources = ((OciContainerConfiguration) request.env).getDataResources();
+
+        final var skipcopy = request.destArchive.equals(request.emilEnvironment.getArchive())
+                && request.destArchive.equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT);
+
+        if (skipcopy)
+            resources = null;  // all resources should be available locally!
 
         try {
             final var options = new ReplaceOptionsV2()
