@@ -76,7 +76,7 @@ public class ImportSource
 		if (url == null || url.isEmpty())
 			throw new IllegalArgumentException("URL is invalid!");
 
-		if (!(url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file://")))
+		if (!(url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file:/")))
 			throw new IllegalArgumentException("Source is not supported!");
 	}
 
