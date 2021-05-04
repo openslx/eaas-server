@@ -49,4 +49,15 @@ public class UserContext {
     public void setUsername(String username) {
         this.username = username;
     }
+
+    @Override
+    public UserContext clone() {
+        UserContext copy = new UserContext();
+        copy.userId = userId;
+        copy.tenantId = tenantId;
+        copy.username = username;
+        copy.name = name;
+        copy.role = role;
+        return copy;
+    }
 }

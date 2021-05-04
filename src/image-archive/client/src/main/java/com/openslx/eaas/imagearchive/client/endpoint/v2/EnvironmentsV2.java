@@ -32,6 +32,7 @@ import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRO;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRWM;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.BindingDataHandler;
@@ -342,6 +343,12 @@ public class EnvironmentsV2
 			for (AbstractDataResource adr : data) {
 				if (adr instanceof ImageArchiveBinding) {
 					final var binding = (ImageArchiveBinding) adr;
+					if (binding.getUrl() == null) {
+						// FIXME: assume, that we replicate from local archive for now
+						final var proxy = MachineTokenProvider.getAuthenticationProxy();
+						binding.setUrl(proxy + "/unknown/" + binding.getImageId());
+					}
+
 					final var request = new ImportRequestV2();
 					request.source()
 							.setUrl(binding.getUrl());

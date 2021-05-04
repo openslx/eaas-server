@@ -4,6 +4,9 @@ import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
@@ -50,7 +53,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
         public Environment env;
         public EmilEnvironment emilEnvironment;
         public EmilEnvironmentRepository repository;
-        public String username;
+        public UserContext userctx;
 
         public void validate() throws BWFLAException
         {
@@ -59,8 +62,18 @@ public class ReplicateImageTask extends BlockingTask<Object>
 
             if(environmentHelper == null || imageProposer == null)
                 throw new BWFLAException("missing dependencies");
+
+            if (!repository.checkPermissions(emilEnvironment, EmilEnvironmentPermissions.Permissions.WRITE, userctx))
+                throw new BWFLAException("Access denied!");
+
+            if (userctx.getTenantId() != null) {
+                // only node-admin can make an environment public!
+                if (destArchive.equals(EmilEnvironmentRepository.MetadataCollection.PUBLIC) && userctx.getRole() != Role.ADMIN)
+                    throw new BWFLAException("Access denied!");
+            }
         }
     }
+
     @Override
     protected Object execute() throws Exception {
         EmulatorSpec emulatorSpec = null;
@@ -126,12 +139,18 @@ public class ReplicateImageTask extends BlockingTask<Object>
         }
 
         // disable for now. for default items we only need to create a HDL. TODO
-        // if(request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
+
         List<AbstractDataResource> resources = null;
         if (request.env instanceof MachineConfiguration)
             resources = ((MachineConfiguration) request.env).getAbstractDataResource();
         else if (request.env instanceof OciContainerConfiguration)
             resources = ((OciContainerConfiguration) request.env).getDataResources();
+
+        final var skipcopy = request.destArchive.equals(request.emilEnvironment.getArchive())
+                && request.destArchive.equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT);
+
+        if (skipcopy)
+            resources = null;  // all resources should be available locally!
 
         try {
             final var options = new ReplaceOptionsV2()
@@ -142,7 +161,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
                     .environments()
                     .replicate(request.env, resources, options);
 
-            request.repository.replicate(request.emilEnvironment, request.destArchive, request.username);
+            request.repository.replicate(request.emilEnvironment, request.destArchive, request.userctx);
         }
         catch (Throwable error) {
             log.log(Level.WARNING, "Replicating environment failed!", error);
