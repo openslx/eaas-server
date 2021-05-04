@@ -357,6 +357,11 @@ public class EnvironmentsV2
 							.setKind(ImportTargetV2.Kind.IMAGE)
 							.setName(binding.getImageId());
 
+					if (options != null) {
+						request.target()
+								.setLocation(options.location());
+					}
+
 					final var task = new ImportTask();
 					task.binding = binding;
 					task.taskid = archive.imports()
