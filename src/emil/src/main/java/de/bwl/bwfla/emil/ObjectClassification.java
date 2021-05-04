@@ -157,7 +157,7 @@ public class ObjectClassification {
         request.environments = environments;
         request.metadata = metadata;
         request.input = null;
-        request.userCtx = this.getUserContext();
+        request.userCtx = this.getUserContext().clone();
 
         return taskManager.submitTask(new ClassificationTask(request));
     }
@@ -180,7 +180,7 @@ public class ObjectClassification {
         request.input = null;
         request.noUpdate = noUpdate;
         request.forceProposal = forceProposal;
-        request.userCtx = userctx;
+        request.userCtx = userctx.clone();
 
         if(!forceCharacterization || noUpdate)
             try {
