@@ -293,59 +293,26 @@ public class ImportService
 		@Override
 		public void prepare(ImportRecord record, TaskStack cleanups) throws Exception
 		{
-			final var task = record.task();
-			final var source = task.source();
-			final var info = this.info(record, source, cleanups);
+			final var info = this.info(record, cleanups);
 			switch (info.getFileFormat()) {
 				case VMDK:
 				case VHD:
-					final var tmpfile = config.getTempDirectory()
-							.resolve("image-" + record.taskid());
-
-					cleanups.push("temp-import-image", () -> Files.deleteIfExists(tmpfile));
-
-					// convert remote or local image, storing result locally
-					final var format = ImageInformation.QemuImageFormat.QCOW2;
-					EmulatorUtils.convertImage(source.url(), tmpfile, format, logger);
-
-					// converted image should now be available locally,
-					// so we need to update import-source accordingly!
-					source.setUrl("file://" + tmpfile.toString());
+					this.convertImage(record, cleanups);
 					break;
 
 				case QCOW2:
-					if (info.getBackingFile() != null) {
-						final var uri = new URI(info.getBackingFile());
-						final var filename = Path.of(uri.getPath())
-								.getFileName()
-								.toString();
+					if (info.getBackingFile() != null)
+						this.handleBackingFile(record, info, cleanups);
 
-						final var newtask = new ImportTask()
-								.setDescription("Backing file for image from task " + record.taskid());
-
-						newtask.setSource(task.source())
-								.source()
-								.setUrl(info.getBackingFile());
-
-						newtask.setTarget(task.target())
-								.target()
-								.setName(filename);
-
-						final var dependency = ImportService.this.insert(newtask, record.taskid());
-						record.dependencies()
-								.add(dependency);
-
-						final var message = "Submitting subtask %d for image-layer referenced in import-task %d";
-						logger.info(String.format(message, dependency.taskid(), record.taskid()));
-					}
-
-					// TODO: update backing file URL!
 					break;
 			}
 		}
 
-		private ImageInformation info(ImportRecord record, ImportSource source, TaskStack cleanups) throws Exception
+		private ImageInformation info(ImportRecord record, TaskStack cleanups) throws Exception
 		{
+			final var source = record.task()
+					.source();
+
 			try {
 				// fetch info directly from remote location...
 				return new ImageInformation(source.url(), logger);
@@ -362,13 +329,22 @@ public class ImportService
 				}
 			}
 
+			// fetching from remote URL failed, byte-ranges might be not supported!
+			// try downloading image completely one more time and process locally!
+			final var outfile = this.download(record, cleanups);
+
+			// try to get info from local file this time
+			source.setUrl("file://" + outfile.toString());
+			return new ImageInformation(source.url(), logger);
+		}
+
+		private Path download(ImportRecord record, TaskStack cleanups) throws Exception
+		{
 			final var outfile = config.getTempDirectory()
 					.resolve("image-" + record.taskid() + ".orig");
 
 			cleanups.push("orig-import-image", () -> Files.deleteIfExists(outfile));
 
-			// fetching from remote URL failed, byte-ranges might be not supported!
-			// try downloading image completely one more time and process locally!
 			final var process = new DeprecatedProcessRunner()
 					.setLogger(logger)
 					.setCommand("curl")
@@ -378,6 +354,7 @@ public class ImportService
 					.addArgument("--show-error")
 					.addArgument("--location");
 
+			final var source = record.task().source();
 			final var headers = source.headers();
 			if (headers != null) {
 				headers.forEach((name, value) -> {
@@ -394,9 +371,77 @@ public class ImportService
 			if (!downloaded)
 				throw new BWFLAException("Downloading remote image failed!");
 
-			// try to get info from local file this time
-			source.setUrl("file://" + outfile.toString());
-			return new ImageInformation(source.url(), logger);
+			return outfile;
+		}
+
+		private void convertImage(ImportRecord record, TaskStack cleanups) throws Exception
+		{
+			final var source = record.task()
+					.source();
+
+			final var tmpfile = config.getTempDirectory()
+					.resolve("image-" + record.taskid());
+
+			cleanups.push("temp-import-image", () -> Files.deleteIfExists(tmpfile));
+
+			// convert remote or local image, storing result locally
+			final var format = ImageInformation.QemuImageFormat.QCOW2;
+			EmulatorUtils.convertImage(source.url(), tmpfile, format, logger);
+
+			// converted image should now be available locally,
+			// so we need to update import-source accordingly!
+			source.setUrl("file://" + tmpfile.toString());
+		}
+
+		private void handleBackingFile(ImportRecord record, ImageInformation info, TaskStack cleanups) throws Exception
+		{
+			final var uri = new URI(info.getBackingFile());
+			final var filename = Path.of(uri.getPath())
+					.getFileName()
+					.toString();
+
+			if (filename.equals(info.getBackingFile()))
+				return;  // relative reference!
+
+			final var parent = record.task();
+
+			// update backing file URL: <some-url>/<id> -> <id>
+			{
+				final var source = parent.source();
+				final var islocal = source.url()
+						.startsWith("file:");
+
+				if (!islocal) {
+					// download image to be able to update backing file reference!
+					final var path = this.download(record, cleanups);
+					source.setUrl("file://" + path.toString());
+				}
+
+				final var srcurl = new URI(source.url());
+				final var image = Path.of(srcurl.getPath());
+				EmulatorUtils.changeBackingFile(image, filename, logger);
+			}
+
+			// prepare subtask for importing referenced image-layer...
+			{
+				final var subtask = new ImportTask()
+						.setDescription("Backing file for image from task " + record.taskid());
+
+				subtask.setSource(new ImportSource(parent.source()))
+						.source()
+						.setUrl(info.getBackingFile());
+
+				subtask.setTarget(new ImportTarget(parent.target()))
+						.target()
+						.setName(filename);
+
+				final var dependency = ImportService.this.insert(subtask, record.taskid());
+				record.dependencies()
+						.add(dependency);
+
+				final var message = "Submitting subtask %d for image-layer referenced in import-task %d";
+				logger.info(String.format(message, dependency.taskid(), record.taskid()));
+			}
 		}
 	}
 
