@@ -433,8 +433,18 @@ public class ImportService
 
 			final var cleanups = new TaskStack(logger);
 			try {
-				this.prepare(record, cleanups);
-				this.process(record, cleanups);
+				final var target = record.task()
+						.target();
+
+				if (!this.exists(target)) {
+					// TODO: optimize potentially concurrent imports of same blobs.
+					//       current implementation is still correct as-is, but workers
+					//       may download identical blobs redundantly in certain cases.
+
+					// blob needs to be imported!
+					this.prepare(record, cleanups);
+					this.process(record, cleanups);
+				}
 			}
 			catch (Exception error) {
 				logger.log(Level.WARNING, "Executing import-task " + record.taskid() + " failed!", error);
@@ -556,6 +566,19 @@ public class ImportService
 			if (target.name() != null)
 				service.upload(target.location(), target.name(), data, size);
 			else target.setName(service.upload(target.location(), data, size));
+		}
+
+		private boolean exists(ImportTarget target) throws BWFLAException
+		{
+			final var name = target.name();
+			if (name == null)
+				return false;
+
+			final var service = (BlobService<?>) backend.services()
+					.lookup(target.kind());
+
+			// does the target blob already exist?
+			return service.lookup(name) != null;
 		}
 	}
 
