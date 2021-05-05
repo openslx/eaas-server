@@ -33,6 +33,18 @@ public class ImportTarget
 	private String name;
 	private String location;
 
+	public ImportTarget()
+	{
+		// Empty!
+	}
+
+	public ImportTarget(ImportTarget other)
+	{
+		this.kind = other.kind();
+		this.name = other.name();
+		this.location = other.location();
+	}
+
 	@JsonSetter(Fields.KIND)
 	public ImportTarget setKind(String kind)
 	{

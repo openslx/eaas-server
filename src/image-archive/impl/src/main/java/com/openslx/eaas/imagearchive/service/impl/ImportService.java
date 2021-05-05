@@ -68,6 +68,8 @@ public class ImportService
 	private final ImportIndex imports;
 	private int numIdleWorkers;
 
+	private static final int INVALID_TASK_ID = -1;
+
 
 	/** Count currently indexed import-tasks */
 	public long count()
@@ -90,13 +92,12 @@ public class ImportService
 	/** Submit new import-task and return task's ID */
 	public int submit(ImportTask config) throws BWFLAException
 	{
-		final int taskid = idgen.getAndIncrement();
-		imports.collection()
-				.insert(ImportRecord.create(taskid, config));
+		final var taskid = this.insert(config)
+				.taskid();
 
 		if (!this.submit(taskid)) {
 			this.abort(taskid);
-			return -1;
+			return INVALID_TASK_ID;
 		}
 
 		return taskid;
@@ -218,6 +219,22 @@ public class ImportService
 		preprocessors.set(kind.ordinal(), preprocessor);
 	}
 
+	private ImportRecord insert(ImportTask config) throws BWFLAException
+	{
+		return this.insert(config, INVALID_TASK_ID);
+	}
+
+	private ImportRecord insert(ImportTask config, int parent) throws BWFLAException
+	{
+		final var taskid = idgen.getAndIncrement();
+		final var record = ImportRecord.create(taskid, config);
+		record.setParentId(parent);
+		imports.collection()
+				.insert(record);
+
+		return record;
+	}
+
 	private synchronized boolean submit(int taskid)
 	{
 		if (!tasks.offer(taskid))
@@ -251,6 +268,7 @@ public class ImportService
 
 			try (records) {
 				final var count = records.stream()
+						.filter(ImportRecord::isroot)
 						.map(ImportRecord::taskid)
 						.peek(this::submit)
 						.count();
@@ -293,6 +311,32 @@ public class ImportService
 					// converted image should now be available locally,
 					// so we need to update import-source accordingly!
 					source.setUrl("file://" + tmpfile.toString());
+					break;
+
+				case QCOW2:
+					if (info.getBackingFile() != null) {
+						final var uri = new URI(info.getBackingFile());
+						final var filename = Path.of(uri.getPath())
+								.getFileName()
+								.toString();
+
+						final var newtask = new ImportTask()
+								.setDescription("Backing file for image from task " + record.taskid());
+
+						newtask.setSource(task.source())
+								.source()
+								.setUrl(info.getBackingFile());
+
+						newtask.setTarget(task.target())
+								.target()
+								.setName(filename);
+
+						record.dependencies()
+								.add(ImportService.this.insert(newtask, record.taskid()));
+					}
+
+					// TODO: update backing file URL!
+					break;
 			}
 		}
 
@@ -379,6 +423,12 @@ public class ImportService
 			if (record == null)
 				return;  // task seems to be aborted!
 
+			// root import-task
+			this.execute(record);
+		}
+
+		private void execute(ImportRecord record) throws Exception
+		{
 			record.setStartedAtTime(ArchiveBackend.now());
 
 			final var cleanups = new TaskStack(logger);
@@ -387,7 +437,7 @@ public class ImportService
 				this.process(record, cleanups);
 			}
 			catch (Exception error) {
-				logger.log(Level.WARNING, "Executing import-task " + taskid + " failed!", error);
+				logger.log(Level.WARNING, "Executing import-task " + record.taskid() + " failed!", error);
 				final var failure = new ImportFailure()
 						.setReason("Importing blob failed!")
 						.setDetail(error.getMessage());
@@ -400,6 +450,8 @@ public class ImportService
 			}
 
 			record.setFinishedAtTime(ArchiveBackend.now());
+
+			final var filter = ImportRecord.filter(record.taskid());
 			imports.collection()
 					.replace(filter, record);
 
@@ -421,6 +473,10 @@ public class ImportService
 
 		private void process(ImportRecord record, TaskStack cleanups) throws Exception
 		{
+			// process dependencies first...
+			for (var dep : record.dependencies())
+				this.execute(dep);
+
 			final var task = record.task();
 			final var source = task.source();
 			final var target = task.target();
