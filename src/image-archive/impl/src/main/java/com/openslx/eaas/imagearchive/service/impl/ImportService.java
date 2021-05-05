@@ -331,8 +331,12 @@ public class ImportService
 								.target()
 								.setName(filename);
 
+						final var dependency = ImportService.this.insert(newtask, record.taskid());
 						record.dependencies()
-								.add(ImportService.this.insert(newtask, record.taskid()));
+								.add(dependency);
+
+						final var message = "Submitting subtask %d for image-layer referenced in import-task %d";
+						logger.info(String.format(message, dependency.taskid(), record.taskid()));
 					}
 
 					// TODO: update backing file URL!
@@ -429,6 +433,8 @@ public class ImportService
 
 		private void execute(ImportRecord record) throws Exception
 		{
+			logger.info("Executing import-task " + record.taskid() + "...");
+
 			record.setStartedAtTime(ArchiveBackend.now());
 
 			final var cleanups = new TaskStack(logger);
@@ -444,6 +450,10 @@ public class ImportService
 					// blob needs to be imported!
 					this.prepare(record, cleanups);
 					this.process(record, cleanups);
+				}
+				else {
+					final var message = "Blob '%s' (%s) already exists! Skipping import-task %d!";
+					logger.info(String.format(message, target.name(), target.kindstr(), record.taskid()));
 				}
 			}
 			catch (Exception error) {
@@ -468,6 +478,17 @@ public class ImportService
 			final var watcher = watchers.remove(record.taskid());
 			if (watcher != null)
 				watcher.complete(ImportStatus.from(record));
+
+			// log processing time...
+			{
+				String suffix = "second(s)";
+				long duration = record.finishedAtTime() - record.startedAtTime();
+				if (duration > 1000L)
+					duration = TimeUnit.SECONDS.convert(duration, TimeUnit.MILLISECONDS);
+				else suffix = "milli" + suffix;
+
+				logger.info("Executing import-task " + record.taskid() + " took " + duration + " " + suffix);
+			}
 		}
 
 		private void prepare(ImportRecord record, TaskStack cleanups) throws Exception
