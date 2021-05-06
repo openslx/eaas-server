@@ -35,6 +35,22 @@ public class CreateContainerImageRequest {
         return urlString;
     }
 
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
+    public void setDigest(String digest) {
+        this.digest = digest;
+    }
+
+    public void setContainerType(ContainerType containerType) {
+        this.containerType = containerType;
+    }
+
+    public void setUrlString(String urlString) {
+        this.urlString = urlString;
+    }
+
     @XmlEnum
     public enum ContainerType {
         @XmlEnumValue("rootfs")
