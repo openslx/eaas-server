@@ -27,16 +27,35 @@ import com.openslx.eaas.imagearchive.ArchiveBackend;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.ArrayList;
+import java.util.List;
+
 
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public class ImportRecord
 {
+	private int parent = -1;
 	private int taskid;
 	private ImportTask task;
 	private ImportFailure failure;
 	private long ctime = -1L;
 	private long stime = -1L;
 	private long ftime = -1L;
+
+	@JsonIgnore
+	private List<ImportRecord> deps;
+
+	@JsonSetter(Fields.PARENT_ID)
+	public void setParentId(int id)
+	{
+		this.parent = id;
+	}
+
+	@JsonGetter(Fields.PARENT_ID)
+	public int parent()
+	{
+		return parent;
+	}
 
 	@JsonSetter(Fields.TASK_ID)
 	public void setTaskId(int id)
@@ -132,6 +151,21 @@ public class ImportRecord
 		return ftime > 0L;
 	}
 
+	@JsonIgnore
+	public boolean isroot()
+	{
+		return parent < 0;
+	}
+
+	@JsonIgnore
+	public List<ImportRecord> dependencies()
+	{
+		if (deps == null)
+			this.deps = new ArrayList<>();
+
+		return deps;
+	}
+
 	public static ImportRecord create(int taskid, ImportTask task)
 	{
 		final var record = new ImportRecord();
@@ -168,6 +202,7 @@ public class ImportRecord
 	private static final class Fields
 	{
 		public static final String TASK_ID          = "tid";
+		public static final String PARENT_ID        = "pid";
 		public static final String TASK_CONFIG      = "cfg";
 		public static final String FAILURE          = "fai";
 		public static final String CREATED_AT_TIME  = "cts";
