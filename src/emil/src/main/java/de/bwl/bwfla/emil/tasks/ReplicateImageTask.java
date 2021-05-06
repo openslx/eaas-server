@@ -126,14 +126,17 @@ public class ReplicateImageTask extends BlockingTask<Object>
 
                 String ociSourceUrl = emulatorSpec.getOciSourceUrl();
                 String digest = emulatorSpec.getDigest();
+                String tag = emulatorSpec.getContainerVersion();
 
                 if(ociSourceUrl == null)
                     throw new BWFLAException("invalid emulator metadata: ociSource is mandatory");
 
-
                 CreateContainerImageRequest containerImageRequest = new CreateContainerImageRequest();
                 containerImageRequest.setContainerType(CreateContainerImageRequest.ContainerType.DOCKERHUB);
-                containerImageRequest.setDigest(digest);
+                if(tag != null)
+                    containerImageRequest.setTag(tag.replace('.', '-').replace('+', '-'));
+                else
+                    containerImageRequest.setDigest(digest);
                 containerImageRequest.setUrlString(ociSourceUrl);
                 CreateContainerImageResult containerImage = BuildContainerUtil.build(containerImageRequest);
 
