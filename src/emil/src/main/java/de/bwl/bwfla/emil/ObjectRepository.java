@@ -270,9 +270,20 @@ public class ObjectRepository extends EmilRest
 			LOG.info("Listing all digital objects in archive '" + archiveId + "'...");
 
 			try {
-				final Stream<DigitalObjectMetadata> objects = objHelper.getObjectMetadata(archiveId);
+				Stream<DigitalObjectMetadata> objects = null;
+				try {
+					objects = objHelper.getObjectMetadata(archiveId);
+				}
+				catch (Exception e)
+				{
+					// we need to initialize the archive list first. otherwise we fail listing the user-archive
+					// see: https://gitlab.com/openslx/eaas-server/-/issues/55
+					archives().list();
+					objects = objHelper.getObjectMetadata(archiveId);
+				}
 
 				// Construct response (in streaming-mode)
+				Stream<DigitalObjectMetadata> finalObjects = objects;
 				final StreamingOutput output = (ostream) -> {
 					final var jsonfactory = DataUtils.json()
 							.mapper()
@@ -283,7 +294,7 @@ public class ObjectRepository extends EmilRest
 								.writer();
 
 						json.writeStartArray();
-						objects.forEach((object) -> {
+						finalObjects.forEach((object) -> {
 							try {
 								final String id = object.getId();
 								if (swHelper.hasSoftwarePackage(id))
@@ -314,7 +325,7 @@ public class ObjectRepository extends EmilRest
 						json.flush();
 					}
 					finally {
-						objects.close();
+						finalObjects.close();
 					}
 				};
 
