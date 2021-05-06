@@ -134,7 +134,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 CreateContainerImageRequest containerImageRequest = new CreateContainerImageRequest();
                 containerImageRequest.setContainerType(CreateContainerImageRequest.ContainerType.DOCKERHUB);
                 if(tag != null)
-                    containerImageRequest.setTag(tag.replace('.', '-'));
+                    containerImageRequest.setTag(tag.replace('.', '-').replace('+', '-'));
                 else
                     containerImageRequest.setDigest(digest);
                 containerImageRequest.setUrlString(ociSourceUrl);
