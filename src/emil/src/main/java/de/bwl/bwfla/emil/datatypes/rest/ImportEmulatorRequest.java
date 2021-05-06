@@ -22,4 +22,12 @@ public class ImportEmulatorRequest extends EmilRequestType {
     public CreateContainerImageResult.ContainerImageMetadata getMetadata() {
         return metadata;
     }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public void setMetadata(CreateContainerImageResult.ContainerImageMetadata metadata) {
+        this.metadata = metadata;
+    }
 }

@@ -11,6 +11,11 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
+import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageRequest;
+import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageResult;
+import de.bwl.bwfla.emil.datatypes.rest.ImportEmulatorRequest;
+import de.bwl.bwfla.emil.utils.BuildContainerUtil;
+import de.bwl.bwfla.emil.utils.ImportEmulatorUtil;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
@@ -121,19 +126,24 @@ public class ReplicateImageTask extends BlockingTask<Object>
 
                 String ociSourceUrl = emulatorSpec.getOciSourceUrl();
                 String digest = emulatorSpec.getDigest();
+                String tag = emulatorSpec.getContainerVersion();
 
                 if(ociSourceUrl == null)
                     throw new BWFLAException("invalid emulator metadata: ociSource is mandatory");
 
-                /*
+                CreateContainerImageRequest containerImageRequest = new CreateContainerImageRequest();
+                containerImageRequest.setContainerType(CreateContainerImageRequest.ContainerType.DOCKERHUB);
+                if(tag != null)
+                    containerImageRequest.setTag(tag.replace('.', '-').replace('+', '-'));
+                else
+                    containerImageRequest.setDigest(digest);
+                containerImageRequest.setUrlString(ociSourceUrl);
+                CreateContainerImageResult containerImage = BuildContainerUtil.build(containerImageRequest);
+
                 ImportEmulatorRequest importEmulatorRequest = new ImportEmulatorRequest();
-                importEmulatorRequest.setDigest(digest);
-                importEmulatorRequest.setUrlString(ociSourceUrl);
-                importEmulatorRequest.setImageType(DOCKERHUB);
-
-                request.containerUtil.importEmulator(importEmulatorRequest);
-
-                 */
+                importEmulatorRequest.setImageUrl(containerImage.getContainerUrl());
+                importEmulatorRequest.setMetadata(containerImage.getMetadata());
+                ImportEmulatorUtil.doImport(importEmulatorRequest, request.environmentHelper);
             }
 
         }
