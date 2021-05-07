@@ -761,9 +761,8 @@ public class Components {
             if (machineDescription.getObject() != null) {
                 driveId = addObjectToEnvironment(chosenEnv, machineDescription.getObjectArchive(), machineDescription.getObject());
             } else if (machineDescription.getSoftware() != null) {
-                String objectId = getObjectIdForSoftware(machineDescription.getSoftware());
-                String archiveId = getArchiveIdForSoftware(machineDescription.getSoftware());
-                driveId = addObjectToEnvironment(chosenEnv, archiveId, objectId);
+                final var software = this.getSoftwarePackage(machineDescription.getSoftware());
+                driveId = addObjectToEnvironment(chosenEnv, software.getArchive(), software.getObjectId());
             }
 
             final List<String> selectors = resourceProviderSelection.getSelectors(chosenEnv.getId());
@@ -851,7 +850,7 @@ public class Components {
         }
     }
 
-    protected String getObjectIdForSoftware(String softwareId)
+    protected SoftwarePackage getSoftwarePackage(String softwareId)
             throws BWFLAException {
         // Start with object ID referenced by the passed software ID.
         final SoftwarePackage software = swHelper
@@ -863,24 +862,8 @@ public class Components {
                             "Could not find software with ID: " + softwareId))
                     .build());
         }
-        String objectId = software.getObjectId();
-        return objectId;
-    }
-    
-    protected String getArchiveIdForSoftware(String softwareId)
-            throws BWFLAException {
-        // Start with object ID referenced by the passed software ID.
-        final SoftwarePackage software = swHelper
-                .getSoftwarePackageById(softwareId);
-        if (software == null) {
-            throw new BadRequestException(Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation(
-                            "Could not find software with ID: " + softwareId))
-                    .build());
-        }
-        String archiveId = software.getArchive();
-        return archiveId;
+
+        return software;
     }
 
     protected int addObjectToEnvironment(Environment chosenEnv, String archiveId, String objectId)
