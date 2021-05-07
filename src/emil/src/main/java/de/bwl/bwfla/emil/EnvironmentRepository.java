@@ -463,6 +463,13 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setXpraEncoding(envReq.getXpraEncoding());
 				newEmilEnv.setOs(envReq.getOperatingSystemId());
 
+				if(envReq.isEnableNetwork())
+				{
+					NetworkingType network = new NetworkingType();
+					network.setConnectEnvs(true);
+					newEmilEnv.setNetworking(network);
+				}
+
 				newEmilEnv.setDescription("imported / user created environment");
 				emilEnvRepo.save(newEmilEnv, true);
 
