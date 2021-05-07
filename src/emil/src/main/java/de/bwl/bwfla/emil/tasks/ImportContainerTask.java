@@ -1,6 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
@@ -42,6 +43,9 @@ public class ImportContainerTask extends BlockingTask<Object>
         importRequest.target()
                 .setKind(ImportTargetV2.Kind.IMAGE);
 
+        if(containerRequest.getArchive() != null)
+            importRequest.target().setLocation(containerRequest.getArchive());
+
         final var imageid = archive.api()
                 .v2()
                 .imports()
@@ -51,7 +55,6 @@ public class ImportContainerTask extends BlockingTask<Object>
         final var binding = new ImageArchiveBinding();
         binding.setId("rootfs");
         binding.setImageId(imageid);
-        binding.setBackendName("default");
         binding.setFileSystemType("ext4");
 
         OciContainerConfiguration config = new OciContainerConfiguration();
@@ -83,10 +86,15 @@ public class ImportContainerTask extends BlockingTask<Object>
         }
 
         final var id = config.getId();
+
+        ReplaceOptionsV2 optionsV2 = new ReplaceOptionsV2();
+        if(containerRequest.getArchive() != null)
+            optionsV2.setLocation(containerRequest.getArchive());
+
         archive.api()
                 .v2()
                 .containers()
-                .replace(id, config);
+                .replace(id, config, optionsV2);
 
         return id;
     }
