@@ -46,6 +46,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
         put("Hatari", "hatari");
         put("Sheepshaver", "sheepshaver");
         put("ViceC64", "vice-sdl");
+        put("Browser", "browser");
     }};
 
     public static class ReplicateImageTaskRequest {
@@ -93,7 +94,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
             if (emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty()) {
                 String containerName = emulatorContainerMap.get(emulatorSpec.getBean());
                 if (containerName == null)
-                    throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first");
+                    throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first: " + emulatorSpec.getBean());
 
                 emulatorSpec.setContainerName("emucon-rootfs/" + containerName);
             }
@@ -111,7 +112,6 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 emulatorSpec.setDigest(entry.getDigest());
             }
         }
-
 
         if(request.env instanceof MachineConfiguration && request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.REMOTE)) {
             if(emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty())
