@@ -1419,7 +1419,7 @@ public class Components {
                     "binding://" + changeRequest.getObjectId() + "/" + objurl);
         } catch (NumberFormatException | BWFLAException e) {
             LOG.log(Level.SEVERE, e.getMessage(), e);
-            return Emil.internalErrorResponse("could not initialize eaas gateway: " + e.getMessage());
+            return Emil.internalErrorResponse("Failed to submit change media request " + e.getMessage());
         }
 
         return Emil.successMessageResponse("");
