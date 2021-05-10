@@ -348,7 +348,13 @@ public class ObjectRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importObject(ImportObjectRequest req)
 		{
-			final ImportObjectTask task = new ImportObjectTask(req, archiveId, objHelper);
+			String _archiveId = null;
+			try {
+				_archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				_archiveId = archiveId;
+			}
+			final ImportObjectTask task = new ImportObjectTask(req, _archiveId, objHelper);
 			return new TaskStateResponse(taskmgr.submitTask(task));
 		}
 
