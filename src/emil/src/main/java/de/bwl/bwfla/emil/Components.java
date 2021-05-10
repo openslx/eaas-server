@@ -168,6 +168,8 @@ public class Components {
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration maxSessionDuration = null;
 
+
+
     private SoftwareArchiveHelper swHelper;
 
     @Inject
@@ -201,6 +203,10 @@ public class Components {
 
     @Inject
     private ObjectRepository objectRepository;
+
+    @Inject
+	@Config(value="objectarchive.user_archive_enabled")
+	private boolean userArchiveEnabled;
 
     /** EaasWS web-service */
     private EaasWS eaas;
@@ -875,7 +881,7 @@ public class Components {
             return EmulationEnvironmentHelper.getDriveId((MachineConfiguration)chosenEnv, objectId);
         }
 
-        if(archiveId == null || archiveId.equals("default"))
+        if(userArchiveEnabled && (archiveId == null || archiveId.equals("default")))
         {
             if(authenticatedUser == null || authenticatedUser.getUserId() == null)
                 archiveId = "default";
