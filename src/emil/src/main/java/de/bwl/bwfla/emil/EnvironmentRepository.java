@@ -759,7 +759,7 @@ public class EnvironmentRepository extends EmilRest
 				return this.addEnvironmentDetails(emilenv);
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Collecting environment's details failed!", error);
+				LOG.warning("Collecting environment's details failed! " + error.getMessage());
 				return null;
 			}
 		}
