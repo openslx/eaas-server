@@ -101,7 +101,7 @@ public class EmilEnvironmentRepository {
 	}
 
 	private String getDataCollection(UserContext userctx) {
-		if (userctx != null) {
+		if (userctx.isAvailable()) {
 			if (userctx.getTenantId() != null)
 				return userctx.getTenantId();
 
@@ -129,6 +129,9 @@ public class EmilEnvironmentRepository {
 		if (env == null)
 			return true;
 
+		if(!userctx.isAvailable()) { // authentification disabled
+			return true;
+		}
 		final var tenantid = userctx.getTenantId();
 		final var userid = userctx.getUserId();
 		final var role = userctx.getRole();
@@ -241,7 +244,7 @@ public class EmilEnvironmentRepository {
 
 	private void setPermissions(EmilEnvironment ee, UserContext userCtx)
 	{
-		if(userCtx != null)
+		if(userCtx.isAvailable())
 		{	EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
 			owner.setUsername(userCtx.getUserId());
 			ee.setOwner(owner);
@@ -769,7 +772,7 @@ public class EmilEnvironmentRepository {
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(this::isEnvironmentVisible)
-				.filter(e -> (userCtx == null || checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
+				.filter(e -> (checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
 				.filter(e -> {
 					if (known.contains(e.getEnvId()))
 						return false;
