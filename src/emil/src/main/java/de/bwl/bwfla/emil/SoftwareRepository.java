@@ -101,6 +101,7 @@ public class SoftwareRepository extends EmilRest
 	{
 		SoftwarePackage softwarePackage = swo.getSoftwarePackage();
 		softwarePackage.setArchive("Remote Objects");
+		softwarePackage.setPublic(true);
 		try {
 			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getObjectId());
 //			if(software != null) {
