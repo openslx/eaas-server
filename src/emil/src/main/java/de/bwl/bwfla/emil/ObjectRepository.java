@@ -93,6 +93,10 @@ public class ObjectRepository extends EmilRest
 	private String defaultArchive;
 
 	@Inject
+	@Config(value="objectarchive.user_archive_enabled")
+	private boolean userArchiveEnabled;
+
+	@Inject
 	@Config(value="objectarchive.user_archive_prefix")
 	private String USER_ARCHIVE_PREFIX;
 
@@ -200,7 +204,7 @@ public class ObjectRepository extends EmilRest
 
 				final String _defaultArchive = ObjectRepository.this.manageUserCtx(defaultArchive);
 				final List<String> archives = objArchives.stream()
-						.filter(e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(_defaultArchive)))
+						.filter(e -> !(userArchiveEnabled && e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(_defaultArchive)))
 						.filter(e -> !e.equals("default"))
 						// remove zero conf archive if usercontext is available
 						.filter(e -> !(!_defaultArchive.equals(defaultArchive) && e.equals("zero conf")))
@@ -254,8 +258,7 @@ public class ObjectRepository extends EmilRest
 		/**
 		 * Looks up and returns a list of all digital objects
 		 * <p>
-		 *
-		 * @param archiveId Archive to be used. Default value: "default"
+
 		 * @return
 		 *
 		 * @HTTP 500 if archive is not found
@@ -446,7 +449,7 @@ public class ObjectRepository extends EmilRest
 
 	private String manageUserCtx(String archiveId) throws BWFLAException
 	{
-		if (userctx != null && userctx.getUserId() != null) {
+		if (userctx != null && userctx.getUserId() != null && userArchiveEnabled) {
 			LOG.info("Using user context: " + userctx.getUserId());
 			archiveId = USER_ARCHIVE_PREFIX + userctx.getUserId();
 			if (!objArchives.contains(archiveId)) {

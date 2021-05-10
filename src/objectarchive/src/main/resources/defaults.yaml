@@ -4,5 +4,6 @@ objectarchive:
     default_local_file_path: /home/bwfla/objects
     userarchive: /home/bwfla/server-data/users
     user_archive_prefix: "user_archive"
+    user_archive_enabled: false
     default_archive: "default"
 
