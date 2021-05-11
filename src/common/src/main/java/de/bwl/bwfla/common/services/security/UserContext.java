@@ -67,6 +67,6 @@ public class UserContext {
     }
 
     public boolean isAvailable() {
-        return !(userId != null && userId.equals(INVALID_USER));
+        return (userId != null && !userId.equals(INVALID_USER));
     }
 }
