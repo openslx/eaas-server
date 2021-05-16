@@ -113,6 +113,7 @@ public class BlobIngestors
 				.toString();
 
 		descriptor.setName(filename);
+		descriptor.setEtag(blob.etag());
 		descriptor.setLocation(location.name());
 		descriptor.setModTime(blob.mtime());
 	}
