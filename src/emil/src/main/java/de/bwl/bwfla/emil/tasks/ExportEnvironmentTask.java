@@ -1,6 +1,7 @@
 package de.bwl.bwfla.emil.tasks;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
@@ -375,6 +376,6 @@ public class ExportEnvironmentTask extends BlockingTask<Object>
         public String envId;
         public String archive;
         public EmilEnvironmentRepository environmentRepository;
-        public String userCtx;
+        public UserContext userCtx;
     }
 }

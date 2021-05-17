@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.common.database.document;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.module.jaxb.JaxbAnnotationModule;
 import com.mongodb.client.MongoCollection;
@@ -45,6 +46,7 @@ public class DocumentDatabase
 	{
 		// Configure object-mapper to use MongoJack module (with JAX-B support)
 		final ObjectMapper mapper = MongoJackModule.configure(new ObjectMapper())
+				.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
 				.registerModule(new JaxbAnnotationModule());
 
 		final MongoCollection<T> collection = JacksonMongoCollection.builder()

@@ -68,6 +68,8 @@ public class ImportService
 	private final ImportIndex imports;
 	private int numIdleWorkers;
 
+	private static final int INVALID_TASK_ID = -1;
+
 
 	/** Count currently indexed import-tasks */
 	public long count()
@@ -90,13 +92,12 @@ public class ImportService
 	/** Submit new import-task and return task's ID */
 	public int submit(ImportTask config) throws BWFLAException
 	{
-		final int taskid = idgen.getAndIncrement();
-		imports.collection()
-				.insert(ImportRecord.create(taskid, config));
+		final var taskid = this.insert(config)
+				.taskid();
 
 		if (!this.submit(taskid)) {
 			this.abort(taskid);
-			return -1;
+			return INVALID_TASK_ID;
 		}
 
 		return taskid;
@@ -218,6 +219,22 @@ public class ImportService
 		preprocessors.set(kind.ordinal(), preprocessor);
 	}
 
+	private ImportRecord insert(ImportTask config) throws BWFLAException
+	{
+		return this.insert(config, INVALID_TASK_ID);
+	}
+
+	private ImportRecord insert(ImportTask config, int parent) throws BWFLAException
+	{
+		final var taskid = idgen.getAndIncrement();
+		final var record = ImportRecord.create(taskid, config);
+		record.setParentId(parent);
+		imports.collection()
+				.insert(record);
+
+		return record;
+	}
+
 	private synchronized boolean submit(int taskid)
 	{
 		if (!tasks.offer(taskid))
@@ -251,6 +268,7 @@ public class ImportService
 
 			try (records) {
 				final var count = records.stream()
+						.filter(ImportRecord::isroot)
 						.map(ImportRecord::taskid)
 						.peek(this::submit)
 						.count();
@@ -275,29 +293,26 @@ public class ImportService
 		@Override
 		public void prepare(ImportRecord record, TaskStack cleanups) throws Exception
 		{
-			final var task = record.task();
-			final var source = task.source();
-			final var info = this.info(record, source, cleanups);
+			final var info = this.info(record, cleanups);
 			switch (info.getFileFormat()) {
 				case VMDK:
 				case VHD:
-					final var tmpfile = config.getTempDirectory()
-							.resolve("image-" + record.taskid());
+					this.convertImage(record, cleanups);
+					break;
 
-					cleanups.push("temp-import-image", () -> Files.deleteIfExists(tmpfile));
+				case QCOW2:
+					if (info.getBackingFile() != null)
+						this.handleBackingFile(record, info, cleanups);
 
-					// convert remote or local image, storing result locally
-					final var format = ImageInformation.QemuImageFormat.QCOW2;
-					EmulatorUtils.convertImage(source.url(), tmpfile, format, logger);
-
-					// converted image should now be available locally,
-					// so we need to update import-source accordingly!
-					source.setUrl("file://" + tmpfile.toString());
+					break;
 			}
 		}
 
-		private ImageInformation info(ImportRecord record, ImportSource source, TaskStack cleanups) throws Exception
+		private ImageInformation info(ImportRecord record, TaskStack cleanups) throws Exception
 		{
+			final var source = record.task()
+					.source();
+
 			try {
 				// fetch info directly from remote location...
 				return new ImageInformation(source.url(), logger);
@@ -314,13 +329,22 @@ public class ImportService
 				}
 			}
 
+			// fetching from remote URL failed, byte-ranges might be not supported!
+			// try downloading image completely one more time and process locally!
+			final var outfile = this.download(record, cleanups);
+
+			// try to get info from local file this time
+			source.setUrl("file://" + outfile.toString());
+			return new ImageInformation(source.url(), logger);
+		}
+
+		private Path download(ImportRecord record, TaskStack cleanups) throws Exception
+		{
 			final var outfile = config.getTempDirectory()
 					.resolve("image-" + record.taskid() + ".orig");
 
 			cleanups.push("orig-import-image", () -> Files.deleteIfExists(outfile));
 
-			// fetching from remote URL failed, byte-ranges might be not supported!
-			// try downloading image completely one more time and process locally!
 			final var process = new DeprecatedProcessRunner()
 					.setLogger(logger)
 					.setCommand("curl")
@@ -330,6 +354,7 @@ public class ImportService
 					.addArgument("--show-error")
 					.addArgument("--location");
 
+			final var source = record.task().source();
 			final var headers = source.headers();
 			if (headers != null) {
 				headers.forEach((name, value) -> {
@@ -346,9 +371,77 @@ public class ImportService
 			if (!downloaded)
 				throw new BWFLAException("Downloading remote image failed!");
 
-			// try to get info from local file this time
-			source.setUrl("file://" + outfile.toString());
-			return new ImageInformation(source.url(), logger);
+			return outfile;
+		}
+
+		private void convertImage(ImportRecord record, TaskStack cleanups) throws Exception
+		{
+			final var source = record.task()
+					.source();
+
+			final var tmpfile = config.getTempDirectory()
+					.resolve("image-" + record.taskid());
+
+			cleanups.push("temp-import-image", () -> Files.deleteIfExists(tmpfile));
+
+			// convert remote or local image, storing result locally
+			final var format = ImageInformation.QemuImageFormat.QCOW2;
+			EmulatorUtils.convertImage(source.url(), tmpfile, format, logger);
+
+			// converted image should now be available locally,
+			// so we need to update import-source accordingly!
+			source.setUrl("file://" + tmpfile.toString());
+		}
+
+		private void handleBackingFile(ImportRecord record, ImageInformation info, TaskStack cleanups) throws Exception
+		{
+			final var uri = new URI(info.getBackingFile());
+			final var filename = Path.of(uri.getPath())
+					.getFileName()
+					.toString();
+
+			if (filename.equals(info.getBackingFile()))
+				return;  // relative reference!
+
+			final var parent = record.task();
+
+			// update backing file URL: <some-url>/<id> -> <id>
+			{
+				final var source = parent.source();
+				final var islocal = source.url()
+						.startsWith("file:");
+
+				if (!islocal) {
+					// download image to be able to update backing file reference!
+					final var path = this.download(record, cleanups);
+					source.setUrl("file://" + path.toString());
+				}
+
+				final var srcurl = new URI(source.url());
+				final var image = Path.of(srcurl.getPath());
+				EmulatorUtils.changeBackingFile(image, filename, logger);
+			}
+
+			// prepare subtask for importing referenced image-layer...
+			{
+				final var subtask = new ImportTask()
+						.setDescription("Backing file for image from task " + record.taskid());
+
+				subtask.setSource(new ImportSource(parent.source()))
+						.source()
+						.setUrl(info.getBackingFile());
+
+				subtask.setTarget(new ImportTarget(parent.target()))
+						.target()
+						.setName(filename);
+
+				final var dependency = ImportService.this.insert(subtask, record.taskid());
+				record.dependencies()
+						.add(dependency);
+
+				final var message = "Submitting subtask %d for image-layer referenced in import-task %d";
+				logger.info(String.format(message, dependency.taskid(), record.taskid()));
+			}
 		}
 	}
 
@@ -379,15 +472,37 @@ public class ImportService
 			if (record == null)
 				return;  // task seems to be aborted!
 
+			// root import-task
+			this.execute(record);
+		}
+
+		private void execute(ImportRecord record) throws Exception
+		{
+			logger.info("Executing import-task " + record.taskid() + "...");
+
 			record.setStartedAtTime(ArchiveBackend.now());
 
 			final var cleanups = new TaskStack(logger);
 			try {
-				this.prepare(record, cleanups);
-				this.process(record, cleanups);
+				final var target = record.task()
+						.target();
+
+				if (!this.exists(target)) {
+					// TODO: optimize potentially concurrent imports of same blobs.
+					//       current implementation is still correct as-is, but workers
+					//       may download identical blobs redundantly in certain cases.
+
+					// blob needs to be imported!
+					this.prepare(record, cleanups);
+					this.process(record, cleanups);
+				}
+				else {
+					final var message = "Blob '%s' (%s) already exists! Skipping import-task %d!";
+					logger.info(String.format(message, target.name(), target.kindstr(), record.taskid()));
+				}
 			}
 			catch (Exception error) {
-				logger.log(Level.WARNING, "Executing import-task " + taskid + " failed!", error);
+				logger.log(Level.WARNING, "Executing import-task " + record.taskid() + " failed!", error);
 				final var failure = new ImportFailure()
 						.setReason("Importing blob failed!")
 						.setDetail(error.getMessage());
@@ -400,12 +515,25 @@ public class ImportService
 			}
 
 			record.setFinishedAtTime(ArchiveBackend.now());
+
+			final var filter = ImportRecord.filter(record.taskid());
 			imports.collection()
 					.replace(filter, record);
 
 			final var watcher = watchers.remove(record.taskid());
 			if (watcher != null)
 				watcher.complete(ImportStatus.from(record));
+
+			// log processing time...
+			{
+				String suffix = "second(s)";
+				long duration = record.finishedAtTime() - record.startedAtTime();
+				if (duration > 1000L)
+					duration = TimeUnit.SECONDS.convert(duration, TimeUnit.MILLISECONDS);
+				else suffix = "milli" + suffix;
+
+				logger.info("Executing import-task " + record.taskid() + " took " + duration + " " + suffix);
+			}
 		}
 
 		private void prepare(ImportRecord record, TaskStack cleanups) throws Exception
@@ -421,6 +549,10 @@ public class ImportService
 
 		private void process(ImportRecord record, TaskStack cleanups) throws Exception
 		{
+			// process dependencies first...
+			for (var dep : record.dependencies())
+				this.execute(dep);
+
 			final var task = record.task();
 			final var source = task.source();
 			final var target = task.target();
@@ -500,6 +632,19 @@ public class ImportService
 			if (target.name() != null)
 				service.upload(target.location(), target.name(), data, size);
 			else target.setName(service.upload(target.location(), data, size));
+		}
+
+		private boolean exists(ImportTarget target) throws BWFLAException
+		{
+			final var name = target.name();
+			if (name == null)
+				return false;
+
+			final var service = (BlobService<?>) backend.services()
+					.lookup(target.kind());
+
+			// does the target blob already exist?
+			return service.lookup(name) != null;
 		}
 	}
 

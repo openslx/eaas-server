@@ -463,6 +463,13 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setXpraEncoding(envReq.getXpraEncoding());
 				newEmilEnv.setOs(envReq.getOperatingSystemId());
 
+				if(envReq.isEnableNetwork())
+				{
+					NetworkingType network = new NetworkingType();
+					network.setConnectEnvs(true);
+					newEmilEnv.setNetworking(network);
+				}
+
 				newEmilEnv.setDescription("imported / user created environment");
 				emilEnvRepo.save(newEmilEnv, true);
 
@@ -708,7 +715,7 @@ public class EnvironmentRepository extends EmilRest
 			request.envHelper = envdb;
 			request.archive = exportRequest.getArchive();
 			request.environmentRepository  = emilEnvRepo;
-			request.userCtx = (authenticatedUser != null) ? authenticatedUser.getUserId() : null;
+			request.userCtx = EnvironmentRepository.this.getUserContext().clone();
 			return new TaskStateResponse(taskManager.submitTask(new ExportEnvironmentTask(request)));
 		}
 
@@ -752,7 +759,7 @@ public class EnvironmentRepository extends EmilRest
 				return this.addEnvironmentDetails(emilenv);
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Collecting environment's details failed!", error);
+				LOG.warning("Collecting environment's details failed! " + error.getMessage());
 				return null;
 			}
 		}
@@ -1202,9 +1209,7 @@ public class EnvironmentRepository extends EmilRest
 				importRequest.imagearchive = imagearchive;
 				importRequest.destArchive = replicateImagesRequest.getDestArchive();
 				importRequest.imageProposer = imageProposer;
-				
-				if (authenticatedUser != null)
-					importRequest.username = authenticatedUser.getUserId();
+				importRequest.userctx = getUserContext().clone();
 
 				try {
 					importRequest.validate();
@@ -1288,5 +1293,9 @@ public class EnvironmentRepository extends EmilRest
 
 			it.remove();
 		}
+	}
+
+	private UserContext getUserContext() {
+		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
 	}
 }

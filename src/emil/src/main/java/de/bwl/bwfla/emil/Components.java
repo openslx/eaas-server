@@ -168,6 +168,8 @@ public class Components {
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration maxSessionDuration = null;
 
+
+
     private SoftwareArchiveHelper swHelper;
 
     @Inject
@@ -201,6 +203,10 @@ public class Components {
 
     @Inject
     private ObjectRepository objectRepository;
+
+    @Inject
+	@Config(value="objectarchive.user_archive_enabled")
+	private boolean userArchiveEnabled;
 
     /** EaasWS web-service */
     private EaasWS eaas;
@@ -761,9 +767,8 @@ public class Components {
             if (machineDescription.getObject() != null) {
                 driveId = addObjectToEnvironment(chosenEnv, machineDescription.getObjectArchive(), machineDescription.getObject());
             } else if (machineDescription.getSoftware() != null) {
-                String objectId = getObjectIdForSoftware(machineDescription.getSoftware());
-                String archiveId = getArchiveIdForSoftware(machineDescription.getSoftware());
-                driveId = addObjectToEnvironment(chosenEnv, archiveId, objectId);
+                final var software = this.getSoftwarePackage(machineDescription.getSoftware());
+                driveId = addObjectToEnvironment(chosenEnv, software.getArchive(), software.getObjectId());
             }
 
             final List<String> selectors = resourceProviderSelection.getSelectors(chosenEnv.getId());
@@ -851,7 +856,7 @@ public class Components {
         }
     }
 
-    protected String getObjectIdForSoftware(String softwareId)
+    protected SoftwarePackage getSoftwarePackage(String softwareId)
             throws BWFLAException {
         // Start with object ID referenced by the passed software ID.
         final SoftwarePackage software = swHelper
@@ -863,24 +868,8 @@ public class Components {
                             "Could not find software with ID: " + softwareId))
                     .build());
         }
-        String objectId = software.getObjectId();
-        return objectId;
-    }
-    
-    protected String getArchiveIdForSoftware(String softwareId)
-            throws BWFLAException {
-        // Start with object ID referenced by the passed software ID.
-        final SoftwarePackage software = swHelper
-                .getSoftwarePackageById(softwareId);
-        if (software == null) {
-            throw new BadRequestException(Response
-                    .status(Response.Status.BAD_REQUEST)
-                    .entity(new ErrorInformation(
-                            "Could not find software with ID: " + softwareId))
-                    .build());
-        }
-        String archiveId = software.getArchive();
-        return archiveId;
+
+        return software;
     }
 
     protected int addObjectToEnvironment(Environment chosenEnv, String archiveId, String objectId)
@@ -892,7 +881,7 @@ public class Components {
             return EmulationEnvironmentHelper.getDriveId((MachineConfiguration)chosenEnv, objectId);
         }
 
-        if(archiveId == null || archiveId.equals("default"))
+        if(userArchiveEnabled && (archiveId == null || archiveId.equals("default")))
         {
             if(authenticatedUser == null || authenticatedUser.getUserId() == null)
                 archiveId = "default";
@@ -1419,7 +1408,7 @@ public class Components {
                     "binding://" + changeRequest.getObjectId() + "/" + objurl);
         } catch (NumberFormatException | BWFLAException e) {
             LOG.log(Level.SEVERE, e.getMessage(), e);
-            return Emil.internalErrorResponse("could not initialize eaas gateway: " + e.getMessage());
+            return Emil.internalErrorResponse("Failed to submit change media request " + e.getMessage());
         }
 
         return Emil.successMessageResponse("");

@@ -93,6 +93,10 @@ public class ObjectRepository extends EmilRest
 	private String defaultArchive;
 
 	@Inject
+	@Config(value="objectarchive.user_archive_enabled")
+	private boolean userArchiveEnabled;
+
+	@Inject
 	@Config(value="objectarchive.user_archive_prefix")
 	private String USER_ARCHIVE_PREFIX;
 
@@ -200,7 +204,7 @@ public class ObjectRepository extends EmilRest
 
 				final String _defaultArchive = ObjectRepository.this.manageUserCtx(defaultArchive);
 				final List<String> archives = objArchives.stream()
-						.filter(e -> !(e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(_defaultArchive)))
+						.filter(e -> !(userArchiveEnabled && e.startsWith(USER_ARCHIVE_PREFIX) && !e.equals(_defaultArchive)))
 						.filter(e -> !e.equals("default"))
 						// remove zero conf archive if usercontext is available
 						.filter(e -> !(!_defaultArchive.equals(defaultArchive) && e.equals("zero conf")))
@@ -254,8 +258,7 @@ public class ObjectRepository extends EmilRest
 		/**
 		 * Looks up and returns a list of all digital objects
 		 * <p>
-		 *
-		 * @param archiveId Archive to be used. Default value: "default"
+
 		 * @return
 		 *
 		 * @HTTP 500 if archive is not found
@@ -270,9 +273,20 @@ public class ObjectRepository extends EmilRest
 			LOG.info("Listing all digital objects in archive '" + archiveId + "'...");
 
 			try {
-				final Stream<DigitalObjectMetadata> objects = objHelper.getObjectMetadata(archiveId);
+				Stream<DigitalObjectMetadata> objects = null;
+				try {
+					objects = objHelper.getObjectMetadata(archiveId);
+				}
+				catch (Exception e)
+				{
+					// we need to initialize the archive list first. otherwise we fail listing the user-archive
+					// see: https://gitlab.com/openslx/eaas-server/-/issues/55
+					archives().list();
+					objects = objHelper.getObjectMetadata(archiveId);
+				}
 
 				// Construct response (in streaming-mode)
+				Stream<DigitalObjectMetadata> finalObjects = objects;
 				final StreamingOutput output = (ostream) -> {
 					final var jsonfactory = DataUtils.json()
 							.mapper()
@@ -283,7 +297,7 @@ public class ObjectRepository extends EmilRest
 								.writer();
 
 						json.writeStartArray();
-						objects.forEach((object) -> {
+						finalObjects.forEach((object) -> {
 							try {
 								final String id = object.getId();
 								if (swHelper.hasSoftwarePackage(id))
@@ -314,7 +328,7 @@ public class ObjectRepository extends EmilRest
 						json.flush();
 					}
 					finally {
-						objects.close();
+						finalObjects.close();
 					}
 				};
 
@@ -337,7 +351,13 @@ public class ObjectRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		public TaskStateResponse importObject(ImportObjectRequest req)
 		{
-			final ImportObjectTask task = new ImportObjectTask(req, archiveId, objHelper);
+			String _archiveId = null;
+			try {
+				_archiveId = manageUserCtx(archiveId);
+			} catch (BWFLAException e) {
+				_archiveId = archiveId;
+			}
+			final ImportObjectTask task = new ImportObjectTask(req, _archiveId, objHelper);
 			return new TaskStateResponse(taskmgr.submitTask(task));
 		}
 
@@ -429,7 +449,7 @@ public class ObjectRepository extends EmilRest
 
 	private String manageUserCtx(String archiveId) throws BWFLAException
 	{
-		if (userctx != null && userctx.getUserId() != null) {
+		if (userctx != null && userctx.getUserId() != null && userArchiveEnabled) {
 			LOG.info("Using user context: " + userctx.getUserId());
 			archiveId = USER_ARCHIVE_PREFIX + userctx.getUserId();
 			if (!objArchives.contains(archiveId)) {

@@ -95,10 +95,22 @@ public class Snapshot
 
         EmilEnvironment newEnv = null;
         MachineConfiguration machineConfiguration;
-        if(!checkpoint)
+        if(!checkpoint) {
             machineConfiguration = EmulationEnvironmentHelper.clean(configuration, req.isCleanRemovableDrives());
-        else
+            if (machineConfiguration.getDescription() != null && machineConfiguration.getDescription().getTitle() != null) {
+                String title = machineConfiguration.getDescription().getTitle();
+
+                int oldRev = title.indexOf("REV:");
+                if (oldRev > 0)
+                    title = title.substring(0, oldRev);
+
+                title += "REV: " + String.format("%x", System.currentTimeMillis() / 1000);
+                machineConfiguration.getDescription().setTitle(title);
+            }
+        }
+        else {
             machineConfiguration = configuration.copy();
+        }
         
         if (parentEnv instanceof EmilSessionEnvironment) {
             newEnv = new EmilSessionEnvironment((EmilSessionEnvironment)parentEnv);

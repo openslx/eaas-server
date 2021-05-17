@@ -1,14 +1,19 @@
 package de.bwl.bwfla.common.services.security;
 
+import java.util.UUID;
+
 public class UserContext {
 
+    public final static String INVALID_USER = UUID.randomUUID().toString();
     private String userId;
     private String tenantId;
     private String username;
     private String name;
     private Role role;
 
-    public UserContext() {}
+    public UserContext() {
+        userId = INVALID_USER;
+    }
 
     public String getUserId() {
         return userId;
@@ -48,5 +53,20 @@ public class UserContext {
 
     public void setUsername(String username) {
         this.username = username;
+    }
+
+    @Override
+    public UserContext clone() {
+        UserContext copy = new UserContext();
+        copy.userId = userId;
+        copy.tenantId = tenantId;
+        copy.username = username;
+        copy.name = name;
+        copy.role = role;
+        return copy;
+    }
+
+    public boolean isAvailable() {
+        return (userId != null && !userId.equals(INVALID_USER));
     }
 }
