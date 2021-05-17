@@ -234,12 +234,10 @@ public class EmilEnvironmentRepository {
 		return result.orElse(Stream.empty());
 	}
 
-	private List<EmilObjectEnvironment> loadEmilObjectEnvironments(UserContext userctx) throws BWFLAException {
-		//TODO: refactor to stream
+	private Stream<EmilObjectEnvironment> loadEmilObjectEnvironments(UserContext userctx) throws BWFLAException {
 		return this.loadEmilEnvironments(userctx)
 				.filter((env) -> env instanceof EmilObjectEnvironment)
-				.map((env) -> (EmilObjectEnvironment) env)
-				.collect(Collectors.toList());
+				.map((env) -> (EmilObjectEnvironment) env);
 	}
 
 	private void setPermissions(EmilEnvironment ee, UserContext userCtx)
@@ -414,20 +412,13 @@ public class EmilEnvironmentRepository {
 		return false;
 	}
 
-	//TODO: refactor
-	public List<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId, UserContext userCtx) throws BWFLAException {
-		// TODO: refactor to use Stream<T>
-		List<EmilObjectEnvironment> result = new ArrayList<>();
+	public Stream<EmilObjectEnvironment> getEmilObjectEnvironmentByObject(String objectId, UserContext userCtx) throws BWFLAException {
 		if (objectId == null)
-			return result;
+			return Stream.empty();
 
-		List<EmilObjectEnvironment> all = loadEmilObjectEnvironments(userCtx);
-		for (EmilObjectEnvironment objEnv : all) {
-			if (objEnv.getObjectId().equals(objectId) && isEnvironmentVisible(objEnv)
-					&& checkPermissions(objEnv, EmilEnvironmentPermissions.Permissions.READ, userCtx))
-				result.add(objEnv);
-		}
-		return result;
+		return this.loadEmilObjectEnvironments(userCtx)
+				.filter((env) -> env.getObjectId().equals(objectId) && isEnvironmentVisible(env)
+						&& checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userCtx));
 	}
 
 	synchronized public void replicate(EmilEnvironment env, String destArchive, UserContext userctx) throws JAXBException, BWFLAException {
