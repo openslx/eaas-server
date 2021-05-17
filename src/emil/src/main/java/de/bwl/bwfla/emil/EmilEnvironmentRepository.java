@@ -1,6 +1,7 @@
 package de.bwl.bwfla.emil;
 
 
+import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -18,6 +19,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
+import de.bwl.bwfla.common.utils.EaasBuildInfo;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.*;
@@ -37,6 +39,7 @@ import javax.annotation.PreDestroy;
 import javax.ejb.Startup;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.json.*;
 import javax.xml.bind.JAXBException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -497,6 +500,8 @@ public class EmilEnvironmentRepository {
 
 		env.setTimestamp(Instant.now().toString());
 
+		provScript(env);
+
 		if(env.getArchive() == null)
 			env.setArchive(MetadataCollection.DEFAULT);
 
@@ -526,6 +531,86 @@ public class EmilEnvironmentRepository {
 		// LOG.severe(env.toString());
 	}
 
+	public void provScript(EmilEnvironment env) {
+
+		LOG.severe("--------------------- Creating Prov Document --------------------------");
+
+
+
+        // Environment Information
+        JsonObject jsonEnvironment = Json.createObjectBuilder()
+                .add("environmentId", env.getEnvId() != null ?  env.getEnvId() : "")
+                .add("revision", env.getVersion()!= null ?  env.getVersion() : "")
+                .add("os", env.getOs() != null ?  env.getOs() : "")
+				.build();
+
+        // User Information
+        JsonObject jsonUser = Json.createObjectBuilder()
+                .add("userId", env.getAuthor() != null ?  env.getAuthor() : "")
+                .add("userMail", "test@xyz.com").build();
+
+        //Input
+        JsonObject input1 = Json.createObjectBuilder()
+                .add("filename", "getThisFromUi").build();
+        JsonObject input2 = Json.createObjectBuilder()
+                .add("filename", "getThisFromUi2").build();
+
+        JsonArray jsonInput = Json.createArrayBuilder()
+                .add(input1)
+                .add(input2).build();
+
+
+        //Output
+        JsonObject output1 = Json.createObjectBuilder()
+                .add("filename", "getThisFromUi").build();
+
+        JsonArray jsonOutput = Json.createArrayBuilder()
+                .add(output1).build();
+
+        //Metadata
+
+        JsonArray keywords = Json.createArrayBuilder()
+                .add("example")
+                .add("metadata").build();
+
+        JsonArray workflows = Json.createArrayBuilder()
+                .add("reference to workflow 1 where the tool is contained/used")
+                .add("reference to workflow 2 where the tool is contained/used").build();
+
+        JsonObject jsonMetadata = Json.createObjectBuilder()
+                .add("original", "linktooriginaltool.com")
+                .add("worklflows", workflows)
+                .add("keywords", keywords).build();
+
+		//Other
+		JsonObject jsonOther = Json.createObjectBuilder()
+		.add("eaasVersion", EaasBuildInfo.getVersion() ).build();
+
+
+        JsonObject json = Json.createObjectBuilder()
+        .add("environment", jsonEnvironment)
+		.add("user", jsonUser)
+		.add("input", jsonInput)
+		.add("output", jsonOutput)
+		.add("metadata", jsonMetadata)
+		.add("other", jsonOther).build();
+
+		LOG.severe("Created JSON:" + json);
+
+        try {
+
+            FileWriter myWriter = new FileWriter("/tmp/test.json");
+            myWriter.write(json.toString());
+            myWriter.close();
+            LOG.severe("Successfully wrote json file.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+	}
+
+
+
 	public void saveNetworkEnvironemnt(NetworkEnvironment env) throws BWFLAException {
 		db.saveDoc(emilDbNetworkEnvCollectionName , env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
 	}
@@ -534,7 +619,7 @@ public class EmilEnvironmentRepository {
 		EmilEnvironment env = getEmilEnvironmentById(envId);
 		if(env == null)
 			throw new BWFLAException("Environment " + envId + " is not available");
-		
+
 		if(!checkPermissions(env, EmilEnvironmentPermissions.Permissions.WRITE))
 			throw new BWFLAException("permission denied");
 
