@@ -81,6 +81,9 @@ import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
+import de.bwl.bwfla.emil.session.Session;
+import de.bwl.bwfla.emil.session.SessionComponent;
+import de.bwl.bwfla.emil.session.SessionManager;
 import de.bwl.bwfla.emil.utils.EventObserver;
 import de.bwl.bwfla.emil.utils.components.ContainerComponent;
 import de.bwl.bwfla.emil.utils.components.UviComponent;
@@ -116,6 +119,9 @@ public class Components {
 
     @Inject
     private BlobStoreClient blobStoreClient;
+
+    @Inject
+    private SessionManager sessionManager = null;
 
     @Inject
     @Config(value = "ws.eaasgw")
@@ -818,6 +824,15 @@ public class Components {
             {
                 final String srcurl = component.getEventSourceUrl(sessionId);
                 observer.add(new EventObserver(srcurl, LOG));
+            }
+
+            if(machineDescription.isHeadless())
+            {
+                Session session = new Session();
+                session.components().add(new SessionComponent(sessionId));
+                sessionManager.register(session);
+                sessionManager.setLifetime(session.id(), machineDescription.getSessionLifetime(), TimeUnit.MINUTES,
+                    "headless session @ " + sessionId);
             }
 
             return new MachineComponentResponse(sessionId, removableMedia);
