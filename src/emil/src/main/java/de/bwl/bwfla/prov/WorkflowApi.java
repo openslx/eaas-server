@@ -5,13 +5,14 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
+import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.EnvironmentRepository;
-import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
-import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
 import de.bwl.bwfla.envproposer.impl.UserData;
+import de.bwl.bwfla.prov.api.WorkflowWaitqueueResponse;
 import de.bwl.bwfla.prov.api.WorkflowRequest;
+import de.bwl.bwfla.prov.api.WorkflowStartedResponse;
 import de.bwl.bwfla.prov.impl.ExecuteEnvForWorkflowTask;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
@@ -47,6 +48,9 @@ public class WorkflowApi {
     EnvironmentRepository environmentRepo = null;
 
     @Inject
+    Components components = null;
+
+    @Inject
     private DatabaseEnvironmentsAdapter environmentsAdapter;
 
     public WorkflowApi() throws BWFLAException {
@@ -74,7 +78,7 @@ public class WorkflowApi {
     @Produces(MediaType.APPLICATION_JSON)
     public Response postBuild(WorkflowRequest request, @Context UriInfo uri) {
 
-        LOG.info("Someone sent a build request to the historic build API.");
+        LOG.info("Someone sent a build request to the workflow build API.");
 
         String envId = request.getEnvironmentId();
         String[] urls = request.getInputFiles();
@@ -83,7 +87,7 @@ public class WorkflowApi {
 
         final String taskID;
         try {
-            taskID = taskmgr.submit(new ExecuteEnvForWorkflowTask(envId, urls, environmentsAdapter));
+            taskID = taskmgr.submit(new ExecuteEnvForWorkflowTask(envId, urls, components, environmentsAdapter));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);
@@ -94,7 +98,7 @@ public class WorkflowApi {
         final TaskInfo<Object> swhInfo = taskmgr.lookup(taskID);
         swhInfo.setUserData(new UserData(waitLocation, resultLocation));
 
-        final HistoricBuildStartedResponse response = new HistoricBuildStartedResponse();
+        final WorkflowStartedResponse response = new WorkflowStartedResponse();
         response.setTaskId(taskID);
         response.setWaitQueueUrl(waitLocation);
 
@@ -116,7 +120,7 @@ public class WorkflowApi {
             Status status = Status.OK;
             final UserData userdata = info.userdata(UserData.class);
 
-            HistoricWaitqueueResponse response = new HistoricWaitqueueResponse();
+            WorkflowWaitqueueResponse response = new WorkflowWaitqueueResponse();
             response.setId(id);
             response.setResultUrl(userdata.getResultLocation());
 

@@ -283,7 +283,7 @@ public class Components {
         sessionStatsWriter.append(session);
     }
 
-    ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
+    public ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
 
