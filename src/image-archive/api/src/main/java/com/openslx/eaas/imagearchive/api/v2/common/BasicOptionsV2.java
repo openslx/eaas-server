@@ -19,6 +19,11 @@
 
 package com.openslx.eaas.imagearchive.api.v2.common;
 
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonSetter;
+import com.openslx.eaas.common.databind.DataUtils;
+
+import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
 
 
@@ -26,6 +31,9 @@ public class BasicOptionsV2<T extends BasicOptionsV2<T>>
 {
 	@QueryParam("location")
 	private String location;
+
+	@HeaderParam("eaas-user-info")
+	private UserInfo userinfo;
 
 
 	public T setLocation(String location)
@@ -37,5 +45,71 @@ public class BasicOptionsV2<T extends BasicOptionsV2<T>>
 	public String location()
 	{
 		return location;
+	}
+
+	public T setUserInfo(UserInfo info)
+	{
+		this.userinfo = info;
+		return (T) this;
+	}
+
+	public UserInfo userinfo()
+	{
+		if (userinfo == null)
+			userinfo = new UserInfo();
+
+		return userinfo;
+	}
+
+
+	public static class UserInfo
+	{
+		private String userid;
+		private String tenantid;
+
+		@JsonSetter("uid")
+		public UserInfo setUserId(String id)
+		{
+			this.userid = id;
+			return this;
+		}
+
+		@JsonGetter("uid")
+		public String userid()
+		{
+			return userid;
+		}
+
+		@JsonSetter("tid")
+		public UserInfo setTenantId(String id)
+		{
+			this.tenantid = id;
+			return this;
+		}
+
+		@JsonGetter("tid")
+		public String tenantid()
+		{
+			return tenantid;
+		}
+
+		@Override
+		public String toString()
+		{
+			try {
+				return DataUtils.json()
+						.writer(false)
+						.writeValueAsString(this);
+			}
+			catch (Exception error) {
+				throw new RuntimeException("Serializing user-info failed!", error);
+			}
+		}
+
+		public static UserInfo valueOf(String value) throws Exception
+		{
+			return DataUtils.json()
+					.read(value, UserInfo.class);
+		}
 	}
 }
