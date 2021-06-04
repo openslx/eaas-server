@@ -6,9 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import javax.inject.Inject;
 
@@ -95,6 +93,7 @@ public class QemuBean extends EmulatorBean
 
 		if (config != null && !config.isEmpty()) {
 			String[] tokens = config.trim().split("\\s+");
+			String savedNetworkOption = null;
 			for (String token : tokens)
 			{
 				if(token.isEmpty())
@@ -106,8 +105,27 @@ public class QemuBean extends EmulatorBean
 						LOG.warning("KVM device is required, but not available!");
 						continue;
 					}
-
 					super.isKvmDeviceEnabled = true;
+				}
+
+				/*
+					fiilter -net user
+					TODO: refactor if more options need to be filtered
+				 */
+				if(token.contains("-net"))
+				{
+					savedNetworkOption = token.trim();
+					continue;
+				}
+
+				if(savedNetworkOption != null)
+				{
+					if(!token.contains("user")) {
+						emuRunner.addArgument(savedNetworkOption.trim());
+						emuRunner.addArgument(token.trim());
+					}
+					savedNetworkOption = null;
+					continue;
 				}
 
 				if(token.contains("nic,model=") && emuEnvironment.getNic() != null && emuEnvironment.getNic().size() >0)
