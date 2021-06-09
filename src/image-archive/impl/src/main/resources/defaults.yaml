@@ -14,6 +14,7 @@ imagearchive:
       paths:
         environment: "/environments"
         session: "/sessions"
+        network: "/networks"
         container: "/containers"
         machine: "/machines"
         emulator: "/emulators"

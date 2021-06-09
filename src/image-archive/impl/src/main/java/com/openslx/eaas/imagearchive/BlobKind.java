@@ -24,6 +24,7 @@ public enum BlobKind
 {
 	ENVIRONMENT,
 	SESSION,
+	NETWORK,
 	MACHINE,
 	CONTAINER,
 	EMULATOR,
@@ -45,6 +46,8 @@ public enum BlobKind
 				return BlobKind.ENVIRONMENT;
 			case "session":
 				return BlobKind.SESSION;
+			case "network":
+				return BlobKind.NETWORK;
 			case "machine":
 				return BlobKind.MACHINE;
 			case "container":

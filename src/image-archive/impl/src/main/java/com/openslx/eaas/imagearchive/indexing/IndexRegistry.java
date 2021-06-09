@@ -85,6 +85,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.SESSION, MetaDataIndex.class);
 	}
 
+	public MetaDataIndex networks()
+	{
+		return this.lookup(BlobKind.NETWORK, MetaDataIndex.class);
+	}
+
 	public ContainerIndex containers()
 	{
 		return this.lookup(BlobKind.CONTAINER, ContainerIndex.class);
@@ -125,6 +130,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		final var registry = new IndexRegistry();
 		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT));
 		registry.insert(new MetaDataIndex(BlobKind.SESSION));
+		registry.insert(new MetaDataIndex(BlobKind.NETWORK));
 		registry.insert(new ContainerIndex());
 		registry.insert(new MachineIndex());
 		registry.insert(new TemplateIndex());
