@@ -23,6 +23,7 @@ package com.openslx.eaas.imagearchive;
 public enum BlobKind
 {
 	ENVIRONMENT,
+	SESSION,
 	MACHINE,
 	CONTAINER,
 	EMULATOR,
@@ -42,6 +43,8 @@ public enum BlobKind
 		switch (kind) {
 			case "environment":
 				return BlobKind.ENVIRONMENT;
+			case "session":
+				return BlobKind.SESSION;
 			case "machine":
 				return BlobKind.MACHINE;
 			case "container":

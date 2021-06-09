@@ -40,6 +40,11 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.ENVIRONMENT, MetaDataService.class);
 	}
 
+	public MetaDataService sessions()
+	{
+		return this.lookup(BlobKind.SESSION, MetaDataService.class);
+	}
+
 	public ContainerService containers()
 	{
 		return this.lookup(BlobKind.CONTAINER, ContainerService.class);
@@ -79,6 +84,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 	{
 		final var registry = new ServiceRegistry();
 		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend));
+		registry.insert(MetaDataService.create(BlobKind.SESSION, backend));
 		registry.insert(ContainerService.create(backend));
 		registry.insert(MachineService.create(backend));
 		registry.insert(TemplateService.create(backend));

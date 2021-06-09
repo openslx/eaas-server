@@ -13,6 +13,7 @@ imagearchive:
       bucket: "image-archive"
       paths:
         environment: "/environments"
+        session: "/sessions"
         container: "/containers"
         machine: "/machines"
         emulator: "/emulators"
