@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive;
 
 public enum BlobKind
 {
+	ENVIRONMENT,
 	MACHINE,
 	CONTAINER,
 	EMULATOR,
@@ -39,6 +40,8 @@ public enum BlobKind
 	public static BlobKind from(String kind)
 	{
 		switch (kind) {
+			case "environment":
+				return BlobKind.ENVIRONMENT;
 			case "machine":
 				return BlobKind.MACHINE;
 			case "container":
