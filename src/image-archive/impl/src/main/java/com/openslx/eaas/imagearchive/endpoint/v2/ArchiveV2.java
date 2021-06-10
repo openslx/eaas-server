@@ -19,18 +19,22 @@
 
 package com.openslx.eaas.imagearchive.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.ICheckpointsV2;
 import com.openslx.eaas.imagearchive.api.v2.IContainersV2;
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
+import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
 import com.openslx.eaas.imagearchive.api.v2.IRomsV2;
 import com.openslx.eaas.imagearchive.api.v2.IStorageV2;
 import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.ws.rs.BadRequestException;
 
 
 @ApplicationScoped
@@ -109,5 +113,23 @@ public class ArchiveV2 implements IArchiveV2
 	public IStorageV2 storage()
 	{
 		return storage;
+	}
+
+	@Override
+	public IMetaDataV2 metadata(String kind)
+	{
+		final var services = ArchiveBackend.instance()
+				.services();
+
+		switch (MetaDataKindV2.from(kind)) {
+			case ENVIRONMENTS:
+				return new MetaDataV2(services.environments());
+			case SESSIONS:
+				return new MetaDataV2(services.sessions());
+			case NETWORKS:
+				return new MetaDataV2(services.networks());
+			default:
+				throw new BadRequestException();
+		}
 	}
 }

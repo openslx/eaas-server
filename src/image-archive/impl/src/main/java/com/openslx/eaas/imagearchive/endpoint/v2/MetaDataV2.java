@@ -17,38 +17,31 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.endpoint.v2;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
+import com.openslx.eaas.imagearchive.endpoint.v2.common.DataResource;
+import com.openslx.eaas.imagearchive.indexing.impl.MetaDataIndex;
+import com.openslx.eaas.imagearchive.service.impl.MetaDataService;
 
 
-public interface IArchiveV2
+public class MetaDataV2 extends DataResource<JsonNode, MetaDataIndex.Record>
+		implements IMetaDataV2
 {
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
+	private final MetaDataService service;
 
-	@Path("/containers")
-	IContainersV2 containers();
 
-	@Path("/machines")
-	IMachinesV2 machines();
+	public MetaDataV2(MetaDataService service)
+	{
+		this.service = service;
+	}
 
-	@Path("/templates")
-	ITemplatesV2 templates();
+	// ===== Internal Helpers ==============================
 
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	@Override
+	protected MetaDataService service()
+	{
+		return service;
+	}
 }
