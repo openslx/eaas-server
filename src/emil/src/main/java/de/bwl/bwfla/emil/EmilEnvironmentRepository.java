@@ -56,7 +56,10 @@ public class EmilEnvironmentRepository {
 	private ImageArchiveClient imagearchive = null;
 
 	@Inject
+	@Deprecated
 	private MongodbEaasConnector dbConnector;
+
+	@Deprecated
 	private MongodbEaasConnector.DatabaseInstance db;
 
 	@Inject
@@ -79,8 +82,6 @@ public class EmilEnvironmentRepository {
 
 	@Inject
 	private EmilDataImport importHelper;
-
-	private String emilDbNetworkEnvCollectionName = "emilNetworkEnvironments";
 
 	@Inject
 	private EmilObjectData objects;
@@ -667,6 +668,7 @@ public class EmilEnvironmentRepository {
 		int counter = 0;
 
 		importFromFolder("import");
+		importFromDatabase();
 
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
@@ -780,6 +782,66 @@ public class EmilEnvironmentRepository {
 
 		importHelper.importFromFolder(directory)
 				.forEach((colname, entries) -> entries.forEach(importer));
+	}
+
+	private void importFromDatabase() throws BWFLAException {
+		final var mapper = DataUtils.json()
+				.mapper();
+
+		final Consumer<JaxbType> importer = (data) -> {
+			try {
+				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
+				if (data instanceof EmilSessionEnvironment)
+					kind = MetaDataKindV2.SESSIONS;
+				else if (data instanceof NetworkEnvironment)
+					kind = MetaDataKindV2.NETWORKS;
+
+				final var options = new ReplaceOptionsV2();
+				final var values = imagearchive.api()
+						.v2()
+						.metadata(kind);
+
+				JsonNode value = null;
+				String envid = null;
+
+				switch (kind) {
+					case ENVIRONMENTS:
+					case SESSIONS: {
+						final var env = (EmilEnvironment) data;
+						options.setLocation(env.getArchive());
+						value = mapper.valueToTree(env);
+						envid = env.getEnvId();
+						break;
+					}
+
+					case NETWORKS: {
+						final var env = (NetworkEnvironment) data;
+						value = mapper.valueToTree(env);
+						envid = env.getEnvId();
+						break;
+					}
+
+					default:
+						throw new IllegalStateException("Not supported metadata kind!");
+				}
+
+				values.replace(envid, value, options);
+				LOG.info("Imported environment '" + envid + "' (" + kind.value() + ")");
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing environment failed!", error);
+			}
+		};
+
+		LOG.info("Importing environments from local database...");
+		final var filter = new MongodbEaasConnector.FilterBuilder();
+		for (var collection : db.getCollections()) {
+			final var values = db.find(collection, filter, "type");
+			try (values) {
+				values.forEach(importer);
+				db.drop(collection);
+			}
+		}
 	}
 
 	public void export()
