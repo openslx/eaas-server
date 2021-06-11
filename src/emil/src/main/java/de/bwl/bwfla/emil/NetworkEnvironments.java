@@ -30,6 +30,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
+
 
 @Path("network-environments")
 @ApplicationScoped
@@ -95,7 +97,7 @@ public class NetworkEnvironments extends EmilRest {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getNetworkEnvironments(@Context final HttpServletResponse response) {
         try {
-            List<NetworkEnvironment> environments = emilEnvRepo.getNetworkEnvironments();
+            Stream<NetworkEnvironment> environments = emilEnvRepo.getNetworkEnvironments();
             return Response.status(Response.Status.OK).entity(environments).build();
         } catch (Throwable t) {
             t.printStackTrace();

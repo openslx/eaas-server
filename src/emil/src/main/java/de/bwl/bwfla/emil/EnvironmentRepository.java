@@ -173,13 +173,14 @@ public class EnvironmentRepository extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
 	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className)
 	{
+		// FIXME: is the following functionality still required somewhere?
 		LOG.info("Loading DB content...");
 		try {
 			Class<T> classType = (Class<T>) Class.forName(className);
 			if (classType == null) {
 				throw new BWFLAException("Class name is incorrect!");
 			}
-			return EnvironmentRepository.createResponse(Status.OK, emilEnvRepo.getDatabaseContent(type, classType));
+			return EnvironmentRepository.createResponse(Status.OK, emilEnvRepo.getDatabaseContent());
 		}
 		catch (ClassNotFoundException | BWFLAException error) {
 			LOG.log(Level.WARNING,"Loading database content failed!\n", error);
