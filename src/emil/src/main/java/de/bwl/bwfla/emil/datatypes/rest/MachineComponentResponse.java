@@ -37,6 +37,9 @@ public class MachineComponentResponse extends ComponentResponse {
         this.driveId = driveId;
     }
 
+    public MachineComponentResponse() {
+    }
+
     public MachineComponentResponse(String id, List<RemovableMedia> removableMediaList) {
         super(id);
         this.removableMediaList = removableMediaList;

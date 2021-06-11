@@ -28,8 +28,19 @@ import javax.xml.bind.annotation.XmlRootElement;
 public class ComponentStateResponse extends ComponentResponse {
     @XmlElement(required = true)
     private String state;
+
+    public ComponentStateResponse(){}
+
     public ComponentStateResponse(String id, String state) {
         super(id);
+        this.state = state;
+    }
+
+    public String getState() {
+        return state;
+    }
+
+    public void setState(String state) {
         this.state = state;
     }
 }

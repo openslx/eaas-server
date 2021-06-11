@@ -34,6 +34,8 @@ public class ComponentResponse extends JaxbType {
     @XmlElement(required = true)
     private String id;
 
+    public ComponentResponse(){}
+
     public ComponentResponse(String id) {
         super();
         this.id = id;

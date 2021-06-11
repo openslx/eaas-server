@@ -1,19 +1,15 @@
 package de.bwl.bwfla.prov;
 
-
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
-import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
-import de.bwl.bwfla.emil.EmilEnvironmentRepository;
-import de.bwl.bwfla.emil.EnvironmentRepository;
 import de.bwl.bwfla.envproposer.impl.UserData;
 import de.bwl.bwfla.prov.api.WorkflowWaitqueueResponse;
 import de.bwl.bwfla.prov.api.WorkflowRequest;
 import de.bwl.bwfla.prov.api.WorkflowStartedResponse;
-import de.bwl.bwfla.prov.impl.ExecuteEnvForWorkflowTask;
+import de.bwl.bwfla.prov.impl.WorkflowTask;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -36,19 +32,10 @@ import java.util.logging.Logger;
 public class WorkflowApi {
 
 
-    private static final Logger LOG = Logger.getLogger("HISTORIC-BUILDS");
+    private static final Logger LOG = Logger.getLogger("WORKFLOW");
 
-    //TODO inject TaskManager?
     private final TaskManager taskmgr;
 
-    @Inject
-    private EmilEnvironmentRepository emilEnvRepo = null;
-
-    @Inject
-    EnvironmentRepository environmentRepo = null;
-
-    @Inject
-    Components components = null;
 
     @Inject
     private DatabaseEnvironmentsAdapter environmentsAdapter;
@@ -61,12 +48,13 @@ public class WorkflowApi {
         }
     }
 
+
     @GET
-    @Path("/hello")
+    @Path("/ping")
     @Secured(roles = {Role.PUBLIC})
     @Produces(MediaType.TEXT_PLAIN)
-    public Response historicHello() {
-        LOG.info("Someone sent a hello request to the  workflow API!");
+    public Response workflowPing() {
+        LOG.info("--- Workflow API getting pinged! ---");
         return ResponseUtils.createResponse(Status.OK, "Hello from the workflow API!");
     }
 
@@ -83,18 +71,16 @@ public class WorkflowApi {
         String envId = request.getEnvironmentId();
         String[] urls = request.getInputFiles();
 
-//        EmilEnvironment emilEnv = emilEnvRepo.getEmilEnvironmentById(envId);
-
         final String taskID;
         try {
-            taskID = taskmgr.submit(new ExecuteEnvForWorkflowTask(envId, urls, components, environmentsAdapter));
+            taskID = taskmgr.submit(new WorkflowTask(envId, urls));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);
         }
 
         final String waitLocation = WorkflowApi.getLocationUrl(uri, "waitqueue", taskID);
-        final String resultLocation = WorkflowApi.getLocationUrl(uri, "buildresult", taskID);
+        final String resultLocation = WorkflowApi.getLocationUrl(uri, "workflowresult", taskID);
         final TaskInfo<Object> swhInfo = taskmgr.lookup(taskID);
         swhInfo.setUserData(new UserData(waitLocation, resultLocation));
 
@@ -126,11 +112,11 @@ public class WorkflowApi {
 
             if (info.result().isDone()) {
                 // Result is available!
-                response.setStatus("Done"); //TODO remove deprecated string
+                response.setStatus("Done");
                 response.setDone(true);
             } else {
                 // Result is not yet available!
-                response.setStatus("Processing"); //TODO remove deprecated string
+                response.setStatus("Processing");
                 response.setDone(false);
             }
             //TODO check for errors and pass error flag to response
@@ -174,24 +160,6 @@ public class WorkflowApi {
             return ResponseUtils.createInternalErrorResponse(throwable);
         }
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
     private static String getLocationUrl(UriInfo uri, String subres, String id) {

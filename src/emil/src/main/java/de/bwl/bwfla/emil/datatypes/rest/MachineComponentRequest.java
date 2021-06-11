@@ -65,6 +65,7 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false)
     private String nic;
 
+
     @XmlElement(required = false, defaultValue = "false")
     private boolean headless;
 
@@ -169,6 +170,14 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         if(userMedia == null)
             userMedia = new ArrayList<>();
         return userMedia;
+    }
+
+    public void setHeadless(boolean headless) {
+        this.headless = headless;
+    }
+
+    public void setSessionLifetime(int sessionLifetime) {
+        this.sessionLifetime = sessionLifetime;
     }
 
     public boolean isHeadless() {
