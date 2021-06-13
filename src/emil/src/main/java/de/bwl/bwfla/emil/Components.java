@@ -282,7 +282,7 @@ public class Components {
         sessions.remove(session.getId());
         sessionStatsWriter.append(session);
     }
-
+    
     ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
@@ -420,7 +420,7 @@ public class Components {
         }
     }
 
-
+    @Deprecated
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {
