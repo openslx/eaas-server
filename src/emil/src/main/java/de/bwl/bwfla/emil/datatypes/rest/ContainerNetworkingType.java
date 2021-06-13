@@ -8,7 +8,7 @@ import javax.xml.bind.annotation.XmlRootElement;
 @XmlRootElement
 @XmlAccessorType(XmlAccessType.NONE)
 public class ContainerNetworkingType extends NetworkingType {
-    @XmlElement
+    @XmlElement(defaultValue = "false")
     private boolean isDHCPenabled;
 
     @XmlElement(defaultValue = "false")

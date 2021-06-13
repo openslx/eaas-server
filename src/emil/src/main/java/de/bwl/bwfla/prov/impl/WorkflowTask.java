@@ -45,19 +45,29 @@ public class WorkflowTask extends BlockingTask<Object> {
             String runtimeId = details.getRuntimeId();
             ContainerNetworkingType networkingInfo = (ContainerNetworkingType) details.getNetworking();
 
+            LOG.severe("Successfully got Networking Info details!");
 
             LinuxRuntimeContainerReq linuxRuntimeContainerReq = new LinuxRuntimeContainerReq();
             linuxRuntimeContainerReq.setUserContainerEnvironment(environmentId);
-            linuxRuntimeContainerReq.setDHCPenabled(networkingInfo.isDHCPenabled());
-            linuxRuntimeContainerReq.setTelnetEnabled(networkingInfo.isTelnetEnabled());
+            linuxRuntimeContainerReq.setDHCPenabled(false);//networkingInfo.isDHCPenabled()); //FIXME this with null check
+            linuxRuntimeContainerReq.setTelnetEnabled(false);//networkingInfo.isTelnetEnabled()); //FIXME this with null check
+
+            LOG.severe("Successfully got LinuxRuntimeContainerReq!");
+
 
             MachineComponentRequest machineComponentRequest = new MachineComponentRequest();
             machineComponentRequest.setEnvironment(runtimeId);
             machineComponentRequest.setHeadless(true);
             machineComponentRequest.setLinuxRuntimeData(linuxRuntimeContainerReq);
 
+            LOG.severe("Successfully created machine Component Request!");
+
+
             MachineComponentResponse response = workflowClient.startComponentHeadless(machineComponentRequest);
             String sessionId = response.getId();
+
+            LOG.severe("Successfully started component and got session Id: " + sessionId);
+
 
             workflowClient.sendKeepAlive(sessionId);
 
