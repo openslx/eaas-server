@@ -426,7 +426,7 @@ public class Components {
         }
     }
 
-
+    @Deprecated
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {

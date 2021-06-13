@@ -48,7 +48,7 @@ import java.util.List;
 })
 public class ContainerConfiguration extends Environment
 {
-	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "input", required = false)
+	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "inputs", required = false)
 	protected List<Input> inputs = new ArrayList<Input>();
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
@@ -59,6 +59,8 @@ public class ContainerConfiguration extends Environment
 			@XmlElementRef(name="objectArchiveBinding", type=ObjectArchiveBinding.class, namespace = "http://bwfla.bwl.de/common/datatypes")
 	})
 	protected List<AbstractDataResource> dataResources = new ArrayList<AbstractDataResource>();
+
+	@XmlElement
 	private String input;
 
 	public String getInput() {

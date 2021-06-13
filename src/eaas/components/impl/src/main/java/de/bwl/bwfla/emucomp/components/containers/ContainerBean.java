@@ -47,7 +47,7 @@ import java.util.UUID;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
-
+@Deprecated
 public abstract class ContainerBean extends EaasComponentBean implements ContainerComponent
 {
 	protected final ContainerBeanState conBeanState = new ContainerBeanState(ContainerState.UNDEFINED);
