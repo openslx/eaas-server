@@ -35,7 +35,6 @@ import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.emucomp.components.containers.ContainerBean;
 import de.bwl.bwfla.emucomp.components.network.NodeTcpBean;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
@@ -199,8 +198,6 @@ public class NodeManager {
             if (configuration instanceof MachineConfiguration) {
                 component = EmulatorBean.createEmulatorBean((MachineConfiguration) configuration);
                 component.setEnvironmentId(((MachineConfiguration)configuration).getId());
-            } else if (configuration instanceof ContainerConfiguration) {
-                component = ContainerBean.createContainerBean((ContainerConfiguration) configuration);
             } else if (configuration instanceof VdeSlirpConfiguration) {
                 component = VdeSlirpBean.createVdeSlirp((VdeSlirpConfiguration) configuration);
             } else if (configuration instanceof NetworkSwitchConfiguration) {
