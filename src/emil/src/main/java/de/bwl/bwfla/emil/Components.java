@@ -307,8 +307,8 @@ public class Components {
         }
         else if (request.getClass().equals(MachineComponentRequest.class)) {
             result = this.createMachineComponent((MachineComponentRequest) request, cleanups, observer);
-        // } else if (request.getClass().equals(ContainerComponentRequest.class)) {
-          //  result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
+        } else if (request.getClass().equals(ContainerComponentRequest.class)) {
+            result = this.createContainerComponent((ContainerComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(SwitchComponentRequest.class)) {
             result = this.createSwitchComponent((SwitchComponentRequest) request, cleanups, observer);
         } else if (request.getClass().equals(NodeTcpComponentRequest.class)) {
@@ -426,8 +426,7 @@ public class Components {
         }
     }
 
-    /*
-    @Deprecated
+
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {
@@ -557,8 +556,6 @@ public class Components {
             throw Components.newInternalError(error);
         }
     }
-
-     */
 
     private BlobStoreBinding buildExternalFilesMedia(ComponentWithExternalFilesRequest.InputMedium medium,
                                            TaskStack cleanups,

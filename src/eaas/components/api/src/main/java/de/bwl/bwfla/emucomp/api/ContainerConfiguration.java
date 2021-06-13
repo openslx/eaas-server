@@ -36,6 +36,7 @@ import java.util.List;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "containerConfiguration", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
+		"inputs",
 		"output",
 		"input",
 		"dataResources",
@@ -47,10 +48,8 @@ import java.util.List;
 })
 public class ContainerConfiguration extends Environment
 {
-	/*
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", name = "input", required = false)
 	protected List<Input> inputs = new ArrayList<Input>();
-	*/
 
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
 	protected String output;
@@ -60,8 +59,6 @@ public class ContainerConfiguration extends Environment
 			@XmlElementRef(name="objectArchiveBinding", type=ObjectArchiveBinding.class, namespace = "http://bwfla.bwl.de/common/datatypes")
 	})
 	protected List<AbstractDataResource> dataResources = new ArrayList<AbstractDataResource>();
-
-	@XmlElement
 	private String input;
 
 	public String getInput() {
@@ -73,7 +70,7 @@ public class ContainerConfiguration extends Environment
 	}
 
 
-/*
+
 	public boolean hasInputs()
 	{
 		return (inputs != null && !inputs.isEmpty());
@@ -88,7 +85,7 @@ public class ContainerConfiguration extends Environment
 	{
 		this.inputs = inputs;
 	}
-*/
+
 	public boolean hasOutputPath()
 	{
 		return (output != null && !output.isEmpty());
