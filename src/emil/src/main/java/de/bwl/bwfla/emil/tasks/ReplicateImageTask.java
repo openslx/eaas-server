@@ -47,6 +47,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
         put("Sheepshaver", "sheepshaver");
         put("ViceC64", "vice-sdl");
         put("Browser", "browser");
+        put("VisualBoyAdvance", "visualboyadvance");
     }};
 
     public static class ReplicateImageTaskRequest {
