@@ -134,7 +134,7 @@ class DockerTools {
     private String jq(String config, String query) throws BWFLAException
     {
         DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-        runner.setCommand("/bin/bash");
+        runner.setCommand("/bin/sh");
         runner.addEnvVariable("config", config);
         runner.addArguments("-c", "echo \"$config\" | jq -r \"" + query + "\"");
         runner.setLogger(log);
