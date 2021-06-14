@@ -136,7 +136,8 @@ class DockerTools {
         DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
         runner.setCommand("/bin/sh");
         runner.addEnvVariable("config", config);
-        runner.addArguments("-c", "echo \"$config\" | jq -r \"" + query + "\"");
+        runner.addEnvVariable("query", query);
+        runner.addArguments("-c", "printf %s \"$config\" | jq -r \"$query\"");
         runner.setLogger(log);
         try {
             final DeprecatedProcessRunner.Result result = runner.executeWithResult(true)
