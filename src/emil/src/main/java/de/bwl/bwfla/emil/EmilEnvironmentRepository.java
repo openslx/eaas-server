@@ -614,24 +614,6 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
-	@Deprecated
-	public Stream<EmilEnvironment> getDatabaseContent() throws BWFLAException {
-		// FIXME: is the following functionality still required somewhere?
-
-		final var options = new FetchOptionsV2()
-				.setLocation(MetadataCollection.DEFAULT);
-
-		final var result = imagearchive.api()
-				.v2()
-				.metadata(MetaDataKindV2.ENVIRONMENTS)
-				.fetch(options);
-
-		return result.stream()
-				.map(ENVIRONMENT_MAPPER)
-				.filter((env) -> checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ))
-				.onClose(result::close);
-	}
-
 	public void importOldDb() throws BWFLAException {
 		List<EmilEnvironment> oldEnvs = null;
 		try {
