@@ -43,7 +43,7 @@ class DockerTools {
 
         DeprecatedProcessRunner runner_ = new DeprecatedProcessRunner();
         runner_.setLogger(log);
-        runner_.setCommand("/bin/bash");
+        runner_.setCommand("/bin/sh");
         runner_.setWorkingDirectory(destDir);
         runner_.addArgument("-c");
         runner_.addArgument("crane export " + ds.imageRef + "@" + ds.digest + " - | tar x");
