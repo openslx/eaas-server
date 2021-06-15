@@ -44,22 +44,6 @@ public abstract class MediumBuilder
 
 	/* ==================== Internal Helpers ==================== */
 
-	// we need to prepare the data source _before_ creating and mounting the dst image to support deduplication
-	public static void prepare(List<ImageContentDescription> entries, Path workdir, Logger log) throws BWFLAException
-	{
-		for (ImageContentDescription entry : entries) {
-			if(entry.getArchiveFormat() != null)
-			switch (entry.getArchiveFormat()) {
-				case DOCKER:
-					ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
-					DockerTools docker = new DockerTools(workdir, ds, log);
-					docker.pull();
-					docker.unpack();
-					break;
-			}
-		}
-	}
-
 	public static ImageBuilderMetadata build(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
 		ImageBuilderMetadata md = null;
 		for (ImageContentDescription entry : entries) {
@@ -95,87 +79,22 @@ public abstract class MediumBuilder
 					if(entry.getArchiveFormat().equals(DOCKER))
 					{
 						ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
-						if(ds.rootfs == null)
-							throw new BWFLAException("Docker data source not ready. Prepare() before calling build");
-
-						ImageHelper.rsync(ds.rootfs, dstdir, log);
+						DockerTools docker = new DockerTools(workdir, ds, log);
+						docker.pull(dstdir);
 
 						DockerImport dockerMd = new DockerImport();
 						dockerMd.setImageRef(ds.imageRef);
-						dockerMd.setLayers(Arrays.asList(ds.layers));
+						// dockerMd.setLayers(Arrays.asList(ds.layers));
 						dockerMd.setTag(ds.tag);
 						dockerMd.setDigest(ds.digest);
 						dockerMd.setEmulatorVersion(ds.version);
 						dockerMd.setEmulatorType(ds.emulatorType);
-						DeprecatedProcessRunner runner = new DeprecatedProcessRunner();
-						runner.setLogger(log);
-						runner.setCommand("/bin/bash");
-						dstdir.getParent().resolve("image");
+						dockerMd.setWorkingDir(ds.workingDir);
+						dockerMd.setEntryProcesses(ds.entryProcesses);
+						dockerMd.setEnvVariables(ds.envVariables);
 
-						runner.addArgument("-c");
+						md = dockerMd;
 
-						Path imageDir = dstdir.getParent().resolve("image");
-
-						if (Files.exists(imageDir)) {
-							runner.addArgument("jq '{Cmd: .config.Cmd, Env: .config.Env, WorkingDir: .config.WorkingDir}' "
-									+ dstdir + "/../image/blobs/\"$(jq -r .config.digest "
-									+ dstdir + "/../image/blobs/\"$(jq -r .manifests[].digest "
-									+ dstdir + "/../image/index.json | tr : /)\" | tr : /)\"");
-							runner.start();
-						} else {
-							throw new BWFLAException("docker container doesn't contain image directory");
-						}
-
-						try {
-							runner.waitUntilFinished();
-
-							try (final JsonReader reader = Json.createReader(runner.getStdOutReader())) {
-								final JsonObject json = reader.readObject();
-								final ArrayList<String> envvars = new ArrayList<>();
-
-								try {
-									JsonArray envArray = json.getJsonArray("Env");
-									for (int i = 0; i < envArray.size(); i++)
-										envvars.add(envArray.getString(i));
-								}
-								catch(ClassCastException e)
-								{
-									log.warning("importing ENV failed");
-									log.warning("Metadata object " + json.toString());
-								}
-
-								final ArrayList<String> cmds = new ArrayList<>();
-								try {
-									JsonArray cmdJson = json.getJsonArray("Cmd");
-									for (int i = 0; i < cmdJson.size(); i++)
-										cmds.add(cmdJson.getString(i));
-								}
-								catch (ClassCastException e)
-								{
-									log.warning("importing CMD failed");
-									log.warning("Metadata object " + json.toString());
-								}
-
-								try {
-									JsonString workDirObject = json.getJsonString("WorkingDir");
-									if (workDirObject != null) {
-										dockerMd.setWorkingDir(workDirObject.getString());
-									}
-								}
-								catch(ClassCastException e)
-								{
-									log.warning("importing WorkingDir failed");
-									log.warning("Metadata object " + json.toString());
-								}
-								dockerMd.setEntryProcesses(cmds);
-								dockerMd.setEnvVariables(envvars);
-							}
-
-							md = dockerMd;
-						}
-						finally {
-							runner.cleanup();
-						}
 					}
 
 					break;
