@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emil;
 
+import com.openslx.eaas.common.databind.Streamable;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
@@ -98,7 +99,8 @@ public class NetworkEnvironments extends EmilRest {
     public Response getNetworkEnvironments(@Context final HttpServletResponse response) {
         try {
             Stream<NetworkEnvironment> environments = emilEnvRepo.getNetworkEnvironments();
-            return Response.status(Response.Status.OK).entity(environments).build();
+            return Response.ok(Streamable.of(environments))
+                    .build();
         } catch (Throwable t) {
             t.printStackTrace();
             throw new BadRequestException(Response
