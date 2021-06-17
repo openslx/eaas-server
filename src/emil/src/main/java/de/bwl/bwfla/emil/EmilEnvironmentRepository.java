@@ -562,7 +562,7 @@ public class EmilEnvironmentRepository {
 				.replace(env.getEnvId(), value, options);
 	}
 
-	public void saveNetworkEnvironemnt(NetworkEnvironment env) throws BWFLAException {
+	public void saveNetworkEnvironment(NetworkEnvironment env) throws BWFLAException {
 		final var value = DataUtils.json()
 				.mapper()
 				.valueToTree(env);

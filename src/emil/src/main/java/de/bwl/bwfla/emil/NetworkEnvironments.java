@@ -78,7 +78,7 @@ public class NetworkEnvironments extends EmilRest {
                     if(networkElement.getMacAddress() != null && networkElement.getMacAddress().equals(""))
                         networkElement.setMacAddress(NetworkUtils.getRandomHWAddress());
             }));
-            emilEnvRepo.saveNetworkEnvironemnt(envNetworkEnv);
+            emilEnvRepo.saveNetworkEnvironment(envNetworkEnv);
 
             final JsonObject json = Json.createObjectBuilder()
                     .add("status", "0")
@@ -209,7 +209,7 @@ public class NetworkEnvironments extends EmilRest {
                 if(networkElement.getMacAddress() != null && networkElement.getMacAddress().equals(""))
                     networkElement.setMacAddress(NetworkUtils.getRandomHWAddress());
             }));
-            emilEnvRepo.saveNetworkEnvironemnt(envNetworkEnv);
+            emilEnvRepo.saveNetworkEnvironment(envNetworkEnv);
             return Emil.createResponse(Response.Status.OK, "{\"status\":\"0\"}");
         } catch (Throwable t) {
             t.printStackTrace();
