@@ -53,11 +53,11 @@ class DockerTools {
             throw new BWFLAException("crane export failed.");
 
         String config = getConfig();
-
-        ds.emulatorType = jq(config, ".Labels.EAAS_EMULATOR_TYPE");
+        
+        ds.emulatorType = jq(config, ".config.Labels.EAAS_EMULATOR_TYPE");
         log.info("Emulator's type: " + ds.emulatorType);
 
-        ds.version = jq(config, ".Labels.EAAS_EMULATOR_VERSION");
+        ds.version = jq(config, ".config.Labels.EAAS_EMULATOR_VERSION");
         log.info("Emulator's version: " + ds.version);
 
         String md = jq(config, "{Cmd: .config.Cmd, Env: .config.Env, WorkingDir: .config.WorkingDir}");
