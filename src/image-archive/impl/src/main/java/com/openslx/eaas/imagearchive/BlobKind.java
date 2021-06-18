@@ -63,7 +63,7 @@ public enum BlobKind
 			case "rom":
 				return BlobKind.ROM;
 			default:
-				throw new IllegalArgumentException();
+				throw new IllegalArgumentException("Unknown kind: " + kind);
 		}
 	}
 
