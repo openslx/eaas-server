@@ -289,6 +289,8 @@ public class Components {
 
         final TaskStack cleanups = new TaskStack(LOG);
         final List<EventObserver> observer = new ArrayList<>();
+        if (request.getUserId() == null)
+            request.setUserId((authenticatedUser != null) ? authenticatedUser.getUserId() : null);
 
         if (request.getClass().equals(UviComponentRequest.class)) {
             try {
