@@ -357,6 +357,9 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request, @Context final HttpServletResponse response)
     {
+
+        System.out.println("GOT THIS REQUEST: " + request.toString());
+
         final ComponentResponse result = this.createComponent(request);
         response.setStatus(Response.Status.CREATED.getStatusCode());
         response.addHeader("Location", result.getId());

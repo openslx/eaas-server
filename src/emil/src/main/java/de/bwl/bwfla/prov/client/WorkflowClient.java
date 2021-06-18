@@ -20,14 +20,11 @@
 package de.bwl.bwfla.prov.client;
 
 import de.bwl.bwfla.emil.datatypes.rest.*;
-import de.bwl.bwfla.imageproposer.client.Proposal;
-import de.bwl.bwfla.imageproposer.client.ProposalRequest;
-import de.bwl.bwfla.imageproposer.client.ProposalResponse;
+import de.bwl.bwfla.prov.api.EnvironmentContainerDetails;
+import de.bwl.bwfla.prov.api.MachineComponentRequestWithInput;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 
-import javax.ws.rs.InternalServerErrorException;
 import javax.ws.rs.ServerErrorException;
-import javax.ws.rs.ServiceUnavailableException;
 import javax.ws.rs.client.Client;
 import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
@@ -60,6 +57,11 @@ public class WorkflowClient {
     public MachineComponentResponse startComponentHeadless(MachineComponentRequest machineComponentRequest) {
 
         machineComponentRequest.setHeadless(true);
+
+
+        System.out.println("---------------------------------- REQUEST: -------------------------------- ");
+        System.out.println(machineComponentRequest.toString());
+        System.out.println(Entity.entity(machineComponentRequest, MediaType.APPLICATION_JSON_TYPE).toString());
 
         final WebTarget target = client.target(baseUrl);
         Response response = null;
@@ -123,6 +125,37 @@ public class WorkflowClient {
         }
 
     }
+
+    public void updateContainerWithNewProcessArgs(UpdateContainerRequest updateContainerRequest) {
+
+        final WebTarget target = client.target(baseUrl);
+        Response response = null;
+        WebTarget restRequest = target.path("/EmilContainerData/updateContainer").queryParam("access_token", "undefined");
+
+        Builder v = restRequest.request(MediaType.APPLICATION_JSON_TYPE);
+
+        try {
+            response = v.post(Entity.entity(updateContainerRequest, MediaType.APPLICATION_JSON_TYPE));
+
+        } catch (Exception e) {
+            System.out.println("ERROR WHILE SENDING REQUEST: ");
+            e.printStackTrace();
+        }
+
+        System.out.println("SENT REQUEST TO UPDATE CONTAINER!");
+        switch (Status.fromStatusCode(response.getStatus())) {
+            case OK:
+                System.out.println("CONTAINER UPDATE RESPONDED WITH OK");
+                return;
+            default:
+                System.out.println("STATUS CODE WAS NOT 200 BUT: " + response.getStatus());
+                throw new ServerErrorException(
+                        "The ImageProposer service responded with an unexpected return code.",
+                        response.getStatus());
+        }
+
+    }
+
 
     public void sendKeepAlive(String sessionId) {
 

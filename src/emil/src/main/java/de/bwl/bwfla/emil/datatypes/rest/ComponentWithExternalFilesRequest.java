@@ -34,6 +34,8 @@ import java.util.Collection;
 @XmlAccessorType(XmlAccessType.NONE)
 public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 {
+
+
 	@XmlElement(name = "input_data")
 	private ArrayList<InputMedium> inputs = new ArrayList<InputMedium>();
 
@@ -42,6 +44,9 @@ public abstract class ComponentWithExternalFilesRequest extends ComponentRequest
 		return inputs;
 	}
 
+	public void setInputs(ArrayList<InputMedium> inputs) {
+		this.inputs = inputs;
+	}
 
 	@XmlRootElement
 	@XmlAccessorType(XmlAccessType.NONE)

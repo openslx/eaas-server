@@ -22,6 +22,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
+import java.util.Map;
 import java.util.concurrent.Future;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -69,11 +70,12 @@ public class WorkflowApi {
         LOG.info("Someone sent a build request to the workflow build API.");
 
         String envId = request.getEnvironmentId();
-        String[] urls = request.getInputFiles();
+        Map<String, String> urls = request.getInputFiles();
+        Map<Integer, String> params = request.getParams();
 
         final String taskID;
         try {
-            taskID = taskmgr.submit(new WorkflowTask(envId, urls));
+            taskID = taskmgr.submit(new WorkflowTask(envId, urls, params));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);

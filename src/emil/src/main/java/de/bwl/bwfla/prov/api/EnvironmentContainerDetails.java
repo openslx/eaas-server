@@ -1,4 +1,4 @@
-package de.bwl.bwfla.prov.client;
+package de.bwl.bwfla.prov.api;
 
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -7,7 +7,6 @@ import de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
 import de.bwl.bwfla.emil.datatypes.rest.ContainerNetworkingType;
-import de.bwl.bwfla.emil.datatypes.rest.EnvironmentDetails;
 import de.bwl.bwfla.emil.datatypes.rest.NetworkingType;
 import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
