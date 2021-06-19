@@ -120,12 +120,12 @@ public class QemuBean extends EmulatorBean
 
 				if(savedNetworkOption != null)
 				{
-					if(!token.contains("user")) {
-						emuRunner.addArgument(savedNetworkOption.trim());
-						emuRunner.addArgument(token.trim());
+					if(token.contains("user")) {
+						savedNetworkOption = null;
+						continue;
 					}
+					emuRunner.addArgument(savedNetworkOption.trim());
 					savedNetworkOption = null;
-					continue;
 				}
 
 				if(token.contains("nic,model=") && emuEnvironment.getNic() != null && emuEnvironment.getNic().size() >0)
