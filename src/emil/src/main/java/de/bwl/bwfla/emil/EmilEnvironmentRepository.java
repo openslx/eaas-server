@@ -884,6 +884,8 @@ public class EmilEnvironmentRepository {
 
 		env.setServiceContainer(req.isServiceContainer());
 		env.setAuthor(req.getAuthor());
+		if(req.getArchive() != null)
+			env.setArchive(req.getArchive());
 		save(env, true, userCtx);
 	}
 
