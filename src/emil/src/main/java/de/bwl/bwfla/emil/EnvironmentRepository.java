@@ -866,12 +866,17 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setArchive("default");
 				newEmilEnv.setParentEnvId(emilEnv.getParentEnvId());
 				emilEnvRepo.save(newEmilEnv, true);
+
+				final var message = "Forked environment " + envId + " as " + id;
+				final var json = EmilRest.newJsonObjectBuilder("0", message)
+						.add("envId", id)
+						.build();
+
+				return EmilRest.createResponse(Status.OK, json);
 			}
 			catch (BWFLAException error) {
 				return EnvironmentRepository.internalErrorResponse(error);
 			}
-
-			return EnvironmentRepository.successMessageResponse("forked environment: " + envId);
 		}
 
 		@POST
