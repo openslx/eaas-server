@@ -318,9 +318,8 @@ public class EmilEnvironmentRepository {
 		try {
 			initialize();
 		}
-		catch (BWFLAException| JAXBException e)
-		{
-			e.printStackTrace();
+		catch (Exception error) {
+			LOG.log(Level.SEVERE, "Initializing emil-environments failed!", error);
 		}
 
 		initialized = true;
