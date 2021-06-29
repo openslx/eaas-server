@@ -7,28 +7,38 @@ import de.bwl.bwfla.emil.datatypes.rest.*;
 
 import de.bwl.bwfla.prov.api.EnvironmentContainerDetails;
 import de.bwl.bwfla.prov.api.MachineComponentRequestWithInput;
+import de.bwl.bwfla.prov.api.WorkflowRequest;
 import de.bwl.bwfla.prov.client.WorkflowClient;
 
 
 import javax.ws.rs.WebApplicationException;
 import java.util.*;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 public class WorkflowTask extends BlockingTask<Object> {
 
     private final String environmentId;
     private final Map<String, String> inputURLS;
-    private final Map<Integer, String> params;
+    private final Map<String, String> params;
+
+    private final String inputFolder;
+    private final String outputFolder;
+
 
     private final WorkflowClient workflowClient;
 
     private static final Logger LOG = Logger.getLogger("");
 
-    public WorkflowTask(String environmentId, Map<String, String> inputFileURLS, Map<Integer, String> params) throws BWFLAException {
 
-        this.environmentId = environmentId;
-        this.inputURLS = inputFileURLS;
-        this.params = params;
+    public WorkflowTask(WorkflowRequest request) {
+
+
+        this.environmentId = request.getEnvironmentId();
+        this.inputURLS = request.getInputFiles();
+        this.params = request.getArguments();
+        this.inputFolder = request.getInputFolder();
+        this.outputFolder = request.getOutputFolder();
 
         this.workflowClient = new WorkflowClient();
     }
@@ -51,19 +61,29 @@ public class WorkflowTask extends BlockingTask<Object> {
             ContainerNetworkingType networkingInfo = (ContainerNetworkingType) details.getNetworking();
             LOG.severe("Successfully got Networking Info details!");
 
-            SortedSet<Integer> sortedArgs = new TreeSet<>(params.keySet());
+            //TODO if empty use set params? for input/output as well?
+            //TODO check if code below works
+
+            Map<Integer, String> casted = params.entrySet()
+                    .stream()
+                    .collect(Collectors.toMap(
+                            e -> Integer.parseInt(e.getKey()),
+                            e -> e.getValue()
+                    ));
+
+            SortedSet<Integer> sortedArgs = new TreeSet<>(casted.keySet());
             ArrayList<String> processArgs = new ArrayList<>();
             for (int key : sortedArgs) {
-                processArgs.add(params.get(key));
+                processArgs.add(casted.get(key));
             }
 
             UpdateContainerRequest updateContainerRequest = new UpdateContainerRequest();
             updateContainerRequest.setId(details.getEnvId());
 
             updateContainerRequest.setTitle(details.getTitle());
-            updateContainerRequest.setInputFolder(details.getInput());
+            updateContainerRequest.setInputFolder(inputFolder);
+            updateContainerRequest.setOutputFolder(outputFolder);
             updateContainerRequest.setDescription(details.getDescription());
-            updateContainerRequest.setOutputFolder(details.getOutput());
             updateContainerRequest.setProcessArgs(processArgs);
             updateContainerRequest.setProcessEnvs((ArrayList<String>) details.getProcessEnvs());
             updateContainerRequest.setAuthor(details.getAuthor());

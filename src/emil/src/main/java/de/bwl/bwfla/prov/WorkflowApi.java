@@ -69,13 +69,11 @@ public class WorkflowApi {
 
         LOG.info("Someone sent a build request to the workflow build API.");
 
-        String envId = request.getEnvironmentId();
-        Map<String, String> urls = request.getInputFiles();
-        Map<Integer, String> params = request.getParams();
+
 
         final String taskID;
         try {
-            taskID = taskmgr.submit(new WorkflowTask(envId, urls, params));
+            taskID = taskmgr.submit(new WorkflowTask(request));
         } catch (Throwable throwable) {
             LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
             return ResponseUtils.createInternalErrorResponse(throwable);

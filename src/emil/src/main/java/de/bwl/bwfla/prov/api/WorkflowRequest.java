@@ -11,12 +11,17 @@ public class WorkflowRequest {
     @JsonProperty("environmentId")
     private String environmentId;
 
+    @JsonProperty("inputFolder")
+    private String inputFolder;
+
+    @JsonProperty("outputFolder")
+    private String outputFolder;
+
     @JsonProperty("inputFiles")
     private Map<String, String> inputFiles;
 
-    @JsonProperty("params")
-    private Map<Integer, String> params;
-
+    @JsonProperty("arguments")
+    private Map<String, String> arguments;
 
     public WorkflowRequest() {
     }
@@ -37,11 +42,27 @@ public class WorkflowRequest {
         this.inputFiles = inputFiles;
     }
 
-    public Map<Integer, String> getParams() {
-        return params;
+    public Map<String, String> getArguments() {
+        return arguments;
     }
 
-    public void setParams(Map<Integer, String> params) {
-        this.params = params;
+    public void setArguments(Map<String, String> arguments) {
+        this.arguments = arguments;
+    }
+
+    public String getInputFolder() {
+        return inputFolder;
+    }
+
+    public void setInputFolder(String inputFolder) {
+        this.inputFolder = inputFolder;
+    }
+
+    public String getOutputFolder() {
+        return outputFolder;
+    }
+
+    public void setOutputFolder(String outputFolder) {
+        this.outputFolder = outputFolder;
     }
 }
