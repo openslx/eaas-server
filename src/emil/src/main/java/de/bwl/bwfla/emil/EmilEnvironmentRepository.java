@@ -10,13 +10,19 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectReader;
+import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -40,7 +46,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.util.*;
-import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 
@@ -51,7 +56,10 @@ public class EmilEnvironmentRepository {
 	private ImageArchiveClient imagearchive = null;
 
 	@Inject
+	@Deprecated
 	private MongodbEaasConnector dbConnector;
+
+	@Deprecated
 	private MongodbEaasConnector.DatabaseInstance db;
 
 	@Inject
@@ -75,9 +83,6 @@ public class EmilEnvironmentRepository {
 	@Inject
 	private EmilDataImport importHelper;
 
-	private String emilDbCollectionName = "eaasEnv";
-	private String emilDbNetworkEnvCollectionName = "emilNetworkEnvironments";
-
 	@Inject
 	private EmilObjectData objects;
 
@@ -86,6 +91,12 @@ public class EmilEnvironmentRepository {
 
 	@Inject
 	private ObjectClassification classification;
+
+	/** Mapper for parsed JSON to emil-environment */
+	private final Mapper<EmilEnvironment> ENVIRONMENT_MAPPER = new Mapper<>(EmilEnvironment.class);
+
+	/** Mapper for parsed JSON to network-environment */
+	private final Mapper<NetworkEnvironment> NETWORK_MAPPER = new Mapper<>(NetworkEnvironment.class);
 
 	private static boolean initialized = false;
 
@@ -98,23 +109,6 @@ public class EmilEnvironmentRepository {
 		public static final String PUBLIC = "public";
 		public static final String REMOTE = "remote";
 		public static final String DEFAULT = "default";
-	}
-
-	private String getDataCollection(UserContext userctx) {
-		if (userctx.isAvailable()) {
-			if (userctx.getTenantId() != null)
-				return userctx.getTenantId();
-
-			if (userctx.getUserId() != null)
-				return userctx.getUserId();
-		}
-
-		// default, if user-context is unknown!
-		return emilDbCollectionName;
-	}
-
-	private String getDataCollection() {
-		return this.getDataCollection(this.getUserContext());
 	}
 
 	private UserContext getUserContext() {
@@ -209,29 +203,45 @@ public class EmilEnvironmentRepository {
 		return false;
 	}
 
-	public Stream<EmilEnvironment> listPublicEnvironments(int offset, int maxcount, MongodbEaasConnector.FilterBuilder filter) {
-		return db.find(MetadataCollection.PUBLIC, offset, maxcount, filter, "type");
+	public Stream<EmilEnvironment> listPublicEnvironments(Filter filter) throws BWFLAException {
+		final var options = new FetchOptionsV2()
+				.setLocation(MetadataCollection.PUBLIC)
+				.setFromTime(filter.from())
+				.setUntilTime(filter.until())
+				.setOffset(filter.offset())
+				.setLimit(filter.limit());
+
+		final var result = imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.ENVIRONMENTS)
+				.fetch(options);
+
+		return result.stream()
+				.map(ENVIRONMENT_MAPPER)
+				.onClose(result::close);
 	}
 
-	public long countPublicEnvironments(MongodbEaasConnector.FilterBuilder filter) {
-		return db.count(MetadataCollection.PUBLIC, filter);
+	public long countPublicEnvironments(Filter filter) throws BWFLAException {
+		final var options = new CountOptionsV2()
+				.setLocation(MetadataCollection.PUBLIC)
+				.setFromTime(filter.from())
+				.setUntilTime(filter.until());
+
+		return imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.ENVIRONMENTS)
+				.count(options);
 	}
 
+	private Stream<EmilEnvironment> loadEmilEnvironments(UserContext userctx) throws BWFLAException {
+		final var result = imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.ENVIRONMENTS)
+				.fetch();
 
-	private Stream<EmilEnvironment> loadEmilEnvironments(UserContext userctx) {
-		final var colnames = new ArrayList<String>(3);
-		colnames.add(this.getDataCollection(userctx));
-		colnames.add(MetadataCollection.PUBLIC);
-		colnames.add(MetadataCollection.REMOTE);
-
-		final Function<String, Stream<EmilEnvironment>> finder =
-				(colname) -> db.find(colname, new MongodbEaasConnector.FilterBuilder(), "type");
-
-		final var result = colnames.stream()
-				.map(finder)
-				.reduce(Stream::concat);
-
-		return result.orElse(Stream.empty());
+		return result.stream()
+				.map(ENVIRONMENT_MAPPER)
+				.onClose(result::close);
 	}
 
 	private Stream<EmilObjectEnvironment> loadEmilObjectEnvironments(UserContext userctx) throws BWFLAException {
@@ -295,12 +305,6 @@ public class EmilEnvironmentRepository {
 		}
 
 		db = dbConnector.getInstance(dbName);
-		try {
-			db.createIndex(emilDbCollectionName, "envId");
-			db.ensureTimestamp(emilDbCollectionName);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
 
 		if (serverdatadir != null) {
 			Path cache = Paths.get(serverdatadir);
@@ -356,22 +360,40 @@ public class EmilEnvironmentRepository {
 
 	private EmilEnvironment getSharedEmilEnvironmentById(String envid) {
 		try {
-			return db.getObjectWithClassFromDatabaseKey(MetadataCollection.PUBLIC, "type", envid, "envId");
-		} catch (BWFLAException | NoSuchElementException e) {
-			try {
-				return db.getObjectWithClassFromDatabaseKey(MetadataCollection.REMOTE, "type", envid, "envId");
-			} catch (BWFLAException | NoSuchElementException e1) {
-				return null;
+			final var result = imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.ENVIRONMENTS)
+					.fetch(envid);
+
+			final var env = ENVIRONMENT_MAPPER.apply(result);
+			switch (env.getArchive()) {
+				case MetadataCollection.PUBLIC:
+				case MetadataCollection.REMOTE:
+					return env;
+				default:
+					return null;
 			}
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Fetching environment '" + envid + "' failed!", error);
+			return null;
 		}
 	}
 
 	public NetworkEnvironment getEmilNetworkEnvironmentById(String envid) throws BWFLAException {
-		return db.getObjectWithClassFromDatabaseKey(emilDbNetworkEnvCollectionName, "type", envid, "envId");
+		final var result = imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.NETWORKS)
+				.fetch(envid);
+
+		return NETWORK_MAPPER.apply(result);
 	}
 
-	public void deleteEmilNetworkEnvironment(NetworkEnvironment env) {
-		db.deleteDoc(emilDbNetworkEnvCollectionName, env.getEnvId(), env.getIdDBkey());
+	public void deleteEmilNetworkEnvironment(NetworkEnvironment env) throws BWFLAException {
+		imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.NETWORKS)
+				.delete(env.getEnvId());
 	}
 
 	public EmilEnvironment getEmilEnvironmentById(String envid)
@@ -384,14 +406,21 @@ public class EmilEnvironmentRepository {
 			return null;
 
 		try {
-			EmilEnvironment env = db.getObjectWithClassFromDatabaseKey(this.getDataCollection(userctx), "type", envid, "envId");
-			if (!this.checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userctx))
-				return getSharedEmilEnvironmentById(envid);
+			final var result = imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.ENVIRONMENTS)
+					.fetch(envid);
 
-			return env;
-		} catch (BWFLAException | NoSuchElementException e) {
-			return getSharedEmilEnvironmentById(envid);
+			final var env = ENVIRONMENT_MAPPER.apply(result);
+			final var isPrivate = MetadataCollection.DEFAULT.equals(env.getArchive());
+			if (!isPrivate || this.checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userctx))
+				return env;
 		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Fetching environment '" + envid + "' failed!", error);
+		}
+
+		return null;
 	}
 
 	public boolean isEnvironmentVisible(EmilEnvironment env)
@@ -437,8 +466,10 @@ public class EmilEnvironmentRepository {
 		}
 
 		if(env.getArchive().equals(MetadataCollection.DEFAULT)) {
-			final var collection = this.getDataCollection(userctx);
-			db.deleteDoc(collection, env.getEnvId(), env.getIdDBkey());
+			imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.ENVIRONMENTS)
+					.delete(env.getEnvId());
 
 			String parent = env.getParentEnvId();
 			String lastPrivateChild = env.getEnvId();
@@ -469,12 +500,15 @@ public class EmilEnvironmentRepository {
 
 					LOG.severe("trying to delete parent with id: " + p.getEnvId() + " in archive " + p.getArchive());
 					try {
-						db.deleteDoc(collection, p.getEnvId(), p.getIdDBkey());
-					} catch (Exception e)
-					{
-						e.printStackTrace();
-						LOG.severe("fix me");
+						imagearchive.api()
+								.v2()
+								.metadata(MetaDataKindV2.ENVIRONMENTS)
+								.delete(p.getEnvId());
 					}
+					catch (Exception error) {
+						LOG.log(Level.WARNING, "Deleting parent environment failed!", error);
+					}
+
 					p.setArchive(destArchive);
 					save(p, false, userctx);
 					lastPrivateChild = p.getEnvId();
@@ -515,22 +549,28 @@ public class EmilEnvironmentRepository {
 				setPermissions(env, userCtx);
 		}
 
-		switch (env.getArchive())
-		{
-			case MetadataCollection.PUBLIC:
-				db.saveDoc(MetadataCollection.PUBLIC, env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
-				break;
-			case MetadataCollection.REMOTE:
-				db.saveDoc(MetadataCollection.REMOTE, env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
-				break;
-			default:
-				db.saveDoc(this.getDataCollection(userCtx), env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
-		}
-		// LOG.severe(env.toString());
+		final var value = DataUtils.json()
+				.mapper()
+				.valueToTree(env);
+
+		final var options = new ReplaceOptionsV2()
+				.setLocation(env.getArchive());
+
+		imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.ENVIRONMENTS)
+				.replace(env.getEnvId(), value, options);
 	}
 
-	public void saveNetworkEnvironemnt(NetworkEnvironment env) throws BWFLAException {
-		db.saveDoc(emilDbNetworkEnvCollectionName , env.getEnvId(), env.getIdDBkey(), env.jsonValueWithoutRoot(false));
+	public void saveNetworkEnvironment(NetworkEnvironment env) throws BWFLAException {
+		final var value = DataUtils.json()
+				.mapper()
+				.valueToTree(env);
+
+		imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.NETWORKS)
+				.replace(env.getEnvId(), value);
 	}
 
 	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
@@ -562,16 +602,16 @@ public class EmilEnvironmentRepository {
 					LOG.log(Level.WARNING, "Deleting environment failed!", error);
 				}
 
-				db.deleteDoc(this.getDataCollection(), envId, env.getIdDBkey());
+				imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.ENVIRONMENTS)
+						.delete(envId);
+
 				classification.cleanupClassificationData(envId);
 			}
 		} else {
 			sessions.delete((EmilSessionEnvironment)env);
 		}
-	}
-
-	public  <T extends JaxbType> ArrayList<T> getDatabaseContent(String type, Class<T> klass ) throws BWFLAException {
-		return db.getRootlessJaxbObjects(this.getDataCollection(), type, "type");
 	}
 
 	public void importOldDb() throws BWFLAException {
@@ -610,6 +650,7 @@ public class EmilEnvironmentRepository {
 		int counter = 0;
 
 		importFromFolder("import");
+		importFromDatabase();
 
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
@@ -696,40 +737,128 @@ public class EmilEnvironmentRepository {
 	}
 
 	private void importFromFolder(String directory) throws BWFLAException {
-		HashMap<String, List<EmilEnvironment>> _result = importHelper.importFromFolder(directory);
-		for(String collection : _result.keySet()) {
-			List<EmilEnvironment> envs = _result.get(collection);
-			for (EmilEnvironment e : envs)
-			{
-				LOG.severe("saving " + collection + " -> " + e.jsonValueWithoutRoot(true));
-				db.saveDoc(collection, e.getEnvId(), e.getIdDBkey(), e.jsonValueWithoutRoot(false));
+		final var mapper = DataUtils.json()
+				.mapper();
+
+		final Consumer<EmilEnvironment> importer = (env) -> {
+			try {
+				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
+				if (env instanceof EmilSessionEnvironment)
+					kind = MetaDataKindV2.SESSIONS;
+
+				final var values = imagearchive.api()
+						.v2()
+						.metadata(kind);
+
+				final var options = new ReplaceOptionsV2()
+						.setLocation(env.getArchive());
+
+				final var value = mapper.valueToTree(env);
+				values.replace(env.getEnvId(), value, options);
+				LOG.info("Imported environment '" + env.getEnvId() + "' (" + env.getArchive() + ")");
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing environment '" + env.getEnvId() + "' failed!", error);
+			}
+		};
+
+		importHelper.importFromFolder(directory)
+				.forEach((colname, entries) -> entries.forEach(importer));
+	}
+
+	private void importFromDatabase() throws BWFLAException {
+		final var mapper = DataUtils.json()
+				.mapper();
+
+		final Consumer<JaxbType> importer = (data) -> {
+			try {
+				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
+				if (data instanceof EmilSessionEnvironment)
+					kind = MetaDataKindV2.SESSIONS;
+				else if (data instanceof NetworkEnvironment)
+					kind = MetaDataKindV2.NETWORKS;
+
+				final var options = new ReplaceOptionsV2();
+				final var values = imagearchive.api()
+						.v2()
+						.metadata(kind);
+
+				JsonNode value = null;
+				String envid = null;
+
+				switch (kind) {
+					case ENVIRONMENTS:
+					case SESSIONS: {
+						final var env = (EmilEnvironment) data;
+						options.setLocation(env.getArchive());
+						value = mapper.valueToTree(env);
+						envid = env.getEnvId();
+						break;
+					}
+
+					case NETWORKS: {
+						final var env = (NetworkEnvironment) data;
+						value = mapper.valueToTree(env);
+						envid = env.getEnvId();
+						break;
+					}
+
+					default:
+						throw new IllegalStateException("Not supported metadata kind!");
+				}
+
+				values.replace(envid, value, options);
+				LOG.info("Imported environment '" + envid + "' (" + kind.value() + ")");
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing environment failed!", error);
+			}
+		};
+
+		LOG.info("Importing environments from local database...");
+		final var filter = new MongodbEaasConnector.FilterBuilder();
+		for (var collection : db.getCollections()) {
+			final var values = db.find(collection, filter, "type");
+			try (values) {
+				values.forEach(importer);
+				db.drop(collection);
 			}
 		}
 	}
 
-	void export()
+	public void export()
 	{
-		List<String> collections = db.getCollections();
+		final var kinds = new MetaDataKindV2[] {
+				MetaDataKindV2.ENVIRONMENTS,
+				MetaDataKindV2.SESSIONS
+		};
+
 		try {
-			EmilDataExport emilDataExport = new EmilDataExport();
-			for(String collection : collections) {
+			final var emilDataExport = new EmilDataExport();
+			final Consumer<EmilEnvironment> exporter = (env) -> {
 				try {
-					Stream<EmilEnvironment> all = db.find(collection, new MongodbEaasConnector.FilterBuilder(), "type");
-					all.forEach(emilEnvironment -> {
-						try {
-							emilDataExport.saveEnvToPath(collection, emilEnvironment);
-						} catch (IOException e) {
-							e.printStackTrace();
-						}
-					});
-				} catch (Exception e) {
-					e.printStackTrace();
-					LOG.warning("failed to export collection: " + collection);
+					emilDataExport.saveEnvToPath(env.getArchive(), env);
+				}
+				catch (Exception error) {
+					LOG.log(Level.WARNING, "Exporting environment failed!", error);
+				}
+			};
+
+			for (var kind : kinds) {
+				final var values = imagearchive.api()
+						.v2()
+						.metadata(kind)
+						.fetch();
+
+				try (values) {
+					values.stream()
+							.map(ENVIRONMENT_MAPPER)
+							.forEach(exporter);
 				}
 			}
-		} catch (IOException e) {
-			e.printStackTrace();
-			LOG.severe("failed to initialize export");
+		}
+		catch (Exception error) {
+			LOG.log(Level.WARNING, "Exporting environments failed!", error);
 		}
 	}
 
@@ -757,7 +886,7 @@ public class EmilEnvironmentRepository {
 	}
 
 
-	public Stream<EmilEnvironment> getEmilEnvironments(UserContext userCtx)
+	public Stream<EmilEnvironment> getEmilEnvironments(UserContext userCtx) throws BWFLAException
 	{
 		final Stream<EmilEnvironment> all = loadEmilEnvironments(userCtx);
 		final HashSet<String> known = new HashSet<>();
@@ -771,12 +900,18 @@ public class EmilEnvironmentRepository {
 				});
 	}
 
-	public List<NetworkEnvironment> getNetworkEnvironments() {
-		Stream<NetworkEnvironment> emilNetworkEnvironments = db.find(emilDbNetworkEnvCollectionName, new MongodbEaasConnector.FilterBuilder(), "type");
-		return emilNetworkEnvironments.collect(Collectors.toList());
+	public Stream<NetworkEnvironment> getNetworkEnvironments() throws BWFLAException {
+		final var result = imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.NETWORKS)
+				.fetch();
+
+		return result.stream()
+				.map(NETWORK_MAPPER)
+				.onClose(result::close);
 	}
 
-	public Stream<EmilEnvironment> getEmilEnvironments() {
+	public Stream<EmilEnvironment> getEmilEnvironments() throws BWFLAException {
 		return this.getEmilEnvironments(this.getUserContext());
 	}
 
@@ -982,4 +1117,79 @@ public class EmilEnvironmentRepository {
 //		return EmilUtils.saveEmilEnvironment(env, basedir);
 //	}
 
+
+	public static class Filter
+	{
+		private int offset;
+		private int limit;
+		private long fromtime;
+		private long untiltime;
+
+		public Filter setOffset(int offset)
+		{
+			this.offset = offset;
+			return this;
+		}
+
+		public int offset()
+		{
+			return offset;
+		}
+
+		public Filter setLimit(int limit)
+		{
+			this.limit = limit;
+			return this;
+		}
+
+		public int limit()
+		{
+			return limit;
+		}
+
+		public Filter setFromTime(long timestamp)
+		{
+			this.fromtime = timestamp;
+			return this;
+		}
+
+		public long from()
+		{
+			return fromtime;
+		}
+
+		public Filter setUntilTime(long timestamp)
+		{
+			this.untiltime = timestamp;
+			return this;
+		}
+
+		public long until()
+		{
+			return untiltime;
+		}
+	}
+
+	private static class Mapper<T> implements Function<JsonNode, T>
+	{
+		private final ObjectReader reader;
+
+		public Mapper(Class<T> clazz)
+		{
+			this.reader = DataUtils.json()
+					.reader()
+					.forType(clazz);
+		}
+
+		@Override
+		public T apply(JsonNode json)
+		{
+			try {
+				return reader.readValue(json);
+			}
+			catch (Exception error) {
+				throw new RuntimeException("Deserializing environment failed!", error);
+			}
+		}
+	}
 }

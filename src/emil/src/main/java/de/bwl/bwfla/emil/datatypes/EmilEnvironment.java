@@ -5,6 +5,8 @@ import javax.xml.bind.annotation.*;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.rest.NetworkingType;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
@@ -21,6 +23,13 @@ import java.util.Set;
 	EmilSessionEnvironment.class
 })
 @XmlAccessorType(XmlAccessType.NONE)
+@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
+@JsonSubTypes({
+	@JsonSubTypes.Type(value = EmilEnvironment.class, name = EmilEnvironment.Names.ENVIRONMENT),
+	@JsonSubTypes.Type(value = EmilObjectEnvironment.class, name = EmilEnvironment.Names.OBJECT_ENVIRONMENT),
+	@JsonSubTypes.Type(value = EmilContainerEnvironment.class, name = EmilEnvironment.Names.CONTAINER_ENVIRONMENT),
+	@JsonSubTypes.Type(value = EmilSessionEnvironment.class, name = EmilEnvironment.Names.SESSION),
+})
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironment> {
 
@@ -329,5 +338,15 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setCanProcessAdditionalFiles(boolean canProcessAdditionalFiles) {
 		this.canProcessAdditionalFiles = canProcessAdditionalFiles;
+	}
+
+
+	/** Class names to use as type-information (compile-time constants) */
+	public static class Names
+	{
+		public static final String ENVIRONMENT = "de.bwl.bwfla.emil.datatypes.EmilEnvironment";
+		public static final String OBJECT_ENVIRONMENT = "de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment";
+		public static final String CONTAINER_ENVIRONMENT = "de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment";
+		public static final String SESSION = "de.bwl.bwfla.emil.datatypes.EmilSessionEnvironment";
 	}
 }

@@ -27,7 +27,6 @@ import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
@@ -166,26 +165,6 @@ public class EnvironmentRepository extends EmilRest
 
 	@Path("/images")
 	public Images images() { return new Images(); }
-
-	@GET
-	@Path("/db-content")
-	@Secured(roles={Role.RESTRICTED})
-	@Produces(MediaType.APPLICATION_JSON)
-	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className)
-	{
-		LOG.info("Loading DB content...");
-		try {
-			Class<T> classType = (Class<T>) Class.forName(className);
-			if (classType == null) {
-				throw new BWFLAException("Class name is incorrect!");
-			}
-			return EnvironmentRepository.createResponse(Status.OK, emilEnvRepo.getDatabaseContent(type, classType));
-		}
-		catch (ClassNotFoundException | BWFLAException error) {
-			LOG.log(Level.WARNING,"Loading database content failed!\n", error);
-			return EnvironmentRepository.internalErrorResponse(error);
-		}
-	}
 
 	@GET
 	@Path("/db-migration")

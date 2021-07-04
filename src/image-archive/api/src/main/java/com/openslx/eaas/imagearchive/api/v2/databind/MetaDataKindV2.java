@@ -17,38 +17,28 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.api.v2.databind;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.fasterxml.jackson.annotation.JsonCreator;
+import com.fasterxml.jackson.annotation.JsonValue;
 
 
-public interface IArchiveV2
+public enum MetaDataKindV2
 {
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
+	ENVIRONMENTS,
+	SESSIONS,
+	NETWORKS;
 
-	@Path("/containers")
-	IContainersV2 containers();
+	@JsonValue
+	public String value()
+	{
+		return this.name()
+				.toLowerCase();
+	}
 
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	@JsonCreator
+	public static MetaDataKindV2 from(String value)
+	{
+		return MetaDataKindV2.valueOf(value.toUpperCase());
+	}
 }

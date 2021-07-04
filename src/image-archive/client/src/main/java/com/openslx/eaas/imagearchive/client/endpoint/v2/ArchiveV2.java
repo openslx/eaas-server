@@ -20,12 +20,14 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 
 import java.util.logging.Logger;
 
 
 public class ArchiveV2
 {
+	private final IArchiveV2 api;
 	private final ContainersV2 containers;
 	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
@@ -41,6 +43,7 @@ public class ArchiveV2
 
 	public ArchiveV2(IArchiveV2 api, Logger logger)
 	{
+		this.api = api;
 		this.containers = new ContainersV2(api.containers());
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
@@ -98,5 +101,15 @@ public class ArchiveV2
 	public EnvironmentsV2 environments()
 	{
 		return environments;
+	}
+
+	public MetaDataV2 metadata(MetaDataKindV2 kind)
+	{
+		return this.metadata(kind.value());
+	}
+
+	public MetaDataV2 metadata(String kind)
+	{
+		return new MetaDataV2(api.metadata(kind));
 	}
 }

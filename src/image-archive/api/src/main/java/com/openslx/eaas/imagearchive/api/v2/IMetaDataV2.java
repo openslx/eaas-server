@@ -19,36 +19,17 @@
 
 package com.openslx.eaas.imagearchive.api.v2;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
 
 
-public interface IArchiveV2
+public interface IMetaDataV2 extends IListable,
+		IManyReadable<JsonNode>,
+		IWritable<JsonNode>,
+		IDeletable
 {
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
-
-	@Path("/containers")
-	IContainersV2 containers();
-
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	// Empty!
 }

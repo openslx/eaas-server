@@ -22,6 +22,9 @@ package com.openslx.eaas.imagearchive;
 
 public enum BlobKind
 {
+	ENVIRONMENT,
+	SESSION,
+	NETWORK,
 	MACHINE,
 	CONTAINER,
 	EMULATOR,
@@ -39,6 +42,12 @@ public enum BlobKind
 	public static BlobKind from(String kind)
 	{
 		switch (kind) {
+			case "environment":
+				return BlobKind.ENVIRONMENT;
+			case "session":
+				return BlobKind.SESSION;
+			case "network":
+				return BlobKind.NETWORK;
 			case "machine":
 				return BlobKind.MACHINE;
 			case "container":
@@ -54,7 +63,7 @@ public enum BlobKind
 			case "rom":
 				return BlobKind.ROM;
 			default:
-				throw new IllegalArgumentException();
+				throw new IllegalArgumentException("Unknown kind: " + kind);
 		}
 	}
 

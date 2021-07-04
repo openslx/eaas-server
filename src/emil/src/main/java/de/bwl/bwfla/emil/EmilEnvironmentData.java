@@ -13,7 +13,6 @@ import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.*;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 import de.bwl.bwfla.emil.datatypes.rest.ReplicateImagesResponse;
@@ -21,7 +20,6 @@ import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
-import de.bwl.bwfla.emucomp.api.*;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -90,14 +88,6 @@ public class EmilEnvironmentData
 	public Response delete(EnvironmentDeleteRequest desc) throws JAXBException {
 		return envrepo.environments()
 				.delete(desc.getEnvId(), desc);
-	}
-
-	@Secured(roles={Role.RESTRICTED})
-	@GET
-	@Path("/getDatabaseContent")
-	@Produces(MediaType.APPLICATION_JSON)
-	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className) {
-		return envrepo.getDatabaseContent(type, className);
 	}
 
 	@Secured(roles={Role.RESTRICTED})
