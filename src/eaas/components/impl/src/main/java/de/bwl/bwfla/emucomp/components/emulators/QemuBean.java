@@ -36,6 +36,12 @@ public class QemuBean extends EmulatorBean
 	private String monitor_path;
 
 	@Override
+	boolean isHeadlessSupported()
+	{
+		return true;
+	}
+
+	@Override
 	protected String getEmuContainerName(MachineConfiguration machineConfiguration)
 	{
 		return "qemu-system";
@@ -139,6 +145,9 @@ public class QemuBean extends EmulatorBean
 			}
 		}
 
+		if(this.isHeadlessModeEnabled()) {
+			emuRunner.addArgument("-nographic");
+		}
 		if (this.isLocalModeEnabled()) {
 			emuRunner.addArgument("-full-screen");
 		}

@@ -255,6 +255,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return (emuBeanMode == EmulatorBeanMode.Y11);
 	}
 
+	public boolean isHeadlessModeEnabled() { return (emuBeanMode == EmulatorBeanMode.HEADLESS); }
+
 	public boolean isContainerModeEnabled()
 	{
 		return emuContainerModeEnabled;
@@ -275,6 +277,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	{
 		return "machine";
 	}
+
+	boolean isHeadlessSupported() { return false; }
 
 	boolean isBeanReady() {
 		return false; // this is the default, if the bean has no internal state
@@ -427,7 +431,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		final MachineConfiguration env = (MachineConfiguration) compConfig;
-		emuBeanMode = EmulatorBean.getEmuBeanMode(env);
+		emuBeanMode = getEmuBeanMode(env);
 		emuRunner.setLogger(LOG);
 
 		try {
@@ -595,7 +599,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		try {
-			if (this.isSdlBackendEnabled() || this.isXpraBackendEnabled())
+			if (this.isSdlBackendEnabled() || this.isXpraBackendEnabled() || this.isHeadlessModeEnabled())
 				this.startBackend();
 			else {
 				throw new BWFLAException("Trying to start emulator using unimplemented mode: " + this.getEmuBeanMode())
@@ -1444,11 +1448,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	// Protected
 	// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private static EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
+	private EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
 	{
 		final UiOptions options = config.getUiOptions();
-		if (options != null && options.getForwarding_system() != null)
-			return EmulatorBeanMode.valueOf(options.getForwarding_system());
+		if (options != null && options.getForwarding_system() != null) {
+			var ret = EmulatorBeanMode.valueOf(options.getForwarding_system());
+			if(ret == EmulatorBeanMode.HEADLESS && !this.isHeadlessSupported())
+				return EmulatorBeanMode.SDLONP;
+			return ret;
+		}
 		else return EmulatorBeanMode.SDLONP;
 	}
 

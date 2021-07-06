@@ -835,6 +835,12 @@ public class Components {
                 sessionManager.register(session);
                 sessionManager.setLifetime(session.id(), machineDescription.getSessionLifetime(), TimeUnit.MINUTES,
                     "headless session @ " + sessionId);
+
+                MachineConfiguration conf = (MachineConfiguration) chosenEnv;
+                if(conf.getUiOptions() == null)
+                    conf.setUiOptions(new UiOptions());
+
+                conf.getUiOptions().setForwarding_system("HEADLESS");
             }
 
             return new MachineComponentResponse(sessionId, removableMedia);
