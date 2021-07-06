@@ -32,6 +32,7 @@ public class BlobDescriptor
 {
 	private String name;
 	private String location;
+	private String etag;
 	private long mtime;
 
 
@@ -57,6 +58,18 @@ public class BlobDescriptor
 	public String location()
 	{
 		return location;
+	}
+
+	@JsonSetter(Fields.ETAG)
+	public void setEtag(String etag)
+	{
+		this.etag = etag;
+	}
+
+	@JsonGetter(Fields.ETAG)
+	public String etag()
+	{
+		return etag;
 	}
 
 	@JsonSetter(Fields.MTIME)
@@ -116,6 +129,7 @@ public class BlobDescriptor
 	{
 		public static final String NAME     = "nam";
 		public static final String LOCATION = "loc";
+		public static final String ETAG     = "etg";
 		public static final String MTIME    = "mts";
 		public static final String DATA     = "dat";
 	}

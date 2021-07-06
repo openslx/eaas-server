@@ -33,6 +33,7 @@ import java.io.IOException;
 import java.nio.file.Paths;
 
 
+@Deprecated
 public class RuncBean extends ContainerBean
 {
 	@Inject

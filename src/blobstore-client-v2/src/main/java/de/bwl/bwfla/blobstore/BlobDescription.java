@@ -31,6 +31,7 @@ public class BlobDescription
 {
 	private final String bucket;
 	private final String name;
+	private final String etag;
 	private final ZonedDateTime mtime;
 	private final long size;
 	private final String contentType;
@@ -40,6 +41,7 @@ public class BlobDescription
 	{
 		this.bucket = stat.bucket();
 		this.name = stat.object();
+		this.etag = stat.etag();
 		this.mtime = stat.lastModified();
 		this.size = stat.size();
 		this.contentType = stat.contentType();
@@ -50,6 +52,7 @@ public class BlobDescription
 	{
 		this.bucket = bucket;
 		this.name = item.objectName();
+		this.etag = item.etag();
 		this.mtime = item.lastModified();
 		this.size = item.size();
 		this.contentType = "application/octet-stream";
@@ -66,6 +69,12 @@ public class BlobDescription
 	public String name()
 	{
 		return name;
+	}
+
+	/** Blob's etag */
+	public String etag()
+	{
+		return etag;
 	}
 
 	/** Blob's last-modified time */

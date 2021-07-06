@@ -89,7 +89,7 @@ public class EmilDataImport {
             Path emilEnvs = importPath.resolve("emil-environments");
             if(Files.exists(emilEnvs))
             {
-                DirectoryStream<Path> collectionStream  = Files.newDirectoryStream(emilEnvs);
+                try (var collectionStream = Files.newDirectoryStream(emilEnvs)) {
                 for (Path collectionPath: collectionStream) {
                     String collection = collectionPath.getFileName().toString();
                     if(collection.startsWith("."))
@@ -97,12 +97,13 @@ public class EmilDataImport {
                     List<EmilEnvironment> envs = importEnvByPath(EmilEnvironment.class, collectionPath);
                     result.put(collection, envs);
                 }
+                }
             }
 
             Path emilObjEnvs = importPath.resolve("emil-object-environments");
             if (Files.exists(emilObjEnvs))
             {
-                DirectoryStream<Path> collectionStream  = Files.newDirectoryStream(emilObjEnvs);
+                try (var collectionStream = Files.newDirectoryStream(emilObjEnvs)) {
                 for (Path collectionPath: collectionStream) {
                     String collection = collectionPath.toString();
                     if(collection.startsWith("."))
@@ -114,6 +115,7 @@ public class EmilDataImport {
                         _envs = new ArrayList<>();
                     _envs.addAll(envs);
                     result.put(collection, _envs);
+                }
                 }
             }
             // FileUtils.deleteDirectory(importPath.toFile());

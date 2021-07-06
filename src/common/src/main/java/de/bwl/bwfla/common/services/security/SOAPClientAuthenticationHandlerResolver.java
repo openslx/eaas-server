@@ -1,7 +1,5 @@
 package de.bwl.bwfla.common.services.security;
 
-import de.bwl.bwfla.common.services.security.SOAPClientAuthenticationHandler;
-
 import java.util.ArrayList;
 import java.util.List;
 import javax.xml.ws.handler.Handler;
@@ -10,9 +8,9 @@ import javax.xml.ws.handler.PortInfo;
 
 public class SOAPClientAuthenticationHandlerResolver implements HandlerResolver {
 
-    private final String authenticationToken;
+    private final MachineToken authenticationToken;
 
-    public SOAPClientAuthenticationHandlerResolver(String authenticationToken)
+    public SOAPClientAuthenticationHandlerResolver(MachineToken authenticationToken)
     {
         this.authenticationToken = authenticationToken;
     }

@@ -112,10 +112,15 @@ public class MachineTokenProvider {
 
     public static SOAPClientAuthenticationHandlerResolver getSoapAuthenticationResolver()
     {
-        if(getApiKey() != null)
-            return new SOAPClientAuthenticationHandlerResolver(getApiKey());
-        else
+        if (apiSecret == null)
             return null;
+
+        final Function<Duration, String> refresher =
+                (time) -> MachineTokenProvider.getBearerToken(apiSecret, time);
+
+        final var lifetime = MachineTokenProvider.getDefaultLifetime();
+        final var token = new MachineToken(lifetime, refresher);
+        return new SOAPClientAuthenticationHandlerResolver(token);
     }
 
     public static Duration getDefaultLifetime()

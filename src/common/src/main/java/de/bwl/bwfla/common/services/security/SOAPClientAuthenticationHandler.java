@@ -1,6 +1,5 @@
 package de.bwl.bwfla.common.services.security;
 
-import javax.servlet.http.HttpServletResponse;
 import javax.xml.namespace.QName;
 import javax.xml.ws.handler.MessageContext;
 import javax.xml.ws.handler.soap.SOAPHandler;
@@ -9,9 +8,9 @@ import java.util.*;
 
 public class SOAPClientAuthenticationHandler implements SOAPHandler<SOAPMessageContext> {
 
-    final String authenticationToken;
+    private final MachineToken authenticationToken;
 
-    public SOAPClientAuthenticationHandler(String authenticationToken)
+    public SOAPClientAuthenticationHandler(MachineToken authenticationToken)
     {
         this.authenticationToken = authenticationToken;
     }
@@ -32,7 +31,7 @@ public class SOAPClientAuthenticationHandler implements SOAPHandler<SOAPMessageC
                 headers = new HashMap<String, List<String>>();
                 context.put(MessageContext.HTTP_REQUEST_HEADERS, headers);
             }
-            headers.put("authorization", Collections.singletonList("Bearer " + authenticationToken));
+            headers.put("authorization", Collections.singletonList(authenticationToken.get()));
         }
         return true;
     }

@@ -24,6 +24,7 @@ import java.util.logging.Logger;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
+import javax.json.JsonObjectBuilder;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
@@ -105,9 +106,14 @@ abstract class EmilRest
 
 	protected static JsonObject newJsonObject(String status, String message)
 	{
+		return EmilRest.newJsonObjectBuilder(status, message)
+				.build();
+	}
+
+	protected static JsonObjectBuilder newJsonObjectBuilder(String status, String message)
+	{
 		return Json.createObjectBuilder()
 				.add("status", status)
-				.add("message", message)
-				.build();
+				.add("message", message);
 	}
 }

@@ -288,13 +288,15 @@ public class Components {
         sessions.remove(session.getId());
         sessionStatsWriter.append(session);
     }
-
+    
     ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
 
         final TaskStack cleanups = new TaskStack(LOG);
         final List<EventObserver> observer = new ArrayList<>();
+        if (request.getUserId() == null)
+            request.setUserId((authenticatedUser != null) ? authenticatedUser.getUserId() : null);
 
         if (request.getClass().equals(UviComponentRequest.class)) {
             try {
@@ -426,7 +428,7 @@ public class Components {
         }
     }
 
-
+    @Deprecated
     protected ComponentResponse createContainerComponent(ContainerComponentRequest desc, TaskStack cleanups, List<EventObserver> observer)
             throws WebApplicationException
     {

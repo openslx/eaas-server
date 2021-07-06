@@ -24,6 +24,7 @@ import de.bwl.bwfla.imageproposer.client.ProposalRequest;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -120,16 +121,16 @@ public class ClassificationTask extends BlockingTask<Object>
             envMap.put(envId, resultList);
         }
 
-        List<EnvironmentInfo> result = new ArrayList<>();
-
-        List<EmilObjectEnvironment> emilObjectEnvironments = emilEnvRepo.getEmilObjectEnvironmentByObject(objectId, request.userCtx);
-
-        for(EmilObjectEnvironment objEnv : emilObjectEnvironments) {
+        final Function<EmilObjectEnvironment, EnvironmentInfo> objEnvToInfo = (objEnv) -> {
             EnvironmentInfo ei = new EnvironmentInfo(objEnv.getEnvId(), objEnv.getTitle());
             // LOG.info("found oe: " + objEnv.getTitle());
             ei.setObjectEnvironment(true);
-            result.add(ei);
-        }
+            return ei;
+        };
+
+        final var result = emilEnvRepo.getEmilObjectEnvironmentByObject(objectId, request.userCtx)
+                .map(objEnvToInfo)
+                .collect(Collectors.toList());
 
         for(String envId: proposedEnvironments)
         {

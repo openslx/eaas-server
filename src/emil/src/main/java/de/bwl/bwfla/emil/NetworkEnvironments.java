@@ -1,5 +1,6 @@
 package de.bwl.bwfla.emil;
 
+import com.openslx.eaas.common.databind.Streamable;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
@@ -30,6 +31,8 @@ import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
+
 
 @Path("network-environments")
 @ApplicationScoped
@@ -75,7 +78,7 @@ public class NetworkEnvironments extends EmilRest {
                     if(networkElement.getMacAddress() != null && networkElement.getMacAddress().equals(""))
                         networkElement.setMacAddress(NetworkUtils.getRandomHWAddress());
             }));
-            emilEnvRepo.saveNetworkEnvironemnt(envNetworkEnv);
+            emilEnvRepo.saveNetworkEnvironment(envNetworkEnv);
 
             final JsonObject json = Json.createObjectBuilder()
                     .add("status", "0")
@@ -95,8 +98,9 @@ public class NetworkEnvironments extends EmilRest {
     @Produces(MediaType.APPLICATION_JSON)
     public Response getNetworkEnvironments(@Context final HttpServletResponse response) {
         try {
-            List<NetworkEnvironment> environments = emilEnvRepo.getNetworkEnvironments();
-            return Response.status(Response.Status.OK).entity(environments).build();
+            Stream<NetworkEnvironment> environments = emilEnvRepo.getNetworkEnvironments();
+            return Response.ok(Streamable.of(environments))
+                    .build();
         } catch (Throwable t) {
             t.printStackTrace();
             throw new BadRequestException(Response
@@ -205,7 +209,7 @@ public class NetworkEnvironments extends EmilRest {
                 if(networkElement.getMacAddress() != null && networkElement.getMacAddress().equals(""))
                     networkElement.setMacAddress(NetworkUtils.getRandomHWAddress());
             }));
-            emilEnvRepo.saveNetworkEnvironemnt(envNetworkEnv);
+            emilEnvRepo.saveNetworkEnvironment(envNetworkEnv);
             return Emil.createResponse(Response.Status.OK, "{\"status\":\"0\"}");
         } catch (Throwable t) {
             t.printStackTrace();

@@ -18,6 +18,7 @@ public class EmilSoftwareObject {
 	 * {"objectId":"id","licenseInformation":"","allowedInstances":1,"nativeFMTs":[],"importFMTs":[],"exportFMTs":[]}
 	 */
 
+	private String id;
 	private String objectId;
 	private String label;
 	private String licenseInformation;
@@ -33,7 +34,13 @@ public class EmilSoftwareObject {
 
 	@JsonProperty
 	private boolean isOperatingSystem;
-	
+
+	public String getId() {
+		return (id != null) ? id : this.getObjectId();
+	}
+	public void setId(String id) {
+		this.id = id;
+	}
 	public String getObjectId() {
 		return objectId;
 	}

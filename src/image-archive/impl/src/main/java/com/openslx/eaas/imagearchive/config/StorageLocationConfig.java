@@ -25,6 +25,7 @@ import de.bwl.bwfla.common.utils.ConfigHelpers;
 import org.apache.tamaya.Configuration;
 import org.apache.tamaya.inject.api.Config;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
@@ -81,7 +82,13 @@ public class StorageLocationConfig extends BaseConfig<StorageLocationConfig>
 
 	public void setPathPrefix(String kind, String prefix)
 	{
-		this.setPathPrefix(BlobKind.from(kind), prefix);
+		try {
+			this.setPathPrefix(BlobKind.from(kind), prefix);
+		}
+		catch (IllegalArgumentException error) {
+			Logger.getLogger("IMAGE-ARCHIVE")
+					.log(Level.WARNING, "Setting path prefix failed!", error);
+		}
 	}
 
 	public BlobStore.Path getPathPrefix(BlobKind kind)

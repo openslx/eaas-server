@@ -22,7 +22,7 @@ package de.bwl.bwfla.emil;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
-import de.bwl.bwfla.common.database.MongodbEaasConnector;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emucomp.api.Environment;
@@ -164,16 +164,22 @@ public class MetaDataSources
 		protected CompletableFuture<Stream<EmilEnvironment>> listEnvironments(QueryOptions options)
 		{
 			final Supplier<Stream<EmilEnvironment>> supplier = () -> {
-				final MongodbEaasConnector.FilterBuilder filter = new MongodbEaasConnector.FilterBuilder();
+				final var filter = new EmilEnvironmentRepository.Filter()
+						.setOffset(options.offset())
+						.setLimit(options.count());
+
 				if (options.hasFrom())
-					filter.withFromTime(Environment.Fields.TIMESTAMP, options.from());
+					filter.setFromTime(options.from());
 
 				if (options.hasUntil())
-					filter.withUntilTime(Environment.Fields.TIMESTAMP, options.until(), true);
+					filter.setUntilTime(options.until());
 
-				filter.eq("archive", "public");
-
-				return environmentRepository.listPublicEnvironments(options.offset(), options.count(), filter);
+				try {
+					return environmentRepository.listPublicEnvironments(filter);
+				}
+				catch (BWFLAException error) {
+					throw new RuntimeException("Listing public environments failed!", error);
+				}
 			};
 
 			return CompletableFuture.supplyAsync(supplier, executor);
@@ -181,15 +187,23 @@ public class MetaDataSources
 
 		public CompletableFuture<Integer> count(QueryOptions options)
 		{
-			final MongodbEaasConnector.FilterBuilder filter = new MongodbEaasConnector.FilterBuilder();
+			final var filter = new EmilEnvironmentRepository.Filter();
 			if (options.hasFrom())
-				filter.withFromTime(Environment.Fields.TIMESTAMP, options.from());
+				filter.setFromTime(options.from());
 
 			if (options.hasUntil())
-				filter.withUntilTime(Environment.Fields.TIMESTAMP, options.until(), true);
+				filter.setUntilTime(options.until());
 
-			filter.eq("archive", "public");
-			return CompletableFuture.supplyAsync(() -> (int) environmentRepository.countPublicEnvironments(filter), executor);
+			final Supplier<Integer> supplier = () -> {
+				try {
+					return (int) environmentRepository.countPublicEnvironments(filter);
+				}
+				catch (BWFLAException error) {
+					throw new RuntimeException("Counting public environments failed!", error);
+				}
+			};
+
+			return CompletableFuture.supplyAsync(supplier, executor);
 		}
 	}
 

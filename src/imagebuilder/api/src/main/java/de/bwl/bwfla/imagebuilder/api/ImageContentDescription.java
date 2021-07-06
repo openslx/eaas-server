@@ -39,6 +39,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 
 
 @XmlRootElement
@@ -424,12 +425,14 @@ public class ImageContentDescription
 		@XmlElement
 		public String imageArchiveHost;
 
-		/* transient members, only used internally */
-		public Path rootfs;
+		@XmlElement
+    	public ArrayList<String> entryProcesses;
 
-		public Path dockerDir;
+		@XmlElement
+		public ArrayList<String> envVariables;
 
-		public String[] layers;
+		@XmlElement
+		public String workingDir;
 
 		public String version;
 
