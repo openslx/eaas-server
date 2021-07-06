@@ -513,7 +513,10 @@ public class EmilEnvironmentRepository {
 				}
 				else // first parent in dest archive, connecting
 				{
-					p.addChildEnvId(lastPrivateChild);
+					if(!p.getBranches().contains(lastPrivateChild))
+						p.addChildEnvId(lastPrivateChild);
+					else
+						LOG.severe("this a branch. we have now two independent heads.");
 					save(p, false, userctx);
 					parent  = null;
 				}
