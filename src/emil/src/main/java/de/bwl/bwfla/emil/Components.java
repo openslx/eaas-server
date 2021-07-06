@@ -168,6 +168,9 @@ public class Components {
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration maxSessionDuration = null;
 
+    @Inject
+    @Config(value = "emucomp.enable_pulseaudio", defaultValue = "false")
+    private boolean pulseAudioAvailable = false;
 
 
     private SoftwareArchiveHelper swHelper;
@@ -795,6 +798,8 @@ public class Components {
                 nics.add(nic);
             }
 
+            checkAndUpdateEnvironmentDefaults(chosenEnv);
+
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
             }
@@ -830,6 +835,17 @@ public class Components {
             LOG.log(Level.SEVERE, "Components create machine failed", error);
             // Return error to the client...
             throw Components.newInternalError(error);
+        }
+    }
+
+    private void checkAndUpdateEnvironmentDefaults(Environment env)
+    {
+        MachineConfiguration mc = (MachineConfiguration) env;
+
+        if (mc.getUiOptions() != null) {
+            if(mc.getUiOptions().getAudio_system() != null
+                    && mc.getUiOptions().getAudio_system().isEmpty() && this.pulseAudioAvailable)
+                mc.getUiOptions().setAudio_system("webrtc");
         }
     }
 
