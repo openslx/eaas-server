@@ -446,6 +446,7 @@ public class EnvironmentRepository extends EmilRest
 				{
 					NetworkingType network = new NetworkingType();
 					network.setConnectEnvs(true);
+					network.setEnableInternet(envReq.isEnableInternet());
 					newEmilEnv.setNetworking(network);
 				}
 
