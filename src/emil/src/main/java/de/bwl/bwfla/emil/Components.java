@@ -841,10 +841,9 @@ public class Components {
     private void checkAndUpdateEnvironmentDefaults(Environment env)
     {
         MachineConfiguration mc = (MachineConfiguration) env;
-
         if (mc.getUiOptions() != null) {
-            if(mc.getUiOptions().getAudio_system() != null
-                    && mc.getUiOptions().getAudio_system().isEmpty() && this.pulseAudioAvailable)
+            if((mc.getUiOptions().getAudio_system() == null
+                    || mc.getUiOptions().getAudio_system().isEmpty()) && this.pulseAudioAvailable)
                 mc.getUiOptions().setAudio_system("webrtc");
         }
     }
