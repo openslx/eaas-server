@@ -655,6 +655,9 @@ public class EmilEnvironmentRepository {
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
 				// LOG.warning("found env " + env.getId()	 + " in archive " + a);
+				if(env.isDeleted())
+					return 0;
+
 				EmilEnvironment emilEnv = getEmilEnvironmentById(env.getId());
 				if(emilEnv != null && (emilEnv.getArchive() == null || !emilEnv.getArchive().equals(archive)))
 				{
