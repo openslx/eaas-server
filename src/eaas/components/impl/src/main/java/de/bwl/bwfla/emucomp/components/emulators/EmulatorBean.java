@@ -1135,13 +1135,21 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				}
 			}
 			else if (this.isXpraBackendEnabled() && this.isContainerModeEnabled()) {
-				final DeprecatedProcessRunner killer = new DeprecatedProcessRunner("sudo");
-				killer.addArguments("runc", "kill", this.getContainerId(), "TERM");
-				killer.setLogger(LOG);
-				if (killer.execute())
-					return;
+				final var killer = new DeprecatedProcessRunner();
+				final var cmds = new ArrayList<List<String>>(2);
+				cmds.add(List.of("runc", "kill", this.getContainerId(), "TERM"));
+				cmds.add(List.of("runc", "kill", "-a", this.getContainerId(), "KILL"));
+				for (final var args : cmds) {
+					killer.setCommand("sudo");
+					killer.addArguments(args);
+					killer.setLogger(LOG);
+					killer.execute();
 
-				runner.waitUntilFinished(15, TimeUnit.SECONDS);
+					if (runner.waitUntilFinished(5, TimeUnit.SECONDS)) {
+						LOG.info("Emulator " + emuProcessId + " stopped.");
+						return;
+					}
+				}
 			}
 		}
 		catch (Exception exception) {
