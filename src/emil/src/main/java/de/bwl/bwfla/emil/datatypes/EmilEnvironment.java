@@ -26,6 +26,7 @@ import java.util.Set;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "type")
 @JsonSubTypes({
 	@JsonSubTypes.Type(value = EmilEnvironment.class, name = EmilEnvironment.Names.ENVIRONMENT),
+	@JsonSubTypes.Type(value = EmilEnvironment.class, name = EmilEnvironment.Names.ENVIRONMENT_COMPAT),
 	@JsonSubTypes.Type(value = EmilObjectEnvironment.class, name = EmilEnvironment.Names.OBJECT_ENVIRONMENT),
 	@JsonSubTypes.Type(value = EmilContainerEnvironment.class, name = EmilEnvironment.Names.CONTAINER_ENVIRONMENT),
 	@JsonSubTypes.Type(value = EmilSessionEnvironment.class, name = EmilEnvironment.Names.SESSION),
@@ -344,6 +345,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 	/** Class names to use as type-information (compile-time constants) */
 	public static class Names
 	{
+		public static final String ENVIRONMENT_COMPAT = "EmilEnvironment";
 		public static final String ENVIRONMENT = "de.bwl.bwfla.emil.datatypes.EmilEnvironment";
 		public static final String OBJECT_ENVIRONMENT = "de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment";
 		public static final String CONTAINER_ENVIRONMENT = "de.bwl.bwfla.emil.datatypes.EmilContainerEnvironment";
