@@ -609,6 +609,13 @@ public class EmilEnvironmentRepository {
 
 				classification.cleanupClassificationData(envId);
 			}
+			else {
+				// user wants to delete this environment, so we need to mark it as deleted
+				// it should not be listed, but remain accessible
+				// semantics for revert and fork need to be clarified
+				env.setDeleted(true);
+				save(env, false);
+			}
 		} else {
 			sessions.delete((EmilSessionEnvironment)env);
 		}
@@ -895,6 +902,7 @@ public class EmilEnvironmentRepository {
 		final HashSet<String> known = new HashSet<>();
 
 		return all.filter(this::isEnvironmentVisible)
+				.filter(e-> !e.isDeleted())
 				.filter(e -> (checkPermissions(e, EmilEnvironmentPermissions.Permissions.READ, userCtx)))
 				.filter(e -> {
 					if (known.contains(e.getEnvId()))
