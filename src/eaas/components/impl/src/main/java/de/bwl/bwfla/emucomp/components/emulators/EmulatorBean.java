@@ -44,6 +44,7 @@ import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils.XmountOutputFormat;
 import de.bwl.bwfla.emucomp.components.BindingsManager;
 import de.bwl.bwfla.emucomp.components.EaasComponentBean;
+import de.bwl.bwfla.emucomp.components.Tail;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.EventID;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
 import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
@@ -177,6 +178,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	final boolean isScreenshotEnabled = ConfigurationProvider.getConfiguration().get("emucomp.enable_screenshooter", Boolean.class);
 
 	protected PostScriptPrinter printer = null;
+
+	protected Tail emulatorStdOut;
+	protected Tail emulatorStdErr;
 
 	/** Internal chain of IGuacInterceptors. */
 	private final GuacInterceptorChain interceptors = new GuacInterceptorChain(2);
@@ -1074,6 +1078,13 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		if (printer != null)
 			printer.stop();
+
+		if(emulatorStdOut != null)
+			emulatorStdOut.cleanup();
+
+		if(emulatorStdErr != null)
+			emulatorStdErr.cleanup();
+
 	}
 
 	private void closeAllConnectors()
@@ -2494,5 +2505,29 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return null;
 	}
 
+	public Tail getEmulatorStdOut()
+	{
+		final EmuCompState curstate = emuBeanState.get();
+		if (curstate != EmuCompState.EMULATOR_RUNNING) {
+			return null;
+		}
 
+		if(emulatorStdOut == null)
+			emulatorStdOut = new Tail(emuRunner.getStdOutPath().toString());
+
+		return emulatorStdOut;
+	}
+
+	public Tail getEmulatorStdErr()
+	{
+		final EmuCompState curstate = emuBeanState.get();
+		if (curstate != EmuCompState.EMULATOR_RUNNING) {
+			return null;
+		}
+
+		if(emulatorStdErr == null)
+			emulatorStdErr = new Tail(emuRunner.getStdErrPath().toString());
+
+		return emulatorStdErr;
+	}
 }
