@@ -179,8 +179,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	protected PostScriptPrinter printer = null;
 
-	protected Tail emulatorStdOut;
-	protected Tail emulatorStdErr;
+	protected List<Tail> emulatorStdOutListener = new ArrayList<>();
+	protected List<Tail> emulatorStdErrListener = new ArrayList<>();
 
 	/** Internal chain of IGuacInterceptors. */
 	private final GuacInterceptorChain interceptors = new GuacInterceptorChain(2);
@@ -1079,12 +1079,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (printer != null)
 			printer.stop();
 
-		if(emulatorStdOut != null)
-			emulatorStdOut.cleanup();
-
-		if(emulatorStdErr != null)
-			emulatorStdErr.cleanup();
-
+		emulatorStdErrListener.forEach(Tail::cleanup);
+		emulatorStdOutListener.forEach(Tail::cleanup);
 	}
 
 	private void closeAllConnectors()
@@ -2512,8 +2508,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return null;
 		}
 
-		if(emulatorStdOut == null)
-			emulatorStdOut = new Tail(emuRunner.getStdOutPath().toString());
+		Tail emulatorStdOut = new Tail(emuRunner.getStdOutPath().toString());
+		emulatorStdOutListener.add(emulatorStdOut);
 
 		return emulatorStdOut;
 	}
@@ -2525,8 +2521,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			return null;
 		}
 
-		if(emulatorStdErr == null)
-			emulatorStdErr = new Tail(emuRunner.getStdErrPath().toString());
+		Tail emulatorStdErr = new Tail(emuRunner.getStdErrPath().toString());
+		emulatorStdErrListener.add(emulatorStdErr);
 
 		return emulatorStdErr;
 	}
