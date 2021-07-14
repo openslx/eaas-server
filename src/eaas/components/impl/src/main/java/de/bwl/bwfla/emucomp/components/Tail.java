@@ -15,7 +15,7 @@ public class Tail {
         this.file = file;
 
         tailProcess = new DeprecatedProcessRunner("tail");
-        tailProcess.addArguments("-f", "-c", "10");
+        tailProcess.addArguments("-f", "-c", "+0");
         tailProcess.addArgument(file);
         tailProcess.start(false);
     }
@@ -23,7 +23,7 @@ public class Tail {
     public void cleanup()
     {
         this.tailProcess.stop();
-        this.cleanup();
+        this.tailProcess.cleanup();
     }
 
     public InputStream getStream() throws IOException {

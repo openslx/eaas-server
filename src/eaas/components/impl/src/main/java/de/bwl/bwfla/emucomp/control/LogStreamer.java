@@ -11,7 +11,8 @@ import javax.inject.Inject;
 import javax.ws.rs.*;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
-import java.io.IOException;
+import javax.ws.rs.core.StreamingOutput;
+import java.io.*;
 
 @ApplicationScoped
 @Path("/api/v1/components")
@@ -35,10 +36,16 @@ public class LogStreamer {
 			if(stdout == null)
 			    return Response.status(Response.Status.NOT_FOUND).build();
 
+			StreamingOutput stream = out -> {
+				while(true) {
+					out.write(stdout.getStream().read());
+					out.flush();
+				}
+			};
 			return Response.status(Response.Status.OK)
-						.entity(stdout.getStream()).build();
+						.entity(stream).build();
 		}
-		catch (BWFLAException | IOException error) {
+		catch (BWFLAException error) {
 			throw new NotFoundException("Component not found: " + componentId);
 		}
 	}
@@ -58,10 +65,16 @@ public class LogStreamer {
 			if(stderr == null)
 			    return Response.status(Response.Status.NOT_FOUND).build();
 
+			StreamingOutput stream = out -> {
+				while(true) {
+					out.write(stderr.getStream().read());
+					out.flush();
+				}
+			};
 			return Response.status(Response.Status.OK)
-						.entity(stderr.getStream()).build();
+						.entity(stream).build();
 		}
-		catch (BWFLAException | IOException error) {
+		catch (BWFLAException error) {
 			throw new NotFoundException("Component not found: " + componentId);
 		}
 	}
