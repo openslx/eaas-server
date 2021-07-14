@@ -128,9 +128,6 @@ public class EmilEnvironmentRepository {
 		final var userid = userctx.getUserId();
 		final var role = userctx.getRole();
 
-		if(role == Role.ADMIN)
-			return true;
-
 		EmilEnvironmentPermissions permissions = env.getPermissions();
 		if (permissions == null) // nothing to be done
 		{
@@ -162,6 +159,9 @@ public class EmilEnvironmentRepository {
 				}
 			}
 		}
+
+		if (role == Role.ADMIN)
+			return true;  // skip all other checks!
 
 		// check node-level permissions first
 		if (permissions.getGroup() != null) {
