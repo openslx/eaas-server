@@ -20,6 +20,7 @@
 package de.bwl.bwfla.metadata.oai.harvester.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
@@ -32,11 +33,10 @@ import java.util.ArrayList;
 import java.util.Collection;
 
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BackendConfig extends BaseConfig
 {
 	private String name;
-
-	private String secret = null;
 
 	private Collection<StreamConfig> streams = new ArrayList<>();
 
@@ -47,12 +47,6 @@ public class BackendConfig extends BaseConfig
 	public String getName()
 	{
 		return name;
-	}
-
-	@JsonProperty(Fields.SECRET)
-	public String getSecret()
-	{
-		return secret;
 	}
 
 	@Config(Fields.NAME)
@@ -136,7 +130,7 @@ public class BackendConfig extends BaseConfig
 			return secret != null;
 		}
 
-		@JsonProperty(Fields.SECRET)
+		@JsonIgnore
 		public String getSecret()
 		{
 			return secret;

@@ -97,15 +97,23 @@ public class HarvesterAPI
 				.build();
 	}
 
+	@GET
+	@Path("/{name}")
+	@Secured(roles={Role.ADMIN})
+	@Produces(MediaType.APPLICATION_JSON)
+	public Response fetch(@PathParam("name") String name)
+	{
+		final HarvesterBackend harvester = this.lookup(name);
+		return Response.ok(harvester.getConfig(), MediaType.APPLICATION_JSON_TYPE)
+				.build();
+	}
+
 	@POST
 	@Secured(roles={Role.ADMIN})
 	@Path("/{name}")
 	public CompletionStage<Response> harvest(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
-		final HarvesterBackend harvester = harvesters.lookup(name);
-		if (harvester == null)
-			throw new NotFoundException("Harvester not found: " + name);
-
+		final HarvesterBackend harvester = this.lookup(name);
 		final Instant fromts = HarvesterAPI.getFromTimestamp(request);
 		final Instant untilts = HarvesterAPI.getUntilTimestamp(request);
 
@@ -130,10 +138,7 @@ public class HarvesterAPI
 	@Path("/{name}/status")
 	public Response status(@PathParam("name") String name)
 	{
-		final HarvesterBackend harvester = harvesters.lookup(name);
-		if (harvester == null)
-			throw new NotFoundException("Harvester not found: " + name);
-
+		final HarvesterBackend harvester = this.lookup(name);
 		return Response.ok(harvester.getStatus(), MediaType.APPLICATION_JSON_TYPE)
 				.build();
 	}
@@ -158,5 +163,14 @@ public class HarvesterAPI
 	private static Instant getUntilTimestamp(HttpServletRequest request)
 	{
 		return HarvesterAPI.getTimestampParam(request, "until", null);
+	}
+
+	private HarvesterBackend lookup(String name) throws NotFoundException
+	{
+		final HarvesterBackend harvester = harvesters.lookup(name);
+		if (harvester == null)
+			throw new NotFoundException("Harvester not found: " + name);
+
+		return harvester;
 	}
 }
