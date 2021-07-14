@@ -66,7 +66,7 @@ public class HarvesterAPI
 	// ========== Admin API ==============================
 
 	@GET
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
 	public Response listHarvesters()
 	{
@@ -76,7 +76,7 @@ public class HarvesterAPI
 	}
 
 	@POST
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(BackendConfig config)
 	{
@@ -86,7 +86,7 @@ public class HarvesterAPI
 	}
 
 	@DELETE
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Path("/{name}")
 	public Response unregister(@PathParam("name") String name)
 	{
@@ -98,7 +98,7 @@ public class HarvesterAPI
 	}
 
 	@POST
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Path("/{name}")
 	public CompletionStage<Response> harvest(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
@@ -126,7 +126,7 @@ public class HarvesterAPI
 	}
 
 	@GET
-	@Secured
+	@Secured(roles={Role.ADMIN})
 	@Path("/{name}/status")
 	public Response status(@PathParam("name") String name)
 	{
