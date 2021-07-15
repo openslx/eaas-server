@@ -62,8 +62,10 @@ public class BackendConfig extends BaseConfig
 		return streams;
 	}
 
+	@JsonProperty(Fields.STREAMS)
 	public void setStreamConfigs(Collection<StreamConfig> streams)
 	{
+		ConfigHelpers.check(streams, "Collection of streams is invalid!");
 		this.streams = streams;
 	}
 
@@ -104,6 +106,11 @@ public class BackendConfig extends BaseConfig
 			if(secret != null && !secret.isEmpty())
 				this.secret = secret;
 		}
+
+		public void validate() throws IllegalStateException
+		{
+			this.setUrl(url);
+		}
 	}
 
 	public static class SinkConfig
@@ -141,6 +148,11 @@ public class BackendConfig extends BaseConfig
 		{
 			if(secret != null && !secret.isEmpty())
 				this.secret = secret;
+		}
+
+		public void validate() throws IllegalStateException
+		{
+			this.setBaseUrl(baseurl);
 		}
 	}
 
@@ -203,6 +215,12 @@ public class BackendConfig extends BaseConfig
 			ConfigHelpers.configure(source, ConfigHelpers.filter(config, Fields.SOURCE + "."));
 			ConfigHelpers.configure(sink, ConfigHelpers.filter(config, Fields.SINK + "."));
 		}
+
+		public void validate() throws IllegalStateException
+		{
+			source.validate();
+			sink.validate();
+		}
 	}
 
 
@@ -228,6 +246,15 @@ public class BackendConfig extends BaseConfig
 				streams.add(stream);
 			}
 		}
+	}
+
+	public void validate() throws IllegalStateException
+	{
+		if (name == null || !name.matches("[a-z0-9]+(-[a-z0-9]+)*"))
+			throw new IllegalArgumentException("Name is invalid: '" + name + "'");
+
+		for (var stream : streams)
+			stream.validate();
 	}
 
 

@@ -82,7 +82,13 @@ public class HarvesterAPI
 	@Consumes(MediaType.APPLICATION_JSON)
 	public Response register(BackendConfig config)
 	{
-		harvesters.add(config);
+		try {
+			harvesters.add(config);
+		}
+		catch (Exception error) {
+			throw new BadRequestException(error);
+		}
+
 		return Response.ok()
 				.build();
 	}
