@@ -177,10 +177,7 @@ public class DataStream
 		final String baseurl = config.getUrl();
 		final String format = HarvesterConfig.getMetaDataFormat();
 		final Transformer transformer = HarvesterConfig.getMetaDataTransformer();
-
-		String token = null;
-		if (config.hasSecret())
-			token = MachineTokenProvider.getJwt(config.getSecret());
+		final var token = (config.hasSecret()) ? MachineTokenProvider.getAccessToken(config.getSecret()) : null;
 
 		return new Context()
 				.withBaseUrl(baseurl)
