@@ -20,6 +20,7 @@
 package de.bwl.bwfla.metadata.oai.harvester;
 
 
+import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.rest.ResponseUtils;
@@ -67,9 +68,11 @@ public class HarvesterAPI
 
 	// ========== Admin API ==============================
 
+	/** List all registered harvesters */
 	@GET
 	@Secured(roles={Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(String[].class)
 	public Response listHarvesters()
 	{
 		final Collection<String> ids = harvesters.list();
@@ -77,9 +80,11 @@ public class HarvesterAPI
 				.build();
 	}
 
+	/** Register a new harvester */
 	@POST
 	@Secured(roles={Role.ADMIN})
 	@Consumes(MediaType.APPLICATION_JSON)
+	@TypeHint(TypeHint.NO_CONTENT.class)
 	public Response register(BackendConfig config)
 	{
 		try {
@@ -93,9 +98,11 @@ public class HarvesterAPI
 				.build();
 	}
 
+	/** Delete an existing harvester */
 	@DELETE
 	@Secured(roles={Role.ADMIN})
 	@Path("/{name}")
+	@TypeHint(TypeHint.NO_CONTENT.class)
 	public Response unregister(@PathParam("name") String name)
 	{
 		if (!harvesters.remove(name))
@@ -105,10 +112,12 @@ public class HarvesterAPI
 				.build();
 	}
 
+	/** Look up harvester's config */
 	@GET
 	@Path("/{name}")
 	@Secured(roles={Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(BackendConfig.class)
 	public Response fetch(@PathParam("name") String name)
 	{
 		final HarvesterBackend harvester = this.lookup(name);
@@ -116,10 +125,12 @@ public class HarvesterAPI
 				.build();
 	}
 
+	/** Update harvester's config */
 	@PUT
 	@Path("/{name}")
 	@Secured(roles={Role.ADMIN})
 	@Consumes(MediaType.APPLICATION_JSON)
+	@TypeHint(TypeHint.NO_CONTENT.class)
 	public Response update(@PathParam("name") String name, BackendConfig config)
 	{
 		if (!name.contentEquals(config.getName()))
@@ -128,9 +139,12 @@ public class HarvesterAPI
 		return this.register(config);
 	}
 
+	/** Execute named harvester */
 	@POST
 	@Secured(roles={Role.ADMIN})
 	@Path("/{name}")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(HarvestingResult.class)
 	public CompletionStage<Response> harvest(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
 		final HarvesterBackend harvester = this.lookup(name);
@@ -140,7 +154,7 @@ public class HarvesterAPI
 		final Supplier<Response> responder = () -> {
 			try {
 				final HarvestingResult result = harvester.execute(fromts, untilts);
-				return Response.ok(result.toJsonString(), MediaType.APPLICATION_JSON_TYPE)
+				return Response.ok(result, MediaType.APPLICATION_JSON_TYPE)
 						.build();
 			}
 			catch (Exception error) {
@@ -153,9 +167,12 @@ public class HarvesterAPI
 		return CompletableFuture.supplyAsync(responder, executor);
 	}
 
+	/** Get harvester's status */
 	@GET
 	@Secured(roles={Role.ADMIN})
 	@Path("/{name}/status")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(HarvesterStatus.class)
 	public Response status(@PathParam("name") String name)
 	{
 		final HarvesterBackend harvester = this.lookup(name);
