@@ -46,7 +46,7 @@ class DockerTools {
         runner_.setCommand("/bin/sh");
         runner_.setWorkingDirectory(destDir);
         runner_.addArgument("-c");
-        runner_.addArgument("crane export \"$1\" - | tar x");
+        runner_.addArgument("crane export \"$1\" - | tar x --exclude=sys --exclude=dev --exclude=proc");
         runner_.addArgument("sh");
         runner_.addArgument(ds.imageRef + "@" + ds.digest);
         if(!runner_.execute(true))
