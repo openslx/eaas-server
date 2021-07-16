@@ -42,7 +42,7 @@
 		<minio.version>8.0.3</minio.version>
 		<!-- Keep this version in sync with the version defined by
 		     the wildfly BOM! -->
-		<resteasy.version>3.11.0.Final</resteasy.version>
+		<resteasy.version>4.6.1.Final</resteasy.version>
 		<ejb3.version>2.3.0.Final</ejb3.version>
 		<cxf.version>3.3.6</cxf.version>
 
