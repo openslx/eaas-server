@@ -129,7 +129,14 @@ public class HarvesterRegistry extends ObjectRegistry<HarvesterBackend>
 
 			description.getBackends()
 					.forEach((bd) -> {
-						final String name = bd.getBackendConfig().getName();
+						final String name = bd.getBackendConfig()
+								.getName()
+								.replaceAll("\\s+", "-")
+								.toLowerCase();
+
+						bd.getBackendConfig()
+								.setName(name);
+
 						this.add(new HarvesterBackend(bd, http));
 						log.info("Harvester's backend state restored: " + name);
 					});

@@ -20,6 +20,7 @@
 package de.bwl.bwfla.metadata.oai.harvester;
 
 
+import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.rest.ResponseUtils;
@@ -29,11 +30,13 @@ import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletRequest;
+import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
+import javax.ws.rs.PUT;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
@@ -65,9 +68,11 @@ public class HarvesterAPI
 
 	// ========== Admin API ==============================
 
+	/** List all registered harvesters */
 	@GET
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(String[].class)
 	public Response listHarvesters()
 	{
 		final Collection<String> ids = harvesters.list();
@@ -75,19 +80,29 @@ public class HarvesterAPI
 				.build();
 	}
 
+	/** Register a new harvester */
 	@POST
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Consumes(MediaType.APPLICATION_JSON)
+	@TypeHint(TypeHint.NO_CONTENT.class)
 	public Response register(BackendConfig config)
 	{
-		harvesters.add(config);
+		try {
+			harvesters.add(config);
+		}
+		catch (Exception error) {
+			throw new BadRequestException(error);
+		}
+
 		return Response.ok()
 				.build();
 	}
 
+	/** Delete an existing harvester */
 	@DELETE
-	@Secured(roles={Role.RESTRICTED})
+	@Secured(roles={Role.ADMIN})
 	@Path("/{name}")
+	@TypeHint(TypeHint.NO_CONTENT.class)
 	public Response unregister(@PathParam("name") String name)
 	{
 		if (!harvesters.remove(name))
@@ -97,22 +112,49 @@ public class HarvesterAPI
 				.build();
 	}
 
-	@POST
-	@Secured(roles={Role.RESTRICTED})
+	/** Look up harvester's config */
+	@GET
 	@Path("/{name}")
+	@Secured(roles={Role.ADMIN})
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(BackendConfig.class)
+	public Response fetch(@PathParam("name") String name)
+	{
+		final HarvesterBackend harvester = this.lookup(name);
+		return Response.ok(harvester.getConfig(), MediaType.APPLICATION_JSON_TYPE)
+				.build();
+	}
+
+	/** Update harvester's config */
+	@PUT
+	@Path("/{name}")
+	@Secured(roles={Role.ADMIN})
+	@Consumes(MediaType.APPLICATION_JSON)
+	@TypeHint(TypeHint.NO_CONTENT.class)
+	public Response update(@PathParam("name") String name, BackendConfig config)
+	{
+		if (!name.contentEquals(config.getName()))
+			throw new BadRequestException("Invalid harvester name!");
+
+		return this.register(config);
+	}
+
+	/** Execute named harvester */
+	@POST
+	@Secured(roles={Role.ADMIN})
+	@Path("/{name}")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(HarvestingResult.class)
 	public CompletionStage<Response> harvest(@PathParam("name") String name, @Context HttpServletRequest request)
 	{
-		final HarvesterBackend harvester = harvesters.lookup(name);
-		if (harvester == null)
-			throw new NotFoundException("Harvester not found: " + name);
-
+		final HarvesterBackend harvester = this.lookup(name);
 		final Instant fromts = HarvesterAPI.getFromTimestamp(request);
 		final Instant untilts = HarvesterAPI.getUntilTimestamp(request);
 
 		final Supplier<Response> responder = () -> {
 			try {
 				final HarvestingResult result = harvester.execute(fromts, untilts);
-				return Response.ok(result.toJsonString(), MediaType.APPLICATION_JSON_TYPE)
+				return Response.ok(result, MediaType.APPLICATION_JSON_TYPE)
 						.build();
 			}
 			catch (Exception error) {
@@ -125,15 +167,15 @@ public class HarvesterAPI
 		return CompletableFuture.supplyAsync(responder, executor);
 	}
 
+	/** Get harvester's status */
 	@GET
-	@Secured
+	@Secured(roles={Role.ADMIN})
 	@Path("/{name}/status")
+	@Produces(MediaType.APPLICATION_JSON)
+	@TypeHint(HarvesterStatus.class)
 	public Response status(@PathParam("name") String name)
 	{
-		final HarvesterBackend harvester = harvesters.lookup(name);
-		if (harvester == null)
-			throw new NotFoundException("Harvester not found: " + name);
-
+		final HarvesterBackend harvester = this.lookup(name);
 		return Response.ok(harvester.getStatus(), MediaType.APPLICATION_JSON_TYPE)
 				.build();
 	}
@@ -158,5 +200,14 @@ public class HarvesterAPI
 	private static Instant getUntilTimestamp(HttpServletRequest request)
 	{
 		return HarvesterAPI.getTimestampParam(request, "until", null);
+	}
+
+	private HarvesterBackend lookup(String name) throws NotFoundException
+	{
+		final HarvesterBackend harvester = harvesters.lookup(name);
+		if (harvester == null)
+			throw new NotFoundException("Harvester not found: " + name);
+
+		return harvester;
 	}
 }

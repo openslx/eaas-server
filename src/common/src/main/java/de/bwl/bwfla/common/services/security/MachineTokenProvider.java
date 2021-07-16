@@ -93,6 +93,20 @@ public class MachineTokenProvider {
         return new MachineToken(lifetime, refresher);
     }
 
+    public static MachineToken getAccessToken(String secret)
+    {
+        return MachineTokenProvider.getAccessToken(secret, MachineTokenProvider.getDefaultLifetime());
+    }
+
+    public static MachineToken getAccessToken(String secret, Duration lifetime)
+    {
+        final Function<Duration, String> refresher = (time) -> {
+            return MachineTokenProvider.getBearerToken(secret, time);
+        };
+
+        return new MachineToken(lifetime, refresher);
+    }
+
     public static String getAuthenticationProxy()
     {
         if( getApiKey() != null )
