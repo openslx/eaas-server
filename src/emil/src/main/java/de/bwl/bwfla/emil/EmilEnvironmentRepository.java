@@ -128,9 +128,6 @@ public class EmilEnvironmentRepository {
 		final var userid = userctx.getUserId();
 		final var role = userctx.getRole();
 
-		if(role == Role.ADMIN)
-			return true;
-
 		EmilEnvironmentPermissions permissions = env.getPermissions();
 		if (permissions == null) // nothing to be done
 		{
@@ -162,6 +159,9 @@ public class EmilEnvironmentRepository {
 				}
 			}
 		}
+
+		if (role == Role.ADMIN)
+			return true;  // skip all other checks!
 
 		// check node-level permissions first
 		if (permissions.getGroup() != null) {
@@ -513,7 +513,10 @@ public class EmilEnvironmentRepository {
 				}
 				else // first parent in dest archive, connecting
 				{
-					p.addChildEnvId(lastPrivateChild);
+					if(!p.getBranches().contains(lastPrivateChild))
+						p.addChildEnvId(lastPrivateChild);
+					else
+						LOG.severe("this a branch. we have now two independent heads.");
 					save(p, false, userctx);
 					parent  = null;
 				}
@@ -652,6 +655,9 @@ public class EmilEnvironmentRepository {
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
 				// LOG.warning("found env " + env.getId()	 + " in archive " + a);
+				if(env.isDeleted())
+					return 0;
+
 				EmilEnvironment emilEnv = getEmilEnvironmentById(env.getId());
 				if(emilEnv != null && (emilEnv.getArchive() == null || !emilEnv.getArchive().equals(archive)))
 				{

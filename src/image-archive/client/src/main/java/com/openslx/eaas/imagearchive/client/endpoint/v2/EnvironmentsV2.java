@@ -215,41 +215,11 @@ public class EnvironmentsV2
 	public void delete(String id, boolean metadata, boolean images) throws BWFLAException
 	{
 		logger.info("Deleting environment '" + id + "'...");
-
-		// NOTE: if we delete metadata, we have to delete images too!
-		if (metadata || images) {
-			final var environment = this.fetch(id);
-			List<AbstractDataResource> data = Collections.emptyList();
-			if (environment instanceof MachineConfiguration)
-				data = ((MachineConfiguration) environment).getAbstractDataResource();
-			else if (environment instanceof OciContainerConfiguration)
-				data = ((OciContainerConfiguration) environment).getDataResources();
-
-			for (AbstractDataResource adr : data) {
-				if (!(adr instanceof ImageArchiveBinding))
-					continue;
-
-				final var binding = (ImageArchiveBinding) adr;
-				final var imageid = binding.getImageId();
-				if (imageid != null && !imageid.isEmpty()) {
-					archive.images()
-							.delete(imageid);
-
-					logger.info("Deleted image '" + imageid + "'");
-				}
-			}
-		}
-
-		if (metadata) {
-			// finally, delete metadata...
-			for (var resource : resources) {
-				if (resource.exists(id)) {
-					resource.delete(id);
-					break;
-				}
-			}
-
-			logger.info("Deleted environment '" + id + "'");
+		final var environment = this.fetch(id);
+		if (environment != null) {
+			environment.setDeleted(true);
+			this.replace(id, environment);
+			logger.info("Marked environment '" + id + "' as deleted");
 		}
 	}
 
