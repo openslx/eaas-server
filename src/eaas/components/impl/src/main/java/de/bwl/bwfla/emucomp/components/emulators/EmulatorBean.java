@@ -47,11 +47,7 @@ import de.bwl.bwfla.emucomp.components.EaasComponentBean;
 import de.bwl.bwfla.emucomp.components.Tail;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.EventID;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
-import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
-import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
-import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
-import de.bwl.bwfla.emucomp.control.connectors.IThrowingSupplier;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
+import de.bwl.bwfla.emucomp.control.connectors.*;
 import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
 import de.bwl.bwfla.emucomp.xpra.PulseAudioStreamer;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
@@ -178,9 +174,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	final boolean isScreenshotEnabled = ConfigurationProvider.getConfiguration().get("emucomp.enable_screenshooter", Boolean.class);
 
 	protected PostScriptPrinter printer = null;
-
-	protected List<Tail> emulatorStdOutListener = new ArrayList<>();
-	protected List<Tail> emulatorStdErrListener = new ArrayList<>();
 
 	/** Internal chain of IGuacInterceptors. */
 	private final GuacInterceptorChain interceptors = new GuacInterceptorChain(2);
@@ -944,6 +937,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.addControlConnector(new AudioConnector(() -> new PulseAudioStreamer(cid, pulsesock)));
 		}
 
+		this.addControlConnector(new StdoutLogConnector(emuRunner.getStdOutPath()));
+		this.addControlConnector(new StderrLogConnector(emuRunner.getStdOutPath()));
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
 	}
@@ -1079,8 +1074,14 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (printer != null)
 			printer.stop();
 
-		emulatorStdErrListener.forEach(Tail::cleanup);
-		emulatorStdOutListener.forEach(Tail::cleanup);
+		final var stdoutCon = (LogConnector) this.getControlConnector(StdoutLogConnector.PROTOCOL);
+		if(stdoutCon != null)
+			stdoutCon.cleanup();
+
+		final var stderrCon = (LogConnector) this.getControlConnector(StderrLogConnector.PROTOCOL);
+		if(stderrCon != null)
+			stderrCon.cleanup();
+
 	}
 
 	private void closeAllConnectors()
@@ -2503,27 +2504,17 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public Tail getEmulatorStdOut()
 	{
-		final EmuCompState curstate = emuBeanState.get();
-		if (curstate != EmuCompState.EMULATOR_RUNNING) {
+		LogConnector logCon = (LogConnector)getControlConnector(StdoutLogConnector.PROTOCOL);
+		if(logCon == null)
 			return null;
-		}
-
-		Tail emulatorStdOut = new Tail(emuRunner.getStdOutPath().toString());
-		emulatorStdOutListener.add(emulatorStdOut);
-
-		return emulatorStdOut;
+		return logCon.connect();
 	}
 
 	public Tail getEmulatorStdErr()
 	{
-		final EmuCompState curstate = emuBeanState.get();
-		if (curstate != EmuCompState.EMULATOR_RUNNING) {
+		LogConnector logCon = (LogConnector)getControlConnector(StderrLogConnector.PROTOCOL);
+		if(logCon == null)
 			return null;
-		}
-
-		Tail emulatorStdErr = new Tail(emuRunner.getStdErrPath().toString());
-		emulatorStdErrListener.add(emulatorStdErr);
-
-		return emulatorStdErr;
+		return logCon.connect();
 	}
 }

@@ -15,7 +15,7 @@ import javax.ws.rs.core.StreamingOutput;
 import java.io.*;
 
 @ApplicationScoped
-@Path("/api/v1/components")
+@Path("/components")
 public class LogStreamer {
 
     @Inject
