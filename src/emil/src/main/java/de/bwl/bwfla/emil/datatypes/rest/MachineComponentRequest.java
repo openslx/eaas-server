@@ -65,6 +65,12 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false)
     private String nic;
 
+    @XmlElement(required = false, defaultValue = "false")
+    private boolean headless;
+
+    @XmlElement(required = false, defaultValue = "120")
+    private int sessionLifetime;
+
     @XmlElement(required = false)
     private LinuxRuntimeContainerReq linuxRuntimeData;
 
@@ -120,6 +126,14 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         if(userMedia == null)
             userMedia = new ArrayList<>();
         return userMedia;
+    }
+
+    public boolean isHeadless() {
+        return headless;
+    }
+
+    public int getSessionLifetime() {
+        return sessionLifetime;
     }
 
     @XmlRootElement

@@ -44,13 +44,10 @@ import de.bwl.bwfla.emucomp.api.Drive.DriveType;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils.XmountOutputFormat;
 import de.bwl.bwfla.emucomp.components.BindingsManager;
 import de.bwl.bwfla.emucomp.components.EaasComponentBean;
+import de.bwl.bwfla.emucomp.components.Tail;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.EventID;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
-import de.bwl.bwfla.emucomp.control.connectors.AudioConnector;
-import de.bwl.bwfla.emucomp.control.connectors.EthernetConnector;
-import de.bwl.bwfla.emucomp.control.connectors.GuacamoleConnector;
-import de.bwl.bwfla.emucomp.control.connectors.IThrowingSupplier;
-import de.bwl.bwfla.emucomp.control.connectors.XpraConnector;
+import de.bwl.bwfla.emucomp.control.connectors.*;
 import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
 import de.bwl.bwfla.emucomp.xpra.PulseAudioStreamer;
 import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
@@ -255,6 +252,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return (emuBeanMode == EmulatorBeanMode.Y11);
 	}
 
+	public boolean isHeadlessModeEnabled() { return (emuBeanMode == EmulatorBeanMode.HEADLESS); }
+
 	public boolean isContainerModeEnabled()
 	{
 		return emuContainerModeEnabled;
@@ -275,6 +274,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	{
 		return "machine";
 	}
+
+	boolean isHeadlessSupported() { return false; }
 
 	boolean isBeanReady() {
 		return false; // this is the default, if the bean has no internal state
@@ -427,7 +428,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		final MachineConfiguration env = (MachineConfiguration) compConfig;
-		emuBeanMode = EmulatorBean.getEmuBeanMode(env);
+		emuBeanMode = getEmuBeanMode(env);
 		emuRunner.setLogger(LOG);
 
 		try {
@@ -595,7 +596,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		}
 
 		try {
-			if (this.isSdlBackendEnabled() || this.isXpraBackendEnabled())
+			if (this.isSdlBackendEnabled() || this.isXpraBackendEnabled() || this.isHeadlessModeEnabled())
 				this.startBackend();
 			else {
 				throw new BWFLAException("Trying to start emulator using unimplemented mode: " + this.getEmuBeanMode())
@@ -936,6 +937,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.addControlConnector(new AudioConnector(() -> new PulseAudioStreamer(cid, pulsesock)));
 		}
 
+		this.addControlConnector(new StdoutLogConnector(emuRunner.getStdOutPath()));
+		this.addControlConnector(new StderrLogConnector(emuRunner.getStdOutPath()));
 
 		emuBeanState.update(EmuCompState.EMULATOR_RUNNING);
 	}
@@ -1070,6 +1073,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		if (printer != null)
 			printer.stop();
+
+		final var stdoutCon = (LogConnector) this.getControlConnector(StdoutLogConnector.PROTOCOL);
+		if(stdoutCon != null)
+			stdoutCon.cleanup();
+
+		final var stderrCon = (LogConnector) this.getControlConnector(StderrLogConnector.PROTOCOL);
+		if(stderrCon != null)
+			stderrCon.cleanup();
+
 	}
 
 	private void closeAllConnectors()
@@ -1452,11 +1464,15 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	// Protected
 	// /////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	private static EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
+	private EmulatorBeanMode getEmuBeanMode(MachineConfiguration config) throws IllegalArgumentException
 	{
 		final UiOptions options = config.getUiOptions();
-		if (options != null && options.getForwarding_system() != null)
-			return EmulatorBeanMode.valueOf(options.getForwarding_system());
+		if (options != null && options.getForwarding_system() != null) {
+			var ret = EmulatorBeanMode.valueOf(options.getForwarding_system());
+			if(ret == EmulatorBeanMode.HEADLESS && !this.isHeadlessSupported())
+				return EmulatorBeanMode.SDLONP;
+			return ret;
+		}
 		else return EmulatorBeanMode.SDLONP;
 	}
 
@@ -2494,5 +2510,19 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return null;
 	}
 
+	public Tail getEmulatorStdOut()
+	{
+		LogConnector logCon = (LogConnector)getControlConnector(StdoutLogConnector.PROTOCOL);
+		if(logCon == null)
+			return null;
+		return logCon.connect();
+	}
 
+	public Tail getEmulatorStdErr()
+	{
+		LogConnector logCon = (LogConnector)getControlConnector(StderrLogConnector.PROTOCOL);
+		if(logCon == null)
+			return null;
+		return logCon.connect();
+	}
 }
