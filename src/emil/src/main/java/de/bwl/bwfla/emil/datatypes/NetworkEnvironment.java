@@ -51,6 +51,8 @@ public class NetworkEnvironment extends JaxbType {
     private NetworkEnvironmentNetworkingType networking;
 
     public ArrayList<NetworkEnvironmentElement> getEmilEnvironments() {
+        if(emilEnvironments == null)
+            emilEnvironments = new ArrayList<>();
         return emilEnvironments;
     }
 
