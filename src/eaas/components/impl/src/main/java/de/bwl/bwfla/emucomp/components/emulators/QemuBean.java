@@ -157,7 +157,9 @@ public class QemuBean extends EmulatorBean
 				emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 			else emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 		} else if (this.isXpraBackendEnabled()){
-			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
+			if (this.isPulseAudioEnabled())
+				emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
+			else emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 		}
 
 		// Qemu's pipe-based character-device requires two pipes (<name>.in + <name>.out) to be created
