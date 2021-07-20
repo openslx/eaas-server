@@ -32,15 +32,20 @@ public class LogStreamer {
 			    return Response.status(Response.Status.NOT_FOUND).build();
 
 			EmulatorBean bean = (EmulatorBean) component;
-			Tail stdout = bean.getEmulatorStdOut();
+			final Tail stdout = bean.getEmulatorStdOut();
 			if(stdout == null)
 			    return Response.status(Response.Status.NOT_FOUND).build();
 
 			StreamingOutput stream = out -> {
-				while(true) {
-					out.write(stdout.getStream().read());
+				final var buffer = new byte[8 * 1024];
+				final var source = stdout.getStream();
+				while (source.read(buffer, 0, 1) > 0) {
+					final int explen = Math.min(source.available(), buffer.length - 1);
+					final int curlen = 1 + source.read(buffer, 1, explen);
+					out.write(buffer, 0, curlen);
 					out.flush();
 				}
+				stdout.cleanup();
 			};
 			return Response.status(Response.Status.OK)
 						.entity(stream).build();
@@ -66,10 +71,15 @@ public class LogStreamer {
 			    return Response.status(Response.Status.NOT_FOUND).build();
 
 			StreamingOutput stream = out -> {
-				while(true) {
-					out.write(stderr.getStream().read());
+				final var buffer = new byte[8 * 1024];
+				final var source = stderr.getStream();
+				while (source.read(buffer, 0, 1) > 0) {
+					final int explen = Math.min(source.available(), buffer.length - 1);
+					final int curlen = 1 + source.read(buffer, 1, explen);
+					out.write(buffer, 0, curlen);
 					out.flush();
 				}
+				stderr.cleanup();
 			};
 			return Response.status(Response.Status.OK)
 						.entity(stream).build();

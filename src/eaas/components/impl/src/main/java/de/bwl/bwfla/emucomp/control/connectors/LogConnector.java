@@ -9,7 +9,7 @@ import java.util.List;
 
 public abstract class LogConnector implements IConnector {
 
-    protected List<Tail> logListener = new ArrayList<>();
+    final protected List<Tail> logListener = new ArrayList<>();
     private final Path logPath;
 
     protected LogConnector(Path logPath)
@@ -25,7 +25,9 @@ public abstract class LogConnector implements IConnector {
     public Tail connect()
     {
         Tail emulatorStdOut = new Tail(logPath.toString());
-		this.logListener.add(emulatorStdOut);
+        synchronized (logListener) {
+			logListener.add(emulatorStdOut);
+		}
 		return emulatorStdOut;
     }
 }
