@@ -746,6 +746,10 @@ public class Components {
                 config.setOutputBindingId(binding.getId());
             }
             else {
+
+                // audio should only be set for non container instances.
+                checkAndUpdateEnvironmentDefaults(chosenEnv);
+
                 // Wrap external input files into images
                 for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia())
                 {
@@ -797,8 +801,6 @@ public class Components {
                 nics.clear();
                 nics.add(nic);
             }
-
-            checkAndUpdateEnvironmentDefaults(chosenEnv);
 
             if(machineDescription.isLockEnvironment()) {
                 options.setLockEnvironment(true);
