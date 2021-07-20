@@ -85,6 +85,13 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return imports;
 	}
 
+	@Override
+	public void close() throws Exception
+	{
+		super.close();
+		imports.close();
+	}
+
 	public static ServiceRegistry create(ArchiveBackend backend) throws BWFLAException
 	{
 		final var registry = new ServiceRegistry();

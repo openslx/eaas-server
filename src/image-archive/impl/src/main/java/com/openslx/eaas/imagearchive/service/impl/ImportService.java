@@ -56,7 +56,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 
-public class ImportService
+public class ImportService implements AutoCloseable
 {
 	private final Logger logger;
 	private final AtomicInteger idgen;
@@ -67,6 +67,7 @@ public class ImportService
 	private final ImporterConfig config;
 	private final ImportIndex imports;
 	private int numIdleWorkers;
+	private boolean isClosed;
 
 	private static final int INVALID_TASK_ID = -1;
 
@@ -170,6 +171,16 @@ public class ImportService
 		return result;
 	}
 
+	@Override
+	public void close() throws Exception
+	{
+		isClosed = true;
+
+		synchronized (this) {
+			tasks.clear();
+		}
+	}
+
 	public static ImportService create(ArchiveBackend backend) throws BWFLAException
 	{
 		final var config = backend.config()
@@ -195,6 +206,7 @@ public class ImportService
 		this.preprocessors = new ArrayList<>(BlobKind.count());
 		this.watchers = new ConcurrentHashMap<>();
 		this.numIdleWorkers = config.getNumWorkers();
+		this.isClosed = false;
 
 		try {
 			Files.createDirectories(config.getTempDirectory());
@@ -653,6 +665,11 @@ public class ImportService
 		@Override
 		public void run()
 		{
+			if (ImportService.this.isClosed) {
+				logger.warning("Aborting cleanup-task!");
+				return;
+			}
+
 			try {
 				final var count = this.cleanup();
 				if (count > 0)

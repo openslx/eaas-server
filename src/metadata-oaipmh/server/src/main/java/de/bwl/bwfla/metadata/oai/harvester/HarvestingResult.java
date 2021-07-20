@@ -19,8 +19,9 @@
 
 package de.bwl.bwfla.metadata.oai.harvester;
 
-import javax.json.Json;
-import javax.json.JsonObject;
+import com.fasterxml.jackson.annotation.JsonGetter;
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import java.time.Instant;
 
 
@@ -37,42 +38,42 @@ public class HarvestingResult
 		this.durationInSeconds = 0;
 	}
 
+	@JsonGetter("start_timestamp")
+	public String getStartTimestamp()
+	{
+		return startTimestamp;
+	}
+
+	@JsonGetter("num_records_downloaded")
 	public int getNumRecordsDownloaded()
 	{
 		return numRecordsDownloaded;
 	}
 
+	@JsonGetter("duration_seconds")
 	public int getDurationInSeconds()
 	{
 		return durationInSeconds;
 	}
 
+	@JsonIgnore
 	public HarvestingResult onRecordDownloaded()
 	{
 		++numRecordsDownloaded;
 		return this;
 	}
 
+	@JsonIgnore
 	public HarvestingResult onRecordsDownloaded(int number)
 	{
 		numRecordsDownloaded += number;
 		return this;
 	}
 
+	@JsonIgnore
 	public HarvestingResult setDurationInSeconds(long duration)
 	{
 		this.durationInSeconds = (int) duration;
 		return this;
-	}
-
-	public String toJsonString()
-	{
-		final JsonObject json = Json.createObjectBuilder()
-				.add("num_records_downloaded", numRecordsDownloaded)
-				.add("duration_seconds", durationInSeconds)
-				.add("start_timestamp", startTimestamp)
-				.build();
-
-		return json.toString();
 	}
 }

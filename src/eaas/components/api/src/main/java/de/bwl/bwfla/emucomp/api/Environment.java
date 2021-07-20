@@ -41,7 +41,8 @@ import java.util.logging.Logger;
     "description",
     "metaDataVersion",
     "userTag",
-    "configurationType"
+    "configurationType",
+    "deleted"
 })
 @XmlSeeAlso({
     MachineConfiguration.class,
@@ -70,6 +71,9 @@ public class Environment extends ComponentConfiguration {
 
     @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
     protected String userTag;
+
+    @XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false, defaultValue = "false")
+    protected boolean deleted = false;
 
     public String getId() {
         return id;
@@ -137,6 +141,13 @@ public class Environment extends ComponentConfiguration {
         return configurationType;
     }
 
+    public boolean isDeleted() {
+        return deleted;
+    }
+
+    public void setDeleted(boolean deleted) {
+        this.deleted = deleted;
+    }
 
 	/** Field names definition */
 	public final class Fields
