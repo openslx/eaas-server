@@ -155,6 +155,8 @@ public class EmilContainerData extends EmilRest {
             containerConf.setProcess(process);
 
             containerConf.setOutputPath(req.getOutputFolder());
+            containerConf.setInputPath(req.getInputFolder());
+            
             EmilContainerEnvironment newEnv = new EmilContainerEnvironment();
             if (!env.getArchive().equals("default")) {
                 // we need to import / duplicate the env
