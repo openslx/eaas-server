@@ -67,6 +67,39 @@ public class ImportContainerRequest extends EmilRequestType {
     @XmlElement
     private String archive;
 
+    @XmlElement
+    private String containerDigest;
+
+    @XmlElement
+    private String containerSourceUrl;
+
+    @XmlElement
+    private String tag;
+
+    public String getContainerDigest() {
+        return containerDigest;
+    }
+
+    public void setContainerDigest(String containerDigest) {
+        this.containerDigest = containerDigest;
+    }
+
+    public String getContainerSourceUrl() {
+        return containerSourceUrl;
+    }
+
+    public void setContainerSourceUrl(String containerSourceUrl) {
+        this.containerSourceUrl = containerSourceUrl;
+    }
+
+    public String getTag() {
+        return tag;
+    }
+
+    public void setTag(String tag) {
+        this.tag = tag;
+    }
+
     public String getTitle() {
         return title;
     }

@@ -7,6 +7,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -512,7 +513,7 @@ public class EmilEnvironmentRepository {
 
 		env.setTimestamp(Instant.now().toString());
 
-		provScript(env);
+//		provScript(env);
 
 		if(env.getArchive() == null)
 			env.setArchive(MetadataCollection.DEFAULT);
@@ -543,7 +544,7 @@ public class EmilEnvironmentRepository {
 		// LOG.severe(env.toString());
 	}
 
-	public void provScript(EmilEnvironment env) {
+	public void provScript(EmilContainerEnvironment env, ImportContainerRequest req) {
 
 		LOG.severe("--------------------- Creating Prov Document --------------------------");
 
@@ -557,62 +558,51 @@ public class EmilEnvironmentRepository {
 				.build();
 
         // User Information
-        JsonObject jsonUser = Json.createObjectBuilder()
+        JsonObject jsonCreation = Json.createObjectBuilder()
                 .add("userId", env.getAuthor() != null ?  env.getAuthor() : "")
-                .add("userMail", "test@xyz.com").build();
+				.add("createdAt", LocalDateTime.now().toString())
+				.build();
 
-        //Input
-        JsonObject input1 = Json.createObjectBuilder()
-                .add("filename", "getThisFromUi").build();
-        JsonObject input2 = Json.createObjectBuilder()
-                .add("filename", "getThisFromUi2").build();
-
-        JsonArray jsonInput = Json.createArrayBuilder()
-                .add(input1)
-                .add(input2).build();
-
-
-        //Output
-        JsonObject output1 = Json.createObjectBuilder()
-                .add("filename", "getThisFromUi").build();
-
-        JsonArray jsonOutput = Json.createArrayBuilder()
-                .add(output1).build();
+        // Container Information
+		JsonObject jsonContainer = Json.createObjectBuilder()
+				.add("tag", req.getTag())
+				.add("digest", req.getContainerDigest())
+				.add("containerUrl", req.getContainerSourceUrl())
+				.add("image", req.getImageUrl())
+				.build();
 
         //Metadata
 
-        JsonArray keywords = Json.createArrayBuilder()
-                .add("example")
-                .add("metadata").build();
-
-        JsonArray workflows = Json.createArrayBuilder()
-                .add("reference to workflow 1 where the tool is contained/used")
-                .add("reference to workflow 2 where the tool is contained/used").build();
-
-        JsonObject jsonMetadata = Json.createObjectBuilder()
-                .add("original", "linktooriginaltool.com")
-                .add("worklflows", workflows)
-                .add("keywords", keywords).build();
+//        JsonArray keywords = Json.createArrayBuilder()
+//                .add("example")
+//                .add("metadata").build();
+//
+//        JsonArray workflows = Json.createArrayBuilder()
+//                .add("reference to workflow 1 where the tool is contained/used")
+//                .add("reference to workflow 2 where the tool is contained/used").build();
+//
+//        JsonObject jsonMetadata = Json.createObjectBuilder()
+//                .add("original", "linktooriginaltool.com")
+//                .add("worklflows", workflows)
+//                .add("keywords", keywords).build();
 
 		//Other
 		JsonObject jsonOther = Json.createObjectBuilder()
 		.add("eaasVersion", EaasBuildInfo.getVersion() ).build();
 
 
-        JsonObject json = Json.createObjectBuilder()
-        .add("environment", jsonEnvironment)
-		.add("user", jsonUser)
-		.add("input", jsonInput)
-		.add("output", jsonOutput)
-		.add("metadata", jsonMetadata)
-		.add("other", jsonOther).build();
+		JsonObject json = Json.createObjectBuilder()
+				.add("environment", jsonEnvironment)
+				.add("creation", jsonCreation)
+				.add("other", jsonOther)
+				.build();
 
 		LOG.severe("Created JSON:" + json);
 
         try {
 
             FileWriter myWriter = new FileWriter("/tmp/test.json");
-            myWriter.write(json.toString());
+            myWriter.write(env.toString());
             myWriter.close();
             LOG.severe("Successfully wrote json file.");
         } catch (IOException e) {
@@ -978,6 +968,9 @@ public class EmilEnvironmentRepository {
 
 		env.setServiceContainer(req.isServiceContainer());
 		env.setAuthor(req.getAuthor());
+
+		provScript(env, req);
+
 		save(env, true, userCtx);
 	}
 
