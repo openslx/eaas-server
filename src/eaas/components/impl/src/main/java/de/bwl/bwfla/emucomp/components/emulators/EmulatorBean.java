@@ -78,6 +78,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.logging.Level;
+import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -234,7 +235,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 	public boolean isSdlBackendEnabled()
 	{
-		return (emuBeanMode != EmulatorBeanMode.XPRA);
+		return (emuBeanMode == EmulatorBeanMode.SDLONP);
 	}
 
 	public boolean isXpraBackendEnabled()
@@ -1146,7 +1147,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 					Thread.sleep(500);
 				}
 			}
-			else if (this.isXpraBackendEnabled() && this.isContainerModeEnabled()) {
+			else if ((this.isXpraBackendEnabled() || this.isHeadlessModeEnabled()) && this.isContainerModeEnabled()) {
 				final var killer = new DeprecatedProcessRunner();
 				final var cmds = new ArrayList<List<String>>(2);
 				cmds.add(List.of("runc", "kill", this.getContainerId(), "TERM"));
