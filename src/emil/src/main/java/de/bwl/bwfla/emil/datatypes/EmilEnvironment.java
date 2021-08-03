@@ -115,6 +115,7 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 		xpraEncoding = template.xpraEncoding;
 		networking = template.networking;
 		helpText = template.helpText;
+		deleted = template.deleted;
 	}
 
 	/*
@@ -134,6 +135,9 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	@XmlElement
 	private String timestamp = Instant.now().toString();
+
+	@XmlElement(required = false, defaultValue = "false")
+	private boolean deleted = false;
 
 	public EmilEnvironment() {}
 
@@ -339,6 +343,14 @@ public class EmilEnvironment extends JaxbType implements Comparable<EmilEnvironm
 
 	public void setCanProcessAdditionalFiles(boolean canProcessAdditionalFiles) {
 		this.canProcessAdditionalFiles = canProcessAdditionalFiles;
+	}
+
+	public boolean isDeleted() {
+		return deleted;
+	}
+
+	public void setDeleted(boolean deleted) {
+		this.deleted = deleted;
 	}
 
 
