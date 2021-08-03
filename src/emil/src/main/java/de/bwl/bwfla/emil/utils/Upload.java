@@ -23,6 +23,7 @@ import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URL;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -61,6 +62,14 @@ public class Upload  {
         for (InputPart inputPart : inputPartsFiles) {
             try {
                 MultivaluedMap<String, String> header = inputPart.getHeaders();
+                String fileName = null;
+                String[] contentDispositionHeader = header.getFirst("Content-Disposition").split(";");
+                for (String name : contentDispositionHeader) {
+                    if ((name.trim().startsWith("filename"))) {
+                        String[] tmp = name.split("=");
+                        fileName = tmp[1].trim().replaceAll("\"", "");
+                    }
+                }
                 inputFile = inputPart.getBody(InputStream.class,null);
 
                 final BlobDescription blob = new BlobDescription()
@@ -73,9 +82,10 @@ public class Upload  {
                         .getBlobStorePort(blobStoreWsAddress)
                         .put(blob);
 
+                UploadResponse.UploadedItem item = new UploadResponse.UploadedItem(new URL(handle.toRestUrl(blobStoreRestAddress)), fileName);
+                response.getUploadedItemList().add(item);
                 response.getUploads().add(handle.toRestUrl(blobStoreRestAddress));
-
-            } catch (IOException | BWFLAException e) {
+            } catch (IOException | BWFLAException  e) {
                 return new UploadResponse(new BWFLAException(e));
             }
         }
