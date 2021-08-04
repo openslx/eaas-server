@@ -17,44 +17,42 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
-import com.openslx.eaas.common.databind.Streamable;
-import com.openslx.eaas.imagearchive.api.v2.IIndexesV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResource;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public class IndexesV2 extends RemoteResource<IIndexesV2>
+public interface IWritableResource<T>
 {
-	public IndexesV2(IIndexesV2 api)
+	// ===== IWritable API ==============================
+
+	default String insert(T value) throws BWFLAException
 	{
-		super(api);
+		return this.insert(value, null);
 	}
 
-	public boolean exists(String name)
+	default String insert(T value, InsertOptionsV2 options) throws BWFLAException
 	{
-		try {
-			api.exists(name);
-			return true;
-		}
-		catch (Exception error) {
-			return false;
-		}
+		return this.api()
+				.insert(value, options);
 	}
 
-	public Streamable<String> list() throws BWFLAException
+	default void replace(String id, T value) throws BWFLAException
 	{
-		return Streamable.of(api.list(), String.class);
+		this.replace(id, value, null);
 	}
 
-	public void rebuild(String name) throws BWFLAException
+	default void replace(String id, T value, ReplaceOptionsV2 options) throws BWFLAException
 	{
-		api.rebuild(name);
+		this.api()
+				.replace(id, value, options);
 	}
 
-	public void rebuild() throws BWFLAException
-	{
-		api.rebuild();
-	}
+
+	// ===== Internal Helpers ==============================
+
+	IWritable<T> api();
 }

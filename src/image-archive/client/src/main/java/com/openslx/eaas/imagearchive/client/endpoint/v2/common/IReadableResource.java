@@ -17,23 +17,36 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
+import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public class MetaDataV2 extends RemoteResourceRWM<JsonNode, IMetaDataV2>
+public interface IReadableResource<T>
 {
-	public MetaDataV2(IMetaDataV2 api)
+	// ===== IReadable API ==============================
+
+	default String resolve(String id) throws BWFLAException
 	{
-		super(api);
+		return this.resolve(id, null);
 	}
 
-	@Override
-	public Class<JsonNode> getTargetClass()
+	default String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
 	{
-		return JsonNode.class;
+		return this.api()
+				.resolve(id, options);
 	}
+
+	default T fetch(String id) throws BWFLAException
+	{
+		return this.api()
+				.fetch(id);
+	}
+
+
+	// ===== Internal Helpers ==============================
+
+	IReadable<T> api();
 }

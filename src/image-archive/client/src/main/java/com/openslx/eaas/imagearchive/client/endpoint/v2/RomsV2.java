@@ -20,48 +20,15 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IRomsV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
-import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRW;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
 
 import java.io.InputStream;
 
 
-public class RomsV2 extends AbstractResourceRW<InputStream>
+public class RomsV2 extends RemoteResourceRW<InputStream, IRomsV2>
 {
-	private final IRomsV2 api;
-
 	public RomsV2(IRomsV2 api)
 	{
-		this.api = api;
-	}
-
-
-	// ===== Internal Helpers ==============================
-
-	@Override
-	protected IListable listable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IReadable<InputStream> readable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IWritable<InputStream> writable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IDeletable deletable()
-	{
-		return api;
+		super(api);
 	}
 }

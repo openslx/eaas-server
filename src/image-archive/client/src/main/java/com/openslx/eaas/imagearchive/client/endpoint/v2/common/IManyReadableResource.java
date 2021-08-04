@@ -25,33 +25,26 @@ import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public abstract class AbstractResourceRWM<T> extends AbstractResourceRW<T>
+public interface IManyReadableResource<T>
 {
-	protected final Class<T> clazz;
-
-
 	// ===== IManyReadable API ==============================
 
-	public Streamable<T> fetch() throws BWFLAException
+	default Streamable<T> fetch() throws BWFLAException
 	{
 		return this.fetch((FetchOptionsV2) null);
 	}
 
-	public Streamable<T> fetch(FetchOptionsV2 options) throws BWFLAException
+	default Streamable<T> fetch(FetchOptionsV2 options) throws BWFLAException
 	{
-		final var response = this.manyreadable()
+		final var response = this.api()
 				.fetch(options);
 
-		return Streamable.of(response, clazz);
+		return Streamable.of(response, this.getTargetClass());
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	protected AbstractResourceRWM(Class<T> clazz)
-	{
-		this.clazz = clazz;
-	}
-
-	protected abstract IManyReadable<T> manyreadable();
+	IManyReadable<T> api();
+	Class<T> getTargetClass();
 }

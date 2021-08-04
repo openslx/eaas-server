@@ -21,16 +21,15 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.api.v2.ILocationsV2;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResource;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public class LocationsV2
+public class LocationsV2 extends RemoteResource<ILocationsV2>
 {
-	private final ILocationsV2 api;
-
 	public LocationsV2(ILocationsV2 api)
 	{
-		this.api = api;
+		super(api);
 	}
 
 	public boolean exists(String id)

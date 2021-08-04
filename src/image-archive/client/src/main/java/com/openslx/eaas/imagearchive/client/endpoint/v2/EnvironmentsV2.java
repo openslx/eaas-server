@@ -29,8 +29,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportStateV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRO;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRWM;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.TaskStack;
@@ -58,7 +57,7 @@ import java.util.stream.Stream;
 
 public class EnvironmentsV2
 {
-	private final List<AbstractResourceRWM<? extends Environment>> resources;
+	private final List<RemoteResourceRWM<? extends Environment, ?>> resources;
 	private final ArchiveV2 archive;
 	private final Logger logger;
 
@@ -83,7 +82,7 @@ public class EnvironmentsV2
 
 	public long count(CountOptionsV2 options)
 	{
-		final Function<AbstractResourceRO<?>, Long> adapter = (resource) -> {
+		final Function<RemoteResourceRWM<?,?>, Long> adapter = (resource) -> {
 			try {
 				return resource.count(options);
 			}
@@ -99,7 +98,7 @@ public class EnvironmentsV2
 
 	public boolean exists(String id)
 	{
-		final Predicate<AbstractResourceRO<?>> adapter = (resource) -> {
+		final Predicate<RemoteResourceRWM<?,?>> adapter = (resource) -> {
 			try {
 				return resource.exists(id);
 			}
@@ -119,7 +118,7 @@ public class EnvironmentsV2
 
 	public Streamable<String> list(ListOptionsV2 options)
 	{
-		final Fetcher<String, ListOptionsV2> fetcher = AbstractResourceRO::list;
+		final Fetcher<String, ListOptionsV2> fetcher = RemoteResourceRWM::list;
 		final var adapter = new RangeAdapter<>(fetcher, options, logger);
 		final var stream = resources.stream()
 				.flatMap(adapter);
@@ -156,7 +155,7 @@ public class EnvironmentsV2
 
 	public Streamable<Environment> fetch(FetchOptionsV2 options)
 	{
-		final Fetcher<Environment, FetchOptionsV2> fetcher = AbstractResourceRWM::fetch;
+		final Fetcher<Environment, FetchOptionsV2> fetcher = RemoteResourceRWM::fetch;
 		final var adapter = new RangeAdapter<>(fetcher, options, logger);
 		final var stream = resources.stream()
 				.flatMap(adapter);
@@ -400,12 +399,12 @@ public class EnvironmentsV2
 
 	private interface Fetcher<T, O extends RangeOptionsV2<?>>
 	{
-		Streamable<? extends T> fetch(AbstractResourceRWM<? extends Environment> resource, O options)
+		Streamable<? extends T> fetch(RemoteResourceRWM<? extends Environment, ?> resource, O options)
 				throws Exception;
 	}
 
 	private static class RangeAdapter<T, O extends RangeOptionsV2<?>>
-			implements Function<AbstractResourceRWM<? extends Environment>, Stream<T>>
+			implements Function<RemoteResourceRWM<? extends Environment, ?>, Stream<T>>
 	{
 		private final Fetcher<? extends T, O> fetcher;
 		private final TaskStack cleanups;
@@ -419,7 +418,7 @@ public class EnvironmentsV2
 		}
 
 		@Override
-		public Stream<T> apply(AbstractResourceRWM<? extends Environment> resource)
+		public Stream<T> apply(RemoteResourceRWM<? extends Environment, ?> resource)
 		{
 			try {
 				// all records returned?
