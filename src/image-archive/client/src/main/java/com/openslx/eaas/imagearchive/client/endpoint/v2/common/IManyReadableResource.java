@@ -24,6 +24,8 @@ import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.function.Function;
+
 
 public interface IManyReadableResource<T>
 {
@@ -40,6 +42,19 @@ public interface IManyReadableResource<T>
 				.fetch(options);
 
 		return Streamable.of(response, this.getTargetClass());
+	}
+
+	default <U> Streamable<U> fetch(Function<T,U> mapper) throws BWFLAException
+	{
+		return this.fetch(mapper, null);
+	}
+
+	default <U> Streamable<U> fetch(Function<T,U> mapper, FetchOptionsV2 options) throws BWFLAException
+	{
+		final var response = this.api()
+				.fetch(options);
+
+		return Streamable.of(response, this.getTargetClass(), mapper);
 	}
 
 

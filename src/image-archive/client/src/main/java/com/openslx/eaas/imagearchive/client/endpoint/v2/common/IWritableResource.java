@@ -24,6 +24,8 @@ import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.function.Function;
+
 
 public interface IWritableResource<T>
 {
@@ -31,7 +33,7 @@ public interface IWritableResource<T>
 
 	default String insert(T value) throws BWFLAException
 	{
-		return this.insert(value, null);
+		return this.insert(value, (InsertOptionsV2) null);
 	}
 
 	default String insert(T value, InsertOptionsV2 options) throws BWFLAException
@@ -40,15 +42,35 @@ public interface IWritableResource<T>
 				.insert(value, options);
 	}
 
+	default <U> String insert(U value, Function<U,T> mapper) throws BWFLAException
+	{
+		return this.insert(mapper.apply(value));
+	}
+
+	default <U> String insert(U value, Function<U,T> mapper, InsertOptionsV2 options) throws BWFLAException
+	{
+		return this.insert(mapper.apply(value), options);
+	}
+
 	default void replace(String id, T value) throws BWFLAException
 	{
-		this.replace(id, value, null);
+		this.replace(id, value, (ReplaceOptionsV2) null);
 	}
 
 	default void replace(String id, T value, ReplaceOptionsV2 options) throws BWFLAException
 	{
 		this.api()
 				.replace(id, value, options);
+	}
+
+	default <U> void replace(String id, U value, Function<U,T> mapper) throws BWFLAException
+	{
+		this.replace(id, value, mapper, null);
+	}
+
+	default <U> void replace(String id, U value, Function<U,T> mapper, ReplaceOptionsV2 options) throws BWFLAException
+	{
+		this.replace(id, mapper.apply(value), options);
 	}
 
 

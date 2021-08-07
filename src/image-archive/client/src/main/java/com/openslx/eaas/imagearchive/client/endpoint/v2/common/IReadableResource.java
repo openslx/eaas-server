@@ -23,6 +23,8 @@ import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.function.Function;
+
 
 public interface IReadableResource<T>
 {
@@ -43,6 +45,11 @@ public interface IReadableResource<T>
 	{
 		return this.api()
 				.fetch(id);
+	}
+
+	default <U> U fetch(String id, Function<T,U> mapper) throws BWFLAException
+	{
+		return mapper.apply(this.fetch(id));
 	}
 
 
