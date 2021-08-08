@@ -212,10 +212,9 @@ public class EmilEnvironmentRepository {
 		final var result = imagearchive.api()
 				.v2()
 				.metadata(MetaDataKindV2.ENVIRONMENTS)
-				.fetch(options);
+				.fetch(ENVIRONMENT_MAPPER, options);
 
 		return result.stream()
-				.map(ENVIRONMENT_MAPPER)
 				.onClose(result::close);
 	}
 
@@ -235,10 +234,9 @@ public class EmilEnvironmentRepository {
 		final var result = imagearchive.api()
 				.v2()
 				.metadata(MetaDataKindV2.ENVIRONMENTS)
-				.fetch();
+				.fetch(ENVIRONMENT_MAPPER);
 
 		return result.stream()
-				.map(ENVIRONMENT_MAPPER)
 				.onClose(result::close);
 	}
 
@@ -357,12 +355,11 @@ public class EmilEnvironmentRepository {
 
 	private EmilEnvironment getSharedEmilEnvironmentById(String envid) {
 		try {
-			final var result = imagearchive.api()
+			final var env = imagearchive.api()
 					.v2()
 					.metadata(MetaDataKindV2.ENVIRONMENTS)
-					.fetch(envid);
+					.fetch(envid, ENVIRONMENT_MAPPER);
 
-			final var env = ENVIRONMENT_MAPPER.apply(result);
 			switch (env.getArchive()) {
 				case MetadataCollection.PUBLIC:
 				case MetadataCollection.REMOTE:
@@ -378,12 +375,10 @@ public class EmilEnvironmentRepository {
 	}
 
 	public NetworkEnvironment getEmilNetworkEnvironmentById(String envid) throws BWFLAException {
-		final var result = imagearchive.api()
+		return imagearchive.api()
 				.v2()
 				.metadata(MetaDataKindV2.NETWORKS)
-				.fetch(envid);
-
-		return NETWORK_MAPPER.apply(result);
+				.fetch(envid, NETWORK_MAPPER);
 	}
 
 	public void deleteEmilNetworkEnvironment(NetworkEnvironment env) throws BWFLAException {
@@ -403,12 +398,11 @@ public class EmilEnvironmentRepository {
 			return null;
 
 		try {
-			final var result = imagearchive.api()
+			final var env = imagearchive.api()
 					.v2()
 					.metadata(MetaDataKindV2.ENVIRONMENTS)
-					.fetch(envid);
+					.fetch(envid, ENVIRONMENT_MAPPER);
 
-			final var env = ENVIRONMENT_MAPPER.apply(result);
 			final var isPrivate = MetadataCollection.DEFAULT.equals(env.getArchive());
 			if (!isPrivate || this.checkPermissions(env, EmilEnvironmentPermissions.Permissions.READ, userctx))
 				return env;
@@ -858,11 +852,10 @@ public class EmilEnvironmentRepository {
 				final var values = imagearchive.api()
 						.v2()
 						.metadata(kind)
-						.fetch();
+						.fetch(ENVIRONMENT_MAPPER);
 
 				try (values) {
 					values.stream()
-							.map(ENVIRONMENT_MAPPER)
 							.forEach(exporter);
 				}
 			}
@@ -915,10 +908,9 @@ public class EmilEnvironmentRepository {
 		final var result = imagearchive.api()
 				.v2()
 				.metadata(MetaDataKindV2.NETWORKS)
-				.fetch();
+				.fetch(NETWORK_MAPPER);
 
 		return result.stream()
-				.map(NETWORK_MAPPER)
 				.onClose(result::close);
 	}
 
