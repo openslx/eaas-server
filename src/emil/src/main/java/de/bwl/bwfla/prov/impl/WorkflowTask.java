@@ -2,6 +2,7 @@ package de.bwl.bwfla.prov.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
+import de.bwl.bwfla.common.utils.EaasBuildInfo;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 
 
@@ -11,7 +12,13 @@ import de.bwl.bwfla.prov.api.WorkflowRequest;
 import de.bwl.bwfla.prov.client.WorkflowClient;
 
 
+import javax.json.Json;
+import javax.json.JsonArray;
+import javax.json.JsonObject;
 import javax.ws.rs.WebApplicationException;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -46,6 +53,40 @@ public class WorkflowTask extends BlockingTask<Object> {
     @Override
     protected ProcessResultUrl execute() throws Exception {
         return executeTool();
+    }
+
+    private void createProvExecutionFile(){
+
+
+
+        var inputsBuilder = Json.createArrayBuilder();
+        for (var input: inputURLS.keySet()) {
+            inputsBuilder.add(input);
+        }
+
+        JsonArray inputs = inputsBuilder.build();
+
+        JsonObject jsonExecution = Json.createObjectBuilder()
+                .add("environmentId", environmentId)
+                .add("startedAt", String.valueOf(LocalDateTime.now()))
+                .add("inputs", inputs)
+                .add("user", "getFromUserCtx")
+                .add("endedAt", String.valueOf(LocalDateTime.now())) //FIXME testing only
+                .add("outputs", inputs) //FIXME testing only
+                .build();
+
+        LOG.severe("Created JSON Execution:" + jsonExecution);
+
+        try {
+
+            FileWriter myWriter = new FileWriter("/tmp/exec_input_" + environmentId + ".json");
+            myWriter.write(jsonExecution.toString());
+            myWriter.close();
+            LOG.severe("Successfully wrote json file.");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
     }
 
     private ProcessResultUrl executeTool() throws BWFLAException, InterruptedException {
@@ -136,6 +177,8 @@ public class WorkflowTask extends BlockingTask<Object> {
 
             LOG.severe("Successfully created machine Component Request!");
 
+            // ---- PROV ----
+            createProvExecutionFile();
 
             MachineComponentResponse response = workflowClient.startComponentHeadless(machineComponentRequest);
             String sessionId = response.getId();

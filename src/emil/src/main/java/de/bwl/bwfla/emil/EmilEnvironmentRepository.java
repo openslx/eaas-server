@@ -555,6 +555,8 @@ public class EmilEnvironmentRepository {
                 .add("environmentId", env.getEnvId() != null ?  env.getEnvId() : "")
                 .add("revision", env.getVersion()!= null ?  env.getVersion() : "")
                 .add("os", env.getOs() != null ?  env.getOs() : "")
+				.add("title", env.getTitle() != null ? env.getTitle() : "")
+				.add("description", env.getDescription() != null ? env.getDescription() : "")
 				.build();
 
         // User Information
@@ -595,18 +597,20 @@ public class EmilEnvironmentRepository {
 				.add("environment", jsonEnvironment)
 				.add("creation", jsonCreation)
 				.add("other", jsonOther)
+				.add("container", jsonContainer)
 				.build();
 
 		LOG.severe("Created JSON:" + json);
 
-        try {
+		try {
 
-            FileWriter myWriter = new FileWriter("/tmp/test.json");
-            myWriter.write(env.toString());
-            myWriter.close();
-            LOG.severe("Successfully wrote json file.");
-        } catch (IOException e) {
-            e.printStackTrace();
+			FileWriter myWriter = new FileWriter("/tmp/" + env.getEnvId() + ".json");
+//            myWriter.write(env.toString());
+			myWriter.write(json.toString());
+			myWriter.close();
+			LOG.severe("Successfully wrote json file.");
+		} catch (IOException e) {
+			e.printStackTrace();
         }
 
 	}

@@ -996,56 +996,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
                 final Path srcdir = fsmnt.getMountPoint();
                 if (emuEnvironment.isLinuxRuntime()) {
 
-                    var src = srcdir.resolve(containerOutput).toFile();
                     // PROV/SIEGFRIED
-                    var srcName = src.getAbsolutePath();
-
-
-                    LOG.severe("--------------Starting siegfried! " + srcName);
-//                    String siegfriedFileName = "/tmp/siegfried_output_" + getEnvironmentId() + "_" + LocalDateTime.now() + ".json";
-                    File siegfriedFileName = new File("/tmp/siegfried_output.json");
-
-                    File logfileUpdate = new File("/tmp/sf_log_update.log");
-                    ProcessBuilder processBuilderUpdate = new ProcessBuilder("sf", "-update").redirectError(logfileUpdate).redirectOutput(logfileUpdate);
-                    var update = processBuilderUpdate.start();
-                    update.waitFor();
-
-                    ArrayList<String> arguments = new ArrayList<String>();
-                    arguments.add("sf");
-                    arguments.add("-json");
-                    arguments.add(srcName);
-//                    arguments.add(">>");
-//                    arguments.add(siegfriedFileName);
-
-                    File logfile = new File("/tmp/sf_log.log");
-//                    File sfFile = new File(siegfriedFileName);
-
-                    ProcessBuilder processBuilder = new ProcessBuilder(arguments).redirectError(logfile).redirectOutput(siegfriedFileName);
-
-                    Process process = null;
-                    try {
-                        process = processBuilder.start();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-
-
-                    if(process!=null){
-                        try {
-                            process.waitFor();
-                        } catch (InterruptedException e) {
-                            e.printStackTrace();
-                        }
-
-                        if (process.exitValue() == 0) {
-                            uploadSiegfriedData(siegfriedFileName);
-                            //TODO put url/ file into output?
-                        } else {
-                            uploadSiegfriedData(siegfriedFileName);
-
-                            LOG.severe("Something went wrong while executing Siegfried!");
-                        }
-                    }
+                    executeSiegfried(srcdir.resolve(containerOutput).toFile());
 
                     Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
 
@@ -1083,6 +1035,52 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
             throw error;
         } catch (InterruptedException e) {
             e.printStackTrace();
+        }
+    }
+
+    private void executeSiegfried(File src) throws IOException, InterruptedException, BWFLAException {
+        var srcName = src.getAbsolutePath();
+
+        LOG.severe("--------------Starting siegfried! " + srcName);
+        File siegfriedFileName = new File("/tmp/siegfried_output.json");
+
+        ProcessBuilder processBuilderUpdate = new ProcessBuilder("sf", "-update");
+        var update = processBuilderUpdate.start();
+        update.waitFor();
+
+        ArrayList<String> arguments = new ArrayList<String>();
+        arguments.add("sf");
+        arguments.add("-json");
+        arguments.add(srcName);
+
+        File logfile = new File("/tmp/sf_output_log.log");
+        ProcessBuilder processBuilder = new ProcessBuilder(arguments).redirectError(logfile).redirectOutput(siegfriedFileName);
+
+        Process process = null;
+        try {
+            process = processBuilder.start();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+
+        if(process!=null){
+            try {
+                process.waitFor();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+
+            if (process.exitValue() == 0) {
+                LOG.info("Successfully executed Siegfried for output files.");
+
+                uploadSiegfriedData(siegfriedFileName);
+                //TODO put url/ file into output?
+            } else {
+                LOG.severe("Something went wrong while executing Siegfried!");
+                uploadSiegfriedData(siegfriedFileName);
+
+            }
         }
     }
 
