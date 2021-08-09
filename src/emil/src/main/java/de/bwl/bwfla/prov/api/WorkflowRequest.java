@@ -11,14 +11,14 @@ public class WorkflowRequest {
     @JsonProperty("environmentId")
     private String environmentId;
 
-    @JsonProperty("inputFolder")
-    private String inputFolder;
+    @JsonProperty("inputTarURL")
+    private String inputTarURL;
 
     @JsonProperty("outputFolder")
     private String outputFolder;
 
-    @JsonProperty("inputFiles")
-    private Map<String, String> inputFiles;
+    @JsonProperty("workdirTarURL")
+    private String workdirTarURL;
 
     @JsonProperty("arguments")
     private Map<String, String> arguments;
@@ -34,28 +34,12 @@ public class WorkflowRequest {
         this.environmentId = environmentId;
     }
 
-    public Map<String, String> getInputFiles() {
-        return inputFiles;
+    public String getInputTarURL() {
+        return inputTarURL;
     }
 
-    public void setInputFiles(Map<String, String> inputFiles) {
-        this.inputFiles = inputFiles;
-    }
-
-    public Map<String, String> getArguments() {
-        return arguments;
-    }
-
-    public void setArguments(Map<String, String> arguments) {
-        this.arguments = arguments;
-    }
-
-    public String getInputFolder() {
-        return inputFolder;
-    }
-
-    public void setInputFolder(String inputFolder) {
-        this.inputFolder = inputFolder;
+    public void setInputTarURL(String inputTarURL) {
+        this.inputTarURL = inputTarURL;
     }
 
     public String getOutputFolder() {
@@ -65,4 +49,21 @@ public class WorkflowRequest {
     public void setOutputFolder(String outputFolder) {
         this.outputFolder = outputFolder;
     }
+
+    public String getWorkdirTarURL() {
+        return workdirTarURL;
+    }
+
+    public void setWorkdirTarURL(String workdirTarURL) {
+        this.workdirTarURL = workdirTarURL;
+    }
+
+    public Map<String, String> getArguments() {
+        return arguments;
+    }
+
+    public void setArguments(Map<String, String> arguments) {
+        this.arguments = arguments;
+    }
 }
+

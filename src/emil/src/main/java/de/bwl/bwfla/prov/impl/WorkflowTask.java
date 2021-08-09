@@ -2,12 +2,10 @@ package de.bwl.bwfla.prov.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
-import de.bwl.bwfla.common.utils.EaasBuildInfo;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 
 
 import de.bwl.bwfla.prov.api.EnvironmentContainerDetails;
-import de.bwl.bwfla.prov.api.MachineComponentRequestWithInput;
 import de.bwl.bwfla.prov.api.WorkflowRequest;
 import de.bwl.bwfla.prov.client.WorkflowClient;
 
@@ -26,12 +24,11 @@ import java.util.stream.Collectors;
 public class WorkflowTask extends BlockingTask<Object> {
 
     private final String environmentId;
-    private final Map<String, String> inputURLS;
-    private final Map<String, String> params;
+    private final String workdirTarURL;
+    private final Map<String, String> arguments;
 
-    private final String inputFolder;
-    private final String outputFolder;
-
+    private final String inputTarURL;
+    private final String outputFolder; // this is the folder where CWL would expect output (TBD)
 
     private final WorkflowClient workflowClient;
 
@@ -42,9 +39,9 @@ public class WorkflowTask extends BlockingTask<Object> {
 
 
         this.environmentId = request.getEnvironmentId();
-        this.inputURLS = request.getInputFiles();
-        this.params = request.getArguments();
-        this.inputFolder = request.getInputFolder();
+        this.workdirTarURL = request.getWorkdirTarURL();
+        this.inputTarURL = request.getInputTarURL();
+        this.arguments = request.getArguments();
         this.outputFolder = request.getOutputFolder();
 
         this.workflowClient = new WorkflowClient();
@@ -55,14 +52,13 @@ public class WorkflowTask extends BlockingTask<Object> {
         return executeTool();
     }
 
-    private void createProvExecutionFile(){
+    private void createProvExecutionFile() {
 
-
-
+        //TODO this needs to move to the actual mount/inject
         var inputsBuilder = Json.createArrayBuilder();
-        for (var input: inputURLS.keySet()) {
-            inputsBuilder.add(input);
-        }
+//        for (var input : workdirTarURL.keySet()) {
+//            inputsBuilder.add(input);
+//        }
 
         JsonArray inputs = inputsBuilder.build();
 
@@ -97,19 +93,15 @@ public class WorkflowTask extends BlockingTask<Object> {
             EnvironmentContainerDetails details = workflowClient.getEnvironmentDetails(environmentId);
             LOG.severe("Successfully got env details!");
 
-
             String runtimeId = details.getRuntimeId();
             ContainerNetworkingType networkingInfo = (ContainerNetworkingType) details.getNetworking();
             LOG.severe("Successfully got Networking Info details!");
 
-            //TODO if empty use set params? for input/output as well?
-            //TODO check if code below works
-
-            Map<Integer, String> casted = params.entrySet()
+            Map<Integer, String> casted = arguments.entrySet()
                     .stream()
                     .collect(Collectors.toMap(
                             e -> Integer.parseInt(e.getKey()),
-                            e -> e.getValue()
+                            Map.Entry::getValue
                     ));
 
             SortedSet<Integer> sortedArgs = new TreeSet<>(casted.keySet());
@@ -122,8 +114,8 @@ public class WorkflowTask extends BlockingTask<Object> {
             updateContainerRequest.setId(details.getEnvId());
 
             updateContainerRequest.setTitle(details.getTitle());
-            updateContainerRequest.setInputFolder(inputFolder);
-            updateContainerRequest.setOutputFolder(outputFolder);
+            updateContainerRequest.setInputFolder("/input"); //TODO remove according to new IO implementation
+            updateContainerRequest.setOutputFolder("/output"); //TODO remove according to new IO implementation
             updateContainerRequest.setDescription(details.getDescription());
             updateContainerRequest.setProcessArgs(processArgs);
             updateContainerRequest.setProcessEnvs((ArrayList<String>) details.getProcessEnvs());
@@ -132,7 +124,6 @@ public class WorkflowTask extends BlockingTask<Object> {
             updateContainerRequest.setNetworking(networkingInfo);
 
             LOG.severe("Successfully set up UpdateContainerRequest!");
-
 
             workflowClient.updateContainerWithNewProcessArgs(updateContainerRequest);
 
@@ -146,7 +137,6 @@ public class WorkflowTask extends BlockingTask<Object> {
 
             LOG.severe("Successfully got LinuxRuntimeContainerReq!");
 
-
             MachineComponentRequest machineComponentRequest = new MachineComponentRequest();
             machineComponentRequest.setEnvironment(runtimeId);
             machineComponentRequest.setHeadless(true);
@@ -156,20 +146,18 @@ public class WorkflowTask extends BlockingTask<Object> {
             inputMedium.setDestination(details.getInput());
             inputMedium.setSizeInMb(512);
 
-            ArrayList<ComponentWithExternalFilesRequest.FileURL> inputData = new ArrayList<>();
+            ArrayList<ComponentWithExternalFilesRequest.FileURL> inputList = new ArrayList<>();
 
-            for (Map.Entry<String, String> entry : inputURLS.entrySet()) {
+            if (inputTarURL != null) {
+                inputList.add(createFileURL(inputTarURL));
 
-                LOG.severe("Got file: " + entry.getKey());
-
-                ComponentWithExternalFilesRequest.FileURL data = new ComponentWithExternalFilesRequest.FileURL();
-                data.setAction("copy");
-                data.setUrl(entry.getValue());
-                data.setName(entry.getKey());
-                data.setCompressionFormat("tar");
-                inputData.add(data);
             }
-            inputMedium.setExtFiles(inputData);
+            if (workdirTarURL != null) {
+                inputList.add(createFileURL(workdirTarURL));
+
+            }
+
+            inputMedium.setExtFiles(inputList);
 
             ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputs = new ArrayList<>();
             inputs.add(inputMedium);
@@ -210,5 +198,16 @@ public class WorkflowTask extends BlockingTask<Object> {
             throw exception;
 
         }
+    }
+
+    private ComponentWithExternalFilesRequest.FileURL createFileURL(String inputTarURL) {
+
+        ComponentWithExternalFilesRequest.FileURL data = new ComponentWithExternalFilesRequest.FileURL();
+        data.setAction("extract");
+        data.setUrl(inputTarURL);
+        data.setName("workdirInput");
+        data.setCompressionFormat("tar");
+
+        return data;
     }
 }
