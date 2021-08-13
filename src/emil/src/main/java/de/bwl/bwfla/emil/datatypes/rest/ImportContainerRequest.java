@@ -64,6 +64,9 @@ public class ImportContainerRequest extends EmilRequestType {
     @XmlElement
     private String serviceContainerId;
 
+    @XmlElement
+    private String archive;
+
     public String getTitle() {
         return title;
     }
@@ -168,5 +171,9 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public String getServiceContainerId() {
         return serviceContainerId;
+    }
+
+    public String getArchive() {
+        return archive;
     }
 }

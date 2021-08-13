@@ -34,6 +34,18 @@ public class ImportSource
 	private String url;
 	private Map<String, String> headers;
 
+	public ImportSource()
+	{
+		// Empty!
+	}
+
+	public ImportSource(ImportSource other)
+	{
+		this.url = other.url();
+		if (other.headers() != null)
+			this.headers = new LinkedHashMap<>(other.headers());
+	}
+
 	@JsonSetter(Fields.URL)
 	public ImportSource setUrl(String url)
 	{
@@ -76,7 +88,7 @@ public class ImportSource
 		if (url == null || url.isEmpty())
 			throw new IllegalArgumentException("URL is invalid!");
 
-		if (!(url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file://")))
+		if (!(url.startsWith("http://") || url.startsWith("https://") || url.startsWith("file:/")))
 			throw new IllegalArgumentException("Source is not supported!");
 	}
 

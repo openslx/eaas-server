@@ -32,6 +32,7 @@ import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRO;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRWM;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.BindingDataHandler;
@@ -214,41 +215,11 @@ public class EnvironmentsV2
 	public void delete(String id, boolean metadata, boolean images) throws BWFLAException
 	{
 		logger.info("Deleting environment '" + id + "'...");
-
-		// NOTE: if we delete metadata, we have to delete images too!
-		if (metadata || images) {
-			final var environment = this.fetch(id);
-			List<AbstractDataResource> data = Collections.emptyList();
-			if (environment instanceof MachineConfiguration)
-				data = ((MachineConfiguration) environment).getAbstractDataResource();
-			else if (environment instanceof OciContainerConfiguration)
-				data = ((OciContainerConfiguration) environment).getDataResources();
-
-			for (AbstractDataResource adr : data) {
-				if (!(adr instanceof ImageArchiveBinding))
-					continue;
-
-				final var binding = (ImageArchiveBinding) adr;
-				final var imageid = binding.getImageId();
-				if (imageid != null && !imageid.isEmpty()) {
-					archive.images()
-							.delete(imageid);
-
-					logger.info("Deleted image '" + imageid + "'");
-				}
-			}
-		}
-
-		if (metadata) {
-			// finally, delete metadata...
-			for (var resource : resources) {
-				if (resource.exists(id)) {
-					resource.delete(id);
-					break;
-				}
-			}
-
-			logger.info("Deleted environment '" + id + "'");
+		final var environment = this.fetch(id);
+		if (environment != null) {
+			environment.setDeleted(true);
+			this.replace(id, environment);
+			logger.info("Marked environment '" + id + "' as deleted");
 		}
 	}
 
@@ -342,6 +313,12 @@ public class EnvironmentsV2
 			for (AbstractDataResource adr : data) {
 				if (adr instanceof ImageArchiveBinding) {
 					final var binding = (ImageArchiveBinding) adr;
+					if (binding.getUrl() == null) {
+						// FIXME: assume, that we replicate from local archive for now
+						final var proxy = MachineTokenProvider.getAuthenticationProxy();
+						binding.setUrl(proxy + "/unknown/" + binding.getImageId());
+					}
+
 					final var request = new ImportRequestV2();
 					request.source()
 							.setUrl(binding.getUrl());
@@ -349,6 +326,11 @@ public class EnvironmentsV2
 					request.target()
 							.setKind(ImportTargetV2.Kind.IMAGE)
 							.setName(binding.getImageId());
+
+					if (options != null) {
+						request.target()
+								.setLocation(options.location());
+					}
 
 					final var task = new ImportTask();
 					task.binding = binding;

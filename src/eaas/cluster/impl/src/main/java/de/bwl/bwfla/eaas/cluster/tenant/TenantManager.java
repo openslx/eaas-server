@@ -127,14 +127,15 @@ public class TenantManager
 			if (tenant == null) {
 				// tenant's config is not yet cached, try to load it from DB!
 				final var config = this.load(name);
-				if (config == null)
-					throw new IllegalArgumentException();
-
-				tenant = new Tenant(config);
+				if (config != null)
+					tenant = new Tenant(config);
 			}
 
-			final var allocated = tenant.getQuota()
-					.allocate(spec);
+			boolean allocated = true;
+			if (tenant != null) {
+				allocated = tenant.getQuota()
+						.allocate(spec);
+			}
 
 			result.set(allocated);
 			return tenant;

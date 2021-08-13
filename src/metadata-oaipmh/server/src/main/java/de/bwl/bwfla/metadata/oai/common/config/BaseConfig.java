@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.metadata.oai.common.config;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import org.dspace.xoai.dataprovider.model.MetadataFormat;
 import org.apache.tamaya.ConfigException;
 import org.apache.tamaya.Configuration;
@@ -37,11 +38,13 @@ public abstract class BaseConfig
 	public abstract void load(Configuration config) throws ConfigException;
 
 
+	@JsonIgnore
 	public static String getMetaDataFormat()
 	{
 		return "eaasmd";
 	}
 
+	@JsonIgnore
 	public static Transformer getMetaDataTransformer()
 	{
 		return MetadataFormat.identity();

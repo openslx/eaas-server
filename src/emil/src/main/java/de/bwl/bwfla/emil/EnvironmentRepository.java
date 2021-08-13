@@ -27,7 +27,6 @@ import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.NetworkUtils;
-import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
 import de.bwl.bwfla.emil.datatypes.EmilObjectEnvironment;
@@ -166,26 +165,6 @@ public class EnvironmentRepository extends EmilRest
 
 	@Path("/images")
 	public Images images() { return new Images(); }
-
-	@GET
-	@Path("/db-content")
-	@Secured(roles={Role.RESTRICTED})
-	@Produces(MediaType.APPLICATION_JSON)
-	public <T extends JaxbType> Response getDatabaseContent(@QueryParam("type") String type, @QueryParam("className") String className)
-	{
-		LOG.info("Loading DB content...");
-		try {
-			Class<T> classType = (Class<T>) Class.forName(className);
-			if (classType == null) {
-				throw new BWFLAException("Class name is incorrect!");
-			}
-			return EnvironmentRepository.createResponse(Status.OK, emilEnvRepo.getDatabaseContent(type, classType));
-		}
-		catch (ClassNotFoundException | BWFLAException error) {
-			LOG.log(Level.WARNING,"Loading database content failed!\n", error);
-			return EnvironmentRepository.internalErrorResponse(error);
-		}
-	}
 
 	@GET
 	@Path("/db-migration")
@@ -463,6 +442,14 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setXpraEncoding(envReq.getXpraEncoding());
 				newEmilEnv.setOs(envReq.getOperatingSystemId());
 
+				if(envReq.isEnableNetwork())
+				{
+					NetworkingType network = new NetworkingType();
+					network.setConnectEnvs(true);
+					network.setEnableInternet(envReq.isEnableInternet());
+					newEmilEnv.setNetworking(network);
+				}
+
 				newEmilEnv.setDescription("imported / user created environment");
 				emilEnvRepo.save(newEmilEnv, true);
 
@@ -708,7 +695,7 @@ public class EnvironmentRepository extends EmilRest
 			request.envHelper = envdb;
 			request.archive = exportRequest.getArchive();
 			request.environmentRepository  = emilEnvRepo;
-			request.userCtx = (authenticatedUser != null) ? authenticatedUser.getUserId() : null;
+			request.userCtx = EnvironmentRepository.this.getUserContext().clone();
 			return new TaskStateResponse(taskManager.submitTask(new ExportEnvironmentTask(request)));
 		}
 
@@ -752,7 +739,7 @@ public class EnvironmentRepository extends EmilRest
 				return this.addEnvironmentDetails(emilenv);
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Collecting environment's details failed!", error);
+				LOG.warning("Collecting environment's details failed! " + error.getMessage());
 				return null;
 			}
 		}
@@ -859,12 +846,17 @@ public class EnvironmentRepository extends EmilRest
 				newEmilEnv.setArchive("default");
 				newEmilEnv.setParentEnvId(emilEnv.getParentEnvId());
 				emilEnvRepo.save(newEmilEnv, true);
+
+				final var message = "Forked environment " + envId + " as " + id;
+				final var json = EmilRest.newJsonObjectBuilder("0", message)
+						.add("envId", id)
+						.build();
+
+				return EmilRest.createResponse(Status.OK, json);
 			}
 			catch (BWFLAException error) {
 				return EnvironmentRepository.internalErrorResponse(error);
 			}
-
-			return EnvironmentRepository.successMessageResponse("forked environment: " + envId);
 		}
 
 		@POST
@@ -1202,9 +1194,7 @@ public class EnvironmentRepository extends EmilRest
 				importRequest.imagearchive = imagearchive;
 				importRequest.destArchive = replicateImagesRequest.getDestArchive();
 				importRequest.imageProposer = imageProposer;
-				
-				if (authenticatedUser != null)
-					importRequest.username = authenticatedUser.getUserId();
+				importRequest.userctx = getUserContext().clone();
 
 				try {
 					importRequest.validate();
@@ -1288,5 +1278,9 @@ public class EnvironmentRepository extends EmilRest
 
 			it.remove();
 		}
+	}
+
+	private UserContext getUserContext() {
+		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
 	}
 }

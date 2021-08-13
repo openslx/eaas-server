@@ -47,6 +47,8 @@ public class HarvesterBackend
 	public HarvesterBackend(StateDescription state, Client http)
 	{
 		final BackendConfig config = state.getBackendConfig();
+		config.validate();
+
 		final PrefixLoggerContext logctx = new PrefixLoggerContext()
 				.add(config.getName());
 
@@ -172,6 +174,5 @@ public class HarvesterBackend
 		{
 			this.lastRunTimestamp = Instant.parse(timestamp);
 		}
-
 	}
 }

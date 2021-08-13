@@ -142,7 +142,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
         try {
             // Stop the WebSocket thread!
             thread.interrupt();
-            // thread.join();
+            thread.join();
         }
         catch (Throwable error) {
             throw new BWFLAException("Disconnecting '" + ethUrl + "' failed!", error);
@@ -166,7 +166,7 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
             final Logger log = Logger.getLogger(Connection.class.getName());
 
-            for(;!Thread.currentThread().isInterrupted() && failCounter > 0;) {
+            while (!Thread.currentThread().isInterrupted() && failCounter > 0) {
 
                 if (!ethUrl.matches("^wss?://[!#-;=?-\\[\\]_a-z~]+$"))
                         throw new IllegalArgumentException("Illegal WebSocket URL");
@@ -195,8 +195,9 @@ public class VdeSwitchBean extends NetworkSwitchBean {
 
                 } catch (InterruptedException e) {
                     log.log(Level.INFO, "Connection has been interrupted!", e);
+                    break;
                 } finally {
-                    websocat.stop();
+                    websocat.kill();
                     websocat.cleanup();
                 }
             }

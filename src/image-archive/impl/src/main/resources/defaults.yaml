@@ -12,6 +12,9 @@ imagearchive:
       endpoint: "minio"
       bucket: "image-archive"
       paths:
+        environment: "/environments"
+        session: "/sessions"
+        network: "/networks"
         container: "/containers"
         machine: "/machines"
         emulator: "/emulators"

@@ -101,6 +101,7 @@ public class SoftwareRepository extends EmilRest
 	{
 		SoftwarePackage softwarePackage = swo.getSoftwarePackage();
 		softwarePackage.setArchive("Remote Objects");
+		softwarePackage.setPublic(true);
 		try {
 			SoftwarePackage software = swHelper.getSoftwarePackageById(softwarePackage.getObjectId());
 //			if(software != null) {
@@ -429,6 +430,7 @@ public class SoftwareRepository extends EmilRest
 						.add("id", desc.getSoftwareId())
 						.add("label", desc.getLabel())
 						.add("isPublic", desc.isPublic())
+						.add("archiveId", (desc.getArchiveId() != null) ? desc.getArchiveId() : "default")
 						.add("isOperatingSystem", desc.getIsOperatingSystem())
 						.build();
 
@@ -445,6 +447,8 @@ public class SoftwareRepository extends EmilRest
 	private static EmilSoftwareObject toEmilSoftwareObject(SoftwarePackage software)
 	{
 		EmilSoftwareObject swo = new EmilSoftwareObject();
+		swo.setId(software.getObjectId());
+		swo.setLabel(software.getName());
 		swo.setIsPublic(software.isPublic());
 		swo.setObjectId(software.getObjectId());
 		swo.setArchiveId(software.getArchive());

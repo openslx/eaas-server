@@ -1,7 +1,9 @@
 package de.bwl.bwfla.emucomp.api;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.logging.Logger;
 
 public class MountOptions {
@@ -10,6 +12,8 @@ public class MountOptions {
 	private EmulatorUtils.XmountInputFormat inFmt;
 	private long offset = 0;
 	private long size = -1;
+
+	Map<String, String> userOption = new HashMap<>();
 	
 	protected final Logger log	= Logger.getLogger(this.getClass().getName());
 	
@@ -49,5 +53,9 @@ public class MountOptions {
 			args.add("-o" + offset);
 		}
 		return args;
+	}
+
+	public Map<String, String> getUserOptions() {
+		return userOption;
 	}
 }

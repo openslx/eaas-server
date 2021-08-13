@@ -213,6 +213,9 @@ public class SheepShaverBean extends EmulatorBean
 				continue;
 			}
 
+			if(args[0].equals("ether") && args[1].equals("slirp"))
+				args[1] = "vde";
+
 			confValues.put(args[0], args[1]);
 		}
 	}

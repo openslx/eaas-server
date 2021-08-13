@@ -54,6 +54,10 @@ public class ObjectArchiveFacadeWS
 	private String USERARCHIVEPRIFIX;
 
 	@Inject
+	@Config(value="objectarchive.user_archive_enabled")
+	private boolean userArchiveEnabled;
+
+	@Inject
 	private SeatManager seatmgr;
 	
 	@PostConstruct
@@ -82,7 +86,7 @@ public class ObjectArchiveFacadeWS
 		if(a != null)
 			return a;
 
-		if(!archive.startsWith(USERARCHIVEPRIFIX))
+		if(userArchiveEnabled && !archive.startsWith(USERARCHIVEPRIFIX))
 		{
 			LOG.warning("trying harder: " + archive);
 			archive = USERARCHIVEPRIFIX + archive;

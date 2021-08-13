@@ -43,6 +43,8 @@ public class EnvironmentCreateRequest extends JaxbType{
 	private String xpraEncoding;
 	private boolean shutdownByOs;
 	private String operatingSystemId;
+	private boolean enableNetwork;
+	private boolean enableInternet;
 
 
 	public List<DriveSetting> getDriveSettings() {
@@ -123,6 +125,14 @@ public class EnvironmentCreateRequest extends JaxbType{
 
 	public void setRomLabel(String romLabel) {
 		this.romLabel = romLabel;
+	}
+
+	public boolean isEnableNetwork() {
+		return enableNetwork;
+	}
+
+	public boolean isEnableInternet() {
+		return enableInternet;
 	}
 
 	@JsonIgnoreProperties(ignoreUnknown=true)

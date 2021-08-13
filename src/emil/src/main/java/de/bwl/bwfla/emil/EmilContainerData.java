@@ -155,6 +155,8 @@ public class EmilContainerData extends EmilRest {
             containerConf.setProcess(process);
 
             containerConf.setOutputPath(req.getOutputFolder());
+            containerConf.setInputPath(req.getInputFolder());
+            
             EmilContainerEnvironment newEnv = new EmilContainerEnvironment();
             if (!env.getArchive().equals("default")) {
                 // we need to import / duplicate the env
@@ -277,10 +279,7 @@ public class EmilContainerData extends EmilRest {
     @Produces(MediaType.APPLICATION_JSON)
     public TaskStateResponse importContainer(ImportContainerRequest req) {
 
-        String userCtx = null;
-        if (authenticatedUser != null)
-            userCtx = authenticatedUser.getUserId();
-
+        final var userCtx = (authenticatedUser != null) ? authenticatedUser.clone() : new UserContext();
         return new TaskStateResponse(taskManager.submitTask(new ImportContainerTask(req, emilEnvRepo, userCtx)));
     }
 

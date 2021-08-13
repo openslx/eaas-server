@@ -26,11 +26,11 @@ import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 
-import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
-import javax.ejb.Singleton;
-import javax.ejb.Startup;
+import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.context.Initialized;
+import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.CDI;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
@@ -38,8 +38,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-@Startup
-@Singleton
+@ApplicationScoped
 public class ArchiveBackend
 {
 	private static final Logger LOG = Logger.getLogger("IMAGE-ARCHIVE");
@@ -123,8 +122,7 @@ public class ArchiveBackend
 		// Empty!
 	}
 
-	@PostConstruct
-	private void initialize()
+	private void initialize(@Observes @Initialized(ApplicationScoped.class) Object unused)
 	{
 		try {
 			this.config = ImageArchiveConfig.create(LOG);

@@ -1,6 +1,5 @@
 package de.bwl.bwfla.common.datatypes;
 
-import com.fasterxml.jackson.annotation.JsonAlias;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -15,22 +14,24 @@ import javax.xml.bind.annotation.XmlRootElement;
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class QemuImage extends JaxbType {
 
-    @XmlElement
-    @JsonProperty("strVal")
+    @JsonProperty("virtual-size")
+    @XmlElement(name = "virtual-size")
     private String virtualSize;
 
-    @XmlElement
+    @JsonProperty("filename")
+    @XmlElement(name = "filename")
     private String filename;
 
-    @XmlElement
+    @JsonProperty("format")
+    @XmlElement(name = "format")
     private String format;
 
-    @XmlElement
     @JsonProperty("backing-filename")
+    @XmlElement(name = "backing-filename")
     private String backingFile;
 
-    @XmlElement
     @JsonProperty("full-backing-filename")
+    @XmlElement(name = "full-backing-filename")
     private String fullBackingName;
 
     public String getVirtualSize() {

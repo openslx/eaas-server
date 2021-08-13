@@ -99,7 +99,7 @@ public class EnvironmentProposer
 	{
 		try {
 			// Submit task
-			final String taskid = taskmgr.submit(new ProposalTask(request, classifier, userctx.getUserId()));
+			final String taskid = taskmgr.submit(new ProposalTask(request, classifier, userctx));
 
 			// Generate task's location URLs
 			final String waitLocation = EnvironmentProposer.getLocationUrl(uri, "waitqueue", taskid);

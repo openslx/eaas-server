@@ -27,6 +27,7 @@ import com.openslx.eaas.imagearchive.service.impl.ContainerService;
 import com.openslx.eaas.imagearchive.service.impl.ImageService;
 import com.openslx.eaas.imagearchive.service.impl.ImportService;
 import com.openslx.eaas.imagearchive.service.impl.MachineService;
+import com.openslx.eaas.imagearchive.service.impl.MetaDataService;
 import com.openslx.eaas.imagearchive.service.impl.RomService;
 import com.openslx.eaas.imagearchive.service.impl.TemplateService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -34,6 +35,21 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 {
+	public MetaDataService environments()
+	{
+		return this.lookup(BlobKind.ENVIRONMENT, MetaDataService.class);
+	}
+
+	public MetaDataService sessions()
+	{
+		return this.lookup(BlobKind.SESSION, MetaDataService.class);
+	}
+
+	public MetaDataService networks()
+	{
+		return this.lookup(BlobKind.NETWORK, MetaDataService.class);
+	}
+
 	public ContainerService containers()
 	{
 		return this.lookup(BlobKind.CONTAINER, ContainerService.class);
@@ -69,9 +85,19 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return imports;
 	}
 
+	@Override
+	public void close() throws Exception
+	{
+		super.close();
+		imports.close();
+	}
+
 	public static ServiceRegistry create(ArchiveBackend backend) throws BWFLAException
 	{
 		final var registry = new ServiceRegistry();
+		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend));
+		registry.insert(MetaDataService.create(BlobKind.SESSION, backend));
+		registry.insert(MetaDataService.create(BlobKind.NETWORK, backend));
 		registry.insert(ContainerService.create(backend));
 		registry.insert(MachineService.create(backend));
 		registry.insert(TemplateService.create(backend));

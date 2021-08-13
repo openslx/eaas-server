@@ -60,7 +60,8 @@ public class BlobIngestors
 					.collection()
 					.lookup(filter);
 
-			if (current != null && current.mtime() == record.mtime()) {
+			final var etag = (current != null) ? current.etag() : null;
+			if (etag != null && etag.equals(record.etag())) {
 				// currently indexed record is up-to-date, reuse its data!
 				record.setData(current.data());
 				context.counters()
@@ -113,6 +114,7 @@ public class BlobIngestors
 				.toString();
 
 		descriptor.setName(filename);
+		descriptor.setEtag(blob.etag());
 		descriptor.setLocation(location.name());
 		descriptor.setModTime(blob.mtime());
 	}
