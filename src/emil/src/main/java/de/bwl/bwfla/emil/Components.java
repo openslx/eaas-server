@@ -721,7 +721,10 @@ public class Components {
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
+                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf,
+                            machineDescription.getLinuxRuntimeData(),
+                            machineDescription.getInputMedia(),
+                            machineDescription.getImageModificationRequestList());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -769,6 +772,11 @@ public class Components {
                     // TODO: Extend MachineConfiguration to support multiple input/output-images!
                     break;
                 }
+
+                if(machineDescription.getImageModificationRequestList() != null) {
+                    Binding resource = (Binding) EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
+                    resource.setModificationRequests(machineDescription.getImageModificationRequestList());
+                }
             }
 
             for(MachineComponentRequest.UserMedium uMedia : machineDescription.getUserMedia())
@@ -814,11 +822,6 @@ public class Components {
 
             if (authenticatedUser.getTenantId() != null)
                 options.setTenantId(authenticatedUser.getTenantId());
-
-            if(machineDescription.getImageModificationRequestList() != null) {
-                Binding resource = (Binding) EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
-                resource.setModificationRequests(machineDescription.getImageModificationRequestList());
-            }
 
             if(machineDescription.isHeadless())
             {

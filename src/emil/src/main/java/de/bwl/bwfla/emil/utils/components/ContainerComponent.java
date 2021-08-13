@@ -15,7 +15,6 @@ import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imagebuilder.api.ImageContentDescription;
 import de.bwl.bwfla.imagebuilder.api.ImageDescription;
 import de.bwl.bwfla.imagebuilder.client.ImageBuilderClient;
-import org.apache.commons.io.FilenameUtils;
 import org.apache.tamaya.inject.api.Config;
 import org.apache.tamaya.inject.api.WithPropertyConverter;
 
@@ -27,12 +26,15 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
-import java.util.logging.Level;
 import java.util.logging.Logger;
+
 
 @ApplicationScoped
 public class ContainerComponent {
@@ -81,9 +83,9 @@ public class ContainerComponent {
     }
 
     private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws IOException, BWFLAException {
-        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
+        ContainerMetadata metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
         File tmpfile = File.createTempFile("metadata.json", null, null);
-        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
+        Files.write(tmpfile.toPath(), metadata.jsonValueWithoutRoot(true).getBytes(), StandardOpenOption.CREATE);
 
         BlobDescription blobDescription = new BlobDescription();
         blobDescription.setDataFromFile(tmpfile.toPath())
@@ -103,7 +105,49 @@ public class ContainerComponent {
         }
     }
 
-    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws BWFLAException {
+    private ContainerMetadata addImageModificationInformation(ContainerMetadata metadata,
+                                                              ImageDescription image,
+                                                              List<ImageModificationRequest> imageModificationRequestList) throws MalformedURLException {
+
+        if(imageModificationRequestList != null) {
+            String subDir = "rootFsModifications";
+
+            for (ImageModificationRequest imageModificationRequest : imageModificationRequestList) {
+                ImageContentDescription imageContent = new ImageContentDescription();
+
+                String tempFileName = null;
+
+                if(imageModificationRequest.getAction() == ImageModificationRequest.ImageModificationAction.EXTRACT_TAR)
+                    tempFileName = UUID.randomUUID().toString() + ".tgz";
+                else
+                    tempFileName = UUID.randomUUID().toString();
+
+                imageContent.setAction(ImageContentDescription.Action.COPY)
+                        .setUrlDataSource(new URL(imageModificationRequest.getDataUrl()))
+                        .setName(tempFileName)
+                        .setSubdir(subDir);
+
+                ContainerMetadata.ContainerRootfsInput fsInput = new ContainerMetadata.ContainerRootfsInput();
+                fsInput.setDst(imageModificationRequest.getDestination());
+                fsInput.setSrc(subDir + "/" + tempFileName);
+                if(imageModificationRequest.getAction() == ImageModificationRequest.ImageModificationAction.EXTRACT_TAR) {
+                    fsInput.setMethod("extract");
+                    fsInput.setArchive("tgz");
+                }
+                else
+                    fsInput.setArchive("copy");
+
+                metadata.getInputs().add(fsInput);
+            }
+        }
+
+        return metadata;
+    }
+
+    private ContainerMetadata createContainerMetadata(OciContainerConfiguration config,
+                                   boolean isDHCPenabled,
+                                   boolean requiresInputFiles,
+                                   boolean enableTelnet) throws BWFLAException {
         ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
         final String inputDir = "container-input";
@@ -156,11 +200,13 @@ public class ContainerComponent {
 
         metadata.setArgs(args);
 
-        return metadata.jsonValueWithoutRoot(true);
+        return metadata;
     }
 
-
-    public ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
+    public ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config,
+                                                         LinuxRuntimeContainerReq linuxRuntime,
+                                                         ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia,
+                                                         List<ImageModificationRequest> imageModificationRequestList) throws IOException, BWFLAException {
         if (inputMedia.size() > 1)
             throw new BWFLAException("Size of Input drives cannot exceed 1");
 
@@ -181,11 +227,10 @@ public class ContainerComponent {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        boolean requiersInputFiles = false;
-        if(inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0)
-            requiersInputFiles = true;
+        boolean requiresInputFiles = (inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0)
+                || imageModificationRequestList != null && imageModificationRequestList.size() > 0;
 
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiersInputFiles, linuxRuntime.isTelnetEnabled());
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiresInputFiles, linuxRuntime.isTelnetEnabled());
 
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
@@ -224,7 +269,4 @@ public class ContainerComponent {
 
         return description;
     }
-
-
-
 }
