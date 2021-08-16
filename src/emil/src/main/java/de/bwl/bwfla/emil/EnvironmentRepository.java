@@ -547,8 +547,10 @@ public class EnvironmentRepository extends EmilRest
 
 					// Do not check for null. EmuBean would choose latest, if value is null
 					final EmulatorSpec emulator = machineConfiguration.getEmulator();
-					emulator.setContainerName(desc.getContainerEmulatorName());
-					emulator.setContainerVersion(desc.getContainerEmulatorVersion());
+					if(desc.getContainerEmulatorName() != null)
+						emulator.setContainerName(desc.getContainerEmulatorName());
+					if(desc.getContainerEmulatorVersion() != null)
+						emulator.setContainerVersion(desc.getContainerEmulatorVersion());
 
 					uiopts.getHtml5().setPointerLock(desc.isEnableRelativeMouse());
 
