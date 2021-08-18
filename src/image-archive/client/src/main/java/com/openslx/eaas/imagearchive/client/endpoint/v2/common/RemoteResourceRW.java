@@ -17,23 +17,20 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
 
 
-public class MetaDataV2 extends RemoteResourceRWM<JsonNode, IMetaDataV2>
+public abstract class RemoteResourceRW<T, A extends IListable & IReadable<T> & IWritable<T> & IDeletable>
+		extends RemoteResource<A> implements IListableResource,
+		IReadableResource<T>, IWritableResource<T>, IDeletableResource
 {
-	public MetaDataV2(IMetaDataV2 api)
+	protected RemoteResourceRW(A api)
 	{
 		super(api);
-	}
-
-	@Override
-	public Class<JsonNode> getTargetClass()
-	{
-		return JsonNode.class;
 	}
 }

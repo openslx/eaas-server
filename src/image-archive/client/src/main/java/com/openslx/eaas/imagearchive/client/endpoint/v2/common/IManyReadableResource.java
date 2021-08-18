@@ -24,34 +24,42 @@ import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.function.Function;
 
-public abstract class AbstractResourceRWM<T> extends AbstractResourceRW<T>
+
+public interface IManyReadableResource<T>
 {
-	protected final Class<T> clazz;
-
-
 	// ===== IManyReadable API ==============================
 
-	public Streamable<T> fetch() throws BWFLAException
+	default Streamable<T> fetch() throws BWFLAException
 	{
 		return this.fetch((FetchOptionsV2) null);
 	}
 
-	public Streamable<T> fetch(FetchOptionsV2 options) throws BWFLAException
+	default Streamable<T> fetch(FetchOptionsV2 options) throws BWFLAException
 	{
-		final var response = this.manyreadable()
+		final var response = this.api()
 				.fetch(options);
 
-		return Streamable.of(response, clazz);
+		return Streamable.of(response, this.getTargetClass());
+	}
+
+	default <U> Streamable<U> fetch(Function<T,U> mapper) throws BWFLAException
+	{
+		return this.fetch(mapper, null);
+	}
+
+	default <U> Streamable<U> fetch(Function<T,U> mapper, FetchOptionsV2 options) throws BWFLAException
+	{
+		final var response = this.api()
+				.fetch(options);
+
+		return Streamable.of(response, this.getTargetClass(), mapper);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	protected AbstractResourceRWM(Class<T> clazz)
-	{
-		this.clazz = clazz;
-	}
-
-	protected abstract IManyReadable<T> manyreadable();
+	IManyReadable<T> api();
+	Class<T> getTargetClass();
 }

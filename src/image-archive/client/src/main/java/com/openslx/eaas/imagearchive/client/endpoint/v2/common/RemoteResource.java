@@ -17,23 +17,20 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
-
-import com.fasterxml.jackson.databind.JsonNode;
-import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
+package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
 
-public class MetaDataV2 extends RemoteResourceRWM<JsonNode, IMetaDataV2>
+public class RemoteResource<A>
 {
-	public MetaDataV2(IMetaDataV2 api)
+	protected final A api;
+
+	protected RemoteResource(A api)
 	{
-		super(api);
+		this.api = api;
 	}
 
-	@Override
-	public Class<JsonNode> getTargetClass()
+	public A api()
 	{
-		return JsonNode.class;
+		return api;
 	}
 }

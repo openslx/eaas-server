@@ -17,34 +17,43 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2;
+package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
-import com.openslx.eaas.common.databind.Streamable;
-import com.openslx.eaas.imagearchive.api.v2.ILocationsV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResource;
+import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import java.util.function.Function;
 
-public class LocationsV2 extends RemoteResource<ILocationsV2>
+
+public interface IReadableResource<T>
 {
-	public LocationsV2(ILocationsV2 api)
+	// ===== IReadable API ==============================
+
+	default String resolve(String id) throws BWFLAException
 	{
-		super(api);
+		return this.resolve(id, null);
 	}
 
-	public boolean exists(String id)
+	default String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
 	{
-		try {
-			api.exists(id);
-			return true;
-		}
-		catch (Exception error) {
-			return false;
-		}
+		return this.api()
+				.resolve(id, options);
 	}
 
-	public Streamable<String> list() throws BWFLAException
+	default T fetch(String id) throws BWFLAException
 	{
-		return Streamable.of(api.list(), String.class);
+		return this.api()
+				.fetch(id);
 	}
+
+	default <U> U fetch(String id, Function<T,U> mapper) throws BWFLAException
+	{
+		return mapper.apply(this.fetch(id));
+	}
+
+
+	// ===== Internal Helpers ==============================
+
+	IReadable<T> api();
 }

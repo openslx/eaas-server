@@ -39,4 +39,10 @@ public class DocumentUtils
 
 		return collection.update(filter, update, true);
 	}
+
+	/** Construct a nested field from multiple parts */
+	public static String nested(String... fields)
+	{
+		return String.join(".", fields);
+	}
 }
