@@ -46,7 +46,7 @@ public class ImportObjectTask extends BlockingTask<Object>
         String blobStoreWsAddress  = ConfigurationProvider.getConfiguration().get("ws.blobstore");
         assert blobStoreWsAddress != null;
 
-        String blobStoreRestAddress = ConfigurationProvider.getConfiguration().get("ws.blobstore");
+        String blobStoreRestAddress = ConfigurationProvider.getConfiguration().get("rest.blobstore");
         assert blobStoreRestAddress != null;
 
         BlobHandle handle = BlobStoreClient.get()
