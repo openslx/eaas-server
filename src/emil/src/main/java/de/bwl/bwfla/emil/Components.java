@@ -721,10 +721,7 @@ public class Components {
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf,
-                            machineDescription.getLinuxRuntimeData(),
-                            machineDescription.getInputMedia(),
-                            machineDescription.getImageModificationRequestList());
+                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }

@@ -444,19 +444,24 @@ public class ImageContentDescription
 
 		public DockerDataSource(String imageRef)
 		{
-			this.imageRef = imageRef;
+			this.imageRef = checkAndReplaceDockerUrl(imageRef);
 			this.tag = "latest";
 		}
 
 		public DockerDataSource(String imageRef, String tag)
 		{
-			this.imageRef = imageRef;
+			this.imageRef = checkAndReplaceDockerUrl(imageRef);
 			this.tag = tag;
 		}
 	}
 
 
 	/* =============== Public Utils =============== */
+
+	private static String checkAndReplaceDockerUrl(String imageRef)
+	{
+		return imageRef.replace("docker://", "");
+	}
 
 	public static void check(String value, String prefix)
 	{

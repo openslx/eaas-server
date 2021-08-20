@@ -21,18 +21,14 @@ import org.apache.tamaya.inject.api.WithPropertyConverter;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.List;
 import java.util.UUID;
 import java.util.logging.Logger;
 
@@ -83,18 +79,11 @@ public class ContainerComponent {
         }
     }
 
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet,
-                                       List<ImageModificationRequest> imageModificationRequestList, ImageDescription image) throws IOException, BWFLAException {
-        ContainerMetadata metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
-       //  addImageModificationInformation(metadata, image, imageModificationRequestList);
 
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws IOException, BWFLAException {
+        String metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
         File tmpfile = File.createTempFile("metadata.json", null, null);
-        try {
-            LOG.severe(metadata.value(true));
-        } catch (JAXBException e) {
-            e.printStackTrace();
-        }
-        Files.write(tmpfile.toPath(), metadata.jsonValueWithoutRoot(true).getBytes(), StandardOpenOption.CREATE);
+        Files.write(tmpfile.toPath(), metadata.getBytes(), StandardOpenOption.CREATE);
 
         BlobDescription blobDescription = new BlobDescription();
         blobDescription.setDataFromFile(tmpfile.toPath())
@@ -114,50 +103,7 @@ public class ContainerComponent {
         }
     }
 
-    private ContainerMetadata addImageModificationInformation(ContainerMetadata metadata,
-                                                              ImageDescription image,
-                                                              List<ImageModificationRequest> imageModificationRequestList) throws MalformedURLException {
-
-        if(imageModificationRequestList != null) {
-            String subDir = "rootFsModifications";
-
-            for (ImageModificationRequest imageModificationRequest : imageModificationRequestList) {
-                ImageContentDescription imageContent = new ImageContentDescription();
-
-                String tempFileName = null;
-
-                if(imageModificationRequest.getAction() == ImageModificationRequest.ImageModificationAction.EXTRACT_TAR)
-                    tempFileName = UUID.randomUUID().toString() + ".tgz";
-                else
-                    tempFileName = UUID.randomUUID().toString();
-
-                imageContent.setAction(ImageContentDescription.Action.COPY)
-                        .setUrlDataSource(new URL(imageModificationRequest.getDataUrl()))
-                        .setName(tempFileName)
-                        .setSubdir(subDir);
-
-                image.addContentEntry(imageContent);
-                ContainerMetadata.ContainerRootfsInput fsInput = new ContainerMetadata.ContainerRootfsInput();
-                fsInput.setDst(imageModificationRequest.getDestination());
-                fsInput.setSrc(subDir + "/" + tempFileName);
-                if(imageModificationRequest.getAction() == ImageModificationRequest.ImageModificationAction.EXTRACT_TAR) {
-                    fsInput.setMethod("extract");
-                    fsInput.setArchive("tgz");
-                }
-                else
-                    fsInput.setArchive("copy");
-
-                metadata.getInputs().add(fsInput);
-            }
-        }
-
-        return metadata;
-    }
-
-    private ContainerMetadata createContainerMetadata(OciContainerConfiguration config,
-                                   boolean isDHCPenabled,
-                                   boolean requiresInputFiles,
-                                   boolean enableTelnet) throws BWFLAException {
+    String createContainerMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws BWFLAException {
         ArrayList<String> args = new ArrayList<String>();
         ContainerMetadata metadata = new ContainerMetadata();
         final String inputDir = "container-input";
@@ -174,11 +120,11 @@ public class ContainerComponent {
         args.add("--output");
         args.add("config.json");
 
+
         if(requiresInputFiles) {
             args.add("--mount");
             args.add(getMountStr(inputDir, config.getInput(), true));
         }
-
         if(config.getOutputPath() != null) {
             args.add("--mount");
             args.add(getMountStr(outputDir, config.getOutputPath(), false));
@@ -210,13 +156,11 @@ public class ContainerComponent {
 
         metadata.setArgs(args);
 
-        return metadata;
+        return metadata.jsonValueWithoutRoot(true);
     }
 
-    public ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config,
-                                                         LinuxRuntimeContainerReq linuxRuntime,
-                                                         ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia,
-                                                         List<ImageModificationRequest> imageModificationRequestList) throws IOException, BWFLAException {
+
+    public ImageDescription prepareContainerRuntimeImage(OciContainerConfiguration config, LinuxRuntimeContainerReq linuxRuntime, ArrayList<ComponentWithExternalFilesRequest.InputMedium> inputMedia) throws IOException, BWFLAException {
         if (inputMedia.size() > 1)
             throw new BWFLAException("Size of Input drives cannot exceed 1");
 
@@ -237,10 +181,11 @@ public class ContainerComponent {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        boolean requiresInputFiles = (inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0);
+        boolean requiersInputFiles = false;
+        if(inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0)
+            requiersInputFiles = true;
 
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiresInputFiles,
-                linuxRuntime.isTelnetEnabled(), imageModificationRequestList, description);
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiersInputFiles, linuxRuntime.isTelnetEnabled());
 
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
@@ -257,6 +202,7 @@ public class ContainerComponent {
                         .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
                         .setUrlDataSource(url)
                         .setSubdir("container-input");
+
                 if (extfile.hasName())
                     entry.setName(extfile.getName());
                 else entry.setName(Components.getFileName(url));
@@ -278,4 +224,7 @@ public class ContainerComponent {
 
         return description;
     }
+
+
+
 }
