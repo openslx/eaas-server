@@ -245,7 +245,6 @@ public class ContainerComponent {
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setUrlDataSource(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
-                .setSubdir("/")
                 .setName("metadata.json");
         description.addContentEntry(metadataEntry);
 
