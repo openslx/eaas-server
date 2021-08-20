@@ -5,12 +5,9 @@ import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import java.util.ArrayList;
 import java.util.List;
 
 @XmlAccessorType(XmlAccessType.NONE)
-@XmlRootElement
 public class ContainerMetadata extends JaxbType {
 
     @XmlElement
@@ -21,9 +18,6 @@ public class ContainerMetadata extends JaxbType {
 
     @XmlElement
     private String process;
-
-    @XmlElement
-    private List<ContainerRootfsInput> inputs;
 
     @XmlElement
     private List<String> args;
@@ -58,59 +52,5 @@ public class ContainerMetadata extends JaxbType {
 
     public void setTelnet(boolean telnet) {
         this.telnet = telnet;
-    }
-
-    public List<ContainerRootfsInput> getInputs() {
-        if(inputs == null)
-            inputs = new ArrayList<>();
-        return inputs;
-    }
-
-    @XmlRootElement
-    @XmlAccessorType(XmlAccessType.NONE)
-    public static class ContainerRootfsInput {
-        @XmlElement
-        private String method;
-
-        @XmlElement
-        private String archive;
-
-        @XmlElement
-        private String src;
-
-        @XmlElement
-        private String dst;
-
-        public String getMethod() {
-            return method;
-        }
-
-        public void setMethod(String method) {
-            this.method = method;
-        }
-
-        public String getArchive() {
-            return archive;
-        }
-
-        public void setArchive(String archive) {
-            this.archive = archive;
-        }
-
-        public String getSrc() {
-            return src;
-        }
-
-        public void setSrc(String src) {
-            this.src = src;
-        }
-
-        public String getDst() {
-            return dst;
-        }
-
-        public void setDst(String dst) {
-            this.dst = dst;
-        }
     }
 }
