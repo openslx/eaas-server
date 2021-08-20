@@ -18,6 +18,7 @@ public class UpdateContainerRequest extends EmilRequestType {
     private String inputFolder;
     private String author;
     private String containerRuntimeId;
+    private String workdir;
 
     private ArrayList<String> processArgs;
     private ArrayList<String> processEnvs;
@@ -103,5 +104,13 @@ public class UpdateContainerRequest extends EmilRequestType {
 
     public void setContainerRuntimeId(String containerRuntimeId) {
         this.containerRuntimeId = containerRuntimeId;
+    }
+
+    public String getWorkdir() {
+        return workdir;
+    }
+
+    public void setWorkdir(String workdir) {
+        this.workdir = workdir;
     }
 }

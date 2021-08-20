@@ -152,6 +152,7 @@ public class EmilContainerData extends EmilRest {
             if (req.getProcessEnvs() != null && req.getProcessEnvs().size() > 0)
                 process.setEnvironmentVariables(req.getProcessEnvs());
             process.getArguments().addAll(req.getProcessArgs());
+            process.setWorkingDir(req.getWorkdir() != null ? req.getWorkdir() : containerConf.getProcess().getWorkingDir());
             containerConf.setProcess(process);
 
             containerConf.setOutputPath(req.getOutputFolder());
