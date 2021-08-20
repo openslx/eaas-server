@@ -29,6 +29,10 @@ public class EmilRequestType extends JaxbType {
         return userId;
     }
 
+    public void setUserId(String userId) {
+        this.userId = userId;
+    }
+
     public boolean isConnectEnvs() {
         return connectEnvs;
     }

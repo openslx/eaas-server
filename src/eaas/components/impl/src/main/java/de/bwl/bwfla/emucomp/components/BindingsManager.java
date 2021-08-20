@@ -261,6 +261,18 @@ public class BindingsManager
 				resourcePath =imgPath.toString();
 				break;
 		}
+
+		Binding originalBinding = bindings.get(binding);
+		if(originalBinding == null)
+			throw new IllegalArgumentException();
+
+		if(originalBinding.getModificationRequests() != null)
+		{
+			log.severe("injecting data...");
+			ImageModificationService.injectData(resourcePath, originalBinding.getModificationRequests(), log);
+		}
+
+
 		this.put(realBindingId, EntryType.IMAGE, imgPath.toAbsolutePath().toString());
 
 		// resourcePath is now the base path for the binding we want to find

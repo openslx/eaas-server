@@ -148,5 +148,11 @@
 			<groupId>de.bwl.bwfla.eaas</groupId>
 			<artifactId>eaas-components-api</artifactId>
 		</dependency>
+		<dependency>
+			<!-- should be removed, once SOAP is removed from codebase -->
+			<groupId>com.sun.xml.messaging.saaj</groupId>
+			<artifactId>saaj-impl</artifactId>
+			<version>1.5.3</version>
+		</dependency>
 	</dependencies>
 </project>

@@ -733,6 +733,7 @@ public class DeprecatedProcessRunner
 
 		log.info("Killing subprocess " + pid + "...");
 		process.destroyForcibly();
+		this.waitUntilFinished();
 		return this;
 	}
 

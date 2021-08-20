@@ -459,6 +459,13 @@ public class ImageMounter implements AutoCloseable
 				log.severe("killed FUSE. we should throw instead!" + processRunner.getStdErrString() + "\n" + processRunner.getStdOutString());
 			} catch (IOException ignored) { }
 		}
+		try {
+			log.severe(processRunner.getStdErrString());
+			log.severe(processRunner.getStdOutString());
+		}
+		catch (IOException ignore) {
+
+		}
 		processRunner.cleanup();
 
 		if (rmdirs && unmounted) {
@@ -541,6 +548,57 @@ public class ImageMounter implements AutoCloseable
 				Thread.sleep(100);
 			} catch (InterruptedException ignore) { }
 		}
+		process.kill();
+		process.cleanup();
+		throw new BWFLAException("mount failed");
+	}
+
+	private static DeprecatedProcessRunner rcloneMount(Path src, Path dst, MountOptions options, Logger log) throws BWFLAException {
+
+		Map<String, String> userOption = options.getUserOptions();
+		String endpoint = userOption.get("endpoint");
+		String region = userOption.get("region");
+		String path = userOption.get("path");
+		String accessKey = userOption.get("AccessKeyId");
+		String secret = userOption.get("SecretAccessKey");
+		String token = userOption.get("SessionToken");
+
+		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo")
+				.addArgument("-E")
+				.addArgument("rclone")
+				.addArguments("-vvv", "--debug-fuse", "--s3-env-auth=true")
+				.addArguments("--s3-region", region, "--s3-endpoint", endpoint)
+				.addArguments("mount", ":s3:"+path, dst.toString())
+				.addArguments("--allow-other", "--fuse-flag", "use_ino", "--gid", "1000", "--uid", "1000", "--umask", "000", "--cache-dir", "/tmp-storage/rclone", "--vfs-cache-mode", "full", "--write-back-cache")
+				.addEnvVariable("AWS_ACCESS_KEY_ID", accessKey)
+				.addEnvVariable("AWS_SECRET_ACCESS_KEY", secret)
+				.addEnvVariable("AWS_SESSION_TOKEN", token)
+				.setLogger(log);
+
+		// process.redirectStdErrToStdOut(false);
+		if (!process.start()) {
+			throw new BWFLAException("Mounting S3-filesystem failed!");
+		}
+		try {
+			log.severe(process.getStdErrString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		try {
+			log.severe(process.getStdOutString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+		for(int _try = 0; _try < 60; _try++) {
+			if (ImageMounter.isMountpoint(dst, log))
+				return process;
+			try {
+				Thread.sleep(100);
+			} catch (InterruptedException ignore) { }
+		}
+
 		process.kill();
 		process.cleanup();
 		throw new BWFLAException("mount failed");

@@ -30,4 +30,7 @@ public enum EmulatorBeanMode
 
 	/** Xpra backend */
 	XPRA,
+
+	/** headless **/
+	HEADLESS
 }

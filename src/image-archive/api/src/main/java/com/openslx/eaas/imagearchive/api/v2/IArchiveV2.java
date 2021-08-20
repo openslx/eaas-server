@@ -20,10 +20,14 @@
 package com.openslx.eaas.imagearchive.api.v2;
 
 import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
 
 
 public interface IArchiveV2
 {
+	@Path("/metadata/{kind}")
+	IMetaDataV2 metadata(@PathParam("kind") String kind);
+
 	@Path("/containers")
 	IContainersV2 containers();
 

@@ -21,6 +21,7 @@ package de.bwl.bwfla.emil.datatypes.rest;
 
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.emucomp.api.Binding;
+import de.bwl.bwfla.emucomp.api.ImageModificationRequest;
 import de.bwl.bwfla.emucomp.api.MediumType;
 
 import javax.xml.bind.annotation.XmlAccessType;
@@ -29,6 +30,7 @@ import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
+import java.util.List;
 
 
 @XmlType(name = "machine")
@@ -76,100 +78,72 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     private LinuxRuntimeContainerReq linuxRuntimeData;
 
     @XmlElement
+    private List<ImageModificationRequest> imageModificationRequestList;
+
+    @XmlElement
     private ArrayList<UserMedium> userMedia;
 
     public String getEnvironment() {
         return environment;
     }
 
-    public void setEnvironment(String environment) {
-        this.environment = environment;
-    }
-
     public String getKeyboardLayout() {
         return keyboardLayout;
-    }
-
-    public void setKeyboardLayout(String keyboardLayout) {
-        this.keyboardLayout = keyboardLayout;
     }
 
     public String getKeyboardModel() {
         return keyboardModel;
     }
 
-    public void setKeyboardModel(String keyboardModel) {
-        this.keyboardModel = keyboardModel;
-    }
-
     public String getObject() {
         return object;
-    }
-
-    public void setObject(String object) {
-        this.object = object;
     }
 
     public String getSoftware() {
         return software;
     }
 
-    public void setSoftware(String software) {
-        this.software = software;
-    }
-
     public String getArchive() {
         return archive;
-    }
-
-    public void setArchive(String archive) {
-        this.archive = archive;
     }
 
     public boolean isLockEnvironment() {
         return lockEnvironment;
     }
 
-    public void setLockEnvironment(boolean lockEnvironment) {
-        this.lockEnvironment = lockEnvironment;
-    }
 
     public String getEmulatorVersion() {
         return emulatorVersion;
-    }
-
-    public void setEmulatorVersion(String emulatorVersion) {
-        this.emulatorVersion = emulatorVersion;
     }
 
     public String getObjectArchive() {
         return objectArchive;
     }
 
-    public void setObjectArchive(String objectArchive) {
-        this.objectArchive = objectArchive;
-    }
-
     public LinuxRuntimeContainerReq getLinuxRuntimeData() {
         return linuxRuntimeData;
-    }
-
-    public void setLinuxRuntimeData(LinuxRuntimeContainerReq linuxRuntimeData) {
-        this.linuxRuntimeData = linuxRuntimeData;
     }
 
     public String getNic() {
         return nic;
     }
 
-    public void setNic(String nic) {
-        this.nic = nic;
-    }
-
     public ArrayList<UserMedium> getUserMedia() {
         if(userMedia == null)
             userMedia = new ArrayList<>();
         return userMedia;
+    }
+
+    public List<ImageModificationRequest> getImageModificationRequestList() {
+        return imageModificationRequestList;
+    }
+
+    public boolean isHeadless() {
+        return headless;
+    }
+
+    public int getSessionLifetime() {
+        return sessionLifetime;
     }
 
     public void setHeadless(boolean headless) {
@@ -180,13 +154,6 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         this.sessionLifetime = sessionLifetime;
     }
 
-    public boolean isHeadless() {
-        return headless;
-    }
-
-    public int getSessionLifetime() {
-        return sessionLifetime;
-    }
 
     @XmlRootElement
     @XmlAccessorType(XmlAccessType.NONE)
@@ -209,16 +176,8 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
             return url;
         }
 
-        public void setUrl(String url) {
-            this.url = url;
-        }
-
         public String getName() {
             return name;
-        }
-
-        public void setName(String name) {
-            this.name = name;
         }
     }
 }

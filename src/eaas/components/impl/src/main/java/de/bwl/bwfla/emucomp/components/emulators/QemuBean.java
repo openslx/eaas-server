@@ -6,9 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
 
 import javax.inject.Inject;
 
@@ -36,6 +34,12 @@ public class QemuBean extends EmulatorBean
 	protected String qemu_bin;
 
 	private String monitor_path;
+
+	@Override
+	boolean isHeadlessSupported()
+	{
+		return true;
+	}
 
 	@Override
 	protected String getEmuContainerName(MachineConfiguration machineConfiguration)
@@ -95,6 +99,7 @@ public class QemuBean extends EmulatorBean
 
 		if (config != null && !config.isEmpty()) {
 			String[] tokens = config.trim().split("\\s+");
+			String savedNetworkOption = null;
 			for (String token : tokens)
 			{
 				if(token.isEmpty())
@@ -106,8 +111,27 @@ public class QemuBean extends EmulatorBean
 						LOG.warning("KVM device is required, but not available!");
 						continue;
 					}
-
 					super.isKvmDeviceEnabled = true;
+				}
+
+				/*
+					fiilter -net user
+					TODO: refactor if more options need to be filtered
+				 */
+				if(token.contains("-net"))
+				{
+					savedNetworkOption = token.trim();
+					continue;
+				}
+
+				if(savedNetworkOption != null)
+				{
+					if(token.contains("user")) {
+						savedNetworkOption = null;
+						continue;
+					}
+					emuRunner.addArgument(savedNetworkOption.trim());
+					savedNetworkOption = null;
 				}
 
 				if(token.contains("nic,model=") && emuEnvironment.getNic() != null && emuEnvironment.getNic().size() >0)
@@ -121,6 +145,9 @@ public class QemuBean extends EmulatorBean
 			}
 		}
 
+		if(this.isHeadlessModeEnabled()) {
+			emuRunner.addArgument("-nographic");
+		}
 		if (this.isLocalModeEnabled()) {
 			emuRunner.addArgument("-full-screen");
 		}
@@ -130,7 +157,9 @@ public class QemuBean extends EmulatorBean
 				emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
 			else emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 		} else if (this.isXpraBackendEnabled()){
-			emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
+			if (this.isPulseAudioEnabled())
+				emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "pa");
+			else emuRunner.addEnvVariable("QEMU_AUDIO_DRV", "sdl");
 		}
 
 		// Qemu's pipe-based character-device requires two pipes (<name>.in + <name>.out) to be created

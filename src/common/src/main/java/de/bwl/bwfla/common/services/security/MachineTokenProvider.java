@@ -93,6 +93,20 @@ public class MachineTokenProvider {
         return new MachineToken(lifetime, refresher);
     }
 
+    public static MachineToken getAccessToken(String secret)
+    {
+        return MachineTokenProvider.getAccessToken(secret, MachineTokenProvider.getDefaultLifetime());
+    }
+
+    public static MachineToken getAccessToken(String secret, Duration lifetime)
+    {
+        final Function<Duration, String> refresher = (time) -> {
+            return MachineTokenProvider.getBearerToken(secret, time);
+        };
+
+        return new MachineToken(lifetime, refresher);
+    }
+
     public static String getAuthenticationProxy()
     {
         if( getApiKey() != null )
@@ -112,10 +126,15 @@ public class MachineTokenProvider {
 
     public static SOAPClientAuthenticationHandlerResolver getSoapAuthenticationResolver()
     {
-        if(getApiKey() != null)
-            return new SOAPClientAuthenticationHandlerResolver(getApiKey());
-        else
+        if (apiSecret == null)
             return null;
+
+        final Function<Duration, String> refresher =
+                (time) -> MachineTokenProvider.getBearerToken(apiSecret, time);
+
+        final var lifetime = MachineTokenProvider.getDefaultLifetime();
+        final var token = new MachineToken(lifetime, refresher);
+        return new SOAPClientAuthenticationHandlerResolver(token);
     }
 
     public static Duration getDefaultLifetime()

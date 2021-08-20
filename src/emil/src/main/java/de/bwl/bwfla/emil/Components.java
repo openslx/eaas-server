@@ -174,6 +174,9 @@ public class Components {
     @WithPropertyConverter(DurationPropertyConverter.class)
     private Duration maxSessionDuration = null;
 
+    @Inject
+    @Config(value = "emucomp.enable_pulseaudio", defaultValue = "false")
+    private boolean pulseAudioAvailable = false;
 
 
     private SoftwareArchiveHelper swHelper;
@@ -289,12 +292,14 @@ public class Components {
         sessionStatsWriter.append(session);
     }
 
-    public ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
+    ComponentResponse createComponent(ComponentRequest request) throws WebApplicationException
     {
         ComponentResponse result;
 
         final TaskStack cleanups = new TaskStack(LOG);
         final List<EventObserver> observer = new ArrayList<>();
+        if (request.getUserId() == null)
+            request.setUserId((authenticatedUser != null) ? authenticatedUser.getUserId() : null);
 
         if (request.getClass().equals(UviComponentRequest.class)) {
             try {
@@ -357,9 +362,6 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse createComponent(ComponentRequest request, @Context final HttpServletResponse response)
     {
-
-        System.out.println("GOT THIS REQUEST: " + request.toString());
-
         final ComponentResponse result = this.createComponent(request);
         response.setStatus(Response.Status.CREATED.getStatusCode());
         response.addHeader("Location", result.getId());
@@ -693,7 +695,7 @@ public class Components {
             }
 
             final MachineConfiguration config = (MachineConfiguration) chosenEnv;
-            
+
             EmulationEnvironmentHelper.setKbdConfig(config,
                     machineDescription.getKeyboardLayout(),
                     machineDescription.getKeyboardModel());
@@ -719,7 +721,10 @@ public class Components {
 
                 ImageDescription imageDescription = null;
                 try {
-                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf, machineDescription.getLinuxRuntimeData(), machineDescription.getInputMedia());
+                    imageDescription = containerHelper.prepareContainerRuntimeImage(ociConf,
+                            machineDescription.getLinuxRuntimeData(),
+                            machineDescription.getInputMedia(),
+                            machineDescription.getImageModificationRequestList());
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
@@ -750,6 +755,10 @@ public class Components {
                 config.setOutputBindingId(binding.getId());
             }
             else {
+
+                // audio should only be set for non container instances.
+                checkAndUpdateEnvironmentDefaults(chosenEnv);
+
                 // Wrap external input files into images
                 for (ComponentWithExternalFilesRequest.InputMedium medium : machineDescription.getInputMedia())
                 {
@@ -762,6 +771,11 @@ public class Components {
 
                     // TODO: Extend MachineConfiguration to support multiple input/output-images!
                     break;
+                }
+
+                if(machineDescription.getImageModificationRequestList() != null) {
+                    Binding resource = (Binding) EmulationEnvironmentHelper.getBootDriveResource((MachineConfiguration) chosenEnv);
+                    resource.setModificationRequests(machineDescription.getImageModificationRequestList());
                 }
             }
 
@@ -809,6 +823,15 @@ public class Components {
             if (authenticatedUser.getTenantId() != null)
                 options.setTenantId(authenticatedUser.getTenantId());
 
+            if(machineDescription.isHeadless())
+            {
+                MachineConfiguration conf = (MachineConfiguration) chosenEnv;
+                if(conf.getUiOptions() == null)
+                    conf.setUiOptions(new UiOptions());
+
+                conf.getUiOptions().setForwarding_system("HEADLESS");
+            }
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -829,15 +852,6 @@ public class Components {
                 observer.add(new EventObserver(srcurl, LOG));
             }
 
-            if(machineDescription.isHeadless())
-            {
-                Session session = new Session();
-                session.components().add(new SessionComponent(sessionId));
-                sessionManager.register(session);
-                sessionManager.setLifetime(session.id(), machineDescription.getSessionLifetime(), TimeUnit.MINUTES,
-                    "headless session @ " + sessionId);
-            }
-
             return new MachineComponentResponse(sessionId, removableMedia);
         }
         catch (Exception error) {
@@ -846,6 +860,16 @@ public class Components {
             LOG.log(Level.SEVERE, "Components create machine failed", error);
             // Return error to the client...
             throw Components.newInternalError(error);
+        }
+    }
+
+    private void checkAndUpdateEnvironmentDefaults(Environment env)
+    {
+        MachineConfiguration mc = (MachineConfiguration) env;
+        if (mc.getUiOptions() != null) {
+            if((mc.getUiOptions().getAudio_system() == null
+                    || mc.getUiOptions().getAudio_system().isEmpty()) && this.pulseAudioAvailable)
+                mc.getUiOptions().setAudio_system("webrtc");
         }
     }
 
