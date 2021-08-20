@@ -86,7 +86,7 @@ public class ContainerComponent {
     private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet,
                                        List<ImageModificationRequest> imageModificationRequestList, ImageDescription image) throws IOException, BWFLAException {
         ContainerMetadata metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
-        addImageModificationInformation(metadata, image, imageModificationRequestList);
+       //  addImageModificationInformation(metadata, image, imageModificationRequestList);
 
         File tmpfile = File.createTempFile("metadata.json", null, null);
         try {
