@@ -5,6 +5,7 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 
 
+import de.bwl.bwfla.emucomp.api.ImageModificationRequest;
 import de.bwl.bwfla.prov.api.EnvironmentContainerDetails;
 import de.bwl.bwfla.prov.api.WorkflowRequest;
 import de.bwl.bwfla.prov.client.WorkflowClient;
@@ -141,6 +142,18 @@ public class WorkflowTask extends BlockingTask<Object> {
             machineComponentRequest.setEnvironment(runtimeId);
             machineComponentRequest.setHeadless(true);
             machineComponentRequest.setLinuxRuntimeData(linuxRuntimeContainerReq);
+
+
+            List<ImageModificationRequest> imageModificationRequestList = new ArrayList<>();
+
+            ImageModificationRequest imageModificationRequest = new ImageModificationRequest();
+            imageModificationRequest.setAction(ImageModificationRequest.ImageModificationAction.EXTRACT_TAR);
+            imageModificationRequest.setDestination("/");
+            imageModificationRequest.setDataUrl(inputTarURL);
+
+            imageModificationRequestList.add(imageModificationRequest);
+
+            machineComponentRequest.setImageModificationRequestList(imageModificationRequestList);
 
             ComponentWithExternalFilesRequest.InputMedium inputMedium = new ComponentWithExternalFilesRequest.InputMedium();
             inputMedium.setDestination(details.getInput());

@@ -799,7 +799,7 @@ public class Components {
             if(selectors != null && !selectors.isEmpty())
                 options.getSelectors().addAll(selectors);
 
-            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && emilEnv.getNetworking() != null && emilEnv.getNetworking().isConnectEnvs())
+            if((!((MachineConfiguration) chosenEnv).hasCheckpointBindingId() && Objects.requireNonNull(emilEnv).getNetworking() != null && emilEnv.getNetworking().isConnectEnvs())
                     || ((MachineConfiguration) chosenEnv).isLinuxRuntime()) {
                 String hwAddress;
                 if (machineDescription.getNic() == null) {

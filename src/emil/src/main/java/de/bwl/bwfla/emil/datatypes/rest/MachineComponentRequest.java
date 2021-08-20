@@ -40,6 +40,8 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = true)
     private String environment;
 
+
+
     @XmlElement(defaultValue = "us")
     private String keyboardLayout = "us";
 
@@ -154,6 +156,17 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         this.sessionLifetime = sessionLifetime;
     }
 
+    public void setEnvironment(String environment) {
+        this.environment = environment;
+    }
+
+    public void setLinuxRuntimeData(LinuxRuntimeContainerReq linuxRuntimeData) {
+        this.linuxRuntimeData = linuxRuntimeData;
+    }
+
+    public void setImageModificationRequestList(List<ImageModificationRequest> imageModificationRequestList) {
+        this.imageModificationRequestList = imageModificationRequestList;
+    }
 
     @XmlRootElement
     @XmlAccessorType(XmlAccessType.NONE)

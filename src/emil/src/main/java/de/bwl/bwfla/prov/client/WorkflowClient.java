@@ -60,8 +60,8 @@ public class WorkflowClient {
 
 
         System.out.println("---------------------------------- REQUEST: -------------------------------- ");
-        System.out.println(machineComponentRequest.toString());
-        System.out.println(Entity.entity(machineComponentRequest, MediaType.APPLICATION_JSON_TYPE).toString());
+//        System.out.println(machineComponentRequest.toString());
+//        System.out.println(Entity.entity(machineComponentRequest, MediaType.APPLICATION_JSON_TYPE).toString());
 
         final WebTarget target = client.target(baseUrl);
         Response response = null;
@@ -84,7 +84,7 @@ public class WorkflowClient {
                 return machineComponentResponse;
             default:
                 throw new ServerErrorException(
-                        "The ImageProposer service responded with an unexpected return code.",
+                        "Starting the component responded with an unexpected return code.",
                         response.getStatus());
         }
 
@@ -120,7 +120,7 @@ public class WorkflowClient {
             default:
                 System.out.println("STATUS CODE WAS NOT 200 BUT: " + response.getStatus());
                 throw new ServerErrorException(
-                        "The ImageProposer service responded with an unexpected return code.",
+                        "The getting Env Details responded with an unexpected return code.",
                         response.getStatus());
         }
 
@@ -150,7 +150,7 @@ public class WorkflowClient {
             default:
                 System.out.println("STATUS CODE WAS NOT 200 BUT: " + response.getStatus());
                 throw new ServerErrorException(
-                        "The ImageProposer service responded with an unexpected return code.",
+                        "Updating Container responded with an unexpected return code.",
                         response.getStatus());
         }
 
@@ -180,7 +180,7 @@ public class WorkflowClient {
                 System.out.println("STATUS CODE WAS NOT 204 BUT: " + response.getStatus());
 
                 throw new ServerErrorException(
-                        "The ImageProposer service responded with an unexpected return code.",
+                        "Keepalive responded with an unexpected return code.",
                         response.getStatus());
         }
 
@@ -210,7 +210,7 @@ public class WorkflowClient {
                 System.out.println("STATUS CODE WAS NOT 200 BUT: " + response.getStatus());
 
                 throw new ServerErrorException(
-                        "The ImageProposer service responded with an unexpected return code.",
+                        "Checking state responded with an unexpected return code.",
                         response.getStatus());
         }
 
@@ -240,7 +240,7 @@ public class WorkflowClient {
                 System.out.println("STATUS CODE WAS NOT 200 BUT: " + response.getStatus());
 
                 throw new ServerErrorException(
-                        "The ImageProposer service responded with an unexpected return code.",
+                        "Stopping Component responded with an unexpected return code.",
                         response.getStatus());
         }
 
