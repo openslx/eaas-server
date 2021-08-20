@@ -67,6 +67,7 @@ public class ContainerMetadata extends JaxbType {
     }
 
     @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
     public static class ContainerRootfsInput {
         @XmlElement
         private String method;

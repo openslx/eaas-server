@@ -47,10 +47,11 @@ public abstract class MediumBuilder
 	public static ImageBuilderMetadata build(List<ImageContentDescription> entries, Path dstdir, Path workdir, Logger log) throws IOException, BWFLAException {
 		ImageBuilderMetadata md = null;
 		for (ImageContentDescription entry : entries) {
+			Path subdir = dstdir;
 			if (entry.getSubdir() != null){
-				Path subdir = dstdir.resolve(entry.getSubdir());
+				subdir = dstdir.resolve(entry.getSubdir());
+				log.severe("creating " + subdir.toString());
 				Files.createDirectories(subdir);
-				dstdir = subdir;
 			}
 
 			switch (entry.getAction()) {
@@ -58,12 +59,13 @@ public abstract class MediumBuilder
 					if (entry.getName() == null || entry.getName().isEmpty())
 						throw new BWFLAException("entry with action COPY must have a valid name");
 
-					Path outpath = dstdir.resolve(entry.getName());
+					Path outpath = subdir.resolve(entry.getName());
 					// FIXME: file names must be unique!
 					if (outpath.toFile().exists())
 						outpath = outpath.getParent().resolve(outpath.getFileName() + "-" + UUID.randomUUID());
 
 					final ImageContentDescription.StreamableDataSource source = entry.getStreamableDataSource();
+					log.severe("copy " + outpath);
 					try (InputStream istream = source.openInputStream()) {
 						Files.copy(istream, outpath);
 					}
@@ -72,7 +74,7 @@ public abstract class MediumBuilder
 
 				case EXTRACT:
 					// Extract archive directly to destination!
-					ImageHelper.extract(entry, dstdir, workdir, log);
+					ImageHelper.extract(entry, subdir, workdir, log);
 					break;
 
 				case RSYNC:
@@ -80,7 +82,7 @@ public abstract class MediumBuilder
 					{
 						ImageContentDescription.DockerDataSource ds = entry.getDockerDataSource();
 						DockerTools docker = new DockerTools(workdir, ds, log);
-						docker.pull(dstdir);
+						docker.pull(subdir);
 
 						DockerImport dockerMd = new DockerImport();
 						dockerMd.setImageRef(ds.imageRef);
@@ -96,7 +98,6 @@ public abstract class MediumBuilder
 						md = dockerMd;
 
 					}
-
 					break;
 			}
 		}

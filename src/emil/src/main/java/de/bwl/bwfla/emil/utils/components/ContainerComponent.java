@@ -21,6 +21,7 @@ import org.apache.tamaya.inject.api.WithPropertyConverter;
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
+import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -82,9 +83,17 @@ public class ContainerComponent {
         }
     }
 
-    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet) throws IOException, BWFLAException {
+    private BlobHandle prepareMetadata(OciContainerConfiguration config, boolean isDHCPenabled, boolean requiresInputFiles, boolean enableTelnet,
+                                       List<ImageModificationRequest> imageModificationRequestList, ImageDescription image) throws IOException, BWFLAException {
         ContainerMetadata metadata = createContainerMetadata(config, isDHCPenabled, requiresInputFiles, enableTelnet);
+        addImageModificationInformation(metadata, image, imageModificationRequestList);
+
         File tmpfile = File.createTempFile("metadata.json", null, null);
+        try {
+            LOG.severe(metadata.value(true));
+        } catch (JAXBException e) {
+            e.printStackTrace();
+        }
         Files.write(tmpfile.toPath(), metadata.jsonValueWithoutRoot(true).getBytes(), StandardOpenOption.CREATE);
 
         BlobDescription blobDescription = new BlobDescription();
@@ -127,6 +136,7 @@ public class ContainerComponent {
                         .setName(tempFileName)
                         .setSubdir(subDir);
 
+                image.addContentEntry(imageContent);
                 ContainerMetadata.ContainerRootfsInput fsInput = new ContainerMetadata.ContainerRootfsInput();
                 fsInput.setDst(imageModificationRequest.getDestination());
                 fsInput.setSrc(subDir + "/" + tempFileName);
@@ -164,11 +174,11 @@ public class ContainerComponent {
         args.add("--output");
         args.add("config.json");
 
-
         if(requiresInputFiles) {
             args.add("--mount");
             args.add(getMountStr(inputDir, config.getInput(), true));
         }
+
         if(config.getOutputPath() != null) {
             args.add("--mount");
             args.add(getMountStr(outputDir, config.getOutputPath(), false));
@@ -227,14 +237,15 @@ public class ContainerComponent {
                 .setLabel("eaas-job")
                 .setSizeInMb(sizeInMb);
 
-        boolean requiresInputFiles = (inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0)
-                || imageModificationRequestList != null && imageModificationRequestList.size() > 0;
+        boolean requiresInputFiles = (inputMedia.size() > 0 && inputMedia.get(0).getExtFiles().size() > 0);
 
-        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiresInputFiles, linuxRuntime.isTelnetEnabled());
+        BlobHandle mdBlob = prepareMetadata(config, linuxRuntime.isDHCPenabled(), requiresInputFiles,
+                linuxRuntime.isTelnetEnabled(), imageModificationRequestList, description);
 
         final ImageContentDescription metadataEntry = new ImageContentDescription();
         metadataEntry.setAction(ImageContentDescription.Action.COPY)
                 .setUrlDataSource(new URL(mdBlob.toRestUrl(blobStoreRestAddress)))
+                .setSubdir("/")
                 .setName("metadata.json");
         description.addContentEntry(metadataEntry);
 
@@ -247,7 +258,6 @@ public class ContainerComponent {
                         .setArchiveFormat(ImageContentDescription.ArchiveFormat.TAR)
                         .setUrlDataSource(url)
                         .setSubdir("container-input");
-
                 if (extfile.hasName())
                     entry.setName(extfile.getName());
                 else entry.setName(Components.getFileName(url));
