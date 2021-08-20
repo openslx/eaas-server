@@ -748,6 +748,10 @@ public class Components {
                             .entity(new ErrorInformation("could not find rootfs "))
                             .build());
                 rootfs.setFileSystemType(null);
+                if(machineDescription.getImageModificationRequestList() != null)
+                {
+                    rootfs.setModificationRequests(machineDescription.getImageModificationRequestList());
+                }
                 this.addBindingToEnvironment(config, rootfs, this.toDriveType(MediumType.HDD));
 
 
