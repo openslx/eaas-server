@@ -12,6 +12,7 @@ imagearchive:
       endpoint: "minio"
       bucket: "image-archive"
       paths:
+        aliasing: "/aliases"
         environment: "/environments"
         session: "/sessions"
         network: "/networks"

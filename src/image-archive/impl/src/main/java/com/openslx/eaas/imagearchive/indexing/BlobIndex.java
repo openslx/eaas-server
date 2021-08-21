@@ -85,6 +85,9 @@ public class BlobIndex<T> extends Index<T>
 
 	protected static String toName(BlobKind kind)
 	{
+		if (kind == BlobKind.ALIASING)
+			return "aliases";
+
 		return kind.value() + "s";
 	}
 }

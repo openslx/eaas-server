@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.indexing;
 import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.impl.AliasingIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ContainerIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
@@ -73,6 +74,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 
 		logger.info("All data-indexes built successfully");
 		return this;
+	}
+
+	public AliasingIndex aliases()
+	{
+		return this.lookup(BlobKind.ALIASING, AliasingIndex.class);
 	}
 
 	public MetaDataIndex environments()
@@ -128,6 +134,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 	public static IndexRegistry create() throws BWFLAException
 	{
 		final var registry = new IndexRegistry();
+		registry.insert(new AliasingIndex());
 		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT));
 		registry.insert(new MetaDataIndex(BlobKind.SESSION));
 		registry.insert(new MetaDataIndex(BlobKind.NETWORK));

@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive;
 
 public enum BlobKind
 {
+	ALIASING,
 	ENVIRONMENT,
 	SESSION,
 	NETWORK,
@@ -42,6 +43,8 @@ public enum BlobKind
 	public static BlobKind from(String kind)
 	{
 		switch (kind) {
+			case "aliasing":
+				return BlobKind.ALIASING;
 			case "environment":
 				return BlobKind.ENVIRONMENT;
 			case "session":
