@@ -25,6 +25,7 @@ import de.bwl.bwfla.blobstore.api.BlobHandle;
 import de.bwl.bwfla.blobstore.client.BlobStoreClient;
 import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.datatypes.ProcessMonitorVID;
+import de.bwl.bwfla.common.datatypes.QemuImage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.exceptions.IllegalEmulatorStateException;
 import de.bwl.bwfla.common.services.guacplay.GuacDefs;
@@ -36,7 +37,9 @@ import de.bwl.bwfla.common.services.guacplay.net.GuacTunnel;
 import de.bwl.bwfla.common.services.guacplay.net.TunnelConfig;
 import de.bwl.bwfla.common.services.guacplay.protocol.InstructionBuilder;
 import de.bwl.bwfla.common.services.guacplay.record.SessionRecorder;
+import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.ProcessMonitor;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.emucomp.api.*;
@@ -67,6 +70,7 @@ import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.io.File;
 import java.io.IOException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -852,7 +856,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				emuRunner.waitUntilFinished();
 
 				// upload emulator's output
-				if (this.isOutputAvailable()) {
+				if (true || this.isOutputAvailable()) {
 					try {
 						this.processEmulatorOutput();
 					}
@@ -971,17 +975,111 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return hasOutput;
 	}
 
+	private BlobHandle getChangedFiles(Path cowImage, FileSystemType fsType) throws IOException, BWFLAException {
+
+		this.unmountBindings();
+
+		ImageInformation imageInformation = new ImageInformation(cowImage.toString(), LOG);
+		String backingFileId = imageInformation.getBackingFile();
+
+		QcowOptions qcowOptions = new QcowOptions();
+		String proxy = MachineTokenProvider.getAuthenticationProxy();
+		String backingUrl = proxy + "/" + this.getComponentId() + "/" + backingFileId;
+		qcowOptions.setBackingFile(backingFileId);
+
+		final Path workdir = this.getWorkingDir().resolve("output-all");
+		Files.createDirectories(workdir);
+
+		Path lowerImgPath = workdir.resolve(backingFileId + ".cow");
+		EmulatorUtils.createCowFile(lowerImgPath, qcowOptions);
+		LOG.severe("created CowFile");
+
+		try (final ImageMounter mounter = new ImageMounter(LOG)) {
+
+			final ImageMounter.Mount rawmnt = mounter.mount(lowerImgPath, workdir.resolve(backingFileId + ".dd"));
+			final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("backingFileId.fs"), fsType);
+			final Path lowerDir = fsmnt.getMountPoint();
+
+			final ImageMounter.Mount rawmnt2 = mounter.mount(cowImage, workdir.resolve("upperDir.dd"));
+			final ImageMounter.Mount fsmnt2 = mounter.mount(rawmnt2, workdir.resolve("upperDir.fs"), fsType);
+			final Path upperDir = fsmnt2.getMountPoint();
+
+			final Path outputDir = this.getWorkingDir().resolve("outputDir");
+			DeprecatedProcessRunner processRunner = new DeprecatedProcessRunner("rsync");
+			processRunner.addArguments("-armxv", "--progress");
+			processRunner.addArguments("--exclude", "dev");
+			processRunner.addArguments("--exclude", "proc");
+			processRunner.addArguments("--compare-dest=" + lowerDir.toAbsolutePath().toString() + "/",
+					upperDir.toAbsolutePath().toString() +  "/",
+					outputDir.toAbsolutePath().toString());
+			processRunner.execute(true);
+			processRunner.cleanup();
+
+			Path outputTar = workdir.resolve("output.tgz");
+			DeprecatedProcessRunner processRunner2 = new DeprecatedProcessRunner("tar");
+			processRunner2.addArguments("-czf");
+			processRunner2.addArguments(outputTar.toAbsolutePath().toString());
+			processRunner2.addArguments(outputDir.toAbsolutePath().toString());
+			processRunner2.execute(true);
+
+			final BlobDescription blob = new BlobDescription()
+				.setDescription("Output for session " + this.getComponentId())
+				.setNamespace("emulator-outputs")
+				.setName("output");
+
+			blob.setDataFromFile(outputTar);
+			blob.setType(".tgz");
+				// Upload archive to the BlobStore
+			BlobHandle handle = BlobStoreClient.get()
+						.getBlobStorePort(blobStoreAddressSoap)
+						.put(blob);
+
+			return handle;
+		}
+		catch (BWFLAException  cause) {
+			cause.printStackTrace();
+		}
+
+		return null;
+	}
+
 	private void processEmulatorOutput() throws BWFLAException
 	{
 		LOG.severe("processing emulator output ...");
+		/*
 		final String bindingId = emuEnvironment.getOutputBindingId();
 		final BlobStoreBinding binding = (BlobStoreBinding) bindings.get(bindingId);
 		final FileSystemType fsType = binding.getFileSystemType();
 
 		final String qcow = bindings.lookup(BindingsManager.toBindingId(bindingId, BindingsManager.EntryType.IMAGE));
+		*/
 
-		this.unmountBindings();
 
+
+		LOG.severe("processing emulator output ... unmounted bindings");
+
+		if(emuEnvironment == null|| emuEnvironment.getAbstractDataResource() == null)
+			LOG.severe("processing emulator output ... failed getting emu");
+
+		for (AbstractDataResource r : emuEnvironment.getAbstractDataResource())
+		{
+			if(r.getId() != null && r.getId().equals("rootfs"))
+			{
+				LOG.severe("processing rootfs");
+				final Binding rootfsBinding = bindings.get("rootfs");
+				final FileSystemType fsType = FileSystemType.EXT4;
+
+				final String cowImage = bindings.lookup(BindingsManager.toBindingId("rootfs", BindingsManager.EntryType.IMAGE));
+				try {
+					this.result.complete(getChangedFiles(Path.of(cowImage), fsType));
+				} catch (IOException e) {
+					this.result.completeExceptionally(e);
+					throw new BWFLAException(e);
+				}
+			}
+		}
+
+		/*
 		final BlobDescription blob = new BlobDescription()
 				.setDescription("Output for session " + this.getComponentId())
 				.setNamespace("emulator-outputs")
@@ -1040,6 +1138,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			this.result.completeExceptionally(error);
 			throw error;
 		}
+
+		 */
 	}
 
 	private String getEmulatorOutputLocation() throws BWFLAException
