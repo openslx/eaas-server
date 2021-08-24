@@ -2,6 +2,7 @@ package de.bwl.bwfla.prov.impl;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.emil.datatypes.rest.*;
 
 
@@ -17,6 +18,7 @@ import javax.json.JsonObject;
 import javax.ws.rs.WebApplicationException;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.logging.Logger;
@@ -61,15 +63,12 @@ public class WorkflowTask extends BlockingTask<Object> {
 //            inputsBuilder.add(input);
 //        }
 
-        JsonArray inputs = inputsBuilder.build();
-
         JsonObject jsonExecution = Json.createObjectBuilder()
                 .add("environmentId", environmentId)
                 .add("startedAt", String.valueOf(LocalDateTime.now()))
-                .add("inputs", inputs)
+                .add("inputBlobstoreURL", inputTarURL)
+//                .add("arguments", arguments)  TODO this
                 .add("user", "getFromUserCtx")
-                .add("endedAt", String.valueOf(LocalDateTime.now())) //FIXME testing only
-                .add("outputs", inputs) //FIXME testing only
                 .build();
 
         LOG.severe("Created JSON Execution:" + jsonExecution);
@@ -204,7 +203,25 @@ public class WorkflowTask extends BlockingTask<Object> {
                 }
             }
             LOG.severe("DONE WITH SLEEPS/keepalive, session should be stopped soon!");
-            return workflowClient.stopComponent(sessionId);
+            var stopComp = workflowClient.stopComponent(sessionId);
+
+            var outPutURL = stopComp.getUrl();
+
+            LOG.severe("Starting PROV subprocess");
+            DeprecatedProcessRunner provRunner = new DeprecatedProcessRunner("python3");
+            provRunner.setWorkingDirectory(Path.of("/tmp"));
+            provRunner.addArgument("/libexec/eaas-prov/provone.py");
+            provRunner.addArgument("/tmp/" + environmentId + ".json");
+            provRunner.addArgument("/tmp/exec_input_" + environmentId + ".json"); //TODO potentially remove json, because everything is in workflowtask now
+            provRunner.addArgument(outPutURL);
+            provRunner.execute(true);
+            provRunner.cleanup();
+            LOG.severe("PROV is done!");
+
+            return stopComp;
+
+
+
 
         } catch (WebApplicationException | InterruptedException exception) {
             LOG.severe("Create Component Error: " + exception.getMessage());

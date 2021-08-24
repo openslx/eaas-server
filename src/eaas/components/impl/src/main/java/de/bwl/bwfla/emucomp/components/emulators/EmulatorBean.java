@@ -975,7 +975,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		return hasOutput;
 	}
 
-	private BlobHandle getChangedFiles(Path cowImage, FileSystemType fsType) throws IOException, BWFLAException {
+	private BlobHandle getChangedFiles(Path cowImage, FileSystemType fsType, String envId) throws IOException, BWFLAException {
 
 		this.unmountBindings();
 
@@ -1006,15 +1006,18 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 			final Path outputDir = this.getWorkingDir().resolve("outputDir");
 			DeprecatedProcessRunner processRunner = new DeprecatedProcessRunner("rsync");
-			processRunner.addArguments("-armxv", "--progress");
+			processRunner.addArguments("-armxv"); //, "--progress");
 			processRunner.addArguments("--exclude", "dev");
 			processRunner.addArguments("--exclude", "proc");
 			processRunner.addArguments("--compare-dest=" + lowerDir.toAbsolutePath().toString() + "/",
 					upperDir.toAbsolutePath().toString() +  "/",
 					outputDir.toAbsolutePath().toString());
+			LOG.severe("Starting RSYNC");
 			processRunner.execute(true);
+			LOG.severe("DONE WITH RSYNC, starting Cleanup");
 			processRunner.cleanup();
 
+			LOG.severe("Starting TAR");
 			Path outputTar = workdir.resolve("output.tgz");
 			DeprecatedProcessRunner processRunner2 = new DeprecatedProcessRunner("tar");
 			processRunner2.addArguments("-czf");
@@ -1071,7 +1074,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				final String cowImage = bindings.lookup(BindingsManager.toBindingId("rootfs", BindingsManager.EntryType.IMAGE));
 				try {
-					this.result.complete(getChangedFiles(Path.of(cowImage), fsType));
+					this.result.complete(getChangedFiles(Path.of(cowImage), fsType, emuEnvironment.getId()));
 				} catch (IOException e) {
 					this.result.completeExceptionally(e);
 					throw new BWFLAException(e);

@@ -606,10 +606,10 @@ public class EmilEnvironmentRepository {
 
 		// Container Information
 		JsonObject jsonContainer = Json.createObjectBuilder()
-				.add("tag", req.getTag())
-				.add("digest", req.getContainerDigest())
-				.add("containerUrl", req.getContainerSourceUrl())
-				.add("image", req.getImageUrl())
+				.add("tag", req.getTag() != null ?   req.getTag() : "")
+				.add("digest", req.getContainerDigest() != null ?  req.getContainerDigest()  : "")
+				.add("containerUrl", req.getContainerSourceUrl() != null ?  req.getContainerSourceUrl() : "")
+				.add("image", req.getImageUrl() != null ?  req.getImageUrl() : "")
 				.build();
 
 		//Metadata
@@ -624,12 +624,12 @@ public class EmilEnvironmentRepository {
 //
 //        JsonObject jsonMetadata = Json.createObjectBuilder()
 //                .add("original", "linktooriginaltool.com")
-//                .add("worklflows", workflows)
+//                .add("workflows", workflows)
 //                .add("keywords", keywords).build();
 
 		//Other
 		JsonObject jsonOther = Json.createObjectBuilder()
-				.add("eaasVersion", EaasBuildInfo.getVersion() ).build();
+				.add("eaasVersion", EaasBuildInfo.getVersion()).build();
 
 
 		JsonObject json = Json.createObjectBuilder()
@@ -1115,7 +1115,7 @@ public class EmilEnvironmentRepository {
 		if(req.getArchive() != null)
 			env.setArchive(req.getArchive());
 
-		//provScript(env, req);
+		provScript(env, req);
 		save(env, true, userCtx);
 	}
 
