@@ -25,6 +25,7 @@ import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import java.io.InputStream;
 
@@ -46,5 +47,13 @@ public class AliasingIndex extends BlobIndex<AliasingIndex.Record>
 	public AliasingIndex()
 	{
 		super(BlobKind.ALIASING, Record.class, Record::index, BlobIngestors.records(Record::new));
+	}
+
+	public AliasingDescriptor fetch(String id) throws BWFLAException
+	{
+		final var record = this.collection()
+				.lookup(Record.filter(id));
+
+		return (record != null) ? record.data() : null;
 	}
 }
