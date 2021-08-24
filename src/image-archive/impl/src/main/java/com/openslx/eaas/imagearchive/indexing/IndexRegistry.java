@@ -134,16 +134,20 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 	public static IndexRegistry create() throws BWFLAException
 	{
 		final var registry = new IndexRegistry();
-		registry.insert(new AliasingIndex());
-		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT));
-		registry.insert(new MetaDataIndex(BlobKind.SESSION));
-		registry.insert(new MetaDataIndex(BlobKind.NETWORK));
-		registry.insert(new ContainerIndex());
-		registry.insert(new MachineIndex());
-		registry.insert(new TemplateIndex());
-		registry.insert(new CheckpointIndex());
-		registry.insert(new ImageIndex());
-		registry.insert(new RomIndex());
+		final var aliases = new AliasingIndex();
+		final var fetcher = new MetaFetcher()
+				.with(aliases);
+
+		registry.insert(aliases);
+		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.SESSION, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.NETWORK, fetcher));
+		registry.insert(new ContainerIndex(fetcher));
+		registry.insert(new MachineIndex(fetcher));
+		registry.insert(new TemplateIndex(fetcher));
+		registry.insert(new CheckpointIndex(fetcher));
+		registry.insert(new ImageIndex(fetcher));
+		registry.insert(new RomIndex(fetcher));
 		registry.insert(new ImportIndex());
 		return registry;
 	}

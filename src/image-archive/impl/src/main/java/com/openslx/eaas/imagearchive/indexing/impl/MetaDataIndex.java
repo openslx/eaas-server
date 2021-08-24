@@ -25,6 +25,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 
 import java.io.InputStream;
 
@@ -45,8 +46,8 @@ public class MetaDataIndex extends BlobIndex<MetaDataIndex.Record>
 		}
 	}
 
-	public MetaDataIndex(BlobKind kind)
+	public MetaDataIndex(BlobKind kind, MetaFetcher fetcher)
 	{
-		super(kind, Record.class, Record::index, BlobIngestors.records(Record::new));
+		super(kind, Record.class, Record::index, BlobIngestors.records(Record::new), fetcher);
 	}
 }
