@@ -28,7 +28,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class BlobIndexer<T> implements AutoCloseable
+public class BlobIndexer<T extends BlobDescriptor> implements AutoCloseable
 {
 	private final BlobIndex<T> target;
 
@@ -74,7 +74,7 @@ public class BlobIndexer<T> implements AutoCloseable
 
 	// ===== Internal Helpers ==============================
 
-	private static <D> void ingest(BlobIngestorContext<D> context, StorageRegistry storage, boolean parallel)
+	private static <D extends BlobDescriptor> void ingest(BlobIngestorContext<D> context, StorageRegistry storage, boolean parallel)
 			throws BWFLAException
 	{
 		final var counters = new Result();
@@ -104,7 +104,7 @@ public class BlobIndexer<T> implements AutoCloseable
 		BlobIndexer.summary(storage, counters, logger);
 	}
 
-	private static <D> Result ingest(BlobIngestorContext<D> context, StorageLocation location, boolean parallel)
+	private static <D extends BlobDescriptor> Result ingest(BlobIngestorContext<D> context, StorageLocation location, boolean parallel)
 			throws BWFLAException
 	{
 		final int MAX_NUM_FAILURES = 5;
@@ -156,7 +156,8 @@ public class BlobIndexer<T> implements AutoCloseable
 		return result;
 	}
 
-	private static <T> void summary(BlobIngestorContext<T> context, StorageLocation location, Result result, Logger logger)
+	private static <T extends BlobDescriptor> void summary(BlobIngestorContext<T> context, StorageLocation location,
+														   Result result, Logger logger)
 	{
 		final var message = new StringBuilder(512);
 		message.append("Indexed ");

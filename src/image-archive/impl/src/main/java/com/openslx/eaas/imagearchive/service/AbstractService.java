@@ -21,6 +21,7 @@ package com.openslx.eaas.imagearchive.service;
 
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.FilterOptions;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
@@ -31,7 +32,7 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 
 
-public abstract class AbstractService<T> implements AutoCloseable
+public abstract class AbstractService<T extends BlobDescriptor> implements AutoCloseable
 {
 	private final Logger logger;
 	private final Filter<String> idfilter;

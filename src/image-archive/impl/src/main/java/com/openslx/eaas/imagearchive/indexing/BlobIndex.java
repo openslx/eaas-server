@@ -26,7 +26,7 @@ import de.bwl.bwfla.blobstore.BlobDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public class BlobIndex<T> extends Index<T>
+public class BlobIndex<T extends BlobDescriptor> extends Index<T>
 {
 	private final BlobKind kind;
 	private final IBlobIngestor<T> ingestor;

@@ -22,7 +22,7 @@ package com.openslx.eaas.imagearchive.indexing;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 
 
-public class BlobIngestorContext<T>
+public class BlobIngestorContext<T extends BlobDescriptor>
 {
 	private final BlobIndex<T> target;
 	private final DocumentCollection<T> buffer;
