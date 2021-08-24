@@ -37,7 +37,7 @@ public class BlobIngestors
 	{
 		return (context, blob, location) -> {
 			final var descriptor = constructor.get();
-			BlobIngestors.prepare(descriptor, blob, location);
+			BlobIngestors.prepare(descriptor, context, blob, location);
 			BlobIngestors.check(descriptor, context, blob, location);
 			BlobIngestors.insert(descriptor, context);
 		};
@@ -47,7 +47,7 @@ public class BlobIngestors
 	{
 		return (context, blob, location) -> {
 			final var record = constructor.get();
-			BlobIngestors.prepare(record, blob, location);
+			BlobIngestors.prepare(record, context, blob, location);
 			BlobIngestors.check(record, context, blob, location);
 
 			// safety check for inline sizes!
@@ -106,7 +106,9 @@ public class BlobIngestors
 		}
 	}
 
-	private static <T extends BlobDescriptor> void prepare(T descriptor, BlobDescription blob, StorageLocation location)
+	private static <T extends BlobDescriptor> void prepare(T descriptor, BlobIngestorContext<T> context,
+														   BlobDescription blob, StorageLocation location)
+			throws BWFLAException
 	{
 		// NOTE: blobstore paths usually contain prefixes, but we need filename only!
 		final var filename = BlobStore.path(blob.name())
@@ -117,6 +119,15 @@ public class BlobIngestors
 		descriptor.setEtag(blob.etag());
 		descriptor.setLocation(location.name());
 		descriptor.setModTime(blob.mtime());
+
+		// inline aliases...
+		{
+			final var aliasing = context.fetcher()
+					.aliasing(filename);
+
+			if (aliasing != null)
+				descriptor.setAliases(aliasing.aliases());
+		}
 	}
 
 	private static <T extends BlobDescriptor> void insert(T descriptor, BlobIngestorContext<T> context)

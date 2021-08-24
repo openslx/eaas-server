@@ -26,12 +26,14 @@ public class BlobIngestorContext<T>
 {
 	private final BlobIndex<T> target;
 	private final DocumentCollection<T> buffer;
+	private final MetaFetcher fetcher;
 	private final Counters counters;
 
-	public BlobIngestorContext(BlobIndex<T> target, DocumentCollection<T> buffer)
+	public BlobIngestorContext(BlobIndex<T> target, DocumentCollection<T> buffer, MetaFetcher fetcher)
 	{
 		this.target = target;
 		this.buffer = buffer;
+		this.fetcher = fetcher;
 		this.counters = new Counters();
 	}
 
@@ -45,6 +47,11 @@ public class BlobIngestorContext<T>
 		return buffer;
 	}
 
+	public MetaFetcher fetcher()
+	{
+		return fetcher;
+	}
+
 	public Counters counters()
 	{
 		return counters;
@@ -52,7 +59,7 @@ public class BlobIngestorContext<T>
 
 	public BlobIngestorContext<T> fork()
 	{
-		return new BlobIngestorContext<>(this.target, this.buffer);
+		return new BlobIngestorContext<>(target, buffer, fetcher);
 	}
 
 

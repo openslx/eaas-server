@@ -30,6 +30,7 @@ public class BlobIndex<T> extends Index<T>
 {
 	private final BlobKind kind;
 	private final IBlobIngestor<T> ingestor;
+	private final MetaFetcher fetcher;
 
 
 	public int id()
@@ -45,7 +46,7 @@ public class BlobIndex<T> extends Index<T>
 	public synchronized void rebuild(StorageRegistry storage) throws BWFLAException
 	{
 		try (final var indexer = new BlobIndexer<>(this)) {
-			indexer.index(storage);
+			indexer.index(storage, fetcher);
 		}
 		catch (Exception error) {
 			if (error instanceof BWFLAException)
@@ -58,7 +59,7 @@ public class BlobIndex<T> extends Index<T>
 	{
 		try {
 			// special context where buffer and destination collections are the same!
-			final var context = new BlobIngestorContext<>(this, this.collection());
+			final var context = new BlobIngestorContext<>(this, this.collection(), fetcher);
 			ingestor.ingest(context, blob, location);
 		}
 		catch (Exception error) {
@@ -73,14 +74,25 @@ public class BlobIndex<T> extends Index<T>
 
 	protected BlobIndex(BlobKind kind, Class<T> clazz, IPreparer<T> preparer, IBlobIngestor<T> ingestor)
 	{
+		this(kind, clazz, preparer, ingestor, new MetaFetcher());
+	}
+
+	protected BlobIndex(BlobKind kind, Class<T> clazz, IPreparer<T> preparer, IBlobIngestor<T> ingestor, MetaFetcher fetcher)
+	{
 		super(BlobIndex.toName(kind), clazz, preparer);
 		this.kind = kind;
 		this.ingestor = ingestor;
+		this.fetcher = fetcher;
 	}
 
 	protected IBlobIngestor<T> ingestor()
 	{
 		return ingestor;
+	}
+
+	protected MetaFetcher fetcher()
+	{
+		return fetcher;
 	}
 
 	protected static String toName(BlobKind kind)

@@ -38,12 +38,12 @@ public class BlobIndexer<T> implements AutoCloseable
 		this.target = target;
 	}
 
-	public void index(StorageRegistry storage) throws BWFLAException
+	public void index(StorageRegistry storage, MetaFetcher fetcher) throws BWFLAException
 	{
-		this.index(storage, false);
+		this.index(storage, fetcher, false);
 	}
 
-	public void index(StorageRegistry storage, boolean parallel) throws BWFLAException
+	public void index(StorageRegistry storage, MetaFetcher fetcher, boolean parallel) throws BWFLAException
 	{
 		final var tmpname = target.name() + "-" + StringUtils.random(8);
 		final var collection = Index.construct(tmpname, target.clazz(), target.logger());
@@ -51,7 +51,7 @@ public class BlobIndexer<T> implements AutoCloseable
 			target.preparer()
 					.prepare(collection);
 
-			final var context = new BlobIngestorContext<>(target, collection);
+			final var context = new BlobIngestorContext<>(target, collection, fetcher);
 			BlobIndexer.ingest(context, storage, parallel);
 			target.switchto(collection);
 		}
