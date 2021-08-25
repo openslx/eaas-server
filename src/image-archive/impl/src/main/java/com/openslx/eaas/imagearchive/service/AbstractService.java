@@ -132,4 +132,15 @@ public abstract class AbstractService<T extends BlobDescriptor> implements AutoC
 	{
 		return index.kind();
 	}
+
+	protected boolean update(String id, DocumentCollection.Update update) throws BWFLAException
+	{
+		return this.update(id, update, false) > 0;
+	}
+
+	protected long update(String id, DocumentCollection.Update update, boolean many) throws BWFLAException
+	{
+		return index.collection()
+				.update(idfilter.apply(id), update, many);
+	}
 }
