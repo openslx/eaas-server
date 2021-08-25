@@ -22,27 +22,37 @@ package com.openslx.eaas.imagearchive.service.impl;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
 import com.openslx.eaas.imagearchive.indexing.impl.AliasingIndex;
+import com.openslx.eaas.imagearchive.service.AbstractService;
+import com.openslx.eaas.imagearchive.service.BlobService;
 import com.openslx.eaas.imagearchive.service.DataService;
+import com.openslx.eaas.imagearchive.service.ServiceRegistry;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+
+import java.util.function.Consumer;
+import java.util.function.Predicate;
 
 
 public class AliasingService extends DataService<AliasingDescriptor, AliasingIndex.Record>
 {
-	public static AliasingService create(ArchiveBackend backend)
+	private final ServiceRegistry services;
+
+
+	public static AliasingService create(ArchiveBackend backend, ServiceRegistry services)
 	{
 		final var index = backend.indexes()
 				.aliases();
 
-		return new AliasingService(backend.storage(), index);
+		return new AliasingService(backend.storage(), services, index);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private AliasingService(StorageRegistry storage, AliasingIndex index)
+	private AliasingService(StorageRegistry storage, ServiceRegistry services, AliasingIndex index)
 	{
 		super(storage, index, AliasingIndex.Record::filter, AliasingIndex.Record::filter);
+		this.services = services;
 	}
 
 	@Override
@@ -54,6 +64,28 @@ public class AliasingService extends DataService<AliasingDescriptor, AliasingInd
 		// update target name
 		data.setName(id);
 
-		return super.update(location, id, data);
+		super.update(location, id, data);
+		this.updateReferences(id, data);
+		return id;
+	}
+
+	private void updateReferences(String id, AliasingDescriptor aliasing)
+	{
+		final Predicate<AbstractService<?>> predicate = (service) -> {
+			if (service instanceof AliasingService)
+				return false;
+
+			return true;
+		};
+
+		final Consumer<AbstractService<?>> updater = (service) -> {
+			if (service instanceof BlobService<?>)
+				((BlobService<?>) service).update(id, aliasing);
+		};
+
+		// update all inlined aliases
+		services.stream()
+				.filter(predicate)
+				.forEach(updater);
 	}
 }

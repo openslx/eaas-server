@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.service;
 
+import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.FilterOptions;
@@ -26,6 +27,7 @@ import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.blobstore.BlobStore;
+import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import javax.ws.rs.core.MediaType;
@@ -33,6 +35,7 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 
 public abstract class BlobService<T extends BlobDescriptor> extends AbstractService<T>
@@ -184,6 +187,23 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 
 		final var seconds = (int) lifetime.toSeconds();
 		return blob.newPreSignedUrl(method, seconds, TimeUnit.SECONDS);
+	}
+
+	/** Update blob's inlined aliases */
+	public void update(String id, AliasingDescriptor aliasing)
+	{
+		final var aliases = (aliasing != null) ? aliasing.aliases() : null;
+		final var update = DocumentCollection.updater()
+				.set(BlobDescriptor.Fields.ALIASES, aliases);
+
+		final var logger = this.logger();
+		try {
+			if (this.update(id, update))
+				logger.info("Aliasing updated for blob '" + id + "'");
+		}
+		catch (Exception error) {
+			logger.log(Level.WARNING, "Updating aliasing for blob '" + id + "' failed!", error);
+		}
 	}
 
 

@@ -155,7 +155,7 @@ public class BlobDescriptor
 
 	// ===== Internal Helpers ==============================
 
-	protected static final class Fields
+	public static final class Fields
 	{
 		public static final String NAME     = "nam";
 		public static final String LOCATION = "loc";

@@ -101,7 +101,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 	public static ServiceRegistry create(ArchiveBackend backend) throws BWFLAException
 	{
 		final var registry = new ServiceRegistry();
-		registry.insert(AliasingService.create(backend));
+		registry.insert(AliasingService.create(backend, registry));
 		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend));
 		registry.insert(MetaDataService.create(BlobKind.SESSION, backend));
 		registry.insert(MetaDataService.create(BlobKind.NETWORK, backend));
