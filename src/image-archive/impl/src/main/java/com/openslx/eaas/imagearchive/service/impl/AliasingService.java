@@ -46,6 +46,14 @@ public class AliasingService extends DataService<AliasingDescriptor, AliasingInd
 		return new AliasingService(backend.storage(), services, index);
 	}
 
+	@Override
+	public boolean remove(String id) throws BWFLAException
+	{
+		final var removed = super.remove(id);
+		this.updateReferences(id, null);
+		return removed;
+	}
+
 
 	// ===== Internal Helpers ==============================
 

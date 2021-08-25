@@ -193,8 +193,11 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 	public void update(String id, AliasingDescriptor aliasing)
 	{
 		final var aliases = (aliasing != null) ? aliasing.aliases() : null;
-		final var update = DocumentCollection.updater()
-				.set(BlobDescriptor.Fields.ALIASES, aliases);
+		final var update = DocumentCollection.updater();
+		final var field = BlobDescriptor.Fields.ALIASES;
+		if (aliases == null || aliases.isEmpty())
+			update.unset(field);
+		else update.set(field, aliases);
 
 		final var logger = this.logger();
 		try {
