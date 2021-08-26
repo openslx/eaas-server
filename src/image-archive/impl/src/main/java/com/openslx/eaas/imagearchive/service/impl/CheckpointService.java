@@ -22,24 +22,25 @@ package com.openslx.eaas.imagearchive.service.impl;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
 import com.openslx.eaas.imagearchive.service.BlobService;
+import com.openslx.eaas.imagearchive.service.MetaRemover;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 
 
 public class CheckpointService extends BlobService<CheckpointIndex.Record>
 {
-	public static CheckpointService create(ArchiveBackend backend)
+	public static CheckpointService create(ArchiveBackend backend, MetaRemover remover)
 	{
 		final var index = backend.indexes()
 				.checkpoints();
 
-		return new CheckpointService(backend.storage(), index);
+		return new CheckpointService(backend.storage(), index, remover);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private CheckpointService(StorageRegistry storage, CheckpointIndex index)
+	private CheckpointService(StorageRegistry storage, CheckpointIndex index, MetaRemover remover)
 	{
-		super(storage, index, CheckpointIndex.Record::filter, CheckpointIndex.Record::filter);
+		super(storage, index, CheckpointIndex.Record::filter, CheckpointIndex.Record::filter, remover);
 	}
 }

@@ -101,16 +101,20 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 	public static ServiceRegistry create(ArchiveBackend backend) throws BWFLAException
 	{
 		final var registry = new ServiceRegistry();
-		registry.insert(AliasingService.create(backend, registry));
-		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend));
-		registry.insert(MetaDataService.create(BlobKind.SESSION, backend));
-		registry.insert(MetaDataService.create(BlobKind.NETWORK, backend));
-		registry.insert(ContainerService.create(backend));
-		registry.insert(MachineService.create(backend));
-		registry.insert(TemplateService.create(backend));
-		registry.insert(CheckpointService.create(backend));
-		registry.insert(ImageService.create(backend));
-		registry.insert(RomService.create(backend));
+		final var aliases = AliasingService.create(backend, registry);
+		final var remover = new MetaRemover()
+				.with(aliases);
+
+		registry.insert(aliases);
+		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend, remover));
+		registry.insert(MetaDataService.create(BlobKind.SESSION, backend, remover));
+		registry.insert(MetaDataService.create(BlobKind.NETWORK, backend, remover));
+		registry.insert(ContainerService.create(backend, remover));
+		registry.insert(MachineService.create(backend, remover));
+		registry.insert(TemplateService.create(backend, remover));
+		registry.insert(CheckpointService.create(backend, remover));
+		registry.insert(ImageService.create(backend, remover));
+		registry.insert(RomService.create(backend, remover));
 		registry.insert(ImportService.create(backend));
 		return registry;
 	}

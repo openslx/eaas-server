@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.service.impl;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.ContainerIndex;
 import com.openslx.eaas.imagearchive.service.DataService;
+import com.openslx.eaas.imagearchive.service.MetaRemover;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
@@ -29,20 +30,20 @@ import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 
 public class ContainerService extends DataService<ContainerConfiguration, ContainerIndex.Record>
 {
-	public static ContainerService create(ArchiveBackend backend)
+	public static ContainerService create(ArchiveBackend backend, MetaRemover remover)
 	{
 		final var index = backend.indexes()
 				.containers();
 
-		return new ContainerService(backend.storage(), index);
+		return new ContainerService(backend.storage(), index, remover);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private ContainerService(StorageRegistry storage, ContainerIndex index)
+	private ContainerService(StorageRegistry storage, ContainerIndex index, MetaRemover remover)
 	{
-		super(storage, index, ContainerIndex.Record::filter, ContainerIndex.Record::filter);
+		super(storage, index, ContainerIndex.Record::filter, ContainerIndex.Record::filter, remover);
 	}
 
 	@Override
