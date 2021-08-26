@@ -64,6 +64,12 @@ public abstract class DataService<D, T extends DataRecord<D>> extends BlobServic
 		super(storage, index, idfilter, optfilter);
 	}
 
+	protected DataService(StorageRegistry storage, BlobIndex<T> index, Filter<String> idfilter,
+						  Filter<FilterOptions> optfilter, MetaRemover remover)
+	{
+		super(storage, index, idfilter, optfilter, remover);
+	}
+
 	protected String update(String location, String id, D data) throws BWFLAException
 	{
 		if (id == null)
