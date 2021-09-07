@@ -100,6 +100,9 @@ public class BlobIndex<T extends BlobDescriptor> extends Index<T>
 		if (kind == BlobKind.ALIASING)
 			return "aliases";
 
+		if (kind == BlobKind.IMAGE_METADATA)
+			return "image-metadata";
+
 		return kind.value() + "s";
 	}
 }

@@ -31,12 +31,14 @@ public enum BlobKind
 	EMULATOR,
 	TEMPLATE,
 	CHECKPOINT,
+	IMAGE_METADATA,
 	IMAGE,
 	ROM;
 
 	public String value()
 	{
 		return this.name()
+				.replace("_", "-")
 				.toLowerCase();
 	}
 
@@ -61,6 +63,8 @@ public enum BlobKind
 				return BlobKind.TEMPLATE;
 			case "checkpoint":
 				return BlobKind.CHECKPOINT;
+			case "image-metadata":
+				return BlobKind.IMAGE_METADATA;
 			case "image":
 				return BlobKind.IMAGE;
 			case "rom":

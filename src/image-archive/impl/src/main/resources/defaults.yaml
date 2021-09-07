@@ -21,6 +21,7 @@ imagearchive:
         emulator: "/emulators"
         template: "/templates"
         checkpoint: "/checkpoints"
+        image-metadata: "/metadata/images"
         image: "/images"
         rom: "/roms"
 
