@@ -84,6 +84,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		archive.setDefaultEnvironment(backend, osId, envId);
 	}
 
+	@Deprecated
 	public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
 		connectArchive();
 		archive.deleteNameIndexesEntry(backend, id, version);
@@ -148,6 +149,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return archive.extractMetadata(EMULATOR_DEFAULT_ARCHIVE, imageId);
 	}
 
+	@Deprecated
 	public ImageNameIndex getNameIndexes() throws BWFLAException {
 		connectArchive();
 		return archive.getNameIndexes(getDefaultBackendName());
@@ -158,6 +160,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		 return archive.getNameIndexes(backend);
 	}
 
+	@Deprecated
 	public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
 		connectArchive();
 		archive.addNameIndexesEntry(backend, entry, alias);

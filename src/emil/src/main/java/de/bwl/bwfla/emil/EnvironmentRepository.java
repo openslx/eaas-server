@@ -232,6 +232,7 @@ public class EnvironmentRepository extends EmilRest
         return envdb.getNameIndexes();
     }
 
+	@Deprecated
 	@GET
 	@Path("/images-index")
 	@Secured(roles={Role.PUBLIC})
@@ -239,8 +240,36 @@ public class EnvironmentRepository extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
 	public ImageNameIndex getImagesIndex() throws BWFLAException
 	{
-		LOG.info("Loading images index...");
-		return envdb.getImagesIndex();
+		final var entries = new ImageNameIndex.Entries();
+		final var images = this.images()
+				.list();
+
+		final Consumer<ImageMetaData> converter = (image) -> {
+			final var metadata = new ImageMetadata();
+			metadata.setName(image.id());
+			metadata.setLabel(image.label());
+
+			final var description = new ImageDescription();
+			description.setFstype(image.fileSystemType());
+			description.setType(image.category());
+			description.setId(image.id());
+			metadata.setImage(description);
+
+			final var entry = new ImageNameIndex.Entries.Entry();
+			entry.setKey(image.id() + "|*");
+			entry.setValue(metadata);
+			entries.getEntry()
+					.add(entry);
+		};
+
+		try (images) {
+			images.stream()
+					.forEach(converter);
+		}
+
+		final var index = new ImageNameIndex();
+		index.setEntries(entries);
+		return index;
 	}
 
 
@@ -1033,33 +1062,31 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Applying image-generalization patch...");
 			try {
-				ImageNameIndex index = envdb.getImagesIndex();
-				ImageNameIndex.Entries.Entry originalEntry = index.getEntries()
-						.getEntry()
-						.stream()
-						.filter(e -> e.getValue().getName().equals(request.getImageId()))
-						.findAny()
-						.get();
+				final var origImage = imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES)
+						.fetch(request.getImageId(), ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
 
-				ImageMetadata originalMetadata = originalEntry.getValue();
-				LOG.severe("label " + originalMetadata.getLabel());
-
+				// TODO: port patching code to use new image-achive!
 				final String newImageId = (request.getArchive() != null) ?
 						envdb.createPatchedImage(request.getArchive(), request.getImageId(), request.getImageType(), patchId)
 						: envdb.createPatchedImage(request.getImageId(), request.getImageType(), patchId);
 
-				final ImageGeneralizationPatchResponse response = new ImageGeneralizationPatchResponse();
+				final var newImage = new ImageMetaData()
+						.setId(newImageId)
+						.setFileSystemType(origImage.fileSystemType())
+						.setLabel(origImage.label() + " (generalized)")
+						.setCategory(request.getImageType().value());
 
-				ImageMetadata entry = new ImageMetadata();
-				entry.setName(newImageId);
-				entry.setLabel(originalMetadata.getLabel() + " (generalized)");
-				ImageDescription description = new ImageDescription();
-				description.setType(request.getImageType().value());
-				description.setId(newImageId);
-				entry.setImage(description);
+				final var options = new ReplaceOptionsV2()
+						.setLocation(request.getArchive());
 
-				envdb.addNameIndexesEntry(request.getArchive(), entry, null);
+				imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES)
+						.replace(newImageId, newImage, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
 
+				final var response = new ImageGeneralizationPatchResponse();
 				response.setStatus("0");
 				response.setImageId(newImageId);
 				return Response.ok()
@@ -1243,8 +1270,12 @@ public class EnvironmentRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response deleteImage(DeleteImageRequest request) throws BWFLAException
 		{
-			LOG.info("delete image");
-			envdb.deleteNameIndexesEntry(request.getImageArchive(), request.getImageId(), null);
+			LOG.info("Deleting image '" + request.getImageId() + "'...");
+			imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.IMAGES)
+					.delete(request.getImageId());
+
 			// envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
 			return Response.status(Status.OK)
 					.build();
