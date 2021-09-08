@@ -20,9 +20,14 @@
 package de.bwl.bwfla.emil;
 
 import com.openslx.eaas.common.databind.DataUtils;
+import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.imagearchive.databind.ImageMetaData;
+import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -164,7 +169,10 @@ public class EnvironmentRepository extends EmilRest
 	}
 
 	@Path("/images")
-	public Images images() { return new Images(); }
+	public Images images()
+	{
+		return new Images();
+	}
 
 	@GET
 	@Path("/db-migration")
@@ -235,9 +243,24 @@ public class EnvironmentRepository extends EmilRest
 		return envdb.getImagesIndex();
 	}
 
+
 	// ========== Subresources ==============================
 
-	public class Images {
+	public class Images
+	{
+		/** List all available images */
+		@GET
+		@Secured(roles={Role.PUBLIC})
+		@Produces(MediaType.APPLICATION_JSON)
+		@TypeHint(ImageMetaData[].class)
+		public Streamable<ImageMetaData> list() throws BWFLAException
+		{
+			LOG.info("Listing all available images...");
+			return imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.IMAGES)
+					.fetch(ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
+		}
 
 		/** Create a new environment */
 //		@POST
