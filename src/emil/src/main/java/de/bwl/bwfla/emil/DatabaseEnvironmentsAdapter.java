@@ -62,6 +62,11 @@ public class DatabaseEnvironmentsAdapter {
     }
 
     @Deprecated
+    public void deleteNameIndexesEntry(String id, String version) throws BWFLAException {
+        environmentsAdapter.deleteNameIndexesEntry(id, version);
+    }
+
+    @Deprecated
     public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
         environmentsAdapter.deleteNameIndexesEntry(backend, id, version);
     }

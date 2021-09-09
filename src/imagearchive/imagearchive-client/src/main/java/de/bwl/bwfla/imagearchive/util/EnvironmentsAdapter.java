@@ -85,6 +85,11 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	}
 
 	@Deprecated
+	public void deleteNameIndexesEntry(String id, String version) throws BWFLAException {
+		this.deleteNameIndexesEntry(this.getDefaultBackendName(), id, version);
+	}
+
+	@Deprecated
 	public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
 		connectArchive();
 		archive.deleteNameIndexesEntry(backend, id, version);

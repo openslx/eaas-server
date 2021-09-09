@@ -129,6 +129,8 @@ public class EnvironmentRepository extends EmilRest
 			imagearchive = emilEnvRepo.getImageArchive();
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
+
+			this.importImageIndex();
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
@@ -1338,5 +1340,43 @@ public class EnvironmentRepository extends EmilRest
 
 	private UserContext getUserContext() {
 		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
+	}
+
+	private void importImageIndex() throws BWFLAException
+	{
+		final var index = envdb.getImagesIndex();
+		final var entries = index.getEntries();
+		if (entries == null)
+			return;
+
+		int numImported = 0, numFailed = 0;
+
+		LOG.info("Importing legacy image-index...");
+		for (var entry : entries.getEntry()) {
+			final var srcmd = entry.getValue();
+			final var srcimg = srcmd.getImage();
+			final var image = new ImageMetaData()
+					.setId(srcimg.getId())
+					.setFileSystemType(srcimg.getFstype())
+					.setCategory(srcimg.getType())
+					.setLabel(srcmd.getLabel());
+
+			try {
+				imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES)
+						.replace(image.id(), image, ImageArchiveMappers.OBJECT_TO_JSON_TREE);
+
+				LOG.info("Imported metadata for image '" + image.id() + "'");
+				envdb.deleteNameIndexesEntry(image.id(), null);
+				++numImported;
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing metadata for image '" + image.id() + "' failed!", error);
+				++numFailed;
+			}
+		}
+
+		LOG.info("Imported metadata for " + numImported + " image(s), failed " + numFailed);
 	}
 }
