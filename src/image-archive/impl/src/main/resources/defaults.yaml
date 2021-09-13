@@ -18,6 +18,7 @@ imagearchive:
         network: "/networks"
         container: "/containers"
         machine: "/machines"
+        emulator-metadata: "/metadata/emulators"
         emulator: "/emulators"
         template: "/templates"
         checkpoint: "/checkpoints"

@@ -66,6 +66,11 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.MACHINE, MachineService.class);
 	}
 
+	public MetaDataService emulatorMetaData()
+	{
+		return this.lookup(BlobKind.EMULATOR_METADATA, MetaDataService.class);
+	}
+
 	public TemplateService templates()
 	{
 		return this.lookup(BlobKind.TEMPLATE, TemplateService.class);
@@ -114,6 +119,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend, remover));
 		registry.insert(MetaDataService.create(BlobKind.SESSION, backend, remover));
 		registry.insert(MetaDataService.create(BlobKind.NETWORK, backend, remover));
+		registry.insert(MetaDataService.create(BlobKind.EMULATOR_METADATA, backend, remover));
 		registry.insert(MetaDataService.create(BlobKind.IMAGE_METADATA, backend, remover));
 		registry.insert(ContainerService.create(backend, remover));
 		registry.insert(MachineService.create(backend, remover));

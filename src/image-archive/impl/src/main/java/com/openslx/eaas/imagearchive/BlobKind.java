@@ -28,6 +28,7 @@ public enum BlobKind
 	NETWORK,
 	MACHINE,
 	CONTAINER,
+	EMULATOR_METADATA,
 	EMULATOR,
 	TEMPLATE,
 	CHECKPOINT,
@@ -57,6 +58,8 @@ public enum BlobKind
 				return BlobKind.MACHINE;
 			case "container":
 				return BlobKind.CONTAINER;
+			case "emulator-metadata":
+				return BlobKind.EMULATOR_METADATA;
 			case "emulator":
 				return BlobKind.EMULATOR;
 			case "template":

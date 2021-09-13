@@ -106,6 +106,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.MACHINE, MachineIndex.class);
 	}
 
+	public MetaDataIndex emulatorMetaData()
+	{
+		return this.lookup(BlobKind.EMULATOR_METADATA, MetaDataIndex.class);
+	}
+
 	public TemplateIndex templates()
 	{
 		return this.lookup(BlobKind.TEMPLATE, TemplateIndex.class);
@@ -147,6 +152,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT, fetcher));
 		registry.insert(new MetaDataIndex(BlobKind.SESSION, fetcher));
 		registry.insert(new MetaDataIndex(BlobKind.NETWORK, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.EMULATOR_METADATA, fetcher));
 		registry.insert(new MetaDataIndex(BlobKind.IMAGE_METADATA, fetcher));
 		registry.insert(new ContainerIndex(fetcher));
 		registry.insert(new MachineIndex(fetcher));
