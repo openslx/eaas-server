@@ -134,6 +134,8 @@ public class ArchiveV2 implements IArchiveV2
 		switch (MetaDataKindV2.from(kind)) {
 			case IMAGES:
 				return new MetaDataV2(services.imageMetaData());
+			case EMULATORS:
+				return new MetaDataV2(services.emulatorMetaData());
 			case ENVIRONMENTS:
 				return new MetaDataV2(services.environments());
 			case SESSIONS:
