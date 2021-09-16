@@ -130,6 +130,11 @@
 			<artifactId>imagearchive-client</artifactId>
 		</dependency>
 		<dependency>
+			<groupId>com.openslx.eaas</groupId>
+			<artifactId>image-archive-client</artifactId>
+			<version>${project.version}</version>
+		</dependency>
+		<dependency>
 			<groupId>org.glyptodon.guacamole</groupId>
 			<artifactId>guacamole-common</artifactId>
 			<scope>provided</scope>

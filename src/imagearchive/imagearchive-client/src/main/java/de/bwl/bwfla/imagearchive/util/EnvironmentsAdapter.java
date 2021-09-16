@@ -138,6 +138,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 	}
 
+	@Deprecated
 	public ImageArchiveBinding getImageBinding(String backend, String name, String version) throws BWFLAException {
 		connectArchive();
 		final String binding = archive.getImageBinding(backend, name, version);
