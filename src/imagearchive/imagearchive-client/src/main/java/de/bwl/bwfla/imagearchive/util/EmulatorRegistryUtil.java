@@ -4,6 +4,7 @@ import de.bwl.bwfla.api.imagearchive.Alias;
 import de.bwl.bwfla.api.imagearchive.ImageMetadata;
 import de.bwl.bwfla.api.imagearchive.ImageNameIndex;
 
+@Deprecated
 public class EmulatorRegistryUtil {
 
 

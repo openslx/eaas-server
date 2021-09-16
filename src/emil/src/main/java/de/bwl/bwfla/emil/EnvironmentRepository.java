@@ -26,6 +26,7 @@ import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import com.openslx.eaas.imagearchive.databind.ImageMetaData;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
@@ -230,8 +231,68 @@ public class EnvironmentRepository extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
     public ImageNameIndex getNameIndexes() throws BWFLAException
 	{
-		LOG.info("Loading image-name index...");
-        return envdb.getNameIndexes();
+		final var entries = new ImageNameIndex.Entries();
+		final var aliases = new ImageNameIndex.Aliases();
+		final var emulators = imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.EMULATORS)
+				.fetch(ImageArchiveMappers.JSON_TREE_TO_EMULATOR_METADATA);
+
+		final Consumer<EmulatorMetaData> converter = (emulator) -> {
+			final var metadata = new ImageMetadata();
+			metadata.setName(emulator.name());
+			metadata.setVersion(emulator.version());
+			metadata.setDigest(emulator.digest());
+
+			final var newimg = emulator.image();
+			final var oldimg = new ImageDescription();
+			oldimg.setFstype(newimg.fileSystemType());
+			oldimg.setType(newimg.category());
+			oldimg.setId(newimg.id());
+			metadata.setImage(oldimg);
+
+			final var newprov = emulator.provenance();
+			final var oldprov = new Provenance();
+			oldprov.setOciSourceUrl(newprov.url());
+			oldprov.setVersionTag(newprov.tag());
+			oldprov.getLayers()
+					.addAll(newprov.layers());
+			metadata.setProvenance(oldprov);
+
+			final var ee = new ImageNameIndex.Entries.Entry();
+			ee.setKey(emulator.name() + "|" + emulator.version());
+			ee.setValue(metadata);
+			entries.getEntry()
+					.add(ee);
+
+			final var tags = new HashSet<>(emulator.tags());
+			tags.add(emulator.version());
+			if (tags.contains(EmulatorMetaData.DEFAULT_VERSION))
+				tags.add("latest");
+
+			for (final var tag : tags) {
+				final var alias = new Alias();
+				alias.setName(emulator.name());
+				alias.setVersion(emulator.version());
+				alias.setAlias(tag);
+
+				final var ae = new ImageNameIndex.Aliases.Entry();
+				ae.setKey(emulator.name() + "|" + tag);
+				ae.setValue(alias);
+				aliases.getEntry()
+						.add(ae);
+			}
+		};
+
+		try (emulators) {
+			emulators.stream()
+					.forEach(converter);
+		}
+
+		final var index = new ImageNameIndex();
+		index.setEntries(entries);
+		index.setAliases(aliases);
+		return index;
     }
 
 	@Deprecated

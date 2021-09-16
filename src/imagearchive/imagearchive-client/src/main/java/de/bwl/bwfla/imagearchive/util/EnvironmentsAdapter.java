@@ -160,6 +160,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		return archive.getNameIndexes(getDefaultBackendName());
 	}
 
+	@Deprecated
 	public ImageNameIndex getNameIndexes(String backend) throws BWFLAException {
 		 connectArchive();
 		 return archive.getNameIndexes(backend);
@@ -171,6 +172,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		archive.addNameIndexesEntry(backend, entry, alias);
 	}
 
+	@Deprecated
 	public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
 		connectArchive();
 		archive.updateLatestEmulator(backend, emulator, version);

@@ -48,6 +48,7 @@ public class DatabaseEnvironmentsAdapter {
 
     private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
+    @Deprecated
     public ImageNameIndex getNameIndexes() throws BWFLAException {
         return environmentsAdapter.getNameIndexes(EMULATOR_DEFAULT_ARCHIVE);
     }
@@ -71,6 +72,7 @@ public class DatabaseEnvironmentsAdapter {
         environmentsAdapter.deleteNameIndexesEntry(backend, id, version);
     }
 
+    @Deprecated
     public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
         environmentsAdapter.updateLatestEmulator(backend, emulator, version);
     }
