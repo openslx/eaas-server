@@ -26,6 +26,7 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.PreDestroy;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
 import javax.naming.InitialContext;
@@ -120,6 +121,22 @@ public class ImageArchiveRegistry
 		}
 
 		log.info("Initialized " + backendConfigs.size() + " image-archive(s)");
+	}
+
+	@PreDestroy
+	protected void destroy()
+	{
+		backends.forEach((name, backend) -> {
+			try {
+				backend.getNameIndexes()
+						.dump();
+
+				log.info("Dumped name-index for backend '" + name + "'");
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Dumping name-index for backend '" + name + "' failed!", error);
+			}
+		});
 	}
 
 	public static TaskState submitTask(BlockingTask<String> task)
