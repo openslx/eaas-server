@@ -46,7 +46,7 @@ public class DatabaseEnvironmentsAdapter {
         environmentsAdapter.setDefaultEnvironment(osId, envId);
     }
 
-    private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+    public static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
     @Deprecated
     public ImageNameIndex getNameIndexes() throws BWFLAException {

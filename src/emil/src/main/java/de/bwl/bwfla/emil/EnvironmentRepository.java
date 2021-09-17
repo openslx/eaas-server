@@ -26,6 +26,7 @@ import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import com.openslx.eaas.imagearchive.databind.ImageMetaData;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
@@ -132,6 +133,7 @@ public class EnvironmentRepository extends EmilRest
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 
 			this.importImageIndex();
+			this.importEmulatorIndex();
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
@@ -1439,5 +1441,67 @@ public class EnvironmentRepository extends EmilRest
 		}
 
 		LOG.info("Imported metadata for " + numImported + " image(s), failed " + numFailed);
+	}
+
+	private void importEmulatorIndex() throws BWFLAException
+	{
+		final var index = envdb.getNameIndexes();
+		final var entries = index.getEntries();
+		if (entries == null)
+			return;
+
+		final var defaultEmulatorIds = new HashSet<String>();
+		final var aliases = index.getAliases();
+		if (aliases != null) {
+			for (var entry : aliases.getEntry()) {
+				final var value = entry.getValue();
+				if ("latest".equals(value.getAlias()))
+					defaultEmulatorIds.add(EmulatorMetaData.identifier(value.getName(), value.getVersion()));
+			}
+		}
+
+		int numImported = 0, numFailed = 0;
+
+		LOG.info("Importing legacy emulator-index...");
+		final var emuMetaHelper = new EmulatorMetaHelperV2(imagearchive, LOG);
+		for (var entry : entries.getEntry()) {
+			final var srcmd = entry.getValue();
+			final var emulator = new EmulatorMetaData()
+					.setName(srcmd.getName())
+					.setVersion(srcmd.getVersion())
+					.setDigest(srcmd.getDigest());
+
+			final var srcprov = srcmd.getProvenance();
+			emulator.provenance()
+					.setUrl(srcprov.getOciSourceUrl())
+					.setTag(srcprov.getVersionTag())
+					.setLayers(srcprov.getLayers());
+
+			final var srcimg = srcmd.getImage();
+			emulator.image()
+					.setId(srcimg.getId())
+					.setCategory(srcimg.getType())
+					.setFileSystemType(srcimg.getFstype());
+
+			if (defaultEmulatorIds.contains(emulator.id())) {
+				emulator.tags()
+						.add(EmulatorMetaData.DEFAULT_VERSION);
+			}
+
+			final var emuname = "'" + emulator.name() + " (" + emulator.version() + ")'";
+			try {
+				emuMetaHelper.insert(emulator);
+				LOG.info("Imported metadata for emulator " + emuname);
+				final var backend = DatabaseEnvironmentsAdapter.EMULATOR_DEFAULT_ARCHIVE;
+				envdb.deleteNameIndexesEntry(backend, srcmd.getName(), srcmd.getVersion());
+				++numImported;
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing metadata for emulator " + emuname + " failed!", error);
+				++numFailed;
+			}
+		}
+
+		LOG.info("Imported metadata for " + numImported + " emulator(s), failed " + numFailed);
 	}
 }
