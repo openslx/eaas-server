@@ -58,11 +58,6 @@ public class DatabaseEnvironmentsAdapter {
     }
 
     @Deprecated
-    public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
-        environmentsAdapter.addNameIndexesEntry(backend, entry, alias);
-    }
-
-    @Deprecated
     public void deleteNameIndexesEntry(String id, String version) throws BWFLAException {
         environmentsAdapter.deleteNameIndexesEntry(id, version);
     }
@@ -70,11 +65,6 @@ public class DatabaseEnvironmentsAdapter {
     @Deprecated
     public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
         environmentsAdapter.deleteNameIndexesEntry(backend, id, version);
-    }
-
-    @Deprecated
-    public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
-        environmentsAdapter.updateLatestEmulator(backend, emulator, version);
     }
 
     @Deprecated

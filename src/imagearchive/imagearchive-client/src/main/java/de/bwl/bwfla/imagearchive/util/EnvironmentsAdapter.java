@@ -1,10 +1,7 @@
 package de.bwl.bwfla.imagearchive.util;
 
 import java.net.URL;
-import java.util.ArrayList;
 import java.util.List;
-
-import javax.xml.bind.JAXBException;
 
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -19,23 +16,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 
 	// replace hardcoded EMULATOR_DEFAULT_ARCHIVE with something nicer
 	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
-
-	public List<Environment> getEnvironments(String backend, String type) throws BWFLAException, JAXBException {
-		connectArchive();
-
-		List<String> envs = archive.getEnvironments(backend, type);
-
-		List<Environment> out = new ArrayList<Environment>();
-		for (String envStr : envs) {
-			Environment emuEnv = Environment.fromValue(envStr);
-			if (emuEnv == null)
-				continue;
-
-			out.add(emuEnv);
-		}
-
-		return out;
-	}
 
 	public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches() throws BWFLAException {
 		connectArchive();
@@ -138,18 +118,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 	}
 
-	@Deprecated
-	public ImageArchiveBinding getImageBinding(String backend, String name, String version) throws BWFLAException {
-		connectArchive();
-		final String binding = archive.getImageBinding(backend, name, version);
-		try {
-			return (binding != null) ? ImageArchiveBinding.fromValue(binding) : null;
-		}
-		catch (Exception error) {
-			throw new BWFLAException(error);
-		}
-	}
-
 	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
 		connectArchive();
 		return archive.extractMetadata(EMULATOR_DEFAULT_ARCHIVE, imageId);
@@ -165,18 +133,6 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 	public ImageNameIndex getNameIndexes(String backend) throws BWFLAException {
 		 connectArchive();
 		 return archive.getNameIndexes(backend);
-	}
-
-	@Deprecated
-	public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
-		connectArchive();
-		archive.addNameIndexesEntry(backend, entry, alias);
-	}
-
-	@Deprecated
-	public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
-		connectArchive();
-		archive.updateLatestEmulator(backend, emulator, version);
 	}
 
 	public static class ImportNoFinishedException extends Exception {  }
