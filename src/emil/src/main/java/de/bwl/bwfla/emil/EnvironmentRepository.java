@@ -1455,8 +1455,10 @@ public class EnvironmentRepository extends EmilRest
 		if (aliases != null) {
 			for (var entry : aliases.getEntry()) {
 				final var value = entry.getValue();
-				if ("latest".equals(value.getAlias()))
-					defaultEmulatorIds.add(EmulatorMetaData.identifier(value.getName(), value.getVersion()));
+				if ("latest".equals(value.getAlias())) {
+					final var name = EmulatorSpec.stripLegacyNamePrefix(value.getName());
+					defaultEmulatorIds.add(EmulatorMetaData.identifier(name, value.getVersion()));
+				}
 			}
 		}
 
@@ -1467,7 +1469,7 @@ public class EnvironmentRepository extends EmilRest
 		for (var entry : entries.getEntry()) {
 			final var srcmd = entry.getValue();
 			final var emulator = new EmulatorMetaData()
-					.setName(srcmd.getName())
+					.setName(EmulatorSpec.stripLegacyNamePrefix(srcmd.getName()))
 					.setVersion(srcmd.getVersion())
 					.setDigest(srcmd.getDigest());
 

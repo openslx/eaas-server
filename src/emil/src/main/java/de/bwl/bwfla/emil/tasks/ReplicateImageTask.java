@@ -97,7 +97,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 if (containerName == null)
                     throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first: " + emulatorSpec.getBean());
 
-                emulatorSpec.setContainerName("emucon-rootfs/" + containerName);
+                emulatorSpec.setContainerName(containerName);
             }
 
             if (emulatorSpec.getOciSourceUrl() == null || emulatorSpec.getOciSourceUrl().isEmpty()) {

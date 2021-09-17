@@ -49,7 +49,7 @@ public class ImportEmulatorUtil {
                     .setUrl(oldEmulatorMetaData.getOciSourceUrl())
                     .setTag(oldEmulatorMetaData.getEmulatorVersion());
 
-            newEmulatorMetaData.setName("emucon-rootfs/" + oldEmulatorMetaData.getEmulatorType())
+            newEmulatorMetaData.setName(oldEmulatorMetaData.getEmulatorType())
                     .setVersion(oldEmulatorMetaData.getEmulatorVersion())
                     .setDigest(oldEmulatorMetaData.getContainerDigest());
         }
@@ -62,7 +62,7 @@ public class ImportEmulatorUtil {
             if( cmd.getEmulatorType() == null || cmd.getEmulatorVersion() == null)
                 throw new BWFLAException("not a emulator container or unsupported metadata format");
 
-            newEmulatorMetaData.setName("emucon-rootfs/" + cmd.getEmulatorType())
+            newEmulatorMetaData.setName(cmd.getEmulatorType())
                     .setVersion(cmd.getEmulatorVersion())
                     .setDigest(cmd.getContainerDigest());
         }

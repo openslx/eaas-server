@@ -27,7 +27,7 @@ import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.XmlValue;
 
 
-@XmlAccessorType(XmlAccessType.FIELD)
+@XmlAccessorType(XmlAccessType.NONE)
 @XmlType(name = "emulatorSpec", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
     "machine", "architecture",
 })
@@ -45,8 +45,6 @@ public class EmulatorSpec
     @XmlAttribute(name = "version")
     protected String version;
 
-
-    @XmlAttribute(name = "containerName", required = false)
     protected String containerName;
     @XmlAttribute(name = "containerVersion", required = false)
     protected String containerVersion;
@@ -67,12 +65,13 @@ public class EmulatorSpec
         return bean;
     }
 
+    @XmlAttribute(name = "containerName", required = false)
     public String getContainerName() {
         return containerName;
     }
 
     public void setContainerName(String containerName) {
-        this.containerName = containerName;
+        this.containerName = EmulatorSpec.stripLegacyNamePrefix(containerName);
     }
 
     public String getContainerVersion() {
@@ -164,4 +163,10 @@ public class EmulatorSpec
 
     }
 
+    public static String stripLegacyNamePrefix(String name)
+    {
+        final var prefix = "emucon-rootfs/";
+        return (name != null && name.startsWith(prefix)) ?
+            name.substring(prefix.length()) : name;
+    }
 }

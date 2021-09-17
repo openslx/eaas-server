@@ -2285,7 +2285,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		try (final var archive = ImageArchiveClient.create(imageArchiveAddress)) {
 			final var emuMetaHelper = new EmulatorMetaHelperV2(archive, LOG);
-			final var name = EMUCON_ROOTFS_BINDING_ID + "/" + this.getEmuContainerName(env);
+			final var name = this.getEmuContainerName(env);
 			var version = env.getEmulator()
 					.getContainerVersion();
 
