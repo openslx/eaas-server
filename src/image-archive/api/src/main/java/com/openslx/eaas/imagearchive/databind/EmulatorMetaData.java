@@ -34,8 +34,7 @@ import java.util.UUID;
 import java.util.stream.Stream;
 
 
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class EmulatorMetaData
+public class EmulatorMetaData extends AbstractMetaData
 {
 	private String id;
 	private String name;
@@ -47,6 +46,12 @@ public class EmulatorMetaData
 
 	/** Version tag to be used by default */
 	public static final String DEFAULT_VERSION = "default";
+
+
+	public EmulatorMetaData()
+	{
+		super(Kinds.V1);
+	}
 
 	@JsonSetter(Fields.ID)
 	public EmulatorMetaData setId(String id)
@@ -237,6 +242,13 @@ public class EmulatorMetaData
 
 			return layers;
 		}
+	}
+
+
+	public static final class Kinds
+	{
+		public static final String TYPE = "emulator";
+		public static final String V1   = AbstractMetaData.kind(TYPE, "v1");
 	}
 
 
