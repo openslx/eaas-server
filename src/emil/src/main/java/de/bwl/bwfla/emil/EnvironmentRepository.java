@@ -226,6 +226,7 @@ public class EnvironmentRepository extends EmilRest
 	}
 
 	/** Get the image-name index */
+	@Deprecated
 	@GET
 	@Path("/image-name-index")
 	@Secured(roles={Role.PUBLIC})
