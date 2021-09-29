@@ -28,7 +28,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class BlobIndexer<T> implements AutoCloseable
+public class BlobIndexer<T extends BlobDescriptor> implements AutoCloseable
 {
 	private final BlobIndex<T> target;
 
@@ -38,12 +38,12 @@ public class BlobIndexer<T> implements AutoCloseable
 		this.target = target;
 	}
 
-	public void index(StorageRegistry storage) throws BWFLAException
+	public void index(StorageRegistry storage, MetaFetcher fetcher) throws BWFLAException
 	{
-		this.index(storage, false);
+		this.index(storage, fetcher, false);
 	}
 
-	public void index(StorageRegistry storage, boolean parallel) throws BWFLAException
+	public void index(StorageRegistry storage, MetaFetcher fetcher, boolean parallel) throws BWFLAException
 	{
 		final var tmpname = target.name() + "-" + StringUtils.random(8);
 		final var collection = Index.construct(tmpname, target.clazz(), target.logger());
@@ -51,7 +51,7 @@ public class BlobIndexer<T> implements AutoCloseable
 			target.preparer()
 					.prepare(collection);
 
-			final var context = new BlobIngestorContext<>(target, collection);
+			final var context = new BlobIngestorContext<>(target, collection, fetcher);
 			BlobIndexer.ingest(context, storage, parallel);
 			target.switchto(collection);
 		}
@@ -74,7 +74,7 @@ public class BlobIndexer<T> implements AutoCloseable
 
 	// ===== Internal Helpers ==============================
 
-	private static <D> void ingest(BlobIngestorContext<D> context, StorageRegistry storage, boolean parallel)
+	private static <D extends BlobDescriptor> void ingest(BlobIngestorContext<D> context, StorageRegistry storage, boolean parallel)
 			throws BWFLAException
 	{
 		final var counters = new Result();
@@ -104,7 +104,7 @@ public class BlobIndexer<T> implements AutoCloseable
 		BlobIndexer.summary(storage, counters, logger);
 	}
 
-	private static <D> Result ingest(BlobIngestorContext<D> context, StorageLocation location, boolean parallel)
+	private static <D extends BlobDescriptor> Result ingest(BlobIngestorContext<D> context, StorageLocation location, boolean parallel)
 			throws BWFLAException
 	{
 		final int MAX_NUM_FAILURES = 5;
@@ -156,7 +156,8 @@ public class BlobIndexer<T> implements AutoCloseable
 		return result;
 	}
 
-	private static <T> void summary(BlobIngestorContext<T> context, StorageLocation location, Result result, Logger logger)
+	private static <T extends BlobDescriptor> void summary(BlobIngestorContext<T> context, StorageLocation location,
+														   Result result, Logger logger)
 	{
 		final var message = new StringBuilder(512);
 		message.append("Indexed ");

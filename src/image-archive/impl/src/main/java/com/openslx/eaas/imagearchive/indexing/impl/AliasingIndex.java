@@ -19,35 +19,41 @@
 
 package com.openslx.eaas.imagearchive.indexing.impl;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
-import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import java.io.InputStream;
 
 
-public class MetaDataIndex extends BlobIndex<MetaDataIndex.Record>
+public class AliasingIndex extends BlobIndex<AliasingIndex.Record>
 {
-	public static class Record extends DataRecord<JsonNode>
+	public static class Record extends DataRecord<AliasingDescriptor>
 	{
 		@Override
-		public DataRecord<JsonNode> setData(InputStream data) throws Exception
+		public DataRecord<AliasingDescriptor> setData(InputStream data) throws Exception
 		{
-			// parse data as generic JSON-object...
-			final var object = DataUtils.json()
-					.reader()
-					.readTree(data);
+			final var descriptor = DataUtils.json()
+					.read(data, AliasingDescriptor.class);
 
-			return this.setData(object);
+			return this.setData(descriptor);
 		}
 	}
 
-	public MetaDataIndex(BlobKind kind, MetaFetcher fetcher)
+	public AliasingIndex()
 	{
-		super(kind, Record.class, Record::index, BlobIngestors.records(Record::new), fetcher);
+		super(BlobKind.ALIASING, Record.class, Record::index, BlobIngestors.records(Record::new));
+	}
+
+	public AliasingDescriptor fetch(String id) throws BWFLAException
+	{
+		final var record = this.collection()
+				.lookup(Record.filter(id));
+
+		return (record != null) ? record.data() : null;
 	}
 }

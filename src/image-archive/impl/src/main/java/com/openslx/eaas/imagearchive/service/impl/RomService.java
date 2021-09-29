@@ -22,24 +22,25 @@ package com.openslx.eaas.imagearchive.service.impl;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.RomIndex;
 import com.openslx.eaas.imagearchive.service.BlobService;
+import com.openslx.eaas.imagearchive.service.MetaRemover;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 
 
 public class RomService extends BlobService<RomIndex.Record>
 {
-	public static RomService create(ArchiveBackend backend)
+	public static RomService create(ArchiveBackend backend, MetaRemover remover)
 	{
 		final var index = backend.indexes()
 				.roms();
 
-		return new RomService(backend.storage(), index);
+		return new RomService(backend.storage(), index, remover);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private RomService(StorageRegistry storage, RomIndex index)
+	private RomService(StorageRegistry storage, RomIndex index, MetaRemover remover)
 	{
-		super(storage, index, RomIndex.Record::filter, RomIndex.Record::filter);
+		super(storage, index, RomIndex.Record::filter, RomIndex.Record::filter, remover);
 	}
 }

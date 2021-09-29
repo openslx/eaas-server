@@ -17,41 +17,26 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.indexing;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
+import com.openslx.eaas.imagearchive.indexing.impl.AliasingIndex;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public interface IArchiveV2
+public class MetaFetcher
 {
-	@Path("/aliases")
-	IAliasesV2 aliases();
+	private AliasingIndex aliases;
 
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
 
-	@Path("/containers")
-	IContainersV2 containers();
+	public MetaFetcher with(AliasingIndex index)
+	{
+		this.aliases = index;
+		return this;
+	}
 
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	public AliasingDescriptor aliasing(String id) throws BWFLAException
+	{
+		return (aliases != null) ? aliases.fetch(id) : null;
+	}
 }

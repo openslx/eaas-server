@@ -21,19 +21,26 @@ package com.openslx.eaas.imagearchive.indexing;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import java.time.ZonedDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
 
+@JsonInclude(JsonInclude.Include.NON_EMPTY)
 public class BlobDescriptor
 {
 	private String name;
 	private String location;
 	private String etag;
 	private long mtime;
+
+	/** Inlined aliases */
+	private Set<String> aliases;
 
 
 	@JsonSetter(Fields.NAME)
@@ -93,10 +100,30 @@ public class BlobDescriptor
 		return mtime;
 	}
 
+	@JsonSetter(Fields.ALIASES)
+	public void setAliases(Set<String> aliases)
+	{
+		this.aliases = aliases;
+	}
+
+	@JsonGetter(Fields.ALIASES)
+	public Set<String> aliases()
+	{
+		if (aliases == null)
+			aliases = new HashSet<>();
+
+		return aliases;
+	}
+
 	public static DocumentCollection.Filter filter(String name)
 	{
-		return DocumentCollection.filter()
+		final var f1 = DocumentCollection.filter()
 				.eq(Fields.NAME, name);
+
+		final var f2 = DocumentCollection.filter()
+				.eq(Fields.ALIASES, name);
+
+		return DocumentCollection.Filter.or(f1, f2);
 	}
 
 	public static DocumentCollection.Filter filter(FilterOptions options)
@@ -120,17 +147,21 @@ public class BlobDescriptor
 		// NOTE: we want to look up entries by 'name ' and 'location'
 		entries.index(Fields.NAME);
 		entries.index(Fields.LOCATION);
+
+		// entries should be queryable by their aliases too
+		entries.index(Fields.ALIASES);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	protected static final class Fields
+	public static final class Fields
 	{
 		public static final String NAME     = "nam";
 		public static final String LOCATION = "loc";
 		public static final String ETAG     = "etg";
 		public static final String MTIME    = "mts";
 		public static final String DATA     = "dat";
+		public static final String ALIASES  = "als";
 	}
 }

@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 
 
 public class RomIndex extends BlobIndex<RomIndex.Record>
@@ -32,8 +33,8 @@ public class RomIndex extends BlobIndex<RomIndex.Record>
 		// Empty!
 	}
 
-	public RomIndex()
+	public RomIndex(MetaFetcher fetcher)
 	{
-		super(BlobKind.ROM, Record.class, Record::index, BlobIngestors.descriptors(Record::new));
+		super(BlobKind.ROM, Record.class, Record::index, BlobIngestors.descriptors(Record::new), fetcher);
 	}
 }

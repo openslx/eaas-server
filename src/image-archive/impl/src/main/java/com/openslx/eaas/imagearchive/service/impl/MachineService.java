@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.service.impl;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
 import com.openslx.eaas.imagearchive.service.DataService;
+import com.openslx.eaas.imagearchive.service.MetaRemover;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
@@ -29,20 +30,20 @@ import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 public class MachineService extends DataService<MachineConfiguration, MachineIndex.Record>
 {
-	public static MachineService create(ArchiveBackend backend)
+	public static MachineService create(ArchiveBackend backend, MetaRemover remover)
 	{
 		final var index = backend.indexes()
 				.machines();
 
-		return new MachineService(backend.storage(), index);
+		return new MachineService(backend.storage(), index, remover);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private MachineService(StorageRegistry storage, MachineIndex index)
+	private MachineService(StorageRegistry storage, MachineIndex index, MetaRemover remover)
 	{
-		super(storage, index, MachineIndex.Record::filter, MachineIndex.Record::filter);
+		super(storage, index, MachineIndex.Record::filter, MachineIndex.Record::filter, remover);
 	}
 
 	@Override

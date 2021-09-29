@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 
 
 public class CheckpointIndex extends BlobIndex<CheckpointIndex.Record>
@@ -32,8 +33,8 @@ public class CheckpointIndex extends BlobIndex<CheckpointIndex.Record>
 		// Empty!
 	}
 
-	public CheckpointIndex()
+	public CheckpointIndex(MetaFetcher fetcher)
 	{
-		super(BlobKind.CHECKPOINT, Record.class, Record::index, BlobIngestors.descriptors(Record::new));
+		super(BlobKind.CHECKPOINT, Record.class, Record::index, BlobIngestors.descriptors(Record::new), fetcher);
 	}
 }

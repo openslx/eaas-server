@@ -17,41 +17,26 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.service;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.openslx.eaas.imagearchive.service.impl.AliasingService;
+import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public interface IArchiveV2
+public class MetaRemover
 {
-	@Path("/aliases")
-	IAliasesV2 aliases();
+	private AliasingService aliases;
 
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
 
-	@Path("/containers")
-	IContainersV2 containers();
+	public MetaRemover with(AliasingService service)
+	{
+		this.aliases = service;
+		return this;
+	}
 
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	public void remove(String id) throws BWFLAException
+	{
+		if (aliases != null)
+			aliases.remove(id);
+	}
 }

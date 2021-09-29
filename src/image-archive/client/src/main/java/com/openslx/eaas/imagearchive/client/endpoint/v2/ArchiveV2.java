@@ -28,6 +28,7 @@ import java.util.logging.Logger;
 public class ArchiveV2
 {
 	private final IArchiveV2 api;
+	private final AliasesV2 aliases;
 	private final ContainersV2 containers;
 	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
@@ -44,6 +45,7 @@ public class ArchiveV2
 	public ArchiveV2(IArchiveV2 api, Logger logger)
 	{
 		this.api = api;
+		this.aliases = new AliasesV2(api.aliases());
 		this.containers = new ContainersV2(api.containers());
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
@@ -57,6 +59,11 @@ public class ArchiveV2
 
 
 	// ===== Public API ==============================
+
+	public AliasesV2 aliases()
+	{
+		return aliases;
+	}
 
 	public ContainersV2 containers()
 	{

@@ -24,7 +24,7 @@ import de.bwl.bwfla.blobstore.BlobDescription;
 
 
 @FunctionalInterface
-public interface IBlobIngestor<T>
+public interface IBlobIngestor<T extends BlobDescriptor>
 {
 	/** Process and ingest given blob from given storage location */
 	void ingest(BlobIngestorContext<T> context, BlobDescription blob, StorageLocation location)
