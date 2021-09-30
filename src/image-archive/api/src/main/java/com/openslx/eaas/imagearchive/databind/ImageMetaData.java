@@ -20,17 +20,20 @@
 package com.openslx.eaas.imagearchive.databind;
 
 import com.fasterxml.jackson.annotation.JsonGetter;
-import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonSetter;
 
 
-@JsonInclude(JsonInclude.Include.NON_EMPTY)
-public class ImageMetaData
+public class ImageMetaData extends AbstractMetaData
 {
 	private String id;
 	private String fstype;
 	private String category;
 	private String label;
+
+	public ImageMetaData()
+	{
+		super(Kinds.V1);
+	}
 
 	@JsonSetter(Fields.ID)
 	public ImageMetaData setId(String id)
@@ -82,6 +85,13 @@ public class ImageMetaData
 	public String label()
 	{
 		return label;
+	}
+
+
+	public static final class Kinds
+	{
+		public static final String TYPE = "image";
+		public static final String V1   = AbstractMetaData.kind(TYPE, "v1");
 	}
 
 
