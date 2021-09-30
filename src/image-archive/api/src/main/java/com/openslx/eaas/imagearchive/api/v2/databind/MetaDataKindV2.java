@@ -26,6 +26,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum MetaDataKindV2
 {
 	IMAGES,
+	EMULATORS,
 	ENVIRONMENTS,
 	SESSIONS,
 	NETWORKS;

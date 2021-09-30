@@ -19,32 +19,21 @@
 
 package de.bwl.bwfla.imagearchive.ImageIndex;
 
-import de.bwl.bwfla.common.concurrent.SequentialExecutor;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.logging.PrefixLogger;
-import de.bwl.bwfla.common.utils.ConfigHelpers;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.configuration.BaseConfigurationPropertySourceProvider;
 import de.bwl.bwfla.imagearchive.ImageArchiveBackend;
 import org.apache.tamaya.Configuration;
-import org.apache.tamaya.ConfigurationProvider;
-import org.apache.tamaya.spi.ConfigurationContext;
 
-import javax.naming.InitialContext;
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
 import java.io.BufferedWriter;
-import java.io.FileWriter;
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -60,8 +49,6 @@ public class ImageNameIndex extends JaxbType
 
 	private String configPath;
 
-	private final SequentialExecutor executor;
-
 	/** Symbolic imageDescription-name index: name --> imageDescription's description */
 	@XmlElement
 	private final Map<String, ImageMetadata> entries = new ConcurrentHashMap<>();
@@ -74,14 +61,12 @@ public class ImageNameIndex extends JaxbType
 	private ImageNameIndex() throws BWFLAException
 	{
 		this.log = new PrefixLogger(ImageArchiveBackend.class.getName());
-		this.executor = ImageNameIndex.lookup(log);
 		this.configPath = null;
 	}
 
 	public ImageNameIndex(String path)
 	{
 		this.log = new PrefixLogger(ImageArchiveBackend.class.getName());
-		this.executor = ImageNameIndex.lookup(log);
 		this.configPath = path;
 	}
 
@@ -128,7 +113,14 @@ public class ImageNameIndex extends JaxbType
 		ImageMetadata md = entries.remove(ImageNameIndex.toIndexKey(name, version));
 		if(md == null)
 			log.severe("failed to find key: " + ImageNameIndex.toIndexKey(name, version));
-		executor.execute(this::dump);
+
+		try {
+			if (entries.isEmpty())
+				this.dump();
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Dumping name-index failed!", error);
+		}
 	}
 
 	/* =============== Internal Helpers =============== */
@@ -171,7 +163,6 @@ public class ImageNameIndex extends JaxbType
 		if(alias != null)
 			this.aliases.put(ImageNameIndex.toIndexKey(alias.getName(), alias.getAlias()), alias);
 
-		executor.execute(this::dump);
 		if(get(entry.getName()) == null)
 		{
 			updateLatest(entry.getName(), entry.getVersion());
@@ -181,35 +172,22 @@ public class ImageNameIndex extends JaxbType
     public synchronized void updateLatest(String emulator, String version) {
         log.info("\nLatest (default) emulator update!\nemulator: " + emulator + "\nversion: " + version);
         this.aliases.put(ImageNameIndex.toIndexKey(emulator, LATEST_TAG), new Alias(emulator, version, LATEST_TAG));
-        executor.execute(this::dump);
     }
 
 
-	private void dump()
+	public void dump() throws Exception
 	{
 		Path outPath = Paths.get(configPath);
 		if (Files.isDirectory(outPath))
 			outPath = outPath.resolve("index.yaml");
 
+		if (entries.isEmpty()) {
+			Files.deleteIfExists(outPath);
+			return;
+		}
+
 		try (final BufferedWriter writer = Files.newBufferedWriter(outPath)) {
 			writer.write(this.yamlValue(false));
-		}
-		catch (IOException error) {
-			throw new IllegalStateException("NameIndexes dump failed!", error);
-		}
-	}
-
-
-
-	private static SequentialExecutor lookup(Logger log)
-	{
-		final String name = "java:jboss/ee/concurrency/executor/io";
-		try {
-			return new SequentialExecutor(InitialContext.doLookup(name),4);
-		}
-		catch (Exception exception) {
-			log.log(Level.SEVERE, "Lookup for '" + name + "' failed!", exception);
-			return null;
 		}
 	}
 }

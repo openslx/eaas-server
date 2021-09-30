@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.openslx.eaas.common.databind.DataUtils;
+import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import com.openslx.eaas.imagearchive.databind.ImageMetaData;
 
 import java.util.function.Function;
@@ -39,6 +40,11 @@ public class ImageArchiveMappers
 	/** Mapper from parsed JSON to image-metadata */
 	public static final FromJsonTree<ImageMetaData> JSON_TREE_TO_IMAGE_METADATA
 			= new FromJsonTree<>(ImageMetaData.class);
+
+
+	/** Mapper from parsed JSON to emulator-metadata */
+	public static final FromJsonTree<EmulatorMetaData> JSON_TREE_TO_EMULATOR_METADATA
+			= new FromJsonTree<>(EmulatorMetaData.class);
 
 
 	/** Mapper from parsed JSON to generic objects */

@@ -1,5 +1,7 @@
 package de.bwl.bwfla.emil.utils;
 
+import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
+import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
@@ -24,7 +26,9 @@ public class ImportEmulatorUtil {
         return archive;
     }
 
-    public static void doImport(ImportEmulatorRequest emulatorRequest, DatabaseEnvironmentsAdapter envHelper) throws BWFLAException, MalformedURLException {
+    public static void doImport(ImportEmulatorRequest emulatorRequest, EmulatorMetaHelperV2 emuMetaHelper, DatabaseEnvironmentsAdapter envHelper)
+            throws BWFLAException, MalformedURLException
+    {
         ImageArchiveMetadata meta = new ImageArchiveMetadata();
         meta.setType(ImageType.BASE);
 
@@ -33,49 +37,39 @@ public class ImportEmulatorUtil {
         importState = envHelper.importImage(getEmulatorArchive(), new URL(emulatorRequest.getImageUrl()), meta, true);
         binding = importState.getBinding(60 * 60 * 60); //wait an hour
 
-        de.bwl.bwfla.api.imagearchive.ImageDescription iD = new de.bwl.bwfla.api.imagearchive.ImageDescription();
-        EmulatorMetadata emulatorMetadata = envHelper.extractMetadata(binding.getImageId());
-        iD.setType(meta.getType().value());
-        iD.setId(binding.getImageId());
-        iD.setFstype(FileSystemType.EXT4.toString());
+        final var newEmulatorMetaData = new EmulatorMetaData();
+        newEmulatorMetaData.image()
+                .setId(binding.getImageId())
+                .setCategory(meta.getType().value())
+                .setFileSystemType(FileSystemType.EXT4.toString());
 
-        ImageMetadata entry = new ImageMetadata();
-        Alias alias = new Alias();
+        final var oldEmulatorMetaData = envHelper.extractMetadata(binding.getImageId());
+        if (oldEmulatorMetaData != null) {
+            newEmulatorMetaData.provenance()
+                    .setUrl(oldEmulatorMetaData.getOciSourceUrl())
+                    .setTag(oldEmulatorMetaData.getEmulatorVersion());
 
-        entry.setImage(iD);
-        Provenance pMd = new Provenance();
-
-        if (emulatorMetadata != null) {
-            pMd.setOciSourceUrl(emulatorMetadata.getOciSourceUrl());
-            pMd.setVersionTag(emulatorMetadata.getEmulatorVersion());
-            entry.setProvenance(pMd);
-
-            entry.setName("emucon-rootfs/" + emulatorMetadata.getEmulatorType());
-            entry.setVersion(emulatorMetadata.getEmulatorVersion());
-            entry.setDigest(emulatorMetadata.getContainerDigest());
-
-            alias.setName("emucon-rootfs/" + emulatorMetadata.getEmulatorType());
-            alias.setVersion(emulatorMetadata.getEmulatorVersion());
-            alias.setAlias(emulatorMetadata.getEmulatorVersion());
-        } else if (emulatorRequest.getMetadata() != null) {
+            newEmulatorMetaData.setName(oldEmulatorMetaData.getEmulatorType())
+                    .setVersion(oldEmulatorMetaData.getEmulatorVersion())
+                    .setDigest(oldEmulatorMetaData.getContainerDigest());
+        }
+        else if (emulatorRequest.getMetadata() != null) {
             CreateContainerImageResult.ContainerImageMetadata cmd = emulatorRequest.getMetadata();
-            pMd.setOciSourceUrl(cmd.getContainerSourceUrl());
-            pMd.setVersionTag(cmd.getTag());
-            entry.setProvenance(pMd);
+            newEmulatorMetaData.provenance()
+                    .setUrl(cmd.getContainerSourceUrl())
+                    .setTag(cmd.getTag());
 
             if( cmd.getEmulatorType() == null || cmd.getEmulatorVersion() == null)
                 throw new BWFLAException("not a emulator container or unsupported metadata format");
 
-            entry.setName("emucon-rootfs/" + cmd.getEmulatorType());
-            entry.setVersion(cmd.getEmulatorVersion());
-            entry.setDigest(cmd.getContainerDigest());
-
-            alias.setName("emucon-rootfs/" + cmd.getEmulatorType());
-            alias.setVersion(cmd.getEmulatorVersion());
-            alias.setAlias(cmd.getEmulatorVersion());
-        } else {
+            newEmulatorMetaData.setName(cmd.getEmulatorType())
+                    .setVersion(cmd.getEmulatorVersion())
+                    .setDigest(cmd.getContainerDigest());
+        }
+        else {
             throw new BWFLAException("not a emulator container or unsupported metadata format");
         }
-        envHelper.addNameIndexesEntry(getEmulatorArchive(), entry, alias);
+
+        emuMetaHelper.insert(newEmulatorMetaData);
     }
 }
