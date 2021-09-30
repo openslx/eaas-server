@@ -116,6 +116,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.CHECKPOINT, CheckpointIndex.class);
 	}
 
+	public MetaDataIndex imageMetaData()
+	{
+		return this.lookup(BlobKind.IMAGE_METADATA, MetaDataIndex.class);
+	}
+
 	public ImageIndex images()
 	{
 		return this.lookup(BlobKind.IMAGE, ImageIndex.class);
@@ -142,6 +147,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT, fetcher));
 		registry.insert(new MetaDataIndex(BlobKind.SESSION, fetcher));
 		registry.insert(new MetaDataIndex(BlobKind.NETWORK, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.IMAGE_METADATA, fetcher));
 		registry.insert(new ContainerIndex(fetcher));
 		registry.insert(new MachineIndex(fetcher));
 		registry.insert(new TemplateIndex(fetcher));

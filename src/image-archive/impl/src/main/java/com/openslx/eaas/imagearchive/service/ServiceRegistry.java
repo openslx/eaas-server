@@ -76,6 +76,11 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		return this.lookup(BlobKind.CHECKPOINT, CheckpointService.class);
 	}
 
+	public MetaDataService imageMetaData()
+	{
+		return this.lookup(BlobKind.IMAGE_METADATA, MetaDataService.class);
+	}
+
 	public ImageService images()
 	{
 		return this.lookup(BlobKind.IMAGE, ImageService.class);
@@ -109,6 +114,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		registry.insert(MetaDataService.create(BlobKind.ENVIRONMENT, backend, remover));
 		registry.insert(MetaDataService.create(BlobKind.SESSION, backend, remover));
 		registry.insert(MetaDataService.create(BlobKind.NETWORK, backend, remover));
+		registry.insert(MetaDataService.create(BlobKind.IMAGE_METADATA, backend, remover));
 		registry.insert(ContainerService.create(backend, remover));
 		registry.insert(MachineService.create(backend, remover));
 		registry.insert(TemplateService.create(backend, remover));
