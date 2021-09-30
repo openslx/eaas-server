@@ -11,14 +11,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
-import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectReader;
-import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
@@ -91,10 +89,12 @@ public class EmilEnvironmentRepository {
 	private ObjectClassification classification;
 
 	/** Mapper for parsed JSON to emil-environment */
-	private final Mapper<EmilEnvironment> ENVIRONMENT_MAPPER = new Mapper<>(EmilEnvironment.class);
+	private final ImageArchiveMappers.FromJsonTree<EmilEnvironment> ENVIRONMENT_MAPPER
+			= new ImageArchiveMappers.FromJsonTree<>(EmilEnvironment.class);
 
 	/** Mapper for parsed JSON to network-environment */
-	private final Mapper<NetworkEnvironment> NETWORK_MAPPER = new Mapper<>(NetworkEnvironment.class);
+	private final ImageArchiveMappers.FromJsonTree<NetworkEnvironment> NETWORK_MAPPER
+			= new ImageArchiveMappers.FromJsonTree<>(NetworkEnvironment.class);
 
 	private static boolean initialized = false;
 
@@ -543,28 +543,20 @@ public class EmilEnvironmentRepository {
 				setPermissions(env, userCtx);
 		}
 
-		final var value = DataUtils.json()
-				.mapper()
-				.valueToTree(env);
-
 		final var options = new ReplaceOptionsV2()
 				.setLocation(env.getArchive());
 
 		imagearchive.api()
 				.v2()
 				.metadata(MetaDataKindV2.ENVIRONMENTS)
-				.replace(env.getEnvId(), value, options);
+				.replace(env.getEnvId(), env, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
 	}
 
 	public void saveNetworkEnvironment(NetworkEnvironment env) throws BWFLAException {
-		final var value = DataUtils.json()
-				.mapper()
-				.valueToTree(env);
-
 		imagearchive.api()
 				.v2()
 				.metadata(MetaDataKindV2.NETWORKS)
-				.replace(env.getEnvId(), value);
+				.replace(env.getEnvId(), env, ImageArchiveMappers.OBJECT_TO_JSON_TREE);
 	}
 
 	public synchronized <T extends JaxbType> void delete(String envId, boolean deleteMetadata, boolean deleteImages) throws BWFLAException {
@@ -741,9 +733,6 @@ public class EmilEnvironmentRepository {
 	}
 
 	private void importFromFolder(String directory) throws BWFLAException {
-		final var mapper = DataUtils.json()
-				.mapper();
-
 		final Consumer<EmilEnvironment> importer = (env) -> {
 			try {
 				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
@@ -757,8 +746,7 @@ public class EmilEnvironmentRepository {
 				final var options = new ReplaceOptionsV2()
 						.setLocation(env.getArchive());
 
-				final var value = mapper.valueToTree(env);
-				values.replace(env.getEnvId(), value, options);
+				values.replace(env.getEnvId(), env, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
 				LOG.info("Imported environment '" + env.getEnvId() + "' (" + env.getArchive() + ")");
 			}
 			catch (Exception error) {
@@ -771,9 +759,7 @@ public class EmilEnvironmentRepository {
 	}
 
 	private void importFromDatabase() throws BWFLAException {
-		final var mapper = DataUtils.json()
-				.mapper();
-
+		final var mapper = ImageArchiveMappers.OBJECT_TO_JSON_TREE;
 		final Consumer<JaxbType> importer = (data) -> {
 			try {
 				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
@@ -795,14 +781,14 @@ public class EmilEnvironmentRepository {
 					case SESSIONS: {
 						final var env = (EmilEnvironment) data;
 						options.setLocation(env.getArchive());
-						value = mapper.valueToTree(env);
+						value = mapper.apply(env);
 						envid = env.getEnvId();
 						break;
 					}
 
 					case NETWORKS: {
 						final var env = (NetworkEnvironment) data;
-						value = mapper.valueToTree(env);
+						value = mapper.apply(env);
 						envid = env.getEnvId();
 						break;
 					}
@@ -1170,29 +1156,6 @@ public class EmilEnvironmentRepository {
 		public long until()
 		{
 			return untiltime;
-		}
-	}
-
-	private static class Mapper<T> implements Function<JsonNode, T>
-	{
-		private final ObjectReader reader;
-
-		public Mapper(Class<T> clazz)
-		{
-			this.reader = DataUtils.json()
-					.reader()
-					.forType(clazz);
-		}
-
-		@Override
-		public T apply(JsonNode json)
-		{
-			try {
-				return reader.readValue(json);
-			}
-			catch (Exception error) {
-				throw new RuntimeException("Deserializing environment failed!", error);
-			}
 		}
 	}
 }
