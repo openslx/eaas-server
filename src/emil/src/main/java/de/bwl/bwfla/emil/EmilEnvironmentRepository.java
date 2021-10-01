@@ -520,6 +520,13 @@ public class EmilEnvironmentRepository {
 		save(env, false, userctx);
 	}
 
+	public boolean existsEmilEnvironment(String envid) throws BWFLAException {
+		return imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.ENVIRONMENTS)
+				.exists(envid);
+	}
+
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
 		save(env, setPermission, getUserContext());
 	}
