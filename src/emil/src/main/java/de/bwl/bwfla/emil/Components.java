@@ -84,7 +84,9 @@ import de.bwl.bwfla.emil.datatypes.snapshot.*;
 import de.bwl.bwfla.emil.session.Session;
 import de.bwl.bwfla.emil.session.SessionComponent;
 import de.bwl.bwfla.emil.session.SessionManager;
+import de.bwl.bwfla.emil.tasks.CreateSnapshotTask;
 import de.bwl.bwfla.emil.utils.EventObserver;
+import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.utils.components.ContainerComponent;
 import de.bwl.bwfla.emil.utils.components.UviComponent;
 import de.bwl.bwfla.emucomp.api.*;
@@ -178,7 +180,6 @@ public class Components {
     @Config(value = "emucomp.enable_pulseaudio", defaultValue = "false")
     private boolean pulseAudioAvailable = false;
 
-
     private SoftwareArchiveHelper swHelper;
 
     @Inject
@@ -201,6 +202,9 @@ public class Components {
     private EmilObjectData objects;
 
     @Inject
+	private UserSessions userSessions;
+
+    @Inject
     private ContainerComponent containerHelper;
 
     @Inject
@@ -212,6 +216,9 @@ public class Components {
 
     @Inject
     private ObjectRepository objectRepository;
+
+    @Inject
+    private TaskManager taskManager;
 
     @Inject
 	@Config(value="objectarchive.user_archive_enabled")
@@ -1356,6 +1363,34 @@ public class Components {
         return result;
     }
 
+    public TaskStateResponse snapshotAsync(String componentId, SnapshotRequest request, UserContext userContext) throws Exception {
+         Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
+         return new TaskStateResponse(taskManager.submitTask(new CreateSnapshotTask(snapshot, componentId, request, false, userContext)));
+    }
+
+    /**
+     * Save environment
+     * Saves the current disk state in a given image archive
+     * @param componentId The component's ID to snapshot.
+     * @param request {@link SnapshotRequest}
+     * @return A JSON response containing the result message.
+     */
+    @POST
+    @Secured(roles={Role.PUBLIC})
+    @Path("/{componentId}/async/snapshot")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public TaskStateResponse snapshotAsync(@PathParam("componentId") String componentId, SnapshotRequest request)
+    {
+        try {
+            return snapshotAsync(componentId, request, getUserContext());
+        } catch (Exception e) {
+             final BWFLAException error = (e instanceof BWFLAException) ?
+                    (BWFLAException) e : new BWFLAException(e);
+            return new TaskStateResponse(error);
+        }
+    }
+
     /**
      * Save environment
      * Saves the current disk state in a given image archive
@@ -1370,7 +1405,37 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public SnapshotResponse snapshot(@PathParam("componentId") String componentId, SnapshotRequest request)
     {
-        return this.handleSnapshotRequest(componentId, request, false);
+        try {
+            Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
+            return snapshot.handleSnapshotRequest(componentId, request, false, getUserContext());
+        } catch (Exception e) {
+            final BWFLAException error = (e instanceof BWFLAException) ?
+                    (BWFLAException) e : new BWFLAException(e);
+            return new SnapshotResponse(error);
+        }
+    }
+
+    /**
+     * Creates a checkpoint of a running emulation session.
+     * @param componentId The component's ID to checkpoint.
+     * @param request {@link SnapshotRequest}
+     * @return A JSON response containing the result message.
+     */
+    @POST
+    @Secured(roles={Role.PUBLIC})
+    @Path("/{componentId}/async/checkpoint")
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public TaskStateResponse checkpointAsync(@PathParam("componentId") String componentId, SnapshotRequest request)
+    {
+        try {
+            Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
+            return new TaskStateResponse(taskManager.submitTask(new CreateSnapshotTask(snapshot, componentId, request, true, getUserContext())));
+        } catch (Exception e) {
+             final BWFLAException error = (e instanceof BWFLAException) ?
+                    (BWFLAException) e : new BWFLAException(e);
+            return new TaskStateResponse(error);
+        }
     }
 
     /**
@@ -1386,7 +1451,14 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public SnapshotResponse checkpoint(@PathParam("componentId") String componentId, SnapshotRequest request)
     {
-        return this.handleSnapshotRequest(componentId, request, true);
+        try {
+            Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
+            return snapshot.handleSnapshotRequest(componentId, request, true, getUserContext());
+        } catch (Exception e) {
+            final BWFLAException error = (e instanceof BWFLAException) ?
+                    (BWFLAException) e : new BWFLAException(e);
+            return new SnapshotResponse(error);
+        }
     }
 
 
@@ -1522,109 +1594,9 @@ public class Components {
         return new WebApplicationException(error, response);
     }
 
-    private Snapshot createSnapshot(String componentId, boolean checkpoint)
-            throws BWFLAException, InterruptedException, JAXBException
-    {
-        final Machine machine = componentClient.getMachinePort(eaasGw);
-        final MachineConfiguration config = MachineConfiguration.fromValue(machine.getRuntimeConfiguration(componentId));
-        String state = machine.getEmulatorState(componentId);
-        if (checkpoint) {
-            // Make a checkpoint + snapshot
-            LOG.info("Preparing session " + componentId + " for checkpointing...");
-            if (!state.equalsIgnoreCase(EaasState.SESSION_RUNNING.value())) {
-                LOG.warning("Preparing session " + componentId + " for checkpointing failed! Invalid state: " + state);
-                return null;
-            }
-
-            // Import checkpoint data into archive
-            final DataHandler data = machine.checkpoint(componentId);
-            final ImageArchiveBinding binding = new ImageArchiveBinding();
-            binding.setId("checkpoint");
-            binding.setLocalAlias("checkpoint.tar.gz");
-            binding.setAccess(Binding.AccessType.COPY);
-
-            LOG.info("Saving checkpointed environment in image-archive...");
-            try (final var stream = data.getInputStream()) {
-                final var imagearchive = emilEnvRepo.getImageArchive();
-                final var imageid = imagearchive.api()
-                        .v2()
-                        .checkpoints()
-                        .insert(stream);
-
-                binding.setImageId(imageid);
-            }
-            catch (IOException error) {
-                throw new BWFLAException("Saving checkpoint failed!", error);
-            }
-
-            // Update machine's configuration
-            config.setCheckpointBindingId("binding://" + binding.getId());
-            config.getAbstractDataResource().add(binding);
-        }
-        else {
-            // Make a snapshot only!
-            if (state.equalsIgnoreCase(EaasState.SESSION_RUNNING.value())) {
-                LOG.info("Preparing session " + componentId + " for snapshotting...");
-                machine.stop(componentId);
-
-                final String expState = EaasState.SESSION_STOPPED.value();
-                for (int i = 0; i < 30; ++i) {
-                    state = machine.getEmulatorState(componentId);
-                    if (state.equalsIgnoreCase(expState))
-                        break;
-
-                    Thread.sleep(500);
-                }
-            }
-
-            state = machine.getEmulatorState(componentId);
-            if (!state.equalsIgnoreCase(EaasState.SESSION_STOPPED.value())) {
-                LOG.warning("Preparing session " + componentId + " for snapshotting failed!");
-                return null;
-            }
-        }
-
-        try {
-            return new Snapshot(config, machine.snapshot(componentId));
-        }
-        catch (BWFLAException e)
-        {
-            e.printStackTrace();
-            LOG.warning("failed to retrieve snapshot.");
-            return null;
-        }
-    }
-
-    private SnapshotResponse handleSnapshotRequest(String componentId, SnapshotRequest request, boolean checkpoint)
-    {
-        try {
-            final Snapshot snapshot = this.createSnapshot(componentId, checkpoint);
-            if (snapshot == null) {
-                final String message = "Creating " + ((checkpoint) ? "checkpoint" : "snapshot") + " failed!";
-                return new SnapshotResponse(new BWFLAException(message));
-            }
-            if (request instanceof SaveObjectEnvironmentRequest) {
-                return new SnapshotResponse(emilEnvRepo.saveAsObjectEnvironment(snapshot, (SaveObjectEnvironmentRequest) request));
-            }
-            else if (request instanceof SaveDerivateRequest) { // implies SaveCreatedEnvironmentRequest && newEnvironmentRequest
-                return new SnapshotResponse(emilEnvRepo.saveAsRevision(snapshot, (SaveDerivateRequest) request, checkpoint));
-            }
-            else if (request instanceof SaveUserSessionRequest) {
-                return new SnapshotResponse(emilEnvRepo.saveAsUserSession(snapshot, (SaveUserSessionRequest) request));
-            }
-            else {
-                return new SnapshotResponse(new BWFLAException("Unknown request type!"));
-            }
-        }
-        catch (Exception exception) {
-            final BWFLAException error = (exception instanceof BWFLAException) ?
-                    (BWFLAException) exception : new BWFLAException(exception);
-
-            final String message = "Handling " + ((checkpoint) ? "checkpoint" : "snapshot") + " request failed!";
-            LOG.log(Level.WARNING, message, error);
-            return new SnapshotResponse(error);
-        }
-    }
+    private UserContext getUserContext() {
+		return (authenticatedUser != null) ? authenticatedUser.clone() : new UserContext();
+	}
 
     private static long timestamp()
     {

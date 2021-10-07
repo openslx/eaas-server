@@ -5,9 +5,11 @@ import de.bwl.bwfla.common.taskmanager.AbstractTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emil.datatypes.rest.ClassificationResult;
 import de.bwl.bwfla.emil.datatypes.rest.CreateContainerImageResult;
+import de.bwl.bwfla.emil.datatypes.rest.SnapshotResponse;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.emil.datatypes.snapshot.SnapshotRequest;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -87,6 +89,8 @@ public class TaskManager {
                     response.setObject((CreateContainerImageResult)result);
                 if (result instanceof Map)
                     response.setUserData((Map<String,String>) result);
+                if(result instanceof SnapshotResponse)
+                    response.setObject((SnapshotResponse)result);
             }
 
             // Cache response

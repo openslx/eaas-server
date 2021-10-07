@@ -113,6 +113,7 @@ public class EmilEnvironmentRepository {
 		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
 	}
 
+	@Deprecated
 	private boolean checkPermissions(EmilEnvironment env, EmilEnvironmentPermissions.Permissions wanted) {
 		return this.checkPermissions(env, wanted, this.getUserContext());
 	}
@@ -388,6 +389,7 @@ public class EmilEnvironmentRepository {
 				.delete(env.getEnvId());
 	}
 
+	@Deprecated
 	public EmilEnvironment getEmilEnvironmentById(String envid)
 	{
 		return this.getEmilEnvironmentById(envid, this.getUserContext());
@@ -527,6 +529,8 @@ public class EmilEnvironmentRepository {
 				.exists(envid);
 	}
 
+
+	@Deprecated
 	public void save(EmilEnvironment env, boolean setPermission) throws BWFLAException {
 		save(env, setPermission, getUserContext());
 	}
@@ -907,10 +911,12 @@ public class EmilEnvironmentRepository {
 				.onClose(result::close);
 	}
 
+	@Deprecated
 	public Stream<EmilEnvironment> getEmilEnvironments() throws BWFLAException {
 		return this.getEmilEnvironments(this.getUserContext());
 	}
 
+	@Deprecated
 	public List<EmilEnvironment> getChildren(String envId, List<EmilEnvironment> envs) throws BWFLAException {
 		return this.getChildren(envId, envs, this.getUserContext());
 	}
@@ -930,67 +936,6 @@ public class EmilEnvironmentRepository {
 				result.add(emilEnvironment);
 		}
 		return result;
-	}
-
-
-	public String saveAsUserSession(Snapshot snapshot, SaveUserSessionRequest request) throws BWFLAException {
-		String sessionEnvId = snapshot.saveUserSession(imagearchive, objects.helper(), request);
-
-		EmilEnvironment parentEnv = getEmilEnvironmentById(request.getEnvId());
-		if (parentEnv == null)
-			throw new BWFLAException("parent environment not found: " + request.getEnvId());
-
-		EmilSessionEnvironment sessionEnv = new EmilSessionEnvironment(parentEnv);
-		sessionEnv.setObjectId(request.getObjectId());
-		sessionEnv.setCreationDate((new Date()).getTime());
-		sessionEnv.setUserId(request.getUserId());
-		sessionEnv.setParentEnvId(parentEnv.getEnvId());
-
-		LOG.info("adding session for user: " + request.getUserId()
-				+ " object: " + request.getObjectId() + " env " + sessionEnvId);
-
-		sessionEnv.setEnvId(sessionEnvId);
-
-		save(sessionEnv, false);
-		EmilSessionEnvironment oldEnv = sessions.get(sessionEnv.getUserId(), sessionEnv.getObjectId());
-		LOG.info("saving: " + sessionEnvId);
-		if (oldEnv != null)
-			LOG.info("found oldEnv: " + oldEnv.getEnvId());
-		LOG.info("parent env was: " + parentEnv.getParentEnvId());
-
-		if (oldEnv != null && parentEnv.getParentEnvId() != null && !oldEnv.getEnvId().equals(parentEnv.getEnvId())) {
-
-			LOG.info("would like to delete " + oldEnv.getEnvId());
-			// delete(oldEnv.getEnvId());
-		}
-		sessions.add(sessionEnv);
-
-		parentEnv.addChildEnvId(sessionEnvId);
-		save(parentEnv, false);
-		return sessionEnv.getEnvId();
-	}
-
-	synchronized String saveAsObjectEnvironment(Snapshot snapshot, SaveObjectEnvironmentRequest request) throws BWFLAException {
-
-		String archiveName = request.getObjectArchiveId();
-		if (archiveName == null) {
-			if(authenticatedUser == null || authenticatedUser.getUserId() == null)
-				request.setObjectArchiveId("default");
-			else
-				request.setObjectArchiveId(authenticatedUser.getUserId());
-		}
-
-		if(request.getObjectArchiveId() == null)
-			request.setObjectArchiveId(archiveName);
-
-		EmilEnvironment parentEnv = getEmilEnvironmentById(request.getEnvId());
-		EmilObjectEnvironment ee = snapshot.createObjectEnvironment(imagearchive, objects.helper(), request);
-
-		parentEnv.addBranchId(ee.getEnvId());
-		save(parentEnv, false);
-		save(ee, true);
-
-		return ee.getEnvId();
 	}
 
 	public void saveImportedContainer(String envId, ImportContainerRequest req, UserContext userCtx) throws BWFLAException
@@ -1018,58 +963,6 @@ public class EmilEnvironmentRepository {
 		if(req.getArchive() != null)
 			env.setArchive(req.getArchive());
 		save(env, true, userCtx);
-	}
-
-	String saveAsRevision(Snapshot snapshot, SaveDerivateRequest req, boolean checkpoint) throws BWFLAException {
-
-		EmilEnvironment env = getEmilEnvironmentById(req.getEnvId());
-		if (env == null) {
-			if (req instanceof SaveCreatedEnvironmentRequest) {
-				// no emil env -> new environment has been created and committed
-				final Environment _env = imagearchive.api()
-						.v2()
-						.environments()
-						.fetch(req.getEnvId());
-
-				env = new EmilEnvironment();
-				env.setTitle(_env.getDescription().getTitle());
-				env.setEnvId(req.getEnvId());
-				env.setDescription("empty hard disk");
-			} else
-				throw new BWFLAException("Environment with id " + req.getEnvId() + " not found");
-		}
-
-		EmilEnvironment newEnv = snapshot.createEnvironment(imagearchive, req, env, checkpoint);
-		if (req instanceof SaveCreatedEnvironmentRequest)
-			newEnv.setTitle(((SaveCreatedEnvironmentRequest) req).getTitle());
-
-		if(req instanceof SaveNewEnvironmentRequest)
-		{
-			env.addBranchId(newEnv.getEnvId());
-		}
-		else
-			env.addChildEnvId(newEnv.getEnvId());
-
-
-		save(env, false);
-		save(newEnv, true);
-		if (newEnv instanceof EmilSessionEnvironment) {
-			EmilSessionEnvironment session = (EmilSessionEnvironment) newEnv;
-			EmilSessionEnvironment oldEnv = sessions.get(session.getUserId(), session.getObjectId());
-			LOG.info("update: " + session.getEnvId());
-			if (oldEnv != null)
-				LOG.info("update: found oldEnv: " + oldEnv.getEnvId());
-			LOG.info("updates parent env was: " + session.getParentEnvId());
-
-			if (oldEnv != null && session.getParentEnvId() != null && !oldEnv.getEnvId().equals(session.getParentEnvId())) {
-
-				LOG.info("would like to delete " + oldEnv.getEnvId());
-				// delete(oldEnv.getEnvId());
-			}
-			sessions.add(session);
-		}
-
-		return newEnv.getEnvId();
 	}
 
 	public EmilSessionEnvironment getUserSession(String userId, String objectId) {
