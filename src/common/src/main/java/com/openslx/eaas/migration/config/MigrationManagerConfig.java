@@ -23,6 +23,7 @@ import de.bwl.bwfla.common.utils.ConfigHelpers;
 import org.apache.tamaya.ConfigException;
 import org.apache.tamaya.Configuration;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -31,6 +32,7 @@ import java.util.logging.Logger;
 public class MigrationManagerConfig extends BaseConfig<MigrationManagerConfig>
 {
 	private List<MigrationConfig> migrations = new ArrayList<>();
+	private Path statedir;
 
 
 	// ===== Getters and Setters ====================
@@ -44,6 +46,17 @@ public class MigrationManagerConfig extends BaseConfig<MigrationManagerConfig>
 	public List<MigrationConfig> getMigrationConfigs()
 	{
 		return migrations;
+	}
+
+	public void setStateDirectory(Path path)
+	{
+		ConfigHelpers.check(path, "State directory is invalid!");
+		this.statedir = path;
+	}
+
+	public Path getStateDirectory()
+	{
+		return statedir;
 	}
 
 
@@ -64,6 +77,12 @@ public class MigrationManagerConfig extends BaseConfig<MigrationManagerConfig>
 		log.info("Loading migration-manager's configuration...");
 
 		super.load(config, log);
+
+		// Configure state directory
+		{
+			final var datadir = config.get("commonconf.serverdatadir");
+			this.setStateDirectory(Path.of(datadir, "migrations"));
+		}
 
 		// Configure migrations
 		{

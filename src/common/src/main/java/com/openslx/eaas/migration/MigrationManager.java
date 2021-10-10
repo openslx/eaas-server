@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.migration;
 
+import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.migration.config.MigrationManagerConfig;
 
@@ -26,6 +27,9 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Initialized;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.CDI;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.logging.Logger;
 import java.util.regex.Pattern;
 
@@ -52,7 +56,11 @@ public class MigrationManager
 			return;
 		}
 
+		final var outpath = config.getStateDirectory()
+				.resolve(name + ".json");
+
 		LOG.info("Running migration '" + name + "'...");
+		final var result = new MigrationResult(name);
 		try {
 			migration.execute(mc);
 		}
@@ -60,6 +68,9 @@ public class MigrationManager
 			LOG.warning("Running migration '" + name + "' failed!");
 			throw error;
 		}
+
+		result.finish(MigrationState.EXECUTED);
+		this.store(outpath, result);
 
 		LOG.warning("Finished migration '" + name + "'");
 	}
@@ -82,7 +93,13 @@ public class MigrationManager
 
 	private void initialize(@Observes @Initialized(ApplicationScoped.class) Object unused)
 	{
-		this.config = MigrationManagerConfig.create(LOG);
+		try {
+			this.config = MigrationManagerConfig.create(LOG);
+			Files.createDirectories(config.getStateDirectory());
+		}
+		catch (Exception error) {
+			throw new IllegalStateException("Initializing migration-manager failed!", error);
+		}
 	}
 
 	private MigrationConfig find(String name)
@@ -93,6 +110,15 @@ public class MigrationManager
 		}
 
 		return null;
+	}
+
+	private void store(Path outpath, MigrationResult result) throws IOException
+	{
+		try (var output = Files.newBufferedWriter(outpath)) {
+			DataUtils.json()
+					.writer(true)
+					.writeValue(output, result);
+		}
 	}
 
 	private static void validate(String name) throws IllegalArgumentException
