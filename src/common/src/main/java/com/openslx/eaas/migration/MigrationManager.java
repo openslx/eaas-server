@@ -48,6 +48,12 @@ public class MigrationManager
 	/** Immediately execute given migration, if enabled */
 	public void execute(String name, IMigration migration) throws Exception
 	{
+		this.execute(name, migration, false);
+	}
+
+	/** Immediately (force-) execute given migration, if enabled */
+	public void execute(String name, IMigration migration, boolean force) throws Exception
+	{
 		MigrationManager.validate(name);
 
 		final var mc = this.find(name);
@@ -59,7 +65,14 @@ public class MigrationManager
 		final var outpath = config.getStateDirectory()
 				.resolve(name + ".json");
 
-		LOG.info("Running migration '" + name + "'...");
+		force = force || mc.getForceFlag();
+		if (!force && Files.exists(outpath)) {
+			LOG.info("Skipping executed migration '" + name + "'!");
+			return;
+		}
+
+		final var suffix = (force) ? " (forced)" : "";
+		LOG.info("Running migration '" + name + "'" + suffix + "...");
 		final var result = new MigrationResult(name);
 		try {
 			migration.execute(mc);

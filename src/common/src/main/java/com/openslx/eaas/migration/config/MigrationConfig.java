@@ -30,6 +30,7 @@ import java.util.logging.Logger;
 public class MigrationConfig extends BaseConfig<MigrationConfig>
 {
 	private String name = null;
+	private boolean force = false;
 	private Configuration args = null;
 
 
@@ -45,6 +46,17 @@ public class MigrationConfig extends BaseConfig<MigrationConfig>
 	public String getName()
 	{
 		return name;
+	}
+
+	@Config(value = "force", defaultValue = "false")
+	public void setForceFlag(boolean force)
+	{
+		this.force = force;
+	}
+
+	public boolean getForceFlag()
+	{
+		return force;
 	}
 
 	public void setArguments(Configuration args)
