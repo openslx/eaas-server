@@ -21,6 +21,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 import com.openslx.eaas.migration.MigrationManager;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -618,6 +619,7 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
+	@Deprecated
 	public void importOldDb() throws BWFLAException {
 		List<EmilEnvironment> oldEnvs = null;
 		try {
@@ -654,12 +656,11 @@ public class EmilEnvironmentRepository {
 	{
 		final var migrations = MigrationManager.instance();
 		migrations.execute("import-local-emil-environments", (mc) -> this.importFromFolder("import"));
+		migrations.execute("import-legacy-emil-database-v1", this::importLegacyDatabaseV1);
 	}
 
 	public int initialize() throws JAXBException, BWFLAException {
 		int counter = 0;
-
-		importFromDatabase();
 
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
@@ -783,7 +784,9 @@ public class EmilEnvironmentRepository {
 		LOG.info(message);
 	}
 
-	private void importFromDatabase() throws BWFLAException {
+	private void importLegacyDatabaseV1(MigrationConfig mc) throws Exception
+	{
+		final var counter = ImportCounts.counter();
 		final var mapper = ImageArchiveMappers.OBJECT_TO_JSON_TREE;
 		final Consumer<JaxbType> importer = (data) -> {
 			try {
@@ -824,13 +827,15 @@ public class EmilEnvironmentRepository {
 
 				values.replace(envid, value, options);
 				LOG.info("Imported environment '" + envid + "' (" + kind.value() + ")");
+				counter.increment(ImportCounts.IMPORTED);
 			}
 			catch (Exception error) {
 				LOG.log(Level.WARNING, "Importing environment failed!", error);
+				counter.increment(ImportCounts.FAILED);
 			}
 		};
 
-		LOG.info("Importing environments from local database...");
+		LOG.info("Importing environments from legacy database...");
 		final var filter = new MongodbEaasConnector.FilterBuilder();
 		for (var collection : db.getCollections()) {
 			final var values = db.find(collection, filter, "type");
@@ -839,6 +844,11 @@ public class EmilEnvironmentRepository {
 				db.drop(collection);
 			}
 		}
+
+		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
+				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
+
+		LOG.info(message);
 	}
 
 	public void export()
