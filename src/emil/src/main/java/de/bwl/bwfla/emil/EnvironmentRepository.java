@@ -135,7 +135,6 @@ public class EnvironmentRepository extends EmilRest
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 
 			this.migrate();
-			this.importEmulatorIndex();
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
@@ -1444,6 +1443,7 @@ public class EnvironmentRepository extends EmilRest
 	{
 		final var migrations = MigrationManager.instance();
 		migrations.execute("import-legacy-image-index", this::importLegacyImageIndex);
+		migrations.execute("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
 	}
 
 	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException
@@ -1484,7 +1484,7 @@ public class EnvironmentRepository extends EmilRest
 		LOG.info("Imported metadata for " + numImported + " image(s), failed " + numFailed);
 	}
 
-	private void importEmulatorIndex() throws BWFLAException
+	private void importLegacyEmulatorIndex(MigrationConfig mc) throws BWFLAException
 	{
 		final var index = envdb.getNameIndexes();
 		final var entries = index.getEntries();
