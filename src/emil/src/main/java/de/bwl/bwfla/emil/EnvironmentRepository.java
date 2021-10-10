@@ -29,6 +29,8 @@ import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import com.openslx.eaas.imagearchive.databind.ImageMetaData;
+import com.openslx.eaas.migration.MigrationManager;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
@@ -132,7 +134,7 @@ public class EnvironmentRepository extends EmilRest
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 
-			this.importImageIndex();
+			this.migrate();
 			this.importEmulatorIndex();
 		}
 		catch (Exception error) {
@@ -1438,7 +1440,13 @@ public class EnvironmentRepository extends EmilRest
 		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
 	}
 
-	private void importImageIndex() throws BWFLAException
+	private void migrate() throws Exception
+	{
+		final var migrations = MigrationManager.instance();
+		migrations.execute("import-legacy-image-index", this::importLegacyImageIndex);
+	}
+
+	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException
 	{
 		final var index = envdb.getImagesIndex();
 		final var entries = index.getEntries();
