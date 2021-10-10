@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -21,6 +20,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.migration.MigrationManager;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -32,8 +32,7 @@ import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
-import de.bwl.bwfla.emil.datatypes.snapshot.*;
-import de.bwl.bwfla.emil.utils.Snapshot;
+import de.bwl.bwfla.emil.utils.ImportCounts;
 import de.bwl.bwfla.emucomp.api.*;
 import org.apache.tamaya.inject.api.Config;
 
@@ -315,6 +314,7 @@ public class EmilEnvironmentRepository {
 			}
 		}
 		try {
+			this.migrate();
 			initialize();
 		}
 		catch (Exception error) {
@@ -650,10 +650,15 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
+	private void migrate() throws Exception
+	{
+		final var migrations = MigrationManager.instance();
+		migrations.execute("import-local-emil-environments", (mc) -> this.importFromFolder("import"));
+	}
+
 	public int initialize() throws JAXBException, BWFLAException {
 		int counter = 0;
 
-		importFromFolder("import");
 		importFromDatabase();
 
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
@@ -744,6 +749,7 @@ public class EmilEnvironmentRepository {
 	}
 
 	private void importFromFolder(String directory) throws BWFLAException {
+		final var counter = ImportCounts.counter();
 		final Consumer<EmilEnvironment> importer = (env) -> {
 			try {
 				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
@@ -759,14 +765,22 @@ public class EmilEnvironmentRepository {
 
 				values.replace(env.getEnvId(), env, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
 				LOG.info("Imported environment '" + env.getEnvId() + "' (" + env.getArchive() + ")");
+				counter.increment(ImportCounts.IMPORTED);
 			}
 			catch (Exception error) {
 				LOG.log(Level.WARNING, "Importing environment '" + env.getEnvId() + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
 			}
 		};
 
+		LOG.info("Importing environments from directory '" + directory + "'...");
 		importHelper.importFromFolder(directory)
 				.forEach((colname, entries) -> entries.forEach(importer));
+
+		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
+				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
+
+		LOG.info(message);
 	}
 
 	private void importFromDatabase() throws BWFLAException {
