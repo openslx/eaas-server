@@ -27,6 +27,7 @@ import javax.enterprise.context.Initialized;
 import javax.enterprise.event.Observes;
 import javax.enterprise.inject.spi.CDI;
 import java.util.logging.Logger;
+import java.util.regex.Pattern;
 
 
 @ApplicationScoped
@@ -34,12 +35,17 @@ public class MigrationManager
 {
 	private static final Logger LOG = Logger.getLogger("MIGRATIONS");
 
+	/** Expected valid migration names */
+	private static final Pattern NAME_PATTERN = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
+
 	private MigrationManagerConfig config;
 
 
 	/** Immediately execute given migration, if enabled */
 	public void execute(String name, IMigration migration) throws Exception
 	{
+		MigrationManager.validate(name);
+
 		final var mc = this.find(name);
 		if (mc == null) {
 			LOG.info("Skipping disabled migration '" + name + "'!");
@@ -87,5 +93,12 @@ public class MigrationManager
 		}
 
 		return null;
+	}
+
+	private static void validate(String name) throws IllegalArgumentException
+	{
+		final var matcher = NAME_PATTERN.matcher(name);
+		if (!matcher.matches())
+			throw new IllegalArgumentException("Invalid name: " + name);
 	}
 }
