@@ -316,7 +316,6 @@ public class EmilEnvironmentRepository {
 		}
 		try {
 			this.migrate();
-			initialize();
 		}
 		catch (Exception error) {
 			LOG.log(Level.SEVERE, "Initializing emil-environments failed!", error);
@@ -657,11 +656,11 @@ public class EmilEnvironmentRepository {
 		final var migrations = MigrationManager.instance();
 		migrations.execute("import-local-emil-environments", (mc) -> this.importFromFolder("import"));
 		migrations.execute("import-legacy-emil-database-v1", this::importLegacyDatabaseV1);
+		migrations.execute("create-absent-emil-environments", this::createAbsentEmilEnvironments);
 	}
 
-	public int initialize() throws JAXBException, BWFLAException {
-		int counter = 0;
-
+	private void createAbsentEmilEnvironments(MigrationConfig mc) throws BWFLAException
+	{
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
 				// LOG.warning("found env " + env.getId()	 + " in archive " + a);
@@ -674,14 +673,16 @@ public class EmilEnvironmentRepository {
 					EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
 					permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
 					emilEnv.setPermissions(permissions);
-
 					emilEnv.setArchive(archive);
 					save(emilEnv, false);
+					LOG.info("Updated emil-environment '" + env.getId() + "'");
 				}
 
 				if ((emilEnv == null && env instanceof ContainerConfiguration)) {
 					EmilContainerEnvironment ee = new EmilContainerEnvironment();
 					saveImport(env, ee);
+					LOG.info("Created emil-environment for container '" + env.getId() + "'");
+					return 1;
 				} else if (emilEnv == null && env instanceof MachineConfiguration) {
 					EmilEnvironment ee;
 					String objectId = EmulationEnvironmentHelper.isObjectEnvironment((MachineConfiguration) env);
@@ -708,6 +709,7 @@ public class EmilEnvironmentRepository {
 						ee.setPermissions(permissions);
 					}
 					save(ee, false);
+					LOG.info("Created emil-environment for machine '" + env.getId() + "'");
 					return 1;
 				}
 
@@ -724,6 +726,9 @@ public class EmilEnvironmentRepository {
 				.locations()
 				.list();
 
+		int counter = 0;
+
+		LOG.info("Creating absent emil-environments...");
 		try (locations) {
 			for (var iter = locations.iterator(); iter.hasNext();) {
 				final var location = iter.next();
@@ -746,7 +751,7 @@ public class EmilEnvironmentRepository {
 			}
 		}
 
-		return counter;
+		LOG.info("Created " + counter + " absent emil-environment(s)");
 	}
 
 	private void importFromFolder(String directory) throws BWFLAException {

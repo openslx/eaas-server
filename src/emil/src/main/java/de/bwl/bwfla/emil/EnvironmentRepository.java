@@ -1210,7 +1210,8 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Preparing environment-repository...");
 			try {
-				return EnvironmentRepository.successMessageResponse("import of " + emilEnvRepo.initialize() + " environments completed");
+				// NOTE: this should not be needed anymore, since initialization is done in @PostConstruct callbacks!
+				return EnvironmentRepository.successMessageResponse("Preparing environment-repository finished!");
 			}
 			catch (Throwable t) {
 				return EnvironmentRepository.internalErrorResponse(t);
