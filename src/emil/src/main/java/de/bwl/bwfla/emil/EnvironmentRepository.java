@@ -357,6 +357,38 @@ public class EnvironmentRepository extends EmilRest
 					.fetch(ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
 		}
 
+		@POST
+		@Secured(roles={Role.RESTRICTED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		public Response update(ImageMetaData userMetaData) throws BWFLAException {
+			LOG.info("Updating image metadata...");
+			ImageMetaData storedMetadata;
+			// we only re-use label and ID from user provided metadata
+			try {
+				storedMetadata = imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES).fetch(userMetaData.id(), ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
+			} catch (Throwable e) {
+				LOG.log(Level.WARNING, "Loading metadata failed!", e);
+				throw new BadRequestException(Response.status(Status.BAD_REQUEST)
+						.entity(new ErrorInformation(e))
+						.build());
+			}
+
+			final var updatedMetadata = new ImageMetaData()
+					.setId(userMetaData.id())
+					.setLabel(userMetaData.label())
+					.setCategory(storedMetadata.category());
+
+			// todo set options here. unclear which location will be used.
+			imagearchive.api()
+                        .v2()
+                        .metadata(MetaDataKindV2.IMAGES)
+                        .replace(userMetaData.id(), updatedMetadata, ImageArchiveMappers.OBJECT_TO_JSON_TREE);
+
+			return Response.status(Status.OK).build();
+		}
+
 		/** Create a new environment */
 //		@POST
 //		@Secured({Role.RESTRCITED})
