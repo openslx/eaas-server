@@ -31,7 +31,8 @@ import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import com.openslx.eaas.imagearchive.databind.ImageMetaData;
-import com.openslx.eaas.migration.MigrationManager;
+import com.openslx.eaas.migration.IMigratable;
+import com.openslx.eaas.migration.MigrationRegistry;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
@@ -73,6 +74,7 @@ import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -98,6 +100,7 @@ import java.util.stream.Stream;
 @ApplicationScoped
 @Path("/environment-repository")
 public class EnvironmentRepository extends EmilRest
+		implements IMigratable
 {
 	private ImageArchiveClient imagearchive = null;
 
@@ -132,6 +135,7 @@ public class EnvironmentRepository extends EmilRest
 	@Inject
 	private EmilObjectData objects;
 
+
 	@PostConstruct
 	private void initialize()
 	{
@@ -139,8 +143,6 @@ public class EnvironmentRepository extends EmilRest
 			imagearchive = emilEnvRepo.getImageArchive();
 			imageProposer = new ImageProposer(imageProposerService + "/imageproposer");
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
-
-			this.migrate();
 		}
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
@@ -1446,12 +1448,12 @@ public class EnvironmentRepository extends EmilRest
 		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
 	}
 
-	private void migrate() throws Exception
+	@Override
+	public void register(@Observes MigrationRegistry migrations) throws Exception
 	{
-		final var migrations = MigrationManager.instance();
-		migrations.execute("import-legacy-image-index", this::importLegacyImageIndex);
-		migrations.execute("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
-		migrations.execute("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
+		migrations.register("import-legacy-image-index", this::importLegacyImageIndex);
+		migrations.register("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
+		migrations.register("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
 	}
 
 	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException

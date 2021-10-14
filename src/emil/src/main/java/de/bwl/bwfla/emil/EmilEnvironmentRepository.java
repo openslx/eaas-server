@@ -20,7 +20,8 @@ import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
-import com.openslx.eaas.migration.MigrationManager;
+import com.openslx.eaas.migration.IMigratable;
+import com.openslx.eaas.migration.MigrationRegistry;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
@@ -40,6 +41,7 @@ import org.apache.tamaya.inject.api.Config;
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.util.*;
@@ -47,7 +49,8 @@ import java.util.stream.Stream;
 
 
 @ApplicationScoped
-public class EmilEnvironmentRepository {
+public class EmilEnvironmentRepository implements IMigratable
+{
 
 	private ImageArchiveClient imagearchive = null;
 
@@ -313,12 +316,6 @@ public class EmilEnvironmentRepository {
 					LOG.log(Level.SEVERE, e.getMessage(), e);
 				}
 			}
-		}
-		try {
-			this.migrate();
-		}
-		catch (Exception error) {
-			LOG.log(Level.SEVERE, "Initializing emil-environments failed!", error);
 		}
 
 		initialized = true;
@@ -651,12 +648,12 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
-	private void migrate() throws Exception
+	@Override
+	public void register(@Observes MigrationRegistry migrations) throws Exception
 	{
-		final var migrations = MigrationManager.instance();
-		migrations.execute("import-local-emil-environments", (mc) -> this.importFromFolder("import"));
-		migrations.execute("import-legacy-emil-database-v1", this::importLegacyDatabaseV1);
-		migrations.execute("create-absent-emil-environments", this::createAbsentEmilEnvironments);
+		migrations.register("import-local-emil-environments", (mc) -> this.importFromFolder("import"));
+		migrations.register("import-legacy-emil-database-v1", this::importLegacyDatabaseV1);
+		migrations.register("create-absent-emil-environments", this::createAbsentEmilEnvironments);
 	}
 
 	private void createAbsentEmilEnvironments(MigrationConfig mc) throws BWFLAException
