@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.migration.config;
 
+import com.openslx.eaas.migration.MigrationManager;
 import de.bwl.bwfla.common.utils.ConfigHelpers;
 import org.apache.tamaya.ConfigException;
 import org.apache.tamaya.Configuration;
@@ -40,6 +41,7 @@ public class MigrationConfig extends BaseConfig<MigrationConfig>
 	public void setName(String name)
 	{
 		ConfigHelpers.check(name, "Name is invalid!");
+		MigrationManager.validate(name);
 		this.name = name;
 	}
 

@@ -23,10 +23,11 @@ import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.migration.config.MigrationManagerConfig;
 
+import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.Initialized;
-import javax.enterprise.event.Observes;
+import javax.enterprise.event.Event;
 import javax.enterprise.inject.spi.CDI;
+import javax.inject.Inject;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -41,6 +42,9 @@ public class MigrationManager
 
 	/** Expected valid migration names */
 	private static final Pattern NAME_PATTERN = Pattern.compile("[a-z0-9]+(-[a-z0-9]+)*");
+
+	@Inject
+	private Event<MigrationRegistry> discovery;
 
 	private MigrationManagerConfig config;
 
@@ -62,6 +66,13 @@ public class MigrationManager
 			return;
 		}
 
+		this.execute(mc, migration, force);
+	}
+
+	/** Immediately (force-) execute given migration, if enabled */
+	public void execute(MigrationConfig mc, IMigration migration, boolean force) throws Exception
+	{
+		final var name = mc.getName();
 		final var outpath = config.getStateDirectory()
 				.resolve(name + ".json");
 
@@ -88,6 +99,36 @@ public class MigrationManager
 		LOG.warning("Finished migration '" + name + "'");
 	}
 
+	/** Trigger ordered execution of all configured migrations */
+	public synchronized void execute() throws Exception
+	{
+		final var configs = config.getMigrationConfigs();
+		if (configs.isEmpty()) {
+			LOG.warning("No migrations configured!");
+			return;
+		}
+
+		LOG.info("Discovering available migrations...");
+		final var migrations = new MigrationRegistry(LOG);
+		discovery.fire(migrations);
+		if (migrations.isEmpty()) {
+			LOG.warning("No migrations found!");
+			return;
+		}
+
+		LOG.info("Found " + migrations.size() + " available migration(s)");
+		LOG.info("Running " + configs.size() + " configured migration(s)...");
+		for (final var mc : configs) {
+			final var migration = migrations.lookup(mc.getName());
+			if (migration == null) {
+				LOG.warning("Skipping unknown migration '" + mc.getName() + "'");
+				continue;
+			}
+
+			this.execute(mc, migration, false);
+		}
+	}
+
 	/** Return global instance */
 	public static MigrationManager instance()
 	{
@@ -104,7 +145,8 @@ public class MigrationManager
 		// Empty!
 	}
 
-	private void initialize(@Observes @Initialized(ApplicationScoped.class) Object unused)
+	@PostConstruct
+	private void initialize()
 	{
 		try {
 			this.config = MigrationManagerConfig.create(LOG);
@@ -134,7 +176,7 @@ public class MigrationManager
 		}
 	}
 
-	private static void validate(String name) throws IllegalArgumentException
+	public static void validate(String name) throws IllegalArgumentException
 	{
 		final var matcher = NAME_PATTERN.matcher(name);
 		if (!matcher.matches())
