@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive;
 
+import com.openslx.eaas.common.event.ServerStartupEvent;
 import com.openslx.eaas.imagearchive.config.ImageArchiveConfig;
 import com.openslx.eaas.imagearchive.indexing.IndexRegistry;
 import com.openslx.eaas.imagearchive.service.ServiceRegistry;
@@ -26,6 +27,7 @@ import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.common.logging.PrefixLogger;
 import de.bwl.bwfla.common.logging.PrefixLoggerContext;
 
+import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
@@ -122,7 +124,8 @@ public class ArchiveBackend
 		// Empty!
 	}
 
-	private void initialize(@Observes @Initialized(ApplicationScoped.class) Object unused)
+	@PostConstruct
+	private void initialize()
 	{
 		try {
 			this.config = ImageArchiveConfig.create(LOG);
@@ -153,5 +156,20 @@ public class ArchiveBackend
 		catch (Exception error) {
 			LOG.log(Level.WARNING, "Closing service failed!", error);
 		}
+	}
+
+
+	// ===== Lifecycle Hooks ==============================
+
+	private void handle(@Observes @Initialized(ApplicationScoped.class) Object unused)
+	{
+		// Trigger CDI-based initialization on startup!
+		LOG.info("Received event 'application-scope-initialized'");
+	}
+
+	private void handle(@Observes ServerStartupEvent event)
+	{
+		// Trigger CDI-based initialization on startup!
+		LOG.info("Received event 'server-startup'");
 	}
 }

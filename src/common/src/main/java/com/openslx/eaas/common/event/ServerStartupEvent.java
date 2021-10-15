@@ -16,32 +16,10 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.emil;
-
-import com.openslx.eaas.common.event.EventTrigger;
-import com.openslx.eaas.common.event.ServerStartupEvent;
-import com.openslx.eaas.migration.MigrationManager;
-
-import javax.enterprise.context.ApplicationScoped;
-import javax.enterprise.context.Initialized;
-import javax.enterprise.event.Observes;
+package com.openslx.eaas.common.event;
 
 
-@ApplicationScoped
-class ServerLifecycleHooks
+public class ServerStartupEvent
 {
-	private ServerLifecycleHooks()
-	{
-		// Empty!
-	}
-
-	private void onStartup(@Observes @Initialized(ApplicationScoped.class) Object unused)
-			throws Exception
-	{
-		EventTrigger.fire(new ServerStartupEvent());
-
-		// execute migrations...
-		MigrationManager.instance()
-				.execute();
-	}
+	// Empty!
 }
