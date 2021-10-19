@@ -23,6 +23,7 @@ import java.time.Duration;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
@@ -38,7 +39,7 @@ public class TaskManager<R>
 	protected final Logger log;
 
 	/** Counter for task ID generation */
-	private final AtomicInteger idCounter = new AtomicInteger(0);
+	private final AtomicInteger idCounter;
 	
 	/** Task registry */
 	private final Map<String, TaskInfo<R>> tasks = new ConcurrentHashMap<String, TaskInfo<R>>();
@@ -59,6 +60,13 @@ public class TaskManager<R>
 	/** Constructor */
 	public TaskManager(String name, ExecutorService executor)
 	{
+		this(name, executor, false);
+	}
+
+	/** Constructor */
+	public TaskManager(String name, ExecutorService executor, boolean useUniqueIds)
+	{
+		this.idCounter = (useUniqueIds) ? null : new AtomicInteger(0);
 		this.log = Logger.getLogger(name);
 		this.executor = executor;
 
@@ -167,6 +175,11 @@ public class TaskManager<R>
 
 	private String nextTaskId()
 	{
+		if (idCounter == null) {
+			return UUID.randomUUID()
+					.toString();
+		}
+
 		int id = idCounter.incrementAndGet();
 		return Integer.toString(id);
 	}
