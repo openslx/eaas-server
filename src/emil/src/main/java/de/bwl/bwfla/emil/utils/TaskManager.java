@@ -9,7 +9,6 @@ import de.bwl.bwfla.emil.datatypes.rest.SnapshotResponse;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
-import de.bwl.bwfla.emil.datatypes.snapshot.SnapshotRequest;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
@@ -33,7 +32,7 @@ public class TaskManager {
 
     private static class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
         AsyncIoTaskManager() throws NamingException {
-            super("EMIL-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+            super("EMIL-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"), true);
         }
     }
 
