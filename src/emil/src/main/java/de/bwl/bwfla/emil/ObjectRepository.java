@@ -449,7 +449,7 @@ public class ObjectRepository extends EmilRest
 
 	private String manageUserCtx(String archiveId) throws BWFLAException
 	{
-		if (userctx != null && userctx.getUserId() != null && userArchiveEnabled) {
+		if (userctx.isAvailable() && userctx.getUserId() != null && userArchiveEnabled) {
 			LOG.info("Using user context: " + userctx.getUserId());
 			archiveId = USER_ARCHIVE_PREFIX + userctx.getUserId();
 			if (!objArchives.contains(archiveId)) {
