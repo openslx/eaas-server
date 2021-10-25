@@ -449,7 +449,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			// Prepare configuration for tunnels
-			tunnelConfig.setGuacdHostname("localhost");
+			tunnelConfig.setGuacdHostname("127.0.0.1");
 			tunnelConfig.setGuacdPort(TunnelConfig.GUACD_PORT);
 			tunnelConfig.setInterceptor(interceptors);
 		}

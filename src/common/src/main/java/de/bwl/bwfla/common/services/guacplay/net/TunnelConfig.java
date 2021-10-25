@@ -52,7 +52,7 @@ public final class TunnelConfig
 	/* Constructor */
 	public TunnelConfig()
 	{
-		this("localhost", GUACD_PORT);
+		this("127.0.0.1", GUACD_PORT);
 	}
 	
 	/* Constructor */
