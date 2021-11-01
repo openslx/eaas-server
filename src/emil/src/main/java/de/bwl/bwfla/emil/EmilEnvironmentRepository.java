@@ -7,7 +7,6 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
@@ -21,6 +20,9 @@ import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.migration.IMigratable;
+import com.openslx.eaas.migration.MigrationRegistry;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
@@ -32,14 +34,14 @@ import de.bwl.bwfla.common.services.security.EmilEnvironmentOwner;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
-import de.bwl.bwfla.emil.datatypes.snapshot.*;
-import de.bwl.bwfla.emil.utils.Snapshot;
+import de.bwl.bwfla.emil.utils.ImportCounts;
 import de.bwl.bwfla.emucomp.api.*;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.xml.bind.JAXBException;
 import java.util.*;
@@ -47,7 +49,8 @@ import java.util.stream.Stream;
 
 
 @ApplicationScoped
-public class EmilEnvironmentRepository {
+public class EmilEnvironmentRepository implements IMigratable
+{
 
 	private ImageArchiveClient imagearchive = null;
 
@@ -313,12 +316,6 @@ public class EmilEnvironmentRepository {
 					LOG.log(Level.SEVERE, e.getMessage(), e);
 				}
 			}
-		}
-		try {
-			initialize();
-		}
-		catch (Exception error) {
-			LOG.log(Level.SEVERE, "Initializing emil-environments failed!", error);
 		}
 
 		initialized = true;
@@ -618,6 +615,7 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
+	@Deprecated
 	public void importOldDb() throws BWFLAException {
 		List<EmilEnvironment> oldEnvs = null;
 		try {
@@ -650,12 +648,16 @@ public class EmilEnvironmentRepository {
 		}
 	}
 
-	public int initialize() throws JAXBException, BWFLAException {
-		int counter = 0;
+	@Override
+	public void register(@Observes MigrationRegistry migrations) throws Exception
+	{
+		migrations.register("import-local-emil-environments", (mc) -> this.importFromFolder("import"));
+		migrations.register("import-legacy-emil-database-v1", this::importLegacyDatabaseV1);
+		migrations.register("create-absent-emil-environments", this::createAbsentEmilEnvironments);
+	}
 
-		importFromFolder("import");
-		importFromDatabase();
-
+	private void createAbsentEmilEnvironments(MigrationConfig mc) throws BWFLAException
+	{
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
 				// LOG.warning("found env " + env.getId()	 + " in archive " + a);
@@ -668,14 +670,16 @@ public class EmilEnvironmentRepository {
 					EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
 					permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
 					emilEnv.setPermissions(permissions);
-
 					emilEnv.setArchive(archive);
 					save(emilEnv, false);
+					LOG.info("Updated emil-environment '" + env.getId() + "'");
 				}
 
 				if ((emilEnv == null && env instanceof ContainerConfiguration)) {
 					EmilContainerEnvironment ee = new EmilContainerEnvironment();
 					saveImport(env, ee);
+					LOG.info("Created emil-environment for container '" + env.getId() + "'");
+					return 1;
 				} else if (emilEnv == null && env instanceof MachineConfiguration) {
 					EmilEnvironment ee;
 					String objectId = EmulationEnvironmentHelper.isObjectEnvironment((MachineConfiguration) env);
@@ -702,6 +706,7 @@ public class EmilEnvironmentRepository {
 						ee.setPermissions(permissions);
 					}
 					save(ee, false);
+					LOG.info("Created emil-environment for machine '" + env.getId() + "'");
 					return 1;
 				}
 
@@ -718,6 +723,9 @@ public class EmilEnvironmentRepository {
 				.locations()
 				.list();
 
+		int counter = 0;
+
+		LOG.info("Creating absent emil-environments...");
 		try (locations) {
 			for (var iter = locations.iterator(); iter.hasNext();) {
 				final var location = iter.next();
@@ -740,10 +748,11 @@ public class EmilEnvironmentRepository {
 			}
 		}
 
-		return counter;
+		LOG.info("Created " + counter + " absent emil-environment(s)");
 	}
 
 	private void importFromFolder(String directory) throws BWFLAException {
+		final var counter = ImportCounts.counter();
 		final Consumer<EmilEnvironment> importer = (env) -> {
 			try {
 				MetaDataKindV2 kind = MetaDataKindV2.ENVIRONMENTS;
@@ -759,17 +768,27 @@ public class EmilEnvironmentRepository {
 
 				values.replace(env.getEnvId(), env, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
 				LOG.info("Imported environment '" + env.getEnvId() + "' (" + env.getArchive() + ")");
+				counter.increment(ImportCounts.IMPORTED);
 			}
 			catch (Exception error) {
 				LOG.log(Level.WARNING, "Importing environment '" + env.getEnvId() + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
 			}
 		};
 
+		LOG.info("Importing environments from directory '" + directory + "'...");
 		importHelper.importFromFolder(directory)
 				.forEach((colname, entries) -> entries.forEach(importer));
+
+		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
+				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
+
+		LOG.info(message);
 	}
 
-	private void importFromDatabase() throws BWFLAException {
+	private void importLegacyDatabaseV1(MigrationConfig mc) throws Exception
+	{
+		final var counter = ImportCounts.counter();
 		final var mapper = ImageArchiveMappers.OBJECT_TO_JSON_TREE;
 		final Consumer<JaxbType> importer = (data) -> {
 			try {
@@ -810,13 +829,15 @@ public class EmilEnvironmentRepository {
 
 				values.replace(envid, value, options);
 				LOG.info("Imported environment '" + envid + "' (" + kind.value() + ")");
+				counter.increment(ImportCounts.IMPORTED);
 			}
 			catch (Exception error) {
 				LOG.log(Level.WARNING, "Importing environment failed!", error);
+				counter.increment(ImportCounts.FAILED);
 			}
 		};
 
-		LOG.info("Importing environments from local database...");
+		LOG.info("Importing environments from legacy database...");
 		final var filter = new MongodbEaasConnector.FilterBuilder();
 		for (var collection : db.getCollections()) {
 			final var values = db.find(collection, filter, "type");
@@ -825,6 +846,11 @@ public class EmilEnvironmentRepository {
 				db.drop(collection);
 			}
 		}
+
+		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
+				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
+
+		LOG.info(message);
 	}
 
 	public void export()

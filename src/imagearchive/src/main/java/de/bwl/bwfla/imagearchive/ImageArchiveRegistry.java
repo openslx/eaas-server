@@ -29,9 +29,11 @@ import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
+import javax.enterprise.event.Observes;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import com.openslx.eaas.common.event.ServerStartupEvent;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -81,6 +83,13 @@ public class ImageArchiveRegistry
 
 		return result;
 	}
+
+	public void handle(@Observes ServerStartupEvent event)
+	{
+		// Trigger CDI-based initialization on startup!
+		log.info("Received event 'server-startup'");
+	}
+
 
 	/* ==================== Internal Helpers ==================== */
 
