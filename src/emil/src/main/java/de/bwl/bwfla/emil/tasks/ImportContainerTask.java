@@ -9,11 +9,14 @@ import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.emil.EmilEnvironmentRepository;
 import de.bwl.bwfla.emil.datatypes.rest.ImportContainerRequest;
+import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
+import org.apache.jena.sparql.algebra.Op;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 
@@ -42,6 +45,18 @@ public class ImportContainerTask extends BlockingTask<Object>
 
         importRequest.target()
                 .setKind(ImportTargetV2.Kind.IMAGE);
+
+        log.severe("importing " + containerRequest.getContainerDigest());
+
+        Optional<ContainerConfiguration> existingContainer = archive.api()
+                    .v2()
+                    .containers().fetch().stream().filter(e -> e.getDigest().equals(containerRequest.getContainerDigest())).findFirst();
+        if(existingContainer.isPresent())
+        {
+            log.severe("container already found");
+            OciContainerConfiguration _config = (OciContainerConfiguration) existingContainer.get();
+            return _config.getId();
+        }
 
         if(containerRequest.getArchive() != null)
             importRequest.target().setLocation(containerRequest.getArchive());
