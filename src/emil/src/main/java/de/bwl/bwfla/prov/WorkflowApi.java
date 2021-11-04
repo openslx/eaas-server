@@ -6,9 +6,11 @@ import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.emil.DatabaseEnvironmentsAdapter;
 import de.bwl.bwfla.envproposer.impl.UserData;
+import de.bwl.bwfla.prov.api.RewriteRequest;
 import de.bwl.bwfla.prov.api.WorkflowWaitqueueResponse;
 import de.bwl.bwfla.prov.api.WorkflowRequest;
 import de.bwl.bwfla.prov.api.WorkflowStartedResponse;
+import de.bwl.bwfla.prov.impl.RewriteTask;
 import de.bwl.bwfla.prov.impl.WorkflowTask;
 import de.bwl.bwfla.restutils.ResponseUtils;
 
@@ -90,6 +92,38 @@ public class WorkflowApi {
 
         return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
     }
+
+    @POST
+    @Path("/rewrite")
+    @Secured(roles = {Role.PUBLIC})
+    @Consumes(MediaType.APPLICATION_JSON)
+    @Produces(MediaType.APPLICATION_JSON)
+    public Response postRewrite(RewriteRequest request, @Context UriInfo uri) {
+
+        LOG.info("Someone sent a build request to the workflow rewrite API.");
+
+        final String taskID;
+        try {
+            taskID = taskmgr.submit(new RewriteTask(request));
+        } catch (Throwable throwable) {
+            LOG.log(Level.WARNING, "Starting the Task failed!", throwable);
+            return ResponseUtils.createInternalErrorResponse(throwable);
+        }
+
+        final String waitLocation = WorkflowApi.getLocationUrl(uri, "waitqueue", taskID);
+        final String resultLocation = WorkflowApi.getLocationUrl(uri, "workflowresult", taskID);
+        final TaskInfo<Object> swhInfo = taskmgr.lookup(taskID);
+        swhInfo.setUserData(new UserData(waitLocation, resultLocation));
+
+        final WorkflowStartedResponse response = new WorkflowStartedResponse();
+        response.setTaskId(taskID);
+        response.setWaitQueueUrl(waitLocation);
+
+        return ResponseUtils.createLocationResponse(Status.ACCEPTED, waitLocation, response);
+    }
+
+
+
 
     @GET
     @Path("/waitqueue/{id}")
