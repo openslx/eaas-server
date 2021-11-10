@@ -301,7 +301,7 @@ public class EmilEnvironmentRepository implements IMigratable
 			imagearchive = ImageArchiveClient.create();
 		}
 		catch (Exception error) {
-			LOG.log(Level.WARNING, "Initializing image-archive client failed!", error);
+			throw new RuntimeException(error);
 		}
 
 		db = dbConnector.getInstance(dbName);

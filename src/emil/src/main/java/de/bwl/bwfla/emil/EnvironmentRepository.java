@@ -145,7 +145,7 @@ public class EnvironmentRepository extends EmilRest
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 		}
 		catch (Exception error) {
-			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
+			throw new RuntimeException(error);
 		}
 	}
 
@@ -1218,7 +1218,10 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Preparing environment-repository...");
 			try {
-				// NOTE: this should not be needed anymore, since initialization is done in @PostConstruct callbacks!
+				ServerLifecycleHooks.instance()
+						.started()
+						.get();
+
 				return EnvironmentRepository.successMessageResponse("Preparing environment-repository finished!");
 			}
 			catch (Throwable t) {

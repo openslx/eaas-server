@@ -22,17 +22,51 @@ import com.openslx.eaas.common.event.EventTrigger;
 import com.openslx.eaas.common.event.ServerStartupEvent;
 import com.openslx.eaas.migration.MigrationManager;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Initialized;
 import javax.enterprise.event.Observes;
+import javax.enterprise.inject.spi.CDI;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 @ApplicationScoped
 class ServerLifecycleHooks
 {
-	private ServerLifecycleHooks()
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
+
+	private CompletableFuture<Boolean> started;
+
+
+	public static ServerLifecycleHooks instance()
+	{
+		return CDI.current()
+				.select(ServerLifecycleHooks.class)
+				.get();
+	}
+
+	public CompletableFuture<Boolean> started()
+	{
+		return started;
+	}
+
+
+	// ===== Internal Helpers ====================
+
+	protected ServerLifecycleHooks()
 	{
 		// Empty!
+	}
+
+	@PostConstruct
+	private void initialize()
+	{
+		this.started = new CompletableFuture<>();
 	}
 
 	private void onStartup(@Observes @Initialized(ApplicationScoped.class) Object unused)
@@ -40,8 +74,20 @@ class ServerLifecycleHooks
 	{
 		EventTrigger.fire(new ServerStartupEvent());
 
-		// execute migrations...
-		MigrationManager.instance()
-				.execute();
+		final var logger = Logger.getLogger("SERVER-LIFECYCLE-HOOKS");
+		executor.execute(() -> {
+			try {
+				// execute migrations...
+				MigrationManager.instance()
+						.execute();
+
+				logger.info("Application started!");
+				started.complete(true);
+			}
+			catch (Exception error) {
+				logger.log(Level.SEVERE, "Starting application failed!", error);
+				started.completeExceptionally(error);
+			}
+		});
 	}
 }
