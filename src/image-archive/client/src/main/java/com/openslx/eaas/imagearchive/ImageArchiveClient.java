@@ -32,6 +32,7 @@ import javax.ws.rs.core.HttpHeaders;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
@@ -69,22 +70,59 @@ public class ImageArchiveClient implements Closeable
 
 	public static ImageArchiveClient create(String endpoint) throws Exception
 	{
-		final var proxy = RestClientBuilder.newBuilder()
-				.baseUrl(new URL(endpoint))
-				.register(new AuthFilter())
-				.build(ImageArchiveApi.class);
+		return ImageArchiveClient.create(endpoint, 1L, TimeUnit.MINUTES);
+	}
 
-		return new ImageArchiveClient(proxy);
+	public static ImageArchiveClient create(String endpoint, long timeout, TimeUnit timeunit) throws Exception
+	{
+		final var logger = Logger.getLogger("IMAGE-ARCHIVE-CLIENT");
+		final long waittime = TimeUnit.SECONDS.toMillis(1L);
+		for (int retries = (int) (timeunit.toMillis(timeout) / waittime); retries > 0; --retries) {
+			try {
+				return ImageArchiveClient.connect(endpoint, logger);
+			}
+			catch (Exception error) {
+				if (retries == 1)
+					throw error;
+
+				Throwable cause = error;
+				while (cause.getCause() != null)
+					cause = cause.getCause();
+
+				logger.warning("Connecting to image-archive failed! " + cause);
+			}
+
+			try {
+				Thread.sleep(waittime);
+			}
+			catch (Exception error) {
+				// Ignore it!
+			}
+		}
+
+		throw new IllegalStateException("Connecting to image-archive failed!");
 	}
 
 
 	// ===== Internal Helpers ===============
 
-	private ImageArchiveClient(ImageArchiveApi proxy)
+	private ImageArchiveClient(ImageArchiveApi proxy, Logger logger)
 	{
-		this.logger = Logger.getLogger("IMAGE-ARCHIVE-CLIENT");
+		this.logger = logger;
 		this.proxy = proxy;
 		this.api = new ImageArchive(proxy, logger);
+	}
+
+	private static ImageArchiveClient connect(String endpoint, Logger logger) throws Exception
+	{
+		logger.info("Connecting to image-archive at '" + endpoint + "'...");
+		final var proxy = RestClientBuilder.newBuilder()
+				.baseUrl(new URL(endpoint))
+				.register(new AuthFilter())
+				.build(ImageArchiveApi.class);
+
+		logger.info("Connected to image-archive at '" + endpoint + "'");
+		return new ImageArchiveClient(proxy, logger);
 	}
 
 	private static class AuthFilter implements ClientRequestFilter
