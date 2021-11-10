@@ -59,10 +59,23 @@ abstract class ImageArchiveWSClient implements Serializable
 	{
 		if(archive != null)
 			return;
-		
-		archive = getImageArchiveCon(wsHost);
-		if(archive == null)
-			throw new BWFLAException("could not connect to image archive @" + wsHost);
+
+		for (int retries = 60; retries > 0; --retries) {
+			archive = ImageArchiveWSClient.getImageArchiveCon(wsHost, retries == 1);
+			if (archive != null)
+				return;
+
+			try {
+				Thread.sleep(1000L);
+			}
+			catch (Exception error) {
+				// Ignore it!
+			}
+
+			// retry again!
+		}
+
+		throw new BWFLAException("Connecting to legacy image-archive failed!");
 	}
 
 	public String getDefaultBackendName() throws BWFLAException
@@ -93,13 +106,15 @@ abstract class ImageArchiveWSClient implements Serializable
 		return archive.getExportPrefix(imageArchiveName);
 	}
 	
-	private static ImageArchiveWS getImageArchiveCon(String host)
+	private static ImageArchiveWS getImageArchiveCon(String host, boolean verbose)
 	{
 		URL wsdl = null;
 		ImageArchiveWS archive;
 		if(host == null)
 			return null;
-		
+
+		final var log = Logger.getLogger(ImageArchiveWSClient.class.getName());
+		log.info("Connecting to legacy image-archive...");
 		try { 
 			wsdl = new URL(host + "/imagearchive/ImageArchiveWS?wsdl");
 		}
@@ -111,7 +126,7 @@ abstract class ImageArchiveWSClient implements Serializable
 			}
 			catch(MalformedURLException e2)
 			{
-				Logger.getLogger(ImageArchiveWSClient.class.getName()).info("Can not initialize wsdl from" + host + "/imagearchive/ImageArchiveWS?wsdl");
+				log.info("Initializing WSDL from '" + host + "/imagearchive/ImageArchiveWS?wsdl' failed!");
 			}
 		}
 		
@@ -123,14 +138,23 @@ abstract class ImageArchiveWSClient implements Serializable
 				service.setHandlerResolver(resolver);
 			archive = service.getImageArchiveWSPort();
 		} 
-		catch (Throwable t) 
+		catch (Throwable error)
 		{
-			// TODO Auto-generated catch block
-			Logger log = Logger.getLogger(ImageArchiveWSClient.class.getName());
-			log.info("Can not initialize wsdl from" + host + "/imagearchive/ImageArchiveWS?wsdl");
-			log.log(Level.SEVERE, t.getMessage(), t);
+			if (verbose) {
+				log.log(Level.SEVERE, "Connecting to legacy image-archive failed!\n", error);
+			}
+			else {
+				Throwable cause = error;
+				while (cause.getCause() != null)
+					cause = cause.getCause();
+
+				log.warning("Connecting to legacy image-archive failed! " + cause);
+			}
+
 			return null;
 		}
+
+		log.info("Connected to legacy image-archive at '" + wsdl.toString() + "'");
 
 		BindingProvider bp = (BindingProvider)archive;
 		SOAPBinding binding = (SOAPBinding) bp.getBinding();
