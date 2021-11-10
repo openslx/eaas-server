@@ -145,7 +145,7 @@ public class EnvironmentRepository extends EmilRest
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 		}
 		catch (Exception error) {
-			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
+			throw new RuntimeException(error);
 		}
 	}
 
