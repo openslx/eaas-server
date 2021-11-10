@@ -22,15 +22,25 @@ import com.openslx.eaas.common.event.EventTrigger;
 import com.openslx.eaas.common.event.ServerStartupEvent;
 import com.openslx.eaas.migration.MigrationManager;
 
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.context.Initialized;
 import javax.enterprise.event.Observes;
+import java.util.concurrent.ExecutorService;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 
 @ApplicationScoped
 class ServerLifecycleHooks
 {
-	private ServerLifecycleHooks()
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
+
+
+	// ===== Internal Helpers ====================
+
+	protected ServerLifecycleHooks()
 	{
 		// Empty!
 	}
@@ -40,8 +50,18 @@ class ServerLifecycleHooks
 	{
 		EventTrigger.fire(new ServerStartupEvent());
 
-		// execute migrations...
-		MigrationManager.instance()
-				.execute();
+		final var logger = Logger.getLogger("SERVER-LIFECYCLE-HOOKS");
+		executor.execute(() -> {
+			try {
+				// execute migrations...
+				MigrationManager.instance()
+						.execute();
+
+				logger.info("Application started!");
+			}
+			catch (Exception error) {
+				logger.log(Level.SEVERE, "Starting application failed!", error);
+			}
+		});
 	}
 }
