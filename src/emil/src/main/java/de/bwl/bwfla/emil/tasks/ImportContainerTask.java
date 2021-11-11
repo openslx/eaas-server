@@ -46,11 +46,9 @@ public class ImportContainerTask extends BlockingTask<Object>
         importRequest.target()
                 .setKind(ImportTargetV2.Kind.IMAGE);
 
-        log.severe("importing " + containerRequest.getContainerDigest());
-
         Optional<ContainerConfiguration> existingContainer = archive.api()
                     .v2()
-                    .containers().fetch().stream().filter(e -> e.getDigest().equals(containerRequest.getContainerDigest())).findFirst();
+                    .containers().fetch().stream().filter(e -> e.getDigest() != null && e.getDigest().equals(containerRequest.getContainerDigest())).findFirst();
         if(existingContainer.isPresent())
         {
             log.severe("container already found");
@@ -76,6 +74,7 @@ public class ImportContainerTask extends BlockingTask<Object>
         EnvironmentDescription description = new EnvironmentDescription();
         description.setTitle(containerRequest.getName());
         config.setDescription(description);
+        config.setDigest(containerRequest.getContainerDigest());
         config.getDataResources().add(binding);
 
         config.setGui(containerRequest.guiRequired());
