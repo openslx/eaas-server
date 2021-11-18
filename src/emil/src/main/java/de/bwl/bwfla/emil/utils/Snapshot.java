@@ -232,29 +232,9 @@ public class Snapshot
         if(request.getObjectId() == null)
             throw new BWFLAException("invalid request: invalid object data");
 
-        MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration, true);
+        MachineConfiguration env = EmulationEnvironmentHelper.clean(configuration, request.isCleanRemovableDrives());
         env.getDescription().setTitle(request.getTitle());
 
-        int driveId = request.getDriveId();
-
-        if(request.isEmbeddedObject()) {
-            String archiveName = request.getObjectArchiveId();
-            if (archiveName == null)
-                archiveName = "default";
-
-            ObjectArchiveBinding binding = new ObjectArchiveBinding(objects.helper().getHost(), archiveName, request.getObjectId());
-            FileCollection fc = objects.helper().getObjectReference(request.getObjectArchiveId(), request.getObjectId());
-
-            if (fc == null)
-                throw new BWFLAException("create object environment: object not found: " + request.getObjectId());
-
-            driveId = EmulationEnvironmentHelper.addArchiveBinding(env, binding, fc);
-            try {
-                System.out.println("ready to import machine: " + env.value());
-            } catch (JAXBException e) {
-                LOG.log(Level.WARNING, e.getMessage(), e);
-            }
-        }
         if (data != null) {
             for (Iterator<BindingDataHandler> it = data.iterator(); it.hasNext();)
             {
@@ -280,7 +260,7 @@ public class Snapshot
         ee.setParentEnvId(request.getEnvId());
         ee.setEnvId(newId);
         ee.setTitle(request.getTitle());
-        ee.setDriveId(driveId);
+        ee.setDriveId(request.getDriveId());
         ee.setObjectId(request.getObjectId());
         ee.setObjectArchiveId(request.getObjectArchiveId());
         ee.setEmulator(env.getEmulator().getBean());
