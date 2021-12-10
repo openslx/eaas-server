@@ -22,6 +22,7 @@ import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 import com.openslx.eaas.migration.IMigratable;
 import com.openslx.eaas.migration.MigrationRegistry;
+import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
@@ -847,10 +848,11 @@ public class EmilEnvironmentRepository implements IMigratable
 			}
 		}
 
-		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
-				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
-
-		LOG.info(message);
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " environment(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Importing environments from legacy database failed!");
 	}
 
 	public void export()

@@ -33,6 +33,7 @@ import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import com.openslx.eaas.imagearchive.databind.ImageMetaData;
 import com.openslx.eaas.migration.IMigratable;
 import com.openslx.eaas.migration.MigrationRegistry;
+import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
@@ -1495,6 +1496,8 @@ public class EnvironmentRepository extends EmilRest
 		}
 
 		LOG.info("Imported metadata for " + numImported + " image(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Importing legacy image-index failed!");
 	}
 
 	private void importLegacyEmulatorIndex(MigrationConfig mc) throws BWFLAException
@@ -1559,6 +1562,8 @@ public class EnvironmentRepository extends EmilRest
 		}
 
 		LOG.info("Imported metadata for " + numImported + " emulator(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Importing legacy emulator-index failed!");
 	}
 
 	private void importLegacyImageArchiveV1(MigrationConfig mc) throws Exception
@@ -1574,15 +1579,17 @@ public class EnvironmentRepository extends EmilRest
 				continue;
 
 			final var basedir = Paths.get(config.get("basepath"));
+			final var maxFailureRate = MigrationUtils.getFailureRate(mc);
 
 			LOG.info("Importing legacy image-archive (" + name + ")...");
-			this.importLegacyEnvironmentsV1(basedir, name);
-			this.importLegacyImagesV1(basedir, name);
-			this.importLegacyBlobsV1(basedir, name);
+			this.importLegacyEnvironmentsV1(basedir, name, maxFailureRate);
+			this.importLegacyImagesV1(basedir, name, maxFailureRate);
+			this.importLegacyBlobsV1(basedir, name, maxFailureRate);
 		}
 	}
 
-	private void importLegacyEnvironmentsV1(java.nio.file.Path basedir, String location) throws Exception
+	private void importLegacyEnvironmentsV1(java.nio.file.Path basedir, String location, float maxFailureRate)
+			throws Exception
 	{
 		final var kinds = new String[] {
 				"base",
@@ -1598,10 +1605,11 @@ public class EnvironmentRepository extends EmilRest
 		for (final var kind : kinds)
 			this.importLegacyEnvironmentsV1(basedir, location, kind, counter);
 
-		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
-				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
-
-		LOG.info(message);
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " environment(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Importing legacy environments failed!");
 	}
 
 	private void importLegacyEnvironmentsV1(java.nio.file.Path basedir, String location,
@@ -1659,7 +1667,8 @@ public class EnvironmentRepository extends EmilRest
 		}
 	}
 
-	private void importLegacyImagesV1(java.nio.file.Path basedir, String location) throws Exception
+	private void importLegacyImagesV1(java.nio.file.Path basedir, String location, float maxFailureRate)
+			throws Exception
 	{
 		final var kinds = new String[] {
 				"base",
@@ -1675,10 +1684,11 @@ public class EnvironmentRepository extends EmilRest
 		for (final var kind : kinds)
 			this.importLegacyImagesV1(basedir, location, kind, counter);
 
-		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
-				+ " image(s), failed " + counter.get(ImportCounts.FAILED);
-
-		LOG.info(message);
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " image(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Importing legacy images failed!");
 	}
 
 	private void importLegacyImagesV1(java.nio.file.Path basedir, String location,
@@ -1738,19 +1748,20 @@ public class EnvironmentRepository extends EmilRest
 		}
 	}
 
-	private void importLegacyBlobsV1(java.nio.file.Path basedir, String location) throws Exception
+	private void importLegacyBlobsV1(java.nio.file.Path basedir, String location, float maxFailureRate)
+			throws Exception
 	{
 		final var api = imagearchive.api()
 				.v2();
 
 		basedir = basedir.resolve("images");
 
-		this.importLegacyBlobsV1(basedir, location, "rom", api.roms());
-		this.importLegacyBlobsV1(basedir, location, "checkpoint", api.checkpoints());
+		this.importLegacyBlobsV1(basedir, location, "rom", api.roms(), maxFailureRate);
+		this.importLegacyBlobsV1(basedir, location, "checkpoint", api.checkpoints(), maxFailureRate);
 	}
 
-	private void importLegacyBlobsV1(java.nio.file.Path basedir, String location,
-									 String kind, RemoteResourceRW<InputStream,?> api)
+	private void importLegacyBlobsV1(java.nio.file.Path basedir, String location, String kind,
+									 RemoteResourceRW<InputStream,?> api, float maxFailureRate)
 			throws Exception
 	{
 		final var srcdir = basedir.resolve(kind + "s");
@@ -1784,9 +1795,10 @@ public class EnvironmentRepository extends EmilRest
 					.forEach(importer);
 		}
 
-		final var message = "Imported " + counter.get(ImportCounts.IMPORTED) + " "
-				+ kind + "(s), failed " + counter.get(ImportCounts.FAILED);
-
-		LOG.info(message);
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " " + kind + "(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Importing legacy " + kind + "s failed!");
 	}
 }
