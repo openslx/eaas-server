@@ -29,6 +29,7 @@ public class WorkflowTask extends BlockingTask<Object> {
     private final String environmentId;
     private final String workdirTarURL;
     private final Map<String, String> arguments;
+    private final Map<String, String> envVars;
 
     private final String inputTarURL;
     private final String outputFolder; // this is the folder where CWL would expect output (TBD)
@@ -45,7 +46,9 @@ public class WorkflowTask extends BlockingTask<Object> {
         this.workdirTarURL = request.getWorkdirTarURL();
         this.inputTarURL = request.getInputTarURL();
         this.arguments = request.getArguments();
+        this.envVars = request.getEnvironmentVariables();
         this.outputFolder = request.getOutputFolder();
+
 
         this.workflowClient = new WorkflowClient();
     }
@@ -110,6 +113,26 @@ public class WorkflowTask extends BlockingTask<Object> {
                 processArgs.add(casted.get(key));
             }
 
+            // Keep old envVars, but overwrite those with the same name
+            ArrayList<String> envVarsToSet;
+            if (envVars.isEmpty()) {
+                envVarsToSet = (ArrayList<String>) details.getProcessEnvs();
+            } else {
+                envVarsToSet = new ArrayList<>();
+                ArrayList<String> oldVars = (ArrayList<String>) details.getProcessEnvs();
+                for (String oldVar : oldVars) {
+                    String varName = oldVar.split("=")[0];
+                    if (!envVars.containsKey(varName)) {
+                        envVarsToSet.add(oldVar);
+                    }
+                }
+                for (var entry : envVars.entrySet()) {
+                    envVarsToSet.add(entry.getKey() + "=" + entry.getValue());
+                }
+
+            }
+
+
             UpdateContainerRequest updateContainerRequest = new UpdateContainerRequest();
             updateContainerRequest.setId(details.getEnvId());
 
@@ -118,7 +141,7 @@ public class WorkflowTask extends BlockingTask<Object> {
             updateContainerRequest.setOutputFolder("/output"); //TODO remove according to new IO implementation
             updateContainerRequest.setDescription(details.getDescription());
             updateContainerRequest.setProcessArgs(processArgs);
-            updateContainerRequest.setProcessEnvs((ArrayList<String>) details.getProcessEnvs());
+            updateContainerRequest.setProcessEnvs(envVarsToSet);
             updateContainerRequest.setAuthor(details.getAuthor());
             updateContainerRequest.setContainerRuntimeId(runtimeId);
             updateContainerRequest.setNetworking(networkingInfo);
@@ -219,8 +242,6 @@ public class WorkflowTask extends BlockingTask<Object> {
             LOG.severe("PROV is done!");
 
             return stopComp;
-
-
 
 
         } catch (WebApplicationException | InterruptedException exception) {

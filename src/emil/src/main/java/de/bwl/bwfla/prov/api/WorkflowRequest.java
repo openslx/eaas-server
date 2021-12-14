@@ -3,6 +3,7 @@ package de.bwl.bwfla.prov.api;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
 import java.util.Map;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -22,6 +23,9 @@ public class WorkflowRequest {
 
     @JsonProperty("arguments")
     private Map<String, String> arguments;
+
+    @JsonProperty("environmentVariables")
+    private Map<String, String> environmentVariables;
 
     public WorkflowRequest() {
     }
@@ -64,6 +68,14 @@ public class WorkflowRequest {
 
     public void setArguments(Map<String, String> arguments) {
         this.arguments = arguments;
+    }
+
+    public Map<String, String> getEnvironmentVariables() {
+        return environmentVariables;
+    }
+
+    public void setEnvironmentVariables(Map<String, String> environmentVariables) {
+        this.environmentVariables = environmentVariables;
     }
 }
 
