@@ -115,7 +115,7 @@ public class WorkflowTask extends BlockingTask<Object> {
 
             // Keep old envVars, but overwrite those with the same name
             ArrayList<String> envVarsToSet;
-            if (envVars.isEmpty()) {
+            if (null == envVars || envVars.isEmpty()) {
                 envVarsToSet = (ArrayList<String>) details.getProcessEnvs();
             } else {
                 envVarsToSet = new ArrayList<>();
