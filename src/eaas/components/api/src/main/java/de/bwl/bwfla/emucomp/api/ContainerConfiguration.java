@@ -40,6 +40,7 @@ import java.util.List;
 		"output",
 		"input",
 		"dataResources",
+		"digest"
 })
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.EXISTING_PROPERTY, property = "configurationType")
 @JsonSubTypes({
@@ -54,6 +55,10 @@ public class ContainerConfiguration extends Environment
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = false)
 	protected String output;
 
+	@XmlElement
+	protected String digest;
+
+
 	@XmlElementRefs({
 			@XmlElementRef(name="binding", type=Binding.class, namespace = "http://bwfla.bwl.de/common/datatypes"),
 			@XmlElementRef(name="objectArchiveBinding", type=ObjectArchiveBinding.class, namespace = "http://bwfla.bwl.de/common/datatypes")
@@ -62,6 +67,14 @@ public class ContainerConfiguration extends Environment
 
 	@XmlElement
 	private String input;
+
+	public String getDigest() {
+		return digest;
+	}
+
+	public void setDigest(String digest) {
+		this.digest = digest;
+	}
 
 	public String getInput() {
 		return input;

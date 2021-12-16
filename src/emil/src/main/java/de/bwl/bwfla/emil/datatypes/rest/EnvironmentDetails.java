@@ -137,6 +137,9 @@ public class EnvironmentDetails {
     @XmlElement
     private boolean isServiceContainer;
 
+    @XmlElement
+    private String digest;
+
 
     EnvironmentDetails() {}
 
@@ -198,6 +201,7 @@ public class EnvironmentDetails {
             this.processArgs = cEnv.getArgs();
             this.processEnvs = cEnv.getEnv();
             this.isServiceContainer = cEnv.isServiceContainer();
+            this.digest = cEnv.getDigest();
         }
 
         this.revisions = new ArrayList<>();
@@ -451,6 +455,10 @@ public class EnvironmentDetails {
     public boolean isServiceContainer()
     {
         return isServiceContainer;
+    }
+
+    public String getDigest() {
+        return digest;
     }
 
     @XmlRootElement

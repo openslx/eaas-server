@@ -42,6 +42,9 @@ public class ImportContainerRequest extends EmilRequestType {
     private ArrayList<String> processEnvs;
 
     @XmlElement
+    private String containerDigest;
+
+    @XmlElement
     private boolean guiRequired;
 
     @XmlElement
@@ -175,5 +178,13 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public String getArchive() {
         return archive;
+    }
+
+    public String getContainerDigest() {
+        return containerDigest;
+    }
+
+    public void setContainerDigest(String containerDigest) {
+        this.containerDigest = containerDigest;
     }
 }
