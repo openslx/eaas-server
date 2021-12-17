@@ -171,6 +171,7 @@ public class EmilContainerData extends EmilRest {
                 newEnv.setEnvId(id);
                 newEnv.setParentEnvId(env.getEnvId());
                 env.addChildEnvId(newEnv.getEnvId());
+                newEnv.setDigest(env.getDigest());
                 imported = true;
             } else {
                 final var options = new ReplaceOptionsV2()
@@ -218,7 +219,8 @@ public class EmilContainerData extends EmilRest {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public TaskStateResponse saveContainerImage(CreateContainerImageRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new BuildContainerImageTask(req)));
+        return new TaskStateResponse(taskManager.submitTask(new BuildContainerImageTask(req, emilEnvRepo)));
+
     }
 
     @Deprecated

@@ -34,6 +34,9 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     @XmlElement
     private ContainerNetworkingType networking;
 
+    @XmlElement
+    private String digest;
+
     public String getInput() {
         return input;
     }
@@ -76,6 +79,11 @@ public class EmilContainerEnvironment extends EmilEnvironment {
         return runtimeId;
     }
 
+    public String getDigest() {
+        return digest;
+    }
+
+
     public void setRuntimeId(String runtimeId) {
         this.runtimeId = runtimeId;
     }
@@ -97,4 +105,9 @@ public class EmilContainerEnvironment extends EmilEnvironment {
     public void setServiceContainer(boolean serviceContainer) {
         this.serviceContainer = serviceContainer;
     }
+
+    public void setDigest(String digest) {
+        this.digest = digest;
+    }
+
 }

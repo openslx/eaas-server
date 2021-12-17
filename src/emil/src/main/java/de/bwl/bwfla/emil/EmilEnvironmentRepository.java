@@ -897,6 +897,8 @@ public class EmilEnvironmentRepository implements IMigratable
 		if (env instanceof ContainerConfiguration) {
 			((EmilContainerEnvironment) ee).setInput(((ContainerConfiguration) env).getInput());
 			((EmilContainerEnvironment) ee).setOutput(((ContainerConfiguration) env).getOutputPath());
+			((EmilContainerEnvironment) ee).setDigest(((ContainerConfiguration) env).getDigest());
+
 			if(env instanceof  OciContainerConfiguration){
 				((EmilContainerEnvironment) ee).setArgs(((OciContainerConfiguration) env).getProcess().getArguments());
 				((EmilContainerEnvironment) ee).setEnv(((OciContainerConfiguration) env).getProcess().getEnvironmentVariables());
@@ -976,6 +978,7 @@ public class EmilEnvironmentRepository implements IMigratable
 		env.setOutput(req.getOutputFolder());
 		env.setArgs(req.getProcessArgs());
 		env.setEnv(req.getProcessEnvs());
+		env.setDigest(req.getContainerDigest());
 
 		if(req.getRuntimeId() != null)
 			env.setRuntimeId(req.getRuntimeId());
