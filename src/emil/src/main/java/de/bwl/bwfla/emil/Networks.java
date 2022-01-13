@@ -255,27 +255,46 @@ public class Networks {
         response.setStatus(Response.Status.OK.getStatusCode());
     }
 
+    @POST
+    @Secured(roles = {Role.RESTRICTED})
+    @Path("/{id}/components/{componentId}/disconnect")
+    public void disconnectComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
+        Session session = sessions.get(id);
+        if(session == null || !(session instanceof NetworkSession))
+        {
+            LOG.severe("disconnectComponent: session not found " + id);
+            return;
+        }
+
+        final String switchId = ((NetworkSession) session).getSwitchId();
+        try {
+            this.disconnectComponent(session, switchId, componentId);
+        }
+        catch (BWFLAException e)
+        {
+            e.printStackTrace();
+            throw new ServerErrorException(Response
+                    .status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorInformation(
+                            "Could not disconnect component: " + componentId , e.getMessage()))
+                    .build());
+        }
+        response.setStatus(Response.Status.OK.getStatusCode());
+    }
+
     @DELETE
     @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
- //       try {
-            Session session = sessions.get(id);
-            if(session == null || !(session instanceof NetworkSession))
-            {
-                LOG.severe("removeComponent: session not found " + id);
-                return;
-            }
+        Session session = sessions.get(id);
+        if(session == null || !(session instanceof NetworkSession))
+        {
+            LOG.severe("removeComponent: session not found " + id);
+            return;
+        }
 
-            final String switchId = ((NetworkSession) session).getSwitchId();
-            this.removeComponent(session, switchId, componentId);
- //       }
-//        catch (BWFLAException error) {
-//            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-//                    .entity(new ErrorInformation("Could not remove component from group!", error.getMessage()))
-//                    .build());
-//        }
-
+        final String switchId = ((NetworkSession) session).getSwitchId();
+        this.removeComponent(session, switchId, componentId);
         response.setStatus(Response.Status.OK.getStatusCode());
     }
 
@@ -356,9 +375,9 @@ public class Networks {
         }
     }
 
-    private void removeComponent(Session session, String switchId, String componentId) {
-        try {
+    private void disconnectComponent(Session session, String switchId, String componentId) throws BWFLAException{
             final Map<String, URI> map = this.getControlUrls(componentId);
+
             final String ethurl = map.entrySet().stream()
                     .filter(e -> e.getKey().startsWith("ws+ethernet+"))
                     .findAny()
@@ -370,12 +389,16 @@ public class Networks {
                     .getValue().toString();
 
             componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethurl);
+    }
+
+    private void removeComponent(Session session, String switchId, String componentId)  {
+        try {
+            disconnectComponent(session, switchId, componentId);
             sessions.remove(session.id(), componentId);
         }
         catch (BWFLAException error) {
-            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation("Could not acquire group information.", error.getMessage()))
-                    .build());
+           // we must not throw here in most cases, since the disconnect may already has happened
+            error.printStackTrace();
         }
     }
 
