@@ -68,7 +68,7 @@ public class EmulatorRepository extends EmilRest
 	{
 		/** List all available emulators */
 		@GET
-		@Secured(roles={Role.ADMIN})
+		@Secured(roles={Role.PUBLIC})
 		@Produces(MediaType.APPLICATION_JSON)
 		@TypeHint(EmulatorMetaData[].class)
 		public Streamable<EmulatorMetaData> list() throws BWFLAException
