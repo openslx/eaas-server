@@ -414,6 +414,9 @@ public class ObjectRepository extends EmilRest
 
 		private String lookupArchiveId(String archiveId)
 		{
+			if(!userArchiveEnabled)
+				return defaultArchive;
+
 			if (archiveId == null || archiveId.equals(defaultArchive)) {
 				try {
 					archiveId = ObjectRepository.this.manageUserCtx(defaultArchive);
