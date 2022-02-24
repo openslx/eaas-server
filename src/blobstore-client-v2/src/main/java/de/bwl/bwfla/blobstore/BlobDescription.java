@@ -111,6 +111,11 @@ public class BlobDescription
 		if (etag.startsWith("\""))
 			etag = etag.replaceAll("\"", "");
 
+		// MinIO can report an invalid etag for certain blobs,
+		// reset its value to make it explicit in such cases!
+		if (etag.isEmpty() || etag.endsWith("0000000000-1"))
+			etag = null;
+
 		return etag;
 	}
 }
