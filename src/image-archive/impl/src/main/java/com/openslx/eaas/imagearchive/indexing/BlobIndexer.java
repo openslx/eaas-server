@@ -21,6 +21,8 @@ package com.openslx.eaas.imagearchive.indexing;
 
 import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.blobstore.BlobDescription;
+import de.bwl.bwfla.blobstore.Bucket;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.StringUtils;
 
@@ -129,9 +131,12 @@ public class BlobIndexer<T extends BlobDescriptor> implements AutoCloseable
 			// process each blob stored at given location...
 			for (final var iter = blobs.iterator(); iter.hasNext();) {
 				try {
-					final var blob = iter.next();
+					var blob = iter.next();
 					if (prefix.equals(blob.name()))
 						continue;  // skip base-dir!
+
+					if (blob.etag() == null)
+						blob = BlobIndexer.updateETag(location.bucket(), blob, logger);
 
 					context.target()
 							.ingestor()
@@ -154,6 +159,23 @@ public class BlobIndexer<T extends BlobDescriptor> implements AutoCloseable
 
 		BlobIndexer.summary(context, location, result, logger);
 		return result;
+	}
+
+	private static BlobDescription updateETag(Bucket bucket, BlobDescription blob, Logger logger)
+			throws BWFLAException
+	{
+		logger.warning("ETag for blob '" + blob.name() + "' is invalid, updating...");
+
+		// NOTE: etags might be missing for blobs added/modified bypassing S3-API,
+		//       e.g. when using MinIO's filesystem backend. Use a server-side
+		//       copy operation to properly re-compute etags in such cases.
+
+		final var blobstore = bucket.storage();
+		final var srcblob = bucket.blob(blob.name());
+		final var tmpblob = bucket.blob(blob.name() + ".etagfix.tmp");
+		blobstore.rename(srcblob, tmpblob);
+		blobstore.rename(tmpblob, srcblob);
+		return srcblob.stat();
 	}
 
 	private static <T extends BlobDescriptor> void summary(BlobIngestorContext<T> context, StorageLocation location,
