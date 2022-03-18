@@ -139,7 +139,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		}
 
 		Path targetDir = objectDir.toPath().resolve(id);
-		targetDir.resolve("metadata");
 		if(!Files.exists(targetDir)) {
 			try {
 				Files.createDirectories(targetDir);
@@ -217,15 +216,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		if(!Files.exists(target))
 			return null;
 
-		String exportPrefix;
-		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/" + id;
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			log.log(Level.WARNING, e.getMessage(), e);
-			return null;
-		}
-		return exportPrefix + "/thumbnail.jpeg";
+		return "thumbnail.jpeg";
 	}
 
 	public void importObjectThumbnail(FileCollectionEntry resource) throws BWFLAException
@@ -396,7 +387,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			else
 				throw new BWFLAException("invalid file entry type");
 
-			String url = Paths.get(localPath).relativize(targetDir).toString();
+			String url = this.resolveMetadatTarget(objectId)
+					.relativize(targetDir)
+					.toString();
 
 			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQID(): null;
 			properties.deviceId = entry.getType() != null ? entry.getType().toQID() : null;
@@ -460,18 +453,10 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		} catch (BWFLAException e) {
 			log.log(Level.WARNING, e.getMessage(), e);
 		}
-		String exportPrefix;
-		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/" + URLEncoder.encode(objectId, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			log.log(Level.WARNING, e.getMessage(), e);
-			return null;
-		}
 		
 		DefaultDriveMapper driveMapper = new DefaultDriveMapper(importHandle);
 		try {
-			return driveMapper.map(exportPrefix, mf);
+			return driveMapper.map(null, mf);
 		} catch (BWFLAException e) {
 			// TODO Auto-generated catch block
 			log.log(Level.WARNING, e.getMessage(), e);
@@ -589,8 +574,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Override
 	public DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException {
 
+		// NOTE: METS file URLs need to stay absolute for now!
+		final var metsExportPrefix = this.getExportPrefix() + "/" + objectId + "/";
+
 		MetsObject o = loadMetsData(objectId);
-		Mets m = MetsUtil.export(o.getMets(), getExportPrefix());
+		Mets m = MetsUtil.export(o.getMets(), metsExportPrefix);
 		DigitalObjectMetadata md = new DigitalObjectMetadata(m);
 
 		String thumb = null;

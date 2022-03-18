@@ -180,7 +180,7 @@ public class MetsUtil {
                 .filter(f -> f.getUSE().equals(MetsEaasConstant.FILE_GROUP_OBJECTS.toString()))
                 .findAny();
 
-        if (!digitalObjects.isPresent())
+        if (!digitalObjects.isPresent() || exportPrefix == null || exportPrefix.isEmpty())
             return metsRoot;
 
         MetsType.FileSec.FileGrp fileGrp = digitalObjects.get();

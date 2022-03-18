@@ -37,10 +37,10 @@ import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
@@ -124,17 +124,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		if(obj == null)
 			return null;
 
-		if(dataPath != null) {
-			try {
-				String exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8");
-				return obj.getFileCollection(exportPrefix);
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-				return null;
-			}
-		}
-		else
-			return obj.getFileCollection(null);
+		return obj.getFileCollection(null);
 	}
 
 	@Override
@@ -206,7 +196,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 			jc = JAXBContext.newInstance(Mets.class);
 			Unmarshaller unmarshaller = jc.createUnmarshaller();
 			metsCopy = (Mets) unmarshaller.unmarshal(new StreamSource(new StringReader(metsCopyStr)));
-			String exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8");
+			String exportPrefix = httpExport + URLEncoder.encode(name, StandardCharsets.UTF_8) + "/" + id;
 			if (metsCopy.getFileSec() != null) {
 				List<MetsType.FileSec.FileGrp> fileGrpList = metsCopy.getFileSec().getFileGrp();
 				for (MetsType.FileSec.FileGrp fileGrp : fileGrpList) {
@@ -227,7 +217,8 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 					}
 				}
 			}
-		} catch (JAXBException | UnsupportedEncodingException e) {
+		}
+		catch (JAXBException e) {
 			e.printStackTrace();
 		}
 		log.warning(metsCopy.toString());

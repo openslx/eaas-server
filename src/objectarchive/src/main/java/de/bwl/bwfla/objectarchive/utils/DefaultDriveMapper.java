@@ -93,27 +93,31 @@ public class DefaultDriveMapper
 		List<ObjectFileManifestation.FileEntry> flist = object.getResourceFiles(rt);
 		if(flist == null || flist.size() == 0)
 			return null;
-		
+
+		if (urlPrefix == null || urlPrefix.isEmpty())
+			urlPrefix = "";
+		else urlPrefix += "/";
+
 		switch (rt) {
 		case ISO:
-			urlPrefix += "/" + "iso";
+			urlPrefix += "iso";
 			driveType = Drive.DriveType.CDROM;
 			break;
 		case DISK:
-			urlPrefix += "/" + "disk";
+			urlPrefix += "disk";
 			driveType = Drive.DriveType.DISK;
 			break;
 		case FLOPPY:
-			urlPrefix += "/" + "floppy";
+			urlPrefix += "floppy";
 			driveType = Drive.DriveType.FLOPPY;
 			break;
 		case FILE:
-			urlPrefix += "/" + "iso";
+			urlPrefix += "iso";
 			driveType = Drive.DriveType.CDROM;
 			flist = mapFiles(flist, object.getId());
 			break;
 		case CART:
-			urlPrefix += "/" + "cart";
+			urlPrefix += "cart";
 			driveType = Drive.DriveType.CART;
 			break;
 		default:
