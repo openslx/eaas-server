@@ -66,4 +66,22 @@ public class FileCollection extends JaxbType {
 	public void setLabel(String label) {
 		this.label = label;
 	}
+
+	public FileCollectionEntry find(String resourceId)
+	{
+		for (final var resource : files) {
+			if (!resourceId.equalsIgnoreCase(resource.getId()))
+				continue;
+
+			return resource;
+		}
+
+		return null;
+	}
+
+	public String resolve(String exportUrlPrefix, String resourceId)
+	{
+		final var resource = this.find(resourceId);
+		return (resource != null) ? resource.resolve(exportUrlPrefix) : null;
+	}
 }

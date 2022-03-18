@@ -80,4 +80,9 @@ public class FileCollectionEntry extends Binding implements Comparable<FileColle
 	public void setResourceType(ResourceType resourceType) {
 		this.resourceType = resourceType;
 	}
+
+	public String resolve(String exportUrlPrefix)
+	{
+		return exportUrlPrefix + "/" + this.getUrl();
+	}
 }
