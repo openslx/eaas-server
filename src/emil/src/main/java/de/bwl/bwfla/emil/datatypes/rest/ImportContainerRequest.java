@@ -71,9 +71,6 @@ public class ImportContainerRequest extends EmilRequestType {
     private String archive;
 
     @XmlElement
-    private String containerDigest;
-
-    @XmlElement
     private String containerSourceUrl;
 
     @XmlElement
@@ -158,7 +155,7 @@ public class ImportContainerRequest extends EmilRequestType {
     }
 
     public ArrayList<String> getProcessArgs() {
-        if(processArgs == null)
+        if (processArgs == null)
             return new ArrayList<>();
         return processArgs;
     }
@@ -168,7 +165,7 @@ public class ImportContainerRequest extends EmilRequestType {
     }
 
     public ArrayList<String> getProcessEnvs() {
-        if(processEnvs == null)
+        if (processEnvs == null)
             return new ArrayList<>();
         return processEnvs;
     }
@@ -211,13 +208,5 @@ public class ImportContainerRequest extends EmilRequestType {
 
     public String getArchive() {
         return archive;
-    }
-
-    public String getContainerDigest() {
-        return containerDigest;
-    }
-
-    public void setContainerDigest(String containerDigest) {
-        this.containerDigest = containerDigest;
     }
 }

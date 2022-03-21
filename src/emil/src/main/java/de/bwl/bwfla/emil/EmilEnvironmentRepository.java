@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.BiFunction;
@@ -26,6 +27,7 @@ import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.*;
+import de.bwl.bwfla.common.utils.EaasBuildInfo;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 import de.bwl.bwfla.common.database.MongodbEaasConnector;
 import de.bwl.bwfla.emil.datatypes.*;
@@ -44,6 +46,8 @@ import javax.annotation.PreDestroy;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
+import javax.json.Json;
+import javax.json.JsonObject;
 import javax.xml.bind.JAXBException;
 import java.util.*;
 import java.util.stream.Stream;
@@ -993,8 +997,79 @@ public class EmilEnvironmentRepository implements IMigratable
 		env.setAuthor(req.getAuthor());
 		if(req.getArchive() != null)
 			env.setArchive(req.getArchive());
+
+		//TODO prov here!
+		provScript(env, req);
 		save(env, true, userCtx);
 	}
+
+	public void provScript(EmilContainerEnvironment env, ImportContainerRequest req) {
+
+		LOG.info("--------------------- Creating Prov Document --------------------------");
+
+		//TODO get env details as well and add to prov
+
+		// Environment Information
+		JsonObject jsonEnvironment = Json.createObjectBuilder()
+				.add("environmentId", env.getEnvId() != null ?  env.getEnvId() : "")
+				.add("revision", env.getVersion()!= null ?  env.getVersion() : "")
+				.add("os", env.getOs() != null ?  env.getOs() : "")
+				.add("title", env.getTitle() != null ? env.getTitle() : "")
+				.add("description", env.getDescription() != null ? env.getDescription() : "")
+				.build();
+
+		// User Information
+		JsonObject jsonCreation = Json.createObjectBuilder()
+				.add("userId", env.getAuthor() != null ?  env.getAuthor() : "")
+				.add("createdAt", LocalDateTime.now().toString())
+				.build();
+
+		// Container Information
+		JsonObject jsonContainer = Json.createObjectBuilder()
+				.add("tag", req.getTag() != null ?   req.getTag() : "")
+				.add("digest", req.getContainerDigest() != null ?  req.getContainerDigest()  : "")
+				.add("containerUrl", req.getContainerSourceUrl() != null ?  req.getContainerSourceUrl() : "")
+				.add("image", req.getImageUrl() != null ?  req.getImageUrl() : "")
+				.build();
+
+		//Metadata
+
+//        JsonArray keywords = Json.createArrayBuilder()
+//                .add("example")
+//                .add("metadata").build();
+//
+//        JsonArray workflows = Json.createArrayBuilder()
+//                .add("reference to workflow 1 where the tool is contained/used")
+//                .add("reference to workflow 2 where the tool is contained/used").build();
+//
+//        JsonObject jsonMetadata = Json.createObjectBuilder()
+//                .add("original", "linktooriginaltool.com")
+//                .add("workflows", workflows)
+//                .add("keywords", keywords).build();
+
+		//Other
+		JsonObject jsonOther = Json.createObjectBuilder()
+				.add("eaasVersion", EaasBuildInfo.getVersion()).build();
+
+		JsonObject json = Json.createObjectBuilder()
+				.add("environment", jsonEnvironment)
+				.add("creation", jsonCreation)
+				.add("other", jsonOther)
+				.add("container", jsonContainer)
+				.build();
+
+		LOG.info("Created JSON:" + json);
+
+		try {
+
+			Files.writeString(Path.of("/tmp/" + env.getEnvId() + ".json"), json.toString());
+			LOG.info("Successfully wrote json file.");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
 
 	public EmilSessionEnvironment getUserSession(String userId, String objectId) {
 		System.out.println("userid: " + userId + " objectId " + objectId);
