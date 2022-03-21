@@ -22,24 +22,25 @@ package com.openslx.eaas.imagearchive.service.impl;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
 import com.openslx.eaas.imagearchive.service.BlobService;
+import com.openslx.eaas.imagearchive.service.MetaRemover;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 
 
 public class ImageService extends BlobService<ImageIndex.Record>
 {
-	public static ImageService create(ArchiveBackend backend)
+	public static ImageService create(ArchiveBackend backend, MetaRemover remover)
 	{
 		final var index = backend.indexes()
 				.images();
 
-		return new ImageService(backend.storage(), index);
+		return new ImageService(backend.storage(), index, remover);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private ImageService(StorageRegistry storage, ImageIndex index)
+	private ImageService(StorageRegistry storage, ImageIndex index, MetaRemover remover)
 	{
-		super(storage, index, ImageIndex.Record::filter, ImageIndex.Record::filter);
+		super(storage, index, ImageIndex.Record::filter, ImageIndex.Record::filter, remover);
 	}
 }

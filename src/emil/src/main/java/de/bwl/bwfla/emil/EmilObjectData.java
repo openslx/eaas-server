@@ -131,7 +131,7 @@ public class EmilObjectData extends EmilRest {
 				.importObject(req);
 	}
 
-	ObjectArchiveHelper helper() {
+	public ObjectArchiveHelper helper() {
 		return objrepo.helper();
 	}
 

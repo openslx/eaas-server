@@ -24,24 +24,25 @@ import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.impl.MetaDataIndex;
 import com.openslx.eaas.imagearchive.service.DataService;
+import com.openslx.eaas.imagearchive.service.MetaRemover;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 
 
 public class MetaDataService extends DataService<JsonNode, MetaDataIndex.Record>
 {
-	public static MetaDataService create(BlobKind kind, ArchiveBackend backend)
+	public static MetaDataService create(BlobKind kind, ArchiveBackend backend, MetaRemover remover)
 	{
 		final var index = backend.indexes()
 				.lookup(kind);
 
-		return new MetaDataService(backend.storage(), (MetaDataIndex) index);
+		return new MetaDataService(backend.storage(), (MetaDataIndex) index, remover);
 	}
 
 
 	// ===== Internal Helpers ==============================
 
-	private MetaDataService(StorageRegistry storage, MetaDataIndex index)
+	private MetaDataService(StorageRegistry storage, MetaDataIndex index, MetaRemover remover)
 	{
-		super(storage, index, MetaDataIndex.Record::filter, MetaDataIndex.Record::filter);
+		super(storage, index, MetaDataIndex.Record::filter, MetaDataIndex.Record::filter, remover);
 	}
 }

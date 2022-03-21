@@ -33,6 +33,9 @@ public abstract class SnapshotRequest  extends EmilRequestType {
     @XmlElement(required = false)
     private boolean isRelativeMouse;
 
+    @XmlElement(defaultValue = "false")
+    private boolean cleanRemovableDrives = false;
+
     public boolean isRelativeMouse() {
         return isRelativeMouse;
     }
@@ -71,5 +74,13 @@ public abstract class SnapshotRequest  extends EmilRequestType {
 
     public void setArchive(String archive) {
         this.archive = archive;
+    }
+
+    public boolean isCleanRemovableDrives() {
+        return cleanRemovableDrives;
+    }
+
+    public void setCleanRemovableDrives(boolean cleanRemovableDrives) {
+        this.cleanRemovableDrives = cleanRemovableDrives;
     }
 }

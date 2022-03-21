@@ -12,14 +12,17 @@ imagearchive:
       endpoint: "minio"
       bucket: "image-archive"
       paths:
+        aliasing: "/aliases"
         environment: "/environments"
         session: "/sessions"
         network: "/networks"
         container: "/containers"
         machine: "/machines"
+        emulator-metadata: "/metadata/emulators"
         emulator: "/emulators"
         template: "/templates"
         checkpoint: "/checkpoints"
+        image-metadata: "/metadata/images"
         image: "/images"
         rom: "/roms"
 

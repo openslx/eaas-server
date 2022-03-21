@@ -75,6 +75,19 @@ public class BlobStore extends TaskExecutor
 		return this.blob(handle.bucket(), handle.name());
 	}
 
+	/** Rename given blob */
+	public void rename(Blob srcblob, Blob dstblob) throws BWFLAException
+	{
+		// S3-API does not support rename operations directly,
+		// but copy + delete operations can be used instead
+
+		dstblob.copier()
+				.source(srcblob)
+				.copy();
+
+		srcblob.remove();
+	}
+
 	/** Create new path builder */
 	public static Path path(String first, String... more)
 	{

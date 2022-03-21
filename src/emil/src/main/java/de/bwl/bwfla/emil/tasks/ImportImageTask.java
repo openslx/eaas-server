@@ -1,9 +1,13 @@
 package de.bwl.bwfla.emil.tasks;
 
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.ImageArchiveMappers;
+import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportStatusV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.imagearchive.databind.ImageMetaData;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.CompletableTask;
@@ -89,15 +93,18 @@ public class ImportImageTask extends CompletableTask<Object>
                     .name();
 
             try {
-                ImageMetadata entry = new ImageMetadata();
-                entry.setName(imageId);
-                entry.setLabel(request.label);
-                ImageDescription description = new ImageDescription();
-                description.setType(request.type.value());
-                description.setId(imageId);
-                entry.setImage(description);
+                final var metadata = new ImageMetaData()
+                        .setId(imageId)
+                        .setLabel(request.label)
+                        .setCategory(request.type.value());
 
-                request.environmentHelper.addNameIndexesEntry(request.destArchive, entry, null);
+                final var options = new ReplaceOptionsV2()
+                        .setLocation(request.destArchive);
+
+                request.imagearchive.api()
+                        .v2()
+                        .metadata(MetaDataKindV2.IMAGES)
+                        .replace(imageId, metadata, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
             }
             catch (BWFLAException exception) {
                 return exception;

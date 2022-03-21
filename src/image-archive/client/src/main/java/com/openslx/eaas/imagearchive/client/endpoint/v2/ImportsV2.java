@@ -22,12 +22,13 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2;
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportStateV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportStatusV2;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRO;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.IDeletableResource;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.IListableResource;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.IReadableResource;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResource;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import java.util.concurrent.CompletableFuture;
@@ -35,13 +36,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 
 
-public class ImportsV2 extends AbstractResourceRO<ImportStatusV2>
+public class ImportsV2 extends RemoteResource<IImportsV2>
+		implements IListableResource, IReadableResource<ImportStatusV2>, IDeletableResource
 {
-	private final IImportsV2 api;
-
 	public ImportsV2(IImportsV2 api)
 	{
-		this.api = api;
+		super(api);
 	}
 
 
@@ -93,20 +93,5 @@ public class ImportsV2 extends AbstractResourceRO<ImportStatusV2>
 			this.delete(taskid);
 			throw error;
 		}
-	}
-
-
-	// ===== Internal Helpers ==============================
-
-	@Override
-	protected IListable listable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IReadable<ImportStatusV2> readable()
-	{
-		return api;
 	}
 }

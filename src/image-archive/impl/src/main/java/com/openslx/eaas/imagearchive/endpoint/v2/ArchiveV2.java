@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.ArchiveBackend;
+import com.openslx.eaas.imagearchive.api.v2.IAliasesV2;
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.ICheckpointsV2;
 import com.openslx.eaas.imagearchive.api.v2.IContainersV2;
@@ -40,6 +41,9 @@ import javax.ws.rs.BadRequestException;
 @ApplicationScoped
 public class ArchiveV2 implements IArchiveV2
 {
+	@Inject
+	private AliasesV2 aliases;
+
 	@Inject
 	private ContainersV2 containers;
 
@@ -66,6 +70,12 @@ public class ArchiveV2 implements IArchiveV2
 
 
 	// ===== Public API ==============================
+
+	@Override
+	public IAliasesV2 aliases()
+	{
+		return aliases;
+	}
 
 	@Override
 	public IContainersV2 containers()
@@ -122,6 +132,10 @@ public class ArchiveV2 implements IArchiveV2
 				.services();
 
 		switch (MetaDataKindV2.from(kind)) {
+			case IMAGES:
+				return new MetaDataV2(services.imageMetaData());
+			case EMULATORS:
+				return new MetaDataV2(services.emulatorMetaData());
 			case ENVIRONMENTS:
 				return new MetaDataV2(services.environments());
 			case SESSIONS:

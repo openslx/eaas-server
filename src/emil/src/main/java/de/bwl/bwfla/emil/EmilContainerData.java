@@ -14,6 +14,7 @@ import javax.ws.rs.*;
 import javax.ws.rs.core.*;
 
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import de.bwl.bwfla.common.datatypes.EnvironmentDescription;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
@@ -29,7 +30,6 @@ import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportContainerTask;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
-import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 @Path("EmilContainerData")
@@ -73,13 +73,14 @@ public class EmilContainerData extends EmilRest {
 
     private ObjectArchiveHelper objHelper;
 
-    protected static final Logger LOG = Logger.getLogger("eaas/containerData");
+    private EmulatorMetaHelperV2 emuMetaHelper;
 
-    private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+    protected static final Logger LOG = Logger.getLogger("eaas/containerData");
 
     @PostConstruct
     private void initialize() {
         objHelper = new ObjectArchiveHelper(objectArchive);
+        emuMetaHelper = new EmulatorMetaHelperV2(emilEnvRepo.getImageArchive(), LOG);
     }
 
     /**
@@ -171,6 +172,7 @@ public class EmilContainerData extends EmilRest {
                 newEnv.setEnvId(id);
                 newEnv.setParentEnvId(env.getEnvId());
                 env.addChildEnvId(newEnv.getEnvId());
+                newEnv.setDigest(env.getDigest());
                 imported = true;
             } else {
                 final var options = new ReplaceOptionsV2()
@@ -218,15 +220,17 @@ public class EmilContainerData extends EmilRest {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public TaskStateResponse saveContainerImage(CreateContainerImageRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new BuildContainerImageTask(req)));
+        return new TaskStateResponse(taskManager.submitTask(new BuildContainerImageTask(req, emilEnvRepo)));
+
     }
 
+    @Deprecated
     @Secured(roles={Role.RESTRICTED})
     @POST
     @Path("/updateLatestEmulator")
     @Consumes(MediaType.APPLICATION_JSON)
     public void updateLatestEmulator(UpdateLatestEmulatorRequest request) throws BWFLAException {
-        envHelper.updateLatestEmulator(getEmulatorArchive(), request.getEmulatorName(), request.getVersion());
+        emuMetaHelper.markAsDefault(request.getEmulatorName(), request.getVersion());
     }
 
     @Secured(roles={Role.RESTRICTED})
@@ -290,14 +294,6 @@ public class EmilContainerData extends EmilRest {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public TaskStateResponse importEmulator(ImportEmulatorRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new ImportEmulatorTask(req, envHelper)));
+        return new TaskStateResponse(taskManager.submitTask(new ImportEmulatorTask(req, emuMetaHelper, envHelper)));
     }
-
-    private String getEmulatorArchive() {
-        String archive = ConfigurationProvider.getConfiguration().get("emucomp.emulator_archive");
-        if(archive == null || archive.isEmpty())
-            return EMULATOR_DEFAULT_ARCHIVE;
-        return archive;
-    }
-
 }

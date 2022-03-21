@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 
 import java.io.InputStream;
@@ -41,8 +42,8 @@ public class ContainerIndex extends BlobIndex<ContainerIndex.Record>
 		}
 	}
 
-	public ContainerIndex()
+	public ContainerIndex(MetaFetcher fetcher)
 	{
-		super(BlobKind.CONTAINER, Record.class, Record::index, BlobIngestors.records(Record::new));
+		super(BlobKind.CONTAINER, Record.class, Record::index, BlobIngestors.records(Record::new), fetcher);
 	}
 }

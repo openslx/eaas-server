@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 
 
 public class ImageIndex extends BlobIndex<ImageIndex.Record>
@@ -32,8 +33,8 @@ public class ImageIndex extends BlobIndex<ImageIndex.Record>
 		// Empty!
 	}
 
-	public ImageIndex()
+	public ImageIndex(MetaFetcher fetcher)
 	{
-		super(BlobKind.IMAGE, Record.class, Record::index, BlobIngestors.descriptors(Record::new));
+		super(BlobKind.IMAGE, Record.class, Record::index, BlobIngestors.descriptors(Record::new), fetcher);
 	}
 }

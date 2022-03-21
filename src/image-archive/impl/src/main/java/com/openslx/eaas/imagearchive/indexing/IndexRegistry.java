@@ -22,6 +22,7 @@ package com.openslx.eaas.imagearchive.indexing;
 import com.openslx.eaas.imagearchive.AbstractRegistry;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.impl.AliasingIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ContainerIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
@@ -75,6 +76,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this;
 	}
 
+	public AliasingIndex aliases()
+	{
+		return this.lookup(BlobKind.ALIASING, AliasingIndex.class);
+	}
+
 	public MetaDataIndex environments()
 	{
 		return this.lookup(BlobKind.ENVIRONMENT, MetaDataIndex.class);
@@ -100,6 +106,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.MACHINE, MachineIndex.class);
 	}
 
+	public MetaDataIndex emulatorMetaData()
+	{
+		return this.lookup(BlobKind.EMULATOR_METADATA, MetaDataIndex.class);
+	}
+
 	public TemplateIndex templates()
 	{
 		return this.lookup(BlobKind.TEMPLATE, TemplateIndex.class);
@@ -108,6 +119,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 	public CheckpointIndex checkpoints()
 	{
 		return this.lookup(BlobKind.CHECKPOINT, CheckpointIndex.class);
+	}
+
+	public MetaDataIndex imageMetaData()
+	{
+		return this.lookup(BlobKind.IMAGE_METADATA, MetaDataIndex.class);
 	}
 
 	public ImageIndex images()
@@ -128,15 +144,22 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 	public static IndexRegistry create() throws BWFLAException
 	{
 		final var registry = new IndexRegistry();
-		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT));
-		registry.insert(new MetaDataIndex(BlobKind.SESSION));
-		registry.insert(new MetaDataIndex(BlobKind.NETWORK));
-		registry.insert(new ContainerIndex());
-		registry.insert(new MachineIndex());
-		registry.insert(new TemplateIndex());
-		registry.insert(new CheckpointIndex());
-		registry.insert(new ImageIndex());
-		registry.insert(new RomIndex());
+		final var aliases = new AliasingIndex();
+		final var fetcher = new MetaFetcher()
+				.with(aliases);
+
+		registry.insert(aliases);
+		registry.insert(new MetaDataIndex(BlobKind.ENVIRONMENT, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.SESSION, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.NETWORK, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.EMULATOR_METADATA, fetcher));
+		registry.insert(new MetaDataIndex(BlobKind.IMAGE_METADATA, fetcher));
+		registry.insert(new ContainerIndex(fetcher));
+		registry.insert(new MachineIndex(fetcher));
+		registry.insert(new TemplateIndex(fetcher));
+		registry.insert(new CheckpointIndex(fetcher));
+		registry.insert(new ImageIndex(fetcher));
+		registry.insert(new RomIndex(fetcher));
 		registry.insert(new ImportIndex());
 		return registry;
 	}

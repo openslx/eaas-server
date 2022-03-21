@@ -63,4 +63,5 @@ emucomp:
     alsa_card: PCH
     image_proxy: nginx:82
 
-ws.imagearchive: http://eaas:8080
+rest:
+    imagearchive: "http://eaas:8080/image-archive"

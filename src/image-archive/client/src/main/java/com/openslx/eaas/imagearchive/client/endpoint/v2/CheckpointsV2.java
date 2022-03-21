@@ -20,48 +20,15 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.ICheckpointsV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
-import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRW;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
 
 import java.io.InputStream;
 
 
-public class CheckpointsV2 extends AbstractResourceRW<InputStream>
+public class CheckpointsV2 extends RemoteResourceRW<InputStream, ICheckpointsV2>
 {
-	private final ICheckpointsV2 api;
-
 	public CheckpointsV2(ICheckpointsV2 api)
 	{
-		this.api = api;
-	}
-
-
-	// ===== Internal Helpers ==============================
-
-	@Override
-	protected IListable listable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IReadable<InputStream> readable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IWritable<InputStream> writable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IDeletable deletable()
-	{
-		return api;
+		super(api);
 	}
 }

@@ -76,6 +76,7 @@ public class ImportContainerTask extends BlockingTask<Object>
         config.setDescription(description);
         config.setDigest(containerRequest.getContainerDigest());
         config.getDataResources().add(binding);
+        config.setDigest(containerRequest.getContainerDigest());
 
         config.setGui(containerRequest.guiRequired());
         if (containerRequest.getCustomSubdir() != null && !containerRequest.getCustomSubdir().equals(""))

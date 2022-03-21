@@ -21,54 +21,19 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
-import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRWM;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 
 
-public class MetaDataV2 extends AbstractResourceRWM<JsonNode>
+public class MetaDataV2 extends RemoteResourceRWM<JsonNode, IMetaDataV2>
 {
-	private final IMetaDataV2 api;
-
 	public MetaDataV2(IMetaDataV2 api)
 	{
-		super(JsonNode.class);
-		this.api = api;
-	}
-
-
-	// ===== Internal Helpers ==============================
-
-	@Override
-	protected IListable listable()
-	{
-		return api;
+		super(api);
 	}
 
 	@Override
-	protected IReadable<JsonNode> readable()
+	public Class<JsonNode> getTargetClass()
 	{
-		return api;
-	}
-
-	@Override
-	protected IManyReadable<JsonNode> manyreadable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IWritable<JsonNode> writable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IDeletable deletable()
-	{
-		return api;
+		return JsonNode.class;
 	}
 }

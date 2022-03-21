@@ -28,9 +28,6 @@ public class SaveObjectEnvironmentRequest extends SnapshotRequest {
 	private String objectArchiveId;
 
 	@XmlElement
-	private boolean embeddedObject = false;
-
-	@XmlElement
 	private int driveId;
 
 	public String getObjectId() {
@@ -54,14 +51,6 @@ public class SaveObjectEnvironmentRequest extends SnapshotRequest {
 
 	public void setTitle(String title) {
 		this.title = title;
-	}
-
-	public boolean isEmbeddedObject() {
-		return embeddedObject;
-	}
-
-	public void setEmbeddedObject(boolean embeddedObject) {
-		this.embeddedObject = embeddedObject;
 	}
 
 	public int getDriveId() {

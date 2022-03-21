@@ -2,7 +2,7 @@ package de.bwl.bwfla.emil.tasks;
 
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
-import de.bwl.bwfla.api.imagearchive.*;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.security.EmilEnvironmentPermissions;
 import de.bwl.bwfla.common.services.security.Role;
@@ -17,7 +17,6 @@ import de.bwl.bwfla.emil.datatypes.rest.ImportEmulatorRequest;
 import de.bwl.bwfla.emil.utils.BuildContainerUtil;
 import de.bwl.bwfla.emil.utils.ImportEmulatorUtil;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.imagearchive.util.EmulatorRegistryUtil;
 import de.bwl.bwfla.imageproposer.client.ImageProposer;
 
 import java.util.HashMap;
@@ -88,6 +87,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
             emulatorSpec = ((MachineConfiguration)request.env).getEmulator();
         }
 
+        final var emulatorMetaHelper = new EmulatorMetaHelperV2(request.imagearchive, log);
 
         // ensure the published environments have emulator info
         if (request.env instanceof MachineConfiguration && request.emilEnvironment.getArchive().equals(EmilEnvironmentRepository.MetadataCollection.DEFAULT)) {
@@ -97,20 +97,17 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 if (containerName == null)
                     throw new BWFLAException("this environment cannot be exported. old metadata. set an emulator first: " + emulatorSpec.getBean());
 
-                emulatorSpec.setContainerName("emucon-rootfs/" + containerName);
+                emulatorSpec.setContainerName(containerName);
             }
-            ImageNameIndex index = request.environmentHelper.getNameIndexes();
-
 
             if (emulatorSpec.getOciSourceUrl() == null || emulatorSpec.getOciSourceUrl().isEmpty()) {
-                ImageMetadata entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
-
+                final var entry = emulatorMetaHelper.fetch(emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
                 if (entry == null)
                     throw new BWFLAException("emulator entry not found. can't publish this environment");
 
-                emulatorSpec.setContainerVersion(entry.getVersion());
-                emulatorSpec.setOciSourceUrl(entry.getProvenance().getOciSourceUrl());
-                emulatorSpec.setDigest(entry.getDigest());
+                emulatorSpec.setContainerVersion(entry.version());
+                emulatorSpec.setOciSourceUrl(entry.provenance().url());
+                emulatorSpec.setDigest(entry.digest());
             }
         }
 
@@ -118,10 +115,8 @@ public class ReplicateImageTask extends BlockingTask<Object>
             if(emulatorSpec.getContainerName() == null || emulatorSpec.getContainerName().isEmpty())
                 throw new BWFLAException("this environment cannot be imported. old metadata. set an emulator first");
 
-            ImageNameIndex index = request.environmentHelper.getNameIndexes();
-            ImageMetadata entry = EmulatorRegistryUtil.getEntry(index, emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion());
-            if(entry == null) // we need to import the emulator
-            {
+            if(!emulatorMetaHelper.exists(emulatorSpec.getContainerName(), emulatorSpec.getContainerVersion())) {
+                // we need to import the emulator
                 if(emulatorSpec == null)
                     throw new BWFLAException("no emulator info available. fix metadata");
 
@@ -144,7 +139,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 ImportEmulatorRequest importEmulatorRequest = new ImportEmulatorRequest();
                 importEmulatorRequest.setImageUrl(containerImage.getContainerUrl());
                 importEmulatorRequest.setMetadata(containerImage.getMetadata());
-                ImportEmulatorUtil.doImport(importEmulatorRequest, request.environmentHelper);
+                ImportEmulatorUtil.doImport(importEmulatorRequest, emulatorMetaHelper, request.environmentHelper);
             }
 
         }

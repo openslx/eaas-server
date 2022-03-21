@@ -20,55 +20,20 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
-import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRWM;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 
 
-public class TemplatesV2 extends AbstractResourceRWM<MachineConfigurationTemplate>
+public class TemplatesV2 extends RemoteResourceRWM<MachineConfigurationTemplate, ITemplatesV2>
 {
-	private final ITemplatesV2 api;
-
 	public TemplatesV2(ITemplatesV2 api)
 	{
-		super(MachineConfigurationTemplate.class);
-		this.api = api;
-	}
-
-
-	// ===== Internal Helpers ==============================
-
-	@Override
-	protected IListable listable()
-	{
-		return api;
+		super(api);
 	}
 
 	@Override
-	protected IReadable<MachineConfigurationTemplate> readable()
+	public Class<MachineConfigurationTemplate> getTargetClass()
 	{
-		return api;
-	}
-
-	@Override
-	protected IManyReadable<MachineConfigurationTemplate> manyreadable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IWritable<MachineConfigurationTemplate> writable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IDeletable deletable()
-	{
-		return api;
+		return MachineConfigurationTemplate.class;
 	}
 }

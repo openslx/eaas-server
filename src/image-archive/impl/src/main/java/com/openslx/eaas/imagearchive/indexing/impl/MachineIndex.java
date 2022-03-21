@@ -23,6 +23,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
 import com.openslx.eaas.imagearchive.indexing.DataRecord;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
 
 import java.io.InputStream;
@@ -41,8 +42,8 @@ public class MachineIndex extends BlobIndex<MachineIndex.Record>
 		}
 	}
 
-	public MachineIndex()
+	public MachineIndex(MetaFetcher fetcher)
 	{
-		super(BlobKind.MACHINE, Record.class, Record::index, BlobIngestors.records(Record::new));
+		super(BlobKind.MACHINE, Record.class, Record::index, BlobIngestors.records(Record::new), fetcher);
 	}
 }

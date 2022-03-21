@@ -58,6 +58,7 @@ public class ContainerConfiguration extends Environment
 	@XmlElement
 	protected String digest;
 
+
 	@XmlElementRefs({
 			@XmlElementRef(name="binding", type=Binding.class, namespace = "http://bwfla.bwl.de/common/datatypes"),
 			@XmlElementRef(name="objectArchiveBinding", type=ObjectArchiveBinding.class, namespace = "http://bwfla.bwl.de/common/datatypes")

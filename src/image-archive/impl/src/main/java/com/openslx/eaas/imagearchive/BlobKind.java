@@ -22,26 +22,32 @@ package com.openslx.eaas.imagearchive;
 
 public enum BlobKind
 {
+	ALIASING,
 	ENVIRONMENT,
 	SESSION,
 	NETWORK,
 	MACHINE,
 	CONTAINER,
+	EMULATOR_METADATA,
 	EMULATOR,
 	TEMPLATE,
 	CHECKPOINT,
+	IMAGE_METADATA,
 	IMAGE,
 	ROM;
 
 	public String value()
 	{
 		return this.name()
+				.replace("_", "-")
 				.toLowerCase();
 	}
 
 	public static BlobKind from(String kind)
 	{
 		switch (kind) {
+			case "aliasing":
+				return BlobKind.ALIASING;
 			case "environment":
 				return BlobKind.ENVIRONMENT;
 			case "session":
@@ -52,12 +58,16 @@ public enum BlobKind
 				return BlobKind.MACHINE;
 			case "container":
 				return BlobKind.CONTAINER;
+			case "emulator-metadata":
+				return BlobKind.EMULATOR_METADATA;
 			case "emulator":
 				return BlobKind.EMULATOR;
 			case "template":
 				return BlobKind.TEMPLATE;
 			case "checkpoint":
 				return BlobKind.CHECKPOINT;
+			case "image-metadata":
+				return BlobKind.IMAGE_METADATA;
 			case "image":
 				return BlobKind.IMAGE;
 			case "rom":

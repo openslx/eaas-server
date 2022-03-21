@@ -41,7 +41,7 @@ public class BlobDescription
 	{
 		this.bucket = stat.bucket();
 		this.name = stat.object();
-		this.etag = stat.etag();
+		this.etag = BlobDescription.checkETag(stat.etag());
 		this.mtime = stat.lastModified();
 		this.size = stat.size();
 		this.contentType = stat.contentType();
@@ -52,7 +52,7 @@ public class BlobDescription
 	{
 		this.bucket = bucket;
 		this.name = item.objectName();
-		this.etag = item.etag();
+		this.etag = BlobDescription.checkETag(item.etag());
 		this.mtime = item.lastModified();
 		this.size = item.size();
 		this.contentType = "application/octet-stream";
@@ -99,5 +99,23 @@ public class BlobDescription
 	public Map<String, String> userdata()
 	{
 		return userdata;
+	}
+
+	private static String checkETag(String etag)
+	{
+		if (etag == null)
+			return null;
+
+		// MinIO can return quoted etags for certain operations,
+		// hence always remove quotes to be consistent in our code!
+		if (etag.startsWith("\""))
+			etag = etag.replaceAll("\"", "");
+
+		// MinIO can report an invalid etag for certain blobs,
+		// reset its value to make it explicit in such cases!
+		if (etag.isEmpty() || etag.endsWith("0000000000-1"))
+			etag = null;
+
+		return etag;
 	}
 }

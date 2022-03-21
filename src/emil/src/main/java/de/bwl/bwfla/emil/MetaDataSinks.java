@@ -21,6 +21,7 @@ package de.bwl.bwfla.emil;
 
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.EnvironmentsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emil.datatypes.EaasiSoftwareObject;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
@@ -63,13 +64,17 @@ public class MetaDataSinks
 	private static class EnvironmentSink implements ItemSink
 	{
 		private final Logger log = Logger.getLogger(this.getClass().getName());
-		private final ImageArchiveClient imagearchive;
-		private final String archive;
+		private final EnvironmentsV2 environments;
+		private final ReplaceOptionsV2 options;
 
 		public EnvironmentSink(String archive, ImageArchiveClient imagearchive)
 		{
-			this.archive = archive;
-			this.imagearchive = imagearchive;
+			this.environments = imagearchive.api()
+					.v2()
+					.environments();
+
+			this.options = new ReplaceOptionsV2()
+				.setLocation(archive);
 		}
 
 		@Override
@@ -77,13 +82,10 @@ public class MetaDataSinks
 		{
 			try {
 				final Environment environment = Environment.fromValue(item.getMetaData());
-				final var options = new ReplaceOptionsV2()
-						.setLocation(archive);
+				if (environments.exists(environment.getId()))
+					return;
 
-				imagearchive.api()
-						.v2()
-						.environments()
-						.replace(environment.getId(), environment, options);
+				environments.replace(environment.getId(), environment, options);
 			}
 			catch (JAXBException error) {
 				throw new BWFLAException(error);
@@ -131,8 +133,10 @@ public class MetaDataSinks
 		public void insert(ItemDescription item) throws BWFLAException
 		{
 			try {
-				// log.severe(item.getMetaData());
 				final EmilEnvironment environment = EmilEnvironment.fromValue(item.getMetaData(), EmilEnvironment.class);
+				if (environmentRepository.existsEmilEnvironment(environment.getEnvId()))
+					return;
+
 				environment.setArchive("remote");
 				environmentRepository.save(environment, false);
 			}

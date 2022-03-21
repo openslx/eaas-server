@@ -22,31 +22,29 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
 import com.openslx.eaas.imagearchive.api.v2.common.ListOptionsV2;
-import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public abstract class AbstractResourceRO<T>
+public interface IListableResource
 {
 	// ===== IListable API ==============================
 
-	public long count() throws BWFLAException
+	default long count() throws BWFLAException
 	{
 		return this.count(null);
 	}
 
-	public long count(CountOptionsV2 options) throws BWFLAException
+	default long count(CountOptionsV2 options) throws BWFLAException
 	{
-		return this.listable()
+		return this.api()
 				.count(options);
 	}
 
-	public boolean exists(String id)
+	default boolean exists(String id)
 	{
 		try {
-			this.listable()
+			this.api()
 					.exists(id);
 
 			return true;
@@ -56,42 +54,21 @@ public abstract class AbstractResourceRO<T>
 		}
 	}
 
-	public Streamable<String> list() throws BWFLAException
+	default Streamable<String> list() throws BWFLAException
 	{
 		return this.list(null);
 	}
 
-	public Streamable<String> list(ListOptionsV2 options) throws BWFLAException
+	default Streamable<String> list(ListOptionsV2 options) throws BWFLAException
 	{
-		final var response = this.listable()
+		final var response = this.api()
 				.list(options);
 
 		return Streamable.of(response, String.class);
 	}
 
 
-	// ===== IReadable API ==============================
-
-	public String resolve(String id) throws BWFLAException
-	{
-		return this.resolve(id, null);
-	}
-
-	public String resolve(String id, ResolveOptionsV2 options) throws BWFLAException
-	{
-		return this.readable()
-				.resolve(id, options);
-	}
-
-	public T fetch(String id) throws BWFLAException
-	{
-		return this.readable()
-				.fetch(id);
-	}
-
-
 	// ===== Internal Helpers ==============================
 
-	protected abstract IListable listable();
-	protected abstract IReadable<T> readable();
+	IListable api();
 }

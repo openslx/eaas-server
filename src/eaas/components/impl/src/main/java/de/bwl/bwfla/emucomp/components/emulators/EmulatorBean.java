@@ -19,6 +19,9 @@
 
 package de.bwl.bwfla.emucomp.components.emulators;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
+import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.blobstore.api.BlobDescription;
 import de.bwl.bwfla.blobstore.api.BlobHandle;
@@ -53,7 +56,6 @@ import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
 import de.bwl.bwfla.emucomp.control.connectors.*;
 import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
 import de.bwl.bwfla.emucomp.xpra.PulseAudioStreamer;
-import de.bwl.bwfla.imagearchive.util.EnvironmentsAdapter;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
@@ -82,7 +84,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.logging.Level;
-import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Stream;
@@ -121,10 +122,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Inject
 	@Config("emucomp.blobstore_soap")
 	private String blobStoreAddressSoap = null;
-
-	@Inject
-	@Config(value = "ws.imagearchive")
-	private String imageArchiveAddress = null;
 
     @Resource(lookup = "java:jboss/ee/concurrency/executor/io")
     protected ExecutorService ioTaskExecutor;
@@ -456,7 +453,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 
 			// Prepare configuration for tunnels
-			tunnelConfig.setGuacdHostname("localhost");
+			tunnelConfig.setGuacdHostname("127.0.0.1");
 			tunnelConfig.setGuacdPort(TunnelConfig.GUACD_PORT);
 			tunnelConfig.setInterceptor(interceptors);
 		}
@@ -472,25 +469,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				if (!isRootFsFound) {
 					// Not found, try to get latest image ID as configured by the archive
-					final EnvironmentsAdapter archive = new EnvironmentsAdapter(imageArchiveAddress);
-					final String name = EMUCON_ROOTFS_BINDING_ID + "/" + this.getEmuContainerName(env);
-					final ImageArchiveBinding image;
-					if (env.getEmulator().getContainerName() != null && env.getEmulator().getContainerVersion() != null) {
-						LOG.warning("loading emulator: " + name + " " + env.getEmulator().getContainerVersion());
-						image = archive.getImageBinding(this.getEmulatorArchive(), name, env.getEmulator().getContainerVersion());
-					}
-					else {
-						LOG.warning("loading emulator " + name + " latest");
-						image = archive.getImageBinding(this.getEmulatorArchive(), name, "latest");
-					}
-
-					if (image == null) {
-						throw new BWFLAException("Emulator's rootfs-image not found!")
-								.setId(this.getComponentId());
-					}
-
-					// Add rootfs binding
-					image.setId(EMUCON_ROOTFS_BINDING_ID);
+					final var image = this.findEmulatorImage(env);
 					env.getAbstractDataResource().add(image);
 				}
 			}
@@ -2400,6 +2379,41 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		LOG.log(Level.SEVERE, message, error);
 		return new BWFLAException(message, error)
 				.setId(this.getComponentId());
+	}
+
+	private ImageArchiveBinding findEmulatorImage(MachineConfiguration env) throws Exception
+	{
+		final var imageArchiveAddress = ConfigurationProvider.getConfiguration()
+				.get("rest.imagearchive");
+
+		try (final var archive = ImageArchiveClient.create(imageArchiveAddress)) {
+			final var emuMetaHelper = new EmulatorMetaHelperV2(archive, LOG);
+			final var name = this.getEmuContainerName(env);
+			var version = env.getEmulator()
+					.getContainerVersion();
+
+			if (version == null || version.isEmpty())
+				version = EmulatorMetaData.DEFAULT_VERSION;
+
+			LOG.info("Looking up image for emulator '" + name + " (" + version + ")'...");
+			final var emulator = emuMetaHelper.fetch(name, version);
+			final var image = emulator.image();
+			final var binding = new ImageArchiveBinding();
+			binding.setId(EMUCON_ROOTFS_BINDING_ID);
+			binding.setAccess(Binding.AccessType.COW);
+			binding.setBackendName(this.getEmulatorArchive());
+			binding.setFileSystemType(image.fileSystemType());
+			binding.setType(image.category());
+			binding.setImageId(image.id());
+			binding.setUrl("");
+
+			LOG.info("Using emulator's image '" + image.id() + "'");
+			return binding;
+		}
+		catch (Exception error) {
+			throw new BWFLAException("Emulator's image not found!", error)
+					.setId(this.getComponentId());
+		}
 	}
 
 

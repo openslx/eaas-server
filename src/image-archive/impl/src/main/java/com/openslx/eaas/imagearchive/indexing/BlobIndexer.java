@@ -21,6 +21,8 @@ package com.openslx.eaas.imagearchive.indexing;
 
 import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
+import de.bwl.bwfla.blobstore.BlobDescription;
+import de.bwl.bwfla.blobstore.Bucket;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.StringUtils;
 
@@ -28,7 +30,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 
-public class BlobIndexer<T> implements AutoCloseable
+public class BlobIndexer<T extends BlobDescriptor> implements AutoCloseable
 {
 	private final BlobIndex<T> target;
 
@@ -38,12 +40,12 @@ public class BlobIndexer<T> implements AutoCloseable
 		this.target = target;
 	}
 
-	public void index(StorageRegistry storage) throws BWFLAException
+	public void index(StorageRegistry storage, MetaFetcher fetcher) throws BWFLAException
 	{
-		this.index(storage, false);
+		this.index(storage, fetcher, false);
 	}
 
-	public void index(StorageRegistry storage, boolean parallel) throws BWFLAException
+	public void index(StorageRegistry storage, MetaFetcher fetcher, boolean parallel) throws BWFLAException
 	{
 		final var tmpname = target.name() + "-" + StringUtils.random(8);
 		final var collection = Index.construct(tmpname, target.clazz(), target.logger());
@@ -51,7 +53,7 @@ public class BlobIndexer<T> implements AutoCloseable
 			target.preparer()
 					.prepare(collection);
 
-			final var context = new BlobIngestorContext<>(target, collection);
+			final var context = new BlobIngestorContext<>(target, collection, fetcher);
 			BlobIndexer.ingest(context, storage, parallel);
 			target.switchto(collection);
 		}
@@ -74,7 +76,7 @@ public class BlobIndexer<T> implements AutoCloseable
 
 	// ===== Internal Helpers ==============================
 
-	private static <D> void ingest(BlobIngestorContext<D> context, StorageRegistry storage, boolean parallel)
+	private static <D extends BlobDescriptor> void ingest(BlobIngestorContext<D> context, StorageRegistry storage, boolean parallel)
 			throws BWFLAException
 	{
 		final var counters = new Result();
@@ -104,7 +106,7 @@ public class BlobIndexer<T> implements AutoCloseable
 		BlobIndexer.summary(storage, counters, logger);
 	}
 
-	private static <D> Result ingest(BlobIngestorContext<D> context, StorageLocation location, boolean parallel)
+	private static <D extends BlobDescriptor> Result ingest(BlobIngestorContext<D> context, StorageLocation location, boolean parallel)
 			throws BWFLAException
 	{
 		final int MAX_NUM_FAILURES = 5;
@@ -129,9 +131,12 @@ public class BlobIndexer<T> implements AutoCloseable
 			// process each blob stored at given location...
 			for (final var iter = blobs.iterator(); iter.hasNext();) {
 				try {
-					final var blob = iter.next();
+					var blob = iter.next();
 					if (prefix.equals(blob.name()))
 						continue;  // skip base-dir!
+
+					if (blob.etag() == null)
+						blob = BlobIndexer.updateETag(location.bucket(), blob, logger);
 
 					context.target()
 							.ingestor()
@@ -156,7 +161,25 @@ public class BlobIndexer<T> implements AutoCloseable
 		return result;
 	}
 
-	private static <T> void summary(BlobIngestorContext<T> context, StorageLocation location, Result result, Logger logger)
+	private static BlobDescription updateETag(Bucket bucket, BlobDescription blob, Logger logger)
+			throws BWFLAException
+	{
+		logger.warning("ETag for blob '" + blob.name() + "' is invalid, updating...");
+
+		// NOTE: etags might be missing for blobs added/modified bypassing S3-API,
+		//       e.g. when using MinIO's filesystem backend. Use a server-side
+		//       copy operation to properly re-compute etags in such cases.
+
+		final var blobstore = bucket.storage();
+		final var srcblob = bucket.blob(blob.name());
+		final var tmpblob = bucket.blob(blob.name() + ".etagfix.tmp");
+		blobstore.rename(srcblob, tmpblob);
+		blobstore.rename(tmpblob, srcblob);
+		return srcblob.stat();
+	}
+
+	private static <T extends BlobDescriptor> void summary(BlobIngestorContext<T> context, StorageLocation location,
+														   Result result, Logger logger)
 	{
 		final var message = new StringBuilder(512);
 		message.append("Indexed ");

@@ -20,55 +20,20 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.imagearchive.api.v2.IContainersV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
-import com.openslx.eaas.imagearchive.api.v2.common.IListable;
-import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
-import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
-import com.openslx.eaas.imagearchive.client.endpoint.v2.common.AbstractResourceRWM;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 
 
-public class ContainersV2 extends AbstractResourceRWM<ContainerConfiguration>
+public class ContainersV2 extends RemoteResourceRWM<ContainerConfiguration, IContainersV2>
 {
-	private final IContainersV2 api;
-
 	public ContainersV2(IContainersV2 api)
 	{
-		super(ContainerConfiguration.class);
-		this.api = api;
-	}
-
-
-	// ===== Internal Helpers ==============================
-
-	@Override
-	protected IListable listable()
-	{
-		return api;
+		super(api);
 	}
 
 	@Override
-	protected IReadable<ContainerConfiguration> readable()
+	public Class<ContainerConfiguration> getTargetClass()
 	{
-		return api;
-	}
-
-	@Override
-	protected IManyReadable<ContainerConfiguration> manyreadable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IWritable<ContainerConfiguration> writable()
-	{
-		return api;
-	}
-
-	@Override
-	protected IDeletable deletable()
-	{
-		return api;
+		return ContainerConfiguration.class;
 	}
 }

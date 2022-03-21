@@ -20,6 +20,7 @@
 package com.openslx.eaas.common.databind;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParser;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.ObjectReader;
 import com.fasterxml.jackson.databind.ObjectWriter;
@@ -86,6 +87,7 @@ public class JsonDataUtils
 	JsonDataUtils()
 	{
 		this.mapper = new ObjectMapper()
+				.enable(JsonParser.Feature.ALLOW_COMMENTS)
 				.setSerializationInclusion(JsonInclude.Include.NON_EMPTY)
 				.registerModule(new JaxbAnnotationModule());
 

@@ -20,12 +20,27 @@
 package de.bwl.bwfla.emil;
 
 import com.openslx.eaas.common.databind.DataUtils;
+import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.common.util.MultiCounter;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
+import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
+import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
+import com.openslx.eaas.imagearchive.databind.ImageMetaData;
+import com.openslx.eaas.migration.IMigratable;
+import com.openslx.eaas.migration.MigrationRegistry;
+import com.openslx.eaas.migration.MigrationUtils;
+import com.openslx.eaas.migration.config.MigrationConfig;
+import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.api.imagearchive.*;
 import de.bwl.bwfla.common.datatypes.identification.OperatingSystems;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.utils.ConfigHelpers;
+import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.NetworkUtils;
 import de.bwl.bwfla.emil.datatypes.DefaultEnvironmentResponse;
 import de.bwl.bwfla.emil.datatypes.EmilEnvironment;
@@ -49,6 +64,7 @@ import de.bwl.bwfla.emil.tasks.ExportEnvironmentTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
+import de.bwl.bwfla.emil.utils.ImportCounts;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
@@ -59,6 +75,7 @@ import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
@@ -69,6 +86,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
+import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -83,6 +101,7 @@ import java.util.stream.Stream;
 @ApplicationScoped
 @Path("/environment-repository")
 public class EnvironmentRepository extends EmilRest
+		implements IMigratable
 {
 	private ImageArchiveClient imagearchive = null;
 
@@ -117,6 +136,7 @@ public class EnvironmentRepository extends EmilRest
 	@Inject
 	private EmilObjectData objects;
 
+
 	@PostConstruct
 	private void initialize()
 	{
@@ -126,7 +146,7 @@ public class EnvironmentRepository extends EmilRest
 			swHelper = new SoftwareArchiveHelper(softwareArchive);
 		}
 		catch (Exception error) {
-			LOG.log(Level.WARNING, "Initializing environment-repository failed!", error);
+			throw new RuntimeException(error);
 		}
 	}
 
@@ -164,7 +184,10 @@ public class EnvironmentRepository extends EmilRest
 	}
 
 	@Path("/images")
-	public Images images() { return new Images(); }
+	public Images images()
+	{
+		return new Images();
+	}
 
 	@GET
 	@Path("/db-migration")
@@ -213,6 +236,7 @@ public class EnvironmentRepository extends EmilRest
 	}
 
 	/** Get the image-name index */
+	@Deprecated
 	@GET
 	@Path("/image-name-index")
 	@Secured(roles={Role.PUBLIC})
@@ -220,10 +244,71 @@ public class EnvironmentRepository extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
     public ImageNameIndex getNameIndexes() throws BWFLAException
 	{
-		LOG.info("Loading image-name index...");
-        return envdb.getNameIndexes();
+		final var entries = new ImageNameIndex.Entries();
+		final var aliases = new ImageNameIndex.Aliases();
+		final var emulators = imagearchive.api()
+				.v2()
+				.metadata(MetaDataKindV2.EMULATORS)
+				.fetch(ImageArchiveMappers.JSON_TREE_TO_EMULATOR_METADATA);
+
+		final Consumer<EmulatorMetaData> converter = (emulator) -> {
+			final var metadata = new ImageMetadata();
+			metadata.setName(emulator.name());
+			metadata.setVersion(emulator.version());
+			metadata.setDigest(emulator.digest());
+
+			final var newimg = emulator.image();
+			final var oldimg = new ImageDescription();
+			oldimg.setFstype(newimg.fileSystemType());
+			oldimg.setType(newimg.category());
+			oldimg.setId(newimg.id());
+			metadata.setImage(oldimg);
+
+			final var newprov = emulator.provenance();
+			final var oldprov = new Provenance();
+			oldprov.setOciSourceUrl(newprov.url());
+			oldprov.setVersionTag(newprov.tag());
+			oldprov.getLayers()
+					.addAll(newprov.layers());
+			metadata.setProvenance(oldprov);
+
+			final var ee = new ImageNameIndex.Entries.Entry();
+			ee.setKey(emulator.name() + "|" + emulator.version());
+			ee.setValue(metadata);
+			entries.getEntry()
+					.add(ee);
+
+			final var tags = new HashSet<>(emulator.tags());
+			tags.add(emulator.version());
+			if (tags.contains(EmulatorMetaData.DEFAULT_VERSION))
+				tags.add("latest");
+
+			for (final var tag : tags) {
+				final var alias = new Alias();
+				alias.setName(emulator.name());
+				alias.setVersion(emulator.version());
+				alias.setAlias(tag);
+
+				final var ae = new ImageNameIndex.Aliases.Entry();
+				ae.setKey(emulator.name() + "|" + tag);
+				ae.setValue(alias);
+				aliases.getEntry()
+						.add(ae);
+			}
+		};
+
+		try (emulators) {
+			emulators.stream()
+					.forEach(converter);
+		}
+
+		final var index = new ImageNameIndex();
+		index.setEntries(entries);
+		index.setAliases(aliases);
+		return index;
     }
 
+	@Deprecated
 	@GET
 	@Path("/images-index")
 	@Secured(roles={Role.PUBLIC})
@@ -231,13 +316,88 @@ public class EnvironmentRepository extends EmilRest
 	@Produces(MediaType.APPLICATION_JSON)
 	public ImageNameIndex getImagesIndex() throws BWFLAException
 	{
-		LOG.info("Loading images index...");
-		return envdb.getImagesIndex();
+		final var entries = new ImageNameIndex.Entries();
+		final var images = this.images()
+				.list();
+
+		final Consumer<ImageMetaData> converter = (image) -> {
+			final var metadata = new ImageMetadata();
+			metadata.setName(image.id());
+			metadata.setLabel(image.label());
+
+			final var description = new ImageDescription();
+			description.setFstype(image.fileSystemType());
+			description.setType(image.category());
+			description.setId(image.id());
+			metadata.setImage(description);
+
+			final var entry = new ImageNameIndex.Entries.Entry();
+			entry.setKey(image.id() + "|*");
+			entry.setValue(metadata);
+			entries.getEntry()
+					.add(entry);
+		};
+
+		try (images) {
+			images.stream()
+					.forEach(converter);
+		}
+
+		final var index = new ImageNameIndex();
+		index.setEntries(entries);
+		return index;
 	}
+
 
 	// ========== Subresources ==============================
 
-	public class Images {
+	public class Images
+	{
+		/** List all available images */
+		@GET
+		@Secured(roles={Role.PUBLIC})
+		@Produces(MediaType.APPLICATION_JSON)
+		@TypeHint(ImageMetaData[].class)
+		public Streamable<ImageMetaData> list() throws BWFLAException
+		{
+			LOG.info("Listing all available images...");
+			return imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.IMAGES)
+					.fetch(ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
+		}
+
+		@POST
+		@Secured(roles={Role.RESTRICTED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		public Response update(ImageMetaData userMetaData) throws BWFLAException {
+			LOG.info("Updating image metadata...");
+			ImageMetaData storedMetadata;
+			// we only re-use label and ID from user provided metadata
+			try {
+				storedMetadata = imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES).fetch(userMetaData.id(), ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
+			} catch (Throwable e) {
+				LOG.log(Level.WARNING, "Loading metadata failed!", e);
+				throw new BadRequestException(Response.status(Status.BAD_REQUEST)
+						.entity(new ErrorInformation(e))
+						.build());
+			}
+
+			final var updatedMetadata = new ImageMetaData()
+					.setId(userMetaData.id())
+					.setLabel(userMetaData.label())
+					.setCategory(storedMetadata.category());
+
+			// todo set options here. unclear which location will be used.
+			imagearchive.api()
+                        .v2()
+                        .metadata(MetaDataKindV2.IMAGES)
+                        .replace(userMetaData.id(), updatedMetadata, ImageArchiveMappers.OBJECT_TO_JSON_TREE);
+
+			return Response.status(Status.OK).build();
+		}
 
 		/** Create a new environment */
 //		@POST
@@ -1010,33 +1170,31 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Applying image-generalization patch...");
 			try {
-				ImageNameIndex index = envdb.getImagesIndex();
-				ImageNameIndex.Entries.Entry originalEntry = index.getEntries()
-						.getEntry()
-						.stream()
-						.filter(e -> e.getValue().getName().equals(request.getImageId()))
-						.findAny()
-						.get();
+				final var origImage = imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES)
+						.fetch(request.getImageId(), ImageArchiveMappers.JSON_TREE_TO_IMAGE_METADATA);
 
-				ImageMetadata originalMetadata = originalEntry.getValue();
-				LOG.severe("label " + originalMetadata.getLabel());
-
+				// TODO: port patching code to use new image-achive!
 				final String newImageId = (request.getArchive() != null) ?
 						envdb.createPatchedImage(request.getArchive(), request.getImageId(), request.getImageType(), patchId)
 						: envdb.createPatchedImage(request.getImageId(), request.getImageType(), patchId);
 
-				final ImageGeneralizationPatchResponse response = new ImageGeneralizationPatchResponse();
+				final var newImage = new ImageMetaData()
+						.setId(newImageId)
+						.setFileSystemType(origImage.fileSystemType())
+						.setLabel(origImage.label() + " (generalized)")
+						.setCategory(request.getImageType().value());
 
-				ImageMetadata entry = new ImageMetadata();
-				entry.setName(newImageId);
-				entry.setLabel(originalMetadata.getLabel() + " (generalized)");
-				ImageDescription description = new ImageDescription();
-				description.setType(request.getImageType().value());
-				description.setId(newImageId);
-				entry.setImage(description);
+				final var options = new ReplaceOptionsV2()
+						.setLocation(request.getArchive());
 
-				envdb.addNameIndexesEntry(request.getArchive(), entry, null);
+				imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES)
+						.replace(newImageId, newImage, ImageArchiveMappers.OBJECT_TO_JSON_TREE, options);
 
+				final var response = new ImageGeneralizationPatchResponse();
 				response.setStatus("0");
 				response.setImageId(newImageId);
 				return Response.ok()
@@ -1061,7 +1219,11 @@ public class EnvironmentRepository extends EmilRest
 		{
 			LOG.info("Preparing environment-repository...");
 			try {
-				return EnvironmentRepository.successMessageResponse("import of " + emilEnvRepo.initialize() + " environments completed");
+				ServerLifecycleHooks.instance()
+						.started()
+						.get();
+
+				return EnvironmentRepository.successMessageResponse("Preparing environment-repository finished!");
 			}
 			catch (Throwable t) {
 				return EnvironmentRepository.internalErrorResponse(t);
@@ -1220,8 +1382,12 @@ public class EnvironmentRepository extends EmilRest
 		@Produces(MediaType.APPLICATION_JSON)
 		public Response deleteImage(DeleteImageRequest request) throws BWFLAException
 		{
-			LOG.info("delete image");
-			envdb.deleteNameIndexesEntry(request.getImageArchive(), request.getImageId(), null);
+			LOG.info("Deleting image '" + request.getImageId() + "'...");
+			imagearchive.api()
+					.v2()
+					.metadata(MetaDataKindV2.IMAGES)
+					.delete(request.getImageId());
+
 			// envdb.deleteImage(request.getImageArchive(), request.getImageId(), ImageType.USER);
 			return Response.status(Status.OK)
 					.build();
@@ -1284,5 +1450,355 @@ public class EnvironmentRepository extends EmilRest
 
 	private UserContext getUserContext() {
 		return (authenticatedUser != null) ? authenticatedUser : new UserContext();
+	}
+
+	@Override
+	public void register(@Observes MigrationRegistry migrations) throws Exception
+	{
+		migrations.register("import-legacy-image-index", this::importLegacyImageIndex);
+		migrations.register("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
+		migrations.register("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
+	}
+
+	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException
+	{
+		final var index = envdb.getImagesIndex();
+		final var entries = index.getEntries();
+		if (entries == null)
+			return;
+
+		int numImported = 0, numFailed = 0;
+
+		LOG.info("Importing legacy image-index...");
+		for (var entry : entries.getEntry()) {
+			final var srcmd = entry.getValue();
+			final var srcimg = srcmd.getImage();
+			final var image = new ImageMetaData()
+					.setId(srcimg.getId())
+					.setFileSystemType(srcimg.getFstype())
+					.setCategory(srcimg.getType())
+					.setLabel(srcmd.getLabel());
+
+			try {
+				imagearchive.api()
+						.v2()
+						.metadata(MetaDataKindV2.IMAGES)
+						.replace(image.id(), image, ImageArchiveMappers.OBJECT_TO_JSON_TREE);
+
+				LOG.info("Imported metadata for image '" + image.id() + "'");
+				envdb.deleteNameIndexesEntry(image.id(), null);
+				++numImported;
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing metadata for image '" + image.id() + "' failed!", error);
+				++numFailed;
+			}
+		}
+
+		LOG.info("Imported metadata for " + numImported + " image(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Importing legacy image-index failed!");
+	}
+
+	private void importLegacyEmulatorIndex(MigrationConfig mc) throws BWFLAException
+	{
+		final var index = envdb.getNameIndexes();
+		final var entries = index.getEntries();
+		if (entries == null)
+			return;
+
+		final var defaultEmulatorIds = new HashSet<String>();
+		final var aliases = index.getAliases();
+		if (aliases != null) {
+			for (var entry : aliases.getEntry()) {
+				final var value = entry.getValue();
+				if ("latest".equals(value.getAlias())) {
+					final var name = EmulatorSpec.stripLegacyNamePrefix(value.getName());
+					defaultEmulatorIds.add(EmulatorMetaData.identifier(name, value.getVersion()));
+				}
+			}
+		}
+
+		int numImported = 0, numFailed = 0;
+
+		LOG.info("Importing legacy emulator-index...");
+		final var emuMetaHelper = new EmulatorMetaHelperV2(imagearchive, LOG);
+		for (var entry : entries.getEntry()) {
+			final var srcmd = entry.getValue();
+			final var emulator = new EmulatorMetaData()
+					.setName(EmulatorSpec.stripLegacyNamePrefix(srcmd.getName()))
+					.setVersion(srcmd.getVersion())
+					.setDigest(srcmd.getDigest());
+
+			final var srcprov = srcmd.getProvenance();
+			emulator.provenance()
+					.setUrl(srcprov.getOciSourceUrl())
+					.setTag(srcprov.getVersionTag())
+					.setLayers(srcprov.getLayers());
+
+			final var srcimg = srcmd.getImage();
+			emulator.image()
+					.setId(srcimg.getId())
+					.setCategory(srcimg.getType())
+					.setFileSystemType(srcimg.getFstype());
+
+			if (defaultEmulatorIds.contains(emulator.id())) {
+				emulator.tags()
+						.add(EmulatorMetaData.DEFAULT_VERSION);
+			}
+
+			final var emuname = "'" + emulator.name() + " (" + emulator.version() + ")'";
+			try {
+				emuMetaHelper.insert(emulator);
+				LOG.info("Imported metadata for emulator " + emuname);
+				final var backend = DatabaseEnvironmentsAdapter.EMULATOR_DEFAULT_ARCHIVE;
+				envdb.deleteNameIndexesEntry(backend, srcmd.getName(), srcmd.getVersion());
+				++numImported;
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing metadata for emulator " + emuname + " failed!", error);
+				++numFailed;
+			}
+		}
+
+		LOG.info("Imported metadata for " + numImported + " emulator(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Importing legacy emulator-index failed!");
+	}
+
+	private void importLegacyImageArchiveV1(MigrationConfig mc) throws Exception
+	{
+		for (int i = 0; true; ++i) {
+			final var prefix = ConfigHelpers.toListKey("imagearchive.backends", i, ".");
+			final var config = ConfigHelpers.filter(ConfigurationProvider.getConfiguration(), prefix);
+			final var name = config.get("name");
+			if (name == null)
+				break;
+
+			if (name.equals("emulators"))
+				continue;
+
+			final var basedir = Paths.get(config.get("basepath"));
+			final var maxFailureRate = MigrationUtils.getFailureRate(mc);
+
+			LOG.info("Importing legacy image-archive (" + name + ")...");
+			this.importLegacyEnvironmentsV1(basedir, name, maxFailureRate);
+			this.importLegacyImagesV1(basedir, name, maxFailureRate);
+			this.importLegacyBlobsV1(basedir, name, maxFailureRate);
+		}
+	}
+
+	private void importLegacyEnvironmentsV1(java.nio.file.Path basedir, String location, float maxFailureRate)
+			throws Exception
+	{
+		final var kinds = new String[] {
+				"base",
+				"containers",
+				"derivate",
+				"object",
+				"user",
+		};
+
+		basedir = basedir.resolve("meta-data");
+
+		final var counter = ImportCounts.counter();
+		for (final var kind : kinds)
+			this.importLegacyEnvironmentsV1(basedir, location, kind, counter);
+
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " environment(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Importing legacy environments failed!");
+	}
+
+	private void importLegacyEnvironmentsV1(java.nio.file.Path basedir, String location,
+											String kind, MultiCounter counter)
+			throws Exception
+	{
+		final var srcdir = basedir.resolve(kind);
+		if (!Files.exists(srcdir)) {
+			LOG.info("No " + kind + "-environments found!");
+			return;
+		}
+
+		final var options = new ReplaceOptionsV2()
+				.setLocation(location);
+
+		final var environments = imagearchive.api()
+				.v2()
+				.environments();
+
+		final Consumer<java.nio.file.Path> importer = (file) -> {
+			try {
+				// simply import metadata from legacy archive...
+				final var env = Environment.fromValue(Files.readString(file));
+				List<AbstractDataResource> resources = null;
+				if (env instanceof MachineConfiguration)
+					resources = ((MachineConfiguration) env).getAbstractDataResource();
+				else if (env instanceof ContainerConfiguration)
+					resources = ((ContainerConfiguration) env).getDataResources();
+
+				if (resources != null) {
+					resources.forEach((resource) -> {
+						if (resource instanceof ImageArchiveBinding) {
+							final var binding = (ImageArchiveBinding) resource;
+							binding.setBackendName(null);
+							binding.setUrl(null);
+						}
+					});
+				}
+
+				environments.replace(env.getId(), env, options);
+				counter.increment(ImportCounts.IMPORTED);
+				LOG.info("Imported environment '" + env.getId() + "'");
+
+				Files.delete(file);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing environment '" + file.getFileName() + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+			}
+		};
+
+		try (final var files = Files.list(srcdir)) {
+			files.filter((file) -> !Files.isDirectory(file))
+					.forEach(importer);
+		}
+	}
+
+	private void importLegacyImagesV1(java.nio.file.Path basedir, String location, float maxFailureRate)
+			throws Exception
+	{
+		final var kinds = new String[] {
+				"base",
+				"containers",
+				"derivate",
+				"object",
+				"user",
+		};
+
+		basedir = basedir.resolve("images");
+
+		final var counter = ImportCounts.counter();
+		for (final var kind : kinds)
+			this.importLegacyImagesV1(basedir, location, kind, counter);
+
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " image(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Importing legacy images failed!");
+	}
+
+	private void importLegacyImagesV1(java.nio.file.Path basedir, String location,
+									  String kind, MultiCounter counter)
+			throws Exception
+	{
+		final var srcdir = basedir.resolve(kind);
+		if (!Files.exists(srcdir)) {
+			LOG.info("No " + kind + "-images found!");
+			return;
+		}
+
+		final var options = new ReplaceOptionsV2()
+				.setLocation(location);
+
+		final var images = imagearchive.api()
+				.v2()
+				.images();
+
+		final Consumer<java.nio.file.Path> importer = (file) -> {
+			final var id = file.getFileName().toString();
+			// first, update backing file's URL in-place
+			try {
+				final var info = new ImageInformation(file.toString(), LOG);
+				if (info.hasBackingFile()) {
+					final var backingFileUrl = info.getBackingFile();
+					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
+					if (!backingFileUrl.equals(backingImageId)) {
+						LOG.info("Rebasing image: " + id + " --> " + backingImageId);
+						EmulatorUtils.changeBackingFile(file, backingImageId, LOG);
+					}
+				}
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Rebasing image '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+				return;
+			}
+
+			// then, import (possibly rebased) image directly
+			try (final var image = Files.newInputStream(file)) {
+				images.replace(id, image, options);
+				counter.increment(ImportCounts.IMPORTED);
+				LOG.info("Imported image '" + id + "'");
+
+				Files.delete(file);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing image '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+			}
+		};
+
+		try (final var files = Files.list(srcdir)) {
+			files.filter((file) -> !Files.isDirectory(file))
+					.forEach(importer);
+		}
+	}
+
+	private void importLegacyBlobsV1(java.nio.file.Path basedir, String location, float maxFailureRate)
+			throws Exception
+	{
+		final var api = imagearchive.api()
+				.v2();
+
+		basedir = basedir.resolve("images");
+
+		this.importLegacyBlobsV1(basedir, location, "rom", api.roms(), maxFailureRate);
+		this.importLegacyBlobsV1(basedir, location, "checkpoint", api.checkpoints(), maxFailureRate);
+	}
+
+	private void importLegacyBlobsV1(java.nio.file.Path basedir, String location, String kind,
+									 RemoteResourceRW<InputStream,?> api, float maxFailureRate)
+			throws Exception
+	{
+		final var srcdir = basedir.resolve(kind + "s");
+		if (!Files.exists(srcdir)) {
+			LOG.info("No " + kind + "s found!");
+			return;
+		}
+
+		final var options = new ReplaceOptionsV2()
+				.setLocation(location);
+
+		final var counter = ImportCounts.counter();
+
+		final Consumer<java.nio.file.Path> importer = (file) -> {
+			final var id = file.getFileName().toString();
+			try (final var blob = Files.newInputStream(file)) {
+				api.replace(id, blob, options);
+				counter.increment(ImportCounts.IMPORTED);
+				LOG.info("Imported " + kind + " '" + id + "'");
+
+				Files.delete(file);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing " + kind + " '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+			}
+		};
+
+		try (final var files = Files.list(srcdir)) {
+			files.filter((file) -> !Files.isDirectory(file))
+					.forEach(importer);
+		}
+
+		final var numImported = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		LOG.info("Imported " + numImported + " " + kind + "(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Importing legacy " + kind + "s failed!");
 	}
 }

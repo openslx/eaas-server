@@ -17,41 +17,26 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
+package com.openslx.eaas.imagearchive.indexing;
 
-import com.openslx.eaas.common.databind.Streamable;
-import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
-import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
+import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
+import com.openslx.eaas.imagearchive.indexing.impl.AliasingIndex;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public abstract class AbstractResourceRWM<T> extends AbstractResourceRW<T>
+public class MetaFetcher
 {
-	protected final Class<T> clazz;
+	private AliasingIndex aliases;
 
 
-	// ===== IManyReadable API ==============================
-
-	public Streamable<T> fetch() throws BWFLAException
+	public MetaFetcher with(AliasingIndex index)
 	{
-		return this.fetch((FetchOptionsV2) null);
+		this.aliases = index;
+		return this;
 	}
 
-	public Streamable<T> fetch(FetchOptionsV2 options) throws BWFLAException
+	public AliasingDescriptor aliasing(String id) throws BWFLAException
 	{
-		final var response = this.manyreadable()
-				.fetch(options);
-
-		return Streamable.of(response, clazz);
+		return (aliases != null) ? aliases.fetch(id) : null;
 	}
-
-
-	// ===== Internal Helpers ==============================
-
-	protected AbstractResourceRWM(Class<T> clazz)
-	{
-		this.clazz = clazz;
-	}
-
-	protected abstract IManyReadable<T> manyreadable();
 }

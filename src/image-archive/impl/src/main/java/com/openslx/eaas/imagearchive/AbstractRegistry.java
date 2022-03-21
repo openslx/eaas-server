@@ -20,7 +20,9 @@
 package com.openslx.eaas.imagearchive;
 
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.logging.Level;
+import java.util.stream.Stream;
 
 
 public class AbstractRegistry<T extends AutoCloseable> implements AutoCloseable
@@ -37,6 +39,12 @@ public class AbstractRegistry<T extends AutoCloseable> implements AutoCloseable
 	public void close() throws Exception
 	{
 		entries.forEach(AbstractRegistry::close);
+	}
+
+	public Stream<T> stream()
+	{
+		return entries.stream()
+				.filter(Objects::nonNull);
 	}
 
 

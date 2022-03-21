@@ -25,6 +25,9 @@ import javax.ws.rs.PathParam;
 
 public interface IArchiveV2
 {
+	@Path("/aliases")
+	IAliasesV2 aliases();
+
 	@Path("/metadata/{kind}")
 	IMetaDataV2 metadata(@PathParam("kind") String kind);
 

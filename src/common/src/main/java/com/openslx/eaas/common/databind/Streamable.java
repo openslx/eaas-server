@@ -34,6 +34,7 @@ import java.io.InputStream;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.Spliterators;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
@@ -100,6 +101,16 @@ public class Streamable<T> implements AutoCloseable
 		return new Streamable<>(stream, cleanups);
 	}
 
+	public static <T,U> Streamable<U> of(Stream<T> stream, Function<T,U> mapper)
+	{
+		return Streamable.of(stream, mapper, null);
+	}
+
+	public static <T,U> Streamable<U> of(Stream<T> stream, Function<T,U> mapper, TaskStack cleanups)
+	{
+		return new Streamable<>(stream.map(mapper), cleanups);
+	}
+
 	@JsonCreator
 	public static <T> Streamable<T> of(Collection<T> collection)
 	{
@@ -109,18 +120,38 @@ public class Streamable<T> implements AutoCloseable
 		return new Streamable<>(collection, null);
 	}
 
+	public static <T,U> Streamable<U> of(Collection<T> collection, Function<T,U> mapper)
+	{
+		final var stream = collection.stream()
+				.map(mapper);
+
+		return new Streamable<>(stream, null);
+	}
+
 	public static <T> Streamable<T> of(InputStream input, Class<T> clazz) throws BWFLAException
 	{
-		return Streamable.of(input, clazz, new TaskStack(2));
+		final Function<T,T> mapper = (value) -> value;
+		return Streamable.of(input, clazz, mapper);
+	}
+
+	public static <T,U> Streamable<U> of(InputStream input, Class<T> clazz, Function<T,U> mapper) throws BWFLAException
+	{
+		return Streamable.of(input, clazz, mapper, new TaskStack(2));
 	}
 
 	public static <T> Streamable<T> of(Response response, Class<T> clazz) throws BWFLAException
+	{
+		final Function<T,T> mapper = (value) -> value;
+		return Streamable.of(response, clazz, mapper);
+	}
+
+	public static <T,U> Streamable<U> of(Response response, Class<T> clazz, Function<T,U> mapper) throws BWFLAException
 	{
 		final var cleanups = new TaskStack(4);
 		cleanups.push("close-response", () -> Streamable.close(response, "response"));
 		try {
 			final var input = response.readEntity(InputStream.class);
-			return Streamable.of(input, clazz, cleanups);
+			return Streamable.of(input, clazz, mapper, cleanups);
 		}
 		catch (BWFLAException error) {
 			cleanups.execute();
@@ -151,7 +182,7 @@ public class Streamable<T> implements AutoCloseable
 		this.stream = null;
 	}
 
-	private static <T> Streamable<T> of(InputStream input, Class<T> clazz, TaskStack cleanups)
+	private static <T,U> Streamable<U> of(InputStream input, Class<T> clazz, Function<T,U> mapper, TaskStack cleanups)
 			throws BWFLAException
 	{
 		cleanups.push("close-input-stream", () -> Streamable.close(input, "input-stream"));
@@ -164,7 +195,9 @@ public class Streamable<T> implements AutoCloseable
 			cleanups.push("close-input-parser", () -> Streamable.close(iterator, "input-parser"));
 
 			final var spliterator = Spliterators.spliteratorUnknownSize(iterator, 0);
-			final var stream = StreamSupport.stream(spliterator, false);
+			final var stream = StreamSupport.stream(spliterator, false)
+					.map(mapper);
+
 			return new Streamable<>(stream, cleanups);
 		}
 		catch (Exception error) {

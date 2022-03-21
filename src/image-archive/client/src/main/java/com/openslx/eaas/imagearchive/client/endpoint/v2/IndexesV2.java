@@ -21,16 +21,15 @@ package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.api.v2.IIndexesV2;
+import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResource;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 
-public class IndexesV2
+public class IndexesV2 extends RemoteResource<IIndexesV2>
 {
-	private final IIndexesV2 api;
-
 	public IndexesV2(IIndexesV2 api)
 	{
-		this.api = api;
+		super(api);
 	}
 
 	public boolean exists(String name)

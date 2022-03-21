@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.service;
 
+import com.openslx.eaas.imagearchive.databind.AliasingDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
 import com.openslx.eaas.imagearchive.indexing.BlobIndex;
 import com.openslx.eaas.imagearchive.indexing.FilterOptions;
@@ -26,6 +27,7 @@ import com.openslx.eaas.imagearchive.storage.StorageLocation;
 import com.openslx.eaas.imagearchive.storage.StorageRegistry;
 import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.blobstore.BlobStore;
+import de.bwl.bwfla.common.database.document.DocumentCollection;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 import javax.ws.rs.core.MediaType;
@@ -33,11 +35,13 @@ import java.io.InputStream;
 import java.time.Duration;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 
 
 public abstract class BlobService<T extends BlobDescriptor> extends AbstractService<T>
 {
 	private final StorageRegistry storage;
+	private final MetaRemover metaremover;
 
 	public static final long UNKNOWN_SIZE = -1L;
 
@@ -146,7 +150,13 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 		blob.remove();
 
 		// remove blob's record from index
-		return super.remove(id);
+		final var removed = super.remove(id);
+		if (removed)
+			this.logger().info("Blob '" + id + "' removed");
+
+		// remove blob's metadata
+		metaremover.remove(id);
+		return removed;
 	}
 
 	/** Return blob's download URL */
@@ -186,13 +196,40 @@ public abstract class BlobService<T extends BlobDescriptor> extends AbstractServ
 		return blob.newPreSignedUrl(method, seconds, TimeUnit.SECONDS);
 	}
 
+	/** Update blob's inlined aliases */
+	public void update(String id, AliasingDescriptor aliasing)
+	{
+		final var aliases = (aliasing != null) ? aliasing.aliases() : null;
+		final var update = DocumentCollection.updater();
+		final var field = BlobDescriptor.Fields.ALIASES;
+		if (aliases == null || aliases.isEmpty())
+			update.unset(field);
+		else update.set(field, aliases);
+
+		final var logger = this.logger();
+		try {
+			if (this.update(id, update))
+				logger.info("Aliasing updated for blob '" + id + "'");
+		}
+		catch (Exception error) {
+			logger.log(Level.WARNING, "Updating aliasing for blob '" + id + "' failed!", error);
+		}
+	}
+
 
 	// ===== Internal Helpers ==============================
 
 	protected BlobService(StorageRegistry storage, BlobIndex<T> index, Filter<String> idfilter, Filter<FilterOptions> optfilter)
 	{
+		this(storage, index, idfilter, optfilter, new MetaRemover());
+	}
+
+	protected BlobService(StorageRegistry storage, BlobIndex<T> index, Filter<String> idfilter,
+						  Filter<FilterOptions> optfilter, MetaRemover remover)
+	{
 		super(index, idfilter, optfilter);
 		this.storage = storage;
+		this.metaremover = remover;
 	}
 
 	/** Find named storage location */

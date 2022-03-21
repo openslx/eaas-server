@@ -19,6 +19,10 @@ public class CreateContainerImageRequest {
     @XmlElement
     private String urlString;
 
+    @XmlElement(defaultValue = "false")
+    private boolean checkForExistingDigest;
+
+
     public String getTag() {
         return tag;
     }
@@ -35,6 +39,10 @@ public class CreateContainerImageRequest {
         return urlString;
     }
 
+    public boolean shouldCheckForExistingDigest() {
+        return checkForExistingDigest;
+    }
+
     public void setTag(String tag) {
         this.tag = tag;
     }
@@ -49,6 +57,10 @@ public class CreateContainerImageRequest {
 
     public void setUrlString(String urlString) {
         this.urlString = urlString;
+    }
+
+    public void setCheckForExistingDigest(boolean checkForExistingDigest) {
+        this.checkForExistingDigest = checkForExistingDigest;
     }
 
     @XmlEnum

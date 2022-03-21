@@ -46,8 +46,9 @@ public class DatabaseEnvironmentsAdapter {
         environmentsAdapter.setDefaultEnvironment(osId, envId);
     }
 
-    private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
+    public static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
+    @Deprecated
     public ImageNameIndex getNameIndexes() throws BWFLAException {
         return environmentsAdapter.getNameIndexes(EMULATOR_DEFAULT_ARCHIVE);
     }
@@ -56,18 +57,17 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.getImageGeneralizationPatches();
     }
 
-    public void addNameIndexesEntry(String backend, ImageMetadata entry, Alias alias) throws BWFLAException {
-        environmentsAdapter.addNameIndexesEntry(backend, entry, alias);
+    @Deprecated
+    public void deleteNameIndexesEntry(String id, String version) throws BWFLAException {
+        environmentsAdapter.deleteNameIndexesEntry(id, version);
     }
 
+    @Deprecated
     public void deleteNameIndexesEntry(String backend, String id, String version) throws BWFLAException {
         environmentsAdapter.deleteNameIndexesEntry(backend, id, version);
     }
 
-    public void updateLatestEmulator(String backend, String emulator, String version) throws BWFLAException {
-        environmentsAdapter.updateLatestEmulator(backend, emulator, version);
-    }
-
+    @Deprecated
     public ImageNameIndex getImagesIndex() throws BWFLAException
     {
         return environmentsAdapter.getNameIndexes();
