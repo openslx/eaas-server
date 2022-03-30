@@ -344,7 +344,7 @@ public class EnvironmentsV2
 			for (var task : tasks) {
 				final var result = archive.imports()
 						.watch(task.taskid)
-						.get(1L, TimeUnit.HOURS);
+						.get(10L, TimeUnit.HOURS);
 
 				if (result.state() != ImportStateV2.FINISHED)
 					throw new BWFLAException("Importing image failed!");

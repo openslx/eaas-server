@@ -130,6 +130,11 @@ public class Session extends JaxbType
 		return components;
 	}
 
+	public void onTimeout(Components endpoint, Logger log)
+	{
+		// Empty!
+	}
+
 	public void keepalive(Components endpoint, Logger log)
 	{
 		final Function<SessionComponent, Long> checker = (component) -> {

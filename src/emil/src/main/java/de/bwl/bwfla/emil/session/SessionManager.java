@@ -23,6 +23,9 @@ import de.bwl.bwfla.emil.Components;
 import de.bwl.bwfla.emil.session.rest.DetachRequest;
 import org.apache.tamaya.inject.api.Config;
 
+import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
+import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import java.time.Duration;
@@ -48,6 +51,16 @@ public class SessionManager
 	@Inject
 	@Config("components.client_timeout")
 	protected Duration sessionExpirationTimeout;
+
+	@Inject
+	@Config("components.client_timeout")
+	private Duration resourceExpirationTimeout;
+
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
+
+	@Resource(lookup = "java:jboss/ee/concurrency/scheduler/default")
+	private ManagedScheduledExecutorService scheduler;
 
 	/** Registers a new session */
 	public void register(Session session)
@@ -87,6 +100,7 @@ public class SessionManager
 			}
 			else {
 				session.setConfiguredExpirationTime(unit.toMillis(lifetime));
+				session.setExpirationTimestamp(unit.toMillis(lifetime) + timems()); // XXX needed if session is not running.
 			}
 
 			if (title != null && title.getComponentName() != null) {
@@ -113,7 +127,7 @@ public class SessionManager
 		sessions.computeIfPresent(id, (unused, session) -> {
 
 			long expTime = session.getConfiguredExpirationTime();
-			if(expTime < 0)
+			if (expTime < 0)
 				return session;
 
 			session.setExpirationTimestamp(expTime + SessionManager.timems());
@@ -131,8 +145,8 @@ public class SessionManager
 		sessions.forEach((id, session) -> {
 			// Remove stale entries...
 			if (curtime > session.getLastUpdate() + timeout) {
+				log.info("Stale session found: " + id);
 				idsToRemove.add(id);
-				return;
 			}
 
 			if (session.isDetached()) {
@@ -140,8 +154,6 @@ public class SessionManager
 					idsToRemove.add(id);
 				else
 					executor.execute(new SessionKeepAliveTask(session, log));
-
-				return;
 			}
 		});
 
@@ -157,6 +169,8 @@ public class SessionManager
 		final Session session = this.get(id);
 		if (session == null)
 			return;
+
+		session.onTimeout(endpoint, log);
 
 		final Collection<String> components = session.components()
 				.stream()
@@ -210,6 +224,14 @@ public class SessionManager
 
 
 	// ========== Internal Helpers ====================
+
+	@PostConstruct
+	private void initialize()
+	{
+		final Runnable trigger = () -> executor.execute(() -> update(executor));
+		final long delay = resourceExpirationTimeout.toMillis() / 5L;
+		scheduler.scheduleWithFixedDelay(trigger, delay, delay, TimeUnit.MILLISECONDS);
+	}
 
 	private class SessionKeepAliveTask implements Runnable
 	{

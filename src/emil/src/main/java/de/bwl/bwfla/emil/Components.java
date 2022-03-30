@@ -81,8 +81,6 @@ import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
-import de.bwl.bwfla.emil.session.Session;
-import de.bwl.bwfla.emil.session.SessionComponent;
 import de.bwl.bwfla.emil.session.SessionManager;
 import de.bwl.bwfla.emil.tasks.CreateSnapshotTask;
 import de.bwl.bwfla.emil.utils.EventObserver;
@@ -100,7 +98,6 @@ import org.apache.tamaya.inject.api.Config;
 import de.bwl.bwfla.api.eaas.EaasWS;
 import de.bwl.bwfla.api.emucomp.Component;
 import de.bwl.bwfla.api.emucomp.Machine;
-import de.bwl.bwfla.common.datatypes.EaasState;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
@@ -831,6 +828,10 @@ public class Components {
                 conf.getUiOptions().setForwarding_system("HEADLESS");
             }
 
+            if (machineDescription.hasOutput()){
+                EmulationEnvironmentHelper.registerDriveForOutput((MachineConfiguration) chosenEnv, machineDescription.getOutputDriveId());
+            }
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -1363,9 +1364,19 @@ public class Components {
         return result;
     }
 
+
+    public TaskStateResponse updateTask(TaskStateResponse taskStateResponse) {
+        return taskManager.lookup(taskStateResponse.getTaskId(), true);
+    }
+
     public TaskStateResponse snapshotAsync(String componentId, SnapshotRequest request, UserContext userContext) throws Exception {
          Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
          return new TaskStateResponse(taskManager.submitTask(new CreateSnapshotTask(snapshot, componentId, request, false, userContext)));
+    }
+
+    public SnapshotResponse snapshot(String componentId, SnapshotRequest request, UserContext userContext) throws Exception{
+        Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
+        return snapshot.handleSnapshotRequest(componentId, request, false, userContext);
     }
 
     /**

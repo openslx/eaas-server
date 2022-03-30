@@ -25,6 +25,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Logger;
@@ -556,7 +557,25 @@ public class EmulationEnvironmentHelper {
 		chosenEnv.getUiOptions().setHtml5(html);
     }
 
+    public static void registerDriveForOutput(MachineConfiguration envConfig, String idToSet) {
+        log.info("Registering Drive " + idToSet + " for file download.");
 
+        boolean setBootDrive = idToSet == null || idToSet.equals("boot");
+
+        for (Drive drive : envConfig.getDrive()) {
+
+            if (drive.getData() != null && drive.getType().equals(DriveType.DISK)) {
+
+                String id = drive.getData().replace("binding://", "");
+
+                if (setBootDrive && drive.isBoot() || Objects.equals(idToSet, id)) {
+                    envConfig.setOutputBindingId(id);
+                    return;
+                }
+            }
+        }
+        log.warning("Could not find drive " + idToSet + ". Output will not be retrieved properly!");
+    }
 
 	/*
 	 * public static List<Resource> getIndirectBindings(EmulationEnvironment

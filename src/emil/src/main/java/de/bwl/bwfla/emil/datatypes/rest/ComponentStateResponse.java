@@ -32,4 +32,8 @@ public class ComponentStateResponse extends ComponentResponse {
         super(id);
         this.state = state;
     }
+
+    public String getState() {
+        return state;
+    }
 }
