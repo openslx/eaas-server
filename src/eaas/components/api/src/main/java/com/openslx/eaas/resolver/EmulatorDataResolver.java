@@ -18,22 +18,23 @@
 
 package com.openslx.eaas.resolver;
 
+import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 
-public class DataResolvers
+
+public class EmulatorDataResolver extends DataResolver
 {
-	public static ImageDataResolver images()
+	public EmulatorDataResolver()
 	{
-		return IMAGES;
+		super(DataResolver.getDefaultEndpoint());
 	}
 
-	public static EmulatorDataResolver emulators()
+	public String resolve(String imageid)
 	{
-		return EMULATORS;
+		return this.resolve(null, "emulators", imageid);
 	}
 
-
-	// ===== Internal Helpers ====================
-
-	private static final ImageDataResolver IMAGES = new ImageDataResolver();
-	private static final EmulatorDataResolver EMULATORS = new EmulatorDataResolver();
+	public String resolve(ImageArchiveBinding binding)
+	{
+		return this.resolve(binding.getImageId());
+	}
 }
