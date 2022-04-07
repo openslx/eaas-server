@@ -80,4 +80,8 @@ public class DatabaseEnvironmentsAdapter {
     public List<DefaultEntry> getDefaultEnvironments() throws BWFLAException {
         return environmentsAdapter.getDefaultEnvironments("default");
     }
+
+    public String resolveEmulatorImage(String imgid) throws BWFLAException {
+        return environmentsAdapter.resolveEmulatorImage(imgid);
+    }
 }

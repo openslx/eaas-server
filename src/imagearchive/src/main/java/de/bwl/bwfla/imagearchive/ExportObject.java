@@ -20,8 +20,15 @@ public class ExportObject extends HttpExportServlet
 
 	private File resolveFile(String imageArchiveName, String filename)
 	{
+		final var backend = this.getImageArchiveBackend(imageArchiveName);
+		if (backend == null)
+			return null;
+
+		final var basepath = backend.getConfig()
+				.getImagePath();
+
 		for (ImageType type : ImageType.values()) {
-			File f = new File(getImageArchiveBackend(imageArchiveName).getConfig().getImagePath() + "/" + type.name() + filename);
+			File f = new File(basepath + "/" + type.name() + filename);
 			if (f.exists())
 				return f;
 		}

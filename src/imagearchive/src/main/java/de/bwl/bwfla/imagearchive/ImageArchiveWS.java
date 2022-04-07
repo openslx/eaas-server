@@ -101,6 +101,11 @@ public class ImageArchiveWS
 				.getEnvironments(type);
 	}
 
+	public String resolveImage(String backend, String imageid) throws BWFLAException
+	{
+		return this.getExportPrefix(backend) + imageid;
+	}
+
 	public boolean deleteImage(String backend, String imageId, String type) throws BWFLAException
 	{
 		return this.lookup(backend)
