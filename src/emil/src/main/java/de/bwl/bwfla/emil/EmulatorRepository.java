@@ -34,11 +34,16 @@ import javax.annotation.PostConstruct;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
+import javax.ws.rs.core.Response;
+import java.net.URI;
 import java.util.logging.Level;
 
 
@@ -48,6 +53,9 @@ public class EmulatorRepository extends EmilRest
 {
 	@Inject
 	private EmilEnvironmentRepository emilEnvRepo = null;
+
+	@Inject
+	private DatabaseEnvironmentsAdapter emuImageArchive = null;
 
 	private ImageArchiveClient imagearchive = null;
 	private EmulatorMetaHelperV2 emuMetaHelper = null;
@@ -59,6 +67,12 @@ public class EmulatorRepository extends EmilRest
 	public Emulators emulators()
 	{
 		return new Emulators();
+	}
+
+	@Path("/images")
+	public Images images()
+	{
+		return new Images();
 	}
 
 
@@ -86,6 +100,41 @@ public class EmulatorRepository extends EmilRest
 		public void makrAsDefault(@PathParam("emuid") String emuid) throws BWFLAException
 		{
 			emuMetaHelper.markAsDefault(emuid);
+		}
+	}
+
+	public class Images
+	{
+		@HEAD
+		@Path("/{imgid}/url")
+		public Response resolveHEAD(@PathParam("imgid") String imgid)
+		{
+			return this.resolve(imgid, HttpMethod.HEAD);
+		}
+
+		@GET
+		@Path("/{imgid}/url")
+		public Response resolveGET(@PathParam("imgid") String imgid)
+		{
+			return this.resolve(imgid, HttpMethod.GET);
+		}
+
+		private Response resolve(String imgid, String method)
+		{
+			try {
+				// TODO: replace legacy emulator-archive!
+				final var location = emuImageArchive.resolveEmulatorImage(imgid);
+				if (location == null || location.isEmpty())
+					throw new NotFoundException();
+
+				LOG.info("Resolving emulator image '" + imgid + "' -> " + method + " " + location);
+				return Response.temporaryRedirect(new URI(location))
+						.build();
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Resolving emulator image '" + imgid + "' failed!", error);
+				throw new NotFoundException();
+			}
 		}
 	}
 
