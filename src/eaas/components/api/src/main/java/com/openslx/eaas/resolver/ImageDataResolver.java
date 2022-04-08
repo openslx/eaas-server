@@ -18,6 +18,7 @@
 
 package com.openslx.eaas.resolver;
 
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 
 
@@ -31,5 +32,10 @@ public class ImageDataResolver extends ComponentDataResolver
 	public String resolve(String component, ImageArchiveBinding binding)
 	{
 		return this.resolve(component, binding.getImageId());
+	}
+
+	public String resolve(ImageArchiveBinding binding, UserContext userctx)
+	{
+		return this.resolve(userctx, kind, binding.getImageId());
 	}
 }
