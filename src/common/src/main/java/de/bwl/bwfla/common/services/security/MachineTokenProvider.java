@@ -107,6 +107,7 @@ public class MachineTokenProvider {
         return new MachineToken(lifetime, refresher);
     }
 
+    @Deprecated
     public static String getAuthenticationProxy()
     {
         if( getApiKey() != null )

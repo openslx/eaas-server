@@ -165,7 +165,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
             request.imagearchive.api()
                     .v2()
                     .environments()
-                    .replicate(request.env, resources, options);
+                    .replicate(request.env, resources, request.userctx, options);
 
             request.repository.replicate(request.emilEnvironment, request.destArchive, request.userctx);
         }
