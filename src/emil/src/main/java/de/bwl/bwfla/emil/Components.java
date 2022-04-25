@@ -977,14 +977,14 @@ public class Components {
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
         try {
-            if (!this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class).getComponentType(componentId)
+            if (!component.getComponentType(componentId)
                     .equals("machine")) {
                 return new ComponentResponse(componentId);
             }
 
             // TODO: find a way to get the correct driveId here
             return new MachineComponentResponse(componentId, new ArrayList<>());
-        } catch (BWFLAException | MalformedURLException e) {
+        } catch (BWFLAException e) {
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
                             + e.getMessage(),
@@ -1122,7 +1122,7 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
         try {
-            String state = this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class).getState(componentId);
+            final String state = component.getState(componentId);
             if (state.equals(ComponentState.OK.toString()) || state.equals(ComponentState.INACTIVE.toString()) || state.equals(ComponentState.READY.toString())) {
                 return new ComponentStateResponse(componentId, state);
             } else if (state.equals(ComponentState.STOPPED.toString()) || state.equals(ComponentState.FAILED.toString())) {
@@ -1133,7 +1133,7 @@ public class Components {
                         .entity("The component associated with your session has failed.")
                         .build());
             }
-        } catch (BWFLAException | MalformedURLException e) {
+        } catch (BWFLAException e) {
             // TODO: 400 if the component id is syntactically wrong
             // TODO: 404 if the component cannot be found
             throw new InternalServerErrorException(Response.serverError()
@@ -1162,9 +1162,8 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
         try {
-            Component component = this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class);
             return component.getControlUrls(componentId).getEntry().stream().collect(Collectors.toMap(e -> e.getKey(), e -> URI.create(e.getValue())));
-        } catch (BWFLAException | MalformedURLException e) {
+        } catch (BWFLAException e) {
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
                             + e.getMessage(),
