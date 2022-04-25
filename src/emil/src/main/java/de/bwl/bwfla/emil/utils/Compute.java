@@ -69,7 +69,7 @@ public class Compute {
 
         ComputeResponse response = new ComputeResponse();
         response.setId(headlessSession.id());
-        response.setResult(headlessSession.getResult(endpoint));
+        response.setResult(headlessSession.getResult(endpoint, LOG));
 
         return Response.status(Response.Status.OK).entity(response).build();
     }

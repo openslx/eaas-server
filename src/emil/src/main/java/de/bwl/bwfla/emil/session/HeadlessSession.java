@@ -12,6 +12,7 @@ import de.bwl.bwfla.emil.datatypes.snapshot.SaveNewEnvironmentRequest;
 import de.bwl.bwfla.emucomp.api.ComponentState;
 
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 
@@ -50,7 +51,7 @@ public class HeadlessSession extends Session {
         headlessComponents.forEach(c -> components().add(new SessionComponent(c.getComponentId())));
     }
 
-    public List<ComputeResponse.ComputeResult> getResult(Components endpoint) {
+    public List<ComputeResponse.ComputeResult> getResult(Components endpoint, Logger log) {
         if (!isFinished) {
             return null;
         }
@@ -61,7 +62,14 @@ public class HeadlessSession extends Session {
                         c -> {
                             ComputeResponse.ComputeResult cr = new ComputeResponse.ComputeResult();
                             cr.setComponentId(c.getComponentId());
-                            cr.setState(((ComponentStateResponse) endpoint.getState(cr.getComponentId())).getState());
+                            try {
+                                final var response = endpoint.getState(cr.getComponentId());
+                                cr.setState(((ComponentStateResponse) response).getState());
+                            }
+                            catch (Exception error) {
+                                log.log(Level.WARNING, "Fetching component's state failed!", error);
+                                cr.setState(ComponentState.FAILED.toString());
+                            }
 
                             if (c.shouldSaveEnvironment()) {
                                 SnapshotResponse taskResponse;
