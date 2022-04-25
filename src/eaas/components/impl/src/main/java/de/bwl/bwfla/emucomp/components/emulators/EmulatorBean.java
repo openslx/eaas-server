@@ -889,6 +889,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			// Prepare the connector for guacamole connections
 			{
 				final IThrowingSupplier<GuacTunnel> clientTunnelCtor = () -> {
+					if (emuBeanState.fetch() == EmuCompState.EMULATOR_STOPPED) {
+						final var message = "Attaching client to stopped emulator failed!";
+						LOG.warning(message);
+						throw new IllegalStateException(message);
+					}
+
 					final Runnable waitTask = () -> {
 						try {
 							EmulatorBean.this.attachClientToEmulator();
