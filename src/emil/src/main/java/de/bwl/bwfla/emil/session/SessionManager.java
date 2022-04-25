@@ -95,11 +95,11 @@ public class SessionManager
 	{
 		sessions.computeIfPresent(sid, (unused, session) -> {
 			session.setName(name);
-			if (lifetime < 0) {
-				session.setConfiguredExpirationTime(-1);
+			if (lifetime < 0L) {
+				session.setLifetime(-1L);
 			}
 			else {
-				session.setConfiguredExpirationTime(unit.toMillis(lifetime));
+				session.setLifetime(unit.toMillis(lifetime));
 				session.setExpirationTimestamp(unit.toMillis(lifetime) + timems()); // XXX needed if session is not running.
 			}
 
@@ -125,12 +125,10 @@ public class SessionManager
 	public boolean keepalive(String id)
 	{
 		sessions.computeIfPresent(id, (unused, session) -> {
+			final long lifetime = session.getLifetime();
+			if (lifetime > 0L)
+				session.setExpirationTimestamp(SessionManager.timems() + lifetime);
 
-			long expTime = session.getConfiguredExpirationTime();
-			if (expTime < 0)
-				return session;
-
-			session.setExpirationTimestamp(expTime + SessionManager.timems());
 			return session;
 		});
 		return true;

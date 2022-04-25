@@ -47,7 +47,7 @@ public class Session extends JaxbType
 	private String name;
 
 	private long expirationTimestamp = -1L;
-	private long configuredExpirationTimestamp = -1L;
+	private long lifetime = -1L;
 	private boolean detached = false;
 	private boolean failed = false;
 	private long lastUpdate;
@@ -79,7 +79,7 @@ public class Session extends JaxbType
 
 	public boolean hasExpirationTimestamp()
 	{
-		return configuredExpirationTimestamp > 0L;
+		return expirationTimestamp > 0L;
 	}
 
 	long getExpirationTimestamp()
@@ -87,14 +87,14 @@ public class Session extends JaxbType
 		return expirationTimestamp;
 	}
 
-	long getConfiguredExpirationTime()
+	public long getLifetime()
 	{
-		return configuredExpirationTimestamp;
+		return lifetime;
 	}
 
-	void setConfiguredExpirationTime(long timestamp)
+	public void setLifetime(long lifetime)
 	{
-		this.configuredExpirationTimestamp = timestamp;
+		this.lifetime = lifetime;
 		detached = true;
 	}
 
@@ -153,7 +153,7 @@ public class Session extends JaxbType
 				.reduce(Long::sum);
 
 		if (numfailed.isPresent() && numfailed.get() > 0L)
-			log.info(numfailed + " out of " + components.size() + " component(s) failed in session " + id + "!");
+			log.info(numfailed.get() + " out of " + components.size() + " component(s) failed in session " + id + "!");
 
 		this.update();
 	}
