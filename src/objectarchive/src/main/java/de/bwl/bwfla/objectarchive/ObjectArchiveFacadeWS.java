@@ -124,6 +124,9 @@ public class ObjectArchiveFacadeWS
 			FileCollection fc = a.getObjectReference(id);
 			if(fc == null)
 				throw new BWFLAException("could not find object");
+
+			fc.setArchive(archive);
+			fc.update();
 			return fc.value();
 		} catch (JAXBException e) {
 			throw new BWFLAException(e);

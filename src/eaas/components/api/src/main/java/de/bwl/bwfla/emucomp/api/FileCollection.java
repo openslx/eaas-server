@@ -23,6 +23,9 @@ public class FileCollection extends JaxbType {
 	public String id;
 
 	@XmlElement
+	private String archive;
+
+	@XmlElement
 	private String label;
 
 	public FileCollection()
@@ -59,12 +62,30 @@ public class FileCollection extends JaxbType {
     	}
     }
 
+	public void update()
+	{
+		for (final var file : files) {
+			file.setArchive(this.archive);
+			file.setObjectId(this.id);
+		}
+	}
+
 	public String getLabel() {
 		return label;
 	}
 
 	public void setLabel(String label) {
 		this.label = label;
+	}
+
+	public String getArchive()
+	{
+		return archive;
+	}
+
+	public void setArchive(String archive)
+	{
+		this.archive = archive;
 	}
 
 	public FileCollectionEntry find(String resourceId)
