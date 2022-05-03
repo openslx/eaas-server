@@ -60,4 +60,17 @@ public class DataResolver
 		return ConfigurationProvider.getConfiguration()
 				.get("emucomp.resolver");
 	}
+
+	public static boolean isRelativeUrl(String url)
+	{
+		return !DataResolver.isAbsoluteUrl(url);
+	}
+
+	public static boolean isAbsoluteUrl(String url)
+	{
+		if (url == null)
+			throw new IllegalArgumentException();
+
+		return url.startsWith("http") || url.startsWith("file");
+	}
 }

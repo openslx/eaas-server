@@ -18,28 +18,29 @@
 
 package com.openslx.eaas.resolver;
 
+import de.bwl.bwfla.common.services.security.UserContext;
+import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 
-public class DataResolvers
+
+public class ObjectDataResolver extends ComponentDataResolver
 {
-	public static ImageDataResolver images()
+	public ObjectDataResolver()
 	{
-		return IMAGES;
+		super("objects");
 	}
 
-	public static EmulatorDataResolver emulators()
+	public String resolve(String component, FileCollectionEntry fce)
 	{
-		return EMULATORS;
+		return this.resolve(component, ObjectDataResolver.toUrl(fce));
 	}
 
-	public static ObjectDataResolver objects()
+	public String resolve(FileCollectionEntry fce, UserContext userctx)
 	{
-		return OBJECTS;
+		return this.resolve(userctx, kind, ObjectDataResolver.toUrl(fce));
 	}
 
-
-	// ===== Internal Helpers ====================
-
-	private static final ImageDataResolver IMAGES = new ImageDataResolver();
-	private static final EmulatorDataResolver EMULATORS = new EmulatorDataResolver();
-	private static final ObjectDataResolver OBJECTS = new ObjectDataResolver();
+	private static String toUrl(FileCollectionEntry fce)
+	{
+		return fce.getArchive() + "/" + fce.getObjectId() + "/" + fce.getId();
+	}
 }
