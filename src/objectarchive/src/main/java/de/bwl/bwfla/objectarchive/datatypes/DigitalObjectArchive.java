@@ -55,4 +55,14 @@ public interface DigitalObjectArchive
     TaskState sync(List<String> objectId);
 
     void delete(String id) throws BWFLAException;
+
+	default String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException
+	{
+		final var object = this.getObjectReference(objectId);
+		if (object == null)
+			return null;
+
+		final var resource = object.find(resourceId);
+		return (resource != null) ? resource.getUrl() : null;
+	}
 }

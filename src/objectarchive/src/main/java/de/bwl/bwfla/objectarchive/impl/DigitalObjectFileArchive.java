@@ -21,6 +21,7 @@ package de.bwl.bwfla.objectarchive.impl;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -36,9 +37,6 @@ import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import javax.inject.Inject;
-
-
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
@@ -46,8 +44,8 @@ import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
 import org.apache.commons.io.FileUtils;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.ConfigurationInjection;
-import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.Binding.ResourceType;
@@ -67,31 +65,13 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private String name;
 	private String localPath;
 	private boolean defaultArchive;
+	private String exportUrlPrefix;
 
 	protected ObjectFileFilter objectFileFilter = new ObjectFileFilter();
 	protected ObjectImportHandle importHandle;
 
-	@Inject
-	@Config(value="objectarchive.httpexport")
-	public String httpExport;
-
-	@Inject
-	@Config(value="commonconf.serverdatadir")
-	public String serverdatadir;
-
 	private static final String METS_MD_FILENAME = "mets.xml";
 
-	private String getExportPrefix()
-	{
-		String exportPrefix;
-		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/";
-		} catch (UnsupportedEncodingException e) {
-			log.log(Level.WARNING, e.getMessage(), e);
-			return null;
-		}
-		return exportPrefix;
-	}
 
 	/**
 	 * Simple ObjectArchive example. Files are organized as follows
@@ -118,9 +98,13 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	protected void init(String name, String localPath, boolean defaultArchive)
 	{
+		final var httpExport = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.httpexport");
+
 		this.name = name;
 		this.localPath = localPath;
 		this.defaultArchive = defaultArchive;
+		this.exportUrlPrefix = httpExport + URLEncoder.encode(name, StandardCharsets.UTF_8);
 		importHandle = new ObjectImportHandle(localPath);
 		ConfigurationInjection.getConfigurationInjector().configure(this);
 	}
@@ -575,7 +559,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	public DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException {
 
 		// NOTE: METS file URLs need to stay absolute for now!
-		final var metsExportPrefix = this.getExportPrefix() + "/" + objectId + "/";
+		final var metsExportPrefix = exportUrlPrefix + "/" + objectId + "/";
 
 		MetsObject o = loadMetsData(objectId);
 		Mets m = MetsUtil.export(o.getMets(), metsExportPrefix);
@@ -619,6 +603,15 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		return this.getObjectIds()
 				.map(mapper)
 				.filter(Objects::nonNull);
+	}
+
+	@Override
+	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException {
+		final var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
+		if (url == null || url.startsWith("http"))
+			return url;
+
+		return exportUrlPrefix + "/" + objectId + "/" + url;
 	}
 
 	@Override
