@@ -183,6 +183,7 @@ public class HeadlessSession extends Session {
         SaveNewEnvironmentRequest request = new SaveNewEnvironmentRequest();
         request.setEnvId(c.getEnvironmentId());
         request.setTitle(c.getSaveEnvironmentLabel());
+        request.setCleanRemovableDrives(true);
         try {
             saveEnvironmentTasks.put(c.getComponentId(), endpoint.snapshot(c.getComponentId(), request, userContext));
         } catch (Exception e) {
