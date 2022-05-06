@@ -115,7 +115,7 @@ public class HeadlessSession extends Session {
     public void keepalive(Components endpoint, Logger log) {
         super.keepalive(endpoint, log);
 
-        log.info("Headless Keepalive, id " + id() + " ComponentsToComplete: " + componentsToComplete.size() + "ComponentsToSave: " + componentsToSave.size());
+        log.info("Headless Keepalive, id " + id() + " ComponentsToComplete: " + componentsToComplete.size() + " ComponentsToSave: " + componentsToSave.size());
 
         this.componentsToComplete.removeIf(
                 component -> {
