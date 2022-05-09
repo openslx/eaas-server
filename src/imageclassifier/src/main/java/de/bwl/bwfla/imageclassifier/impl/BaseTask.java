@@ -51,6 +51,7 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imageclassifier.datatypes.*;
 import de.bwl.bwfla.common.datatypes.identification.DiskType;
@@ -67,6 +68,7 @@ import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
 public abstract class BaseTask extends BlockingTask<Object>
 {
 	protected final IdentificationRequest request;
+	protected final UserContext userctx;
 	protected final ExecutorService executor;
 	protected Configuration cfg = ConfigurationProvider.getConfiguration();
 	private final ImageMounter imageMounter;
@@ -83,9 +85,10 @@ public abstract class BaseTask extends BlockingTask<Object>
 		BASEDIR_ATTRIBUTES = PosixFilePermissions.asFileAttribute(permissions);
 	}
 	
-	protected BaseTask(IdentificationRequest request, ExecutorService executor)
+	protected BaseTask(IdentificationRequest request, UserContext userctx, ExecutorService executor)
 	{
 		this.request = request;
+		this.userctx = userctx;
 		this.executor = executor;
 		imageMounter = new ImageMounter(log);
 	}

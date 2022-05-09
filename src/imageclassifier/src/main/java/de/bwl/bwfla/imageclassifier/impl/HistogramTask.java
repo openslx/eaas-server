@@ -24,9 +24,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
-import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
 import de.bwl.bwfla.imageclassifier.client.HistogramEntry;
 import de.bwl.bwfla.imageclassifier.client.Identification;
@@ -38,9 +38,9 @@ import de.bwl.bwfla.imageclassifier.datatypes.IdentificationResultContainer;
 
 public class HistogramTask extends BaseTask
 {
-	public HistogramTask(IdentificationRequest request, ExecutorService executor)
+	public HistogramTask(IdentificationRequest request, UserContext userctx, ExecutorService executor)
 	{
-		super(request, executor);
+		super(request, userctx, executor);
 	}
 	
 	@Override

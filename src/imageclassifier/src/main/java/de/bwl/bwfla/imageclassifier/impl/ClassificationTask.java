@@ -23,6 +23,7 @@ import java.util.*;
 import java.util.concurrent.ExecutorService;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.imageclassifier.client.ClassificationEntry;
@@ -35,8 +36,8 @@ import de.bwl.bwfla.imageclassifier.datatypes.IdentificationResultContainer;
 
 public class ClassificationTask extends BaseTask
 {
-	public ClassificationTask(IdentificationRequest request, ExecutorService executor) {
-		super(request, executor);
+	public ClassificationTask(IdentificationRequest request, UserContext userctx, ExecutorService executor) {
+		super(request, userctx, executor);
 	}
 
 	@Override

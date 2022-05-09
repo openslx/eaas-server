@@ -5,22 +5,11 @@
          version="3.1">
  <display-name>imageclassifier</display-name>
  <context-param>
-  <param-name>resteasy.resources</param-name>
-  <param-value>de.bwl.bwfla.imageclassifier.ImageClassifierAPI</param-value>
- </context-param>
- <context-param>
   <param-name>resteasy.providers</param-name>
   <param-value>de.bwl.bwfla.imageclassifier.JacksonConfig</param-value>
- </context-param> 
- <listener>
-  <listener-class>org.jboss.resteasy.plugins.server.servlet.ResteasyBootstrap</listener-class>
- </listener>
- <servlet>
-  <servlet-name>resteasy-servlet</servlet-name>
-  <servlet-class>org.jboss.resteasy.plugins.server.servlet.HttpServletDispatcher</servlet-class>
- </servlet>
+ </context-param>
  <servlet-mapping>
-  <servlet-name>resteasy-servlet</servlet-name>
-  <url-pattern>/*</url-pattern>
+  <servlet-name>javax.ws.rs.core.Application</servlet-name>
+  <url-pattern>/</url-pattern>
  </servlet-mapping>
 </web-app>
