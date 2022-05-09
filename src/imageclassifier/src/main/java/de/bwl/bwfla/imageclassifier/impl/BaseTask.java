@@ -51,6 +51,8 @@ import javax.net.ssl.SSLSession;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import com.openslx.eaas.resolver.DataResolver;
+import com.openslx.eaas.resolver.DataResolvers;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.imageclassifier.datatypes.*;
@@ -91,6 +93,18 @@ public abstract class BaseTask extends BlockingTask<Object>
 		this.userctx = userctx;
 		this.executor = executor;
 		imageMounter = new ImageMounter(log);
+
+		for (FileCollectionEntry fce : request.getFileCollection().files) {
+			var location = fce.getUrl();
+
+			// Optionally, resolve relative URLs...
+			if (location == null || DataResolver.isRelativeUrl(location)) {
+				location = DataResolvers.objects()
+						.resolve(fce, userctx);
+
+				fce.setUrl(location);
+			}
+		}
 	}
 
 	private IdentificationData<?> identifyFile(String url, String fileName)
