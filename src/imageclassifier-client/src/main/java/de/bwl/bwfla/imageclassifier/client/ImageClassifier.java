@@ -27,10 +27,12 @@ import javax.ws.rs.client.Entity;
 import javax.ws.rs.client.Invocation.Builder;
 import javax.ws.rs.client.WebTarget;
 import javax.ws.rs.core.GenericType;
+import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 
@@ -53,28 +55,31 @@ public class ImageClassifier {
     }
 
     public Identification<ClassificationEntry> getClassification(
-            FileCollection fc) throws InterruptedException,
+            FileCollection fc, UserContext userctx) throws InterruptedException,
             IllegalArgumentException, ServiceUnavailableException,
             ServerErrorException, InternalServerErrorException {
-        return getClassification(new IdentificationRequest(fc, null));
+        return getClassification(new IdentificationRequest(fc, null), userctx);
     }
 
     public Identification<ClassificationEntry> getClassification(
-            FileCollection fc, String policyUrl) throws InterruptedException,
+            FileCollection fc, String policyUrl, UserContext userctx) throws InterruptedException,
             IllegalArgumentException, ServiceUnavailableException,
             ServerErrorException, InternalServerErrorException {
         return getClassification(
-                new IdentificationRequest(fc, policyUrl));
+                new IdentificationRequest(fc, policyUrl), userctx);
     }
 
     public Identification<ClassificationEntry> getClassification(
-            IdentificationRequest request) throws InterruptedException,
+            IdentificationRequest request, UserContext userctx) throws InterruptedException,
             IllegalArgumentException, ServiceUnavailableException,
             ServerErrorException, InternalServerErrorException {
         final WebTarget target = client.target(serviceUrl + "/api/v1");
         Response response = null;
         Builder restRequest = target.path("classifications")
                 .request(IdentificationResponse.MEDIATYPE_AS_JSON);
+
+        if (userctx != null && userctx.isAvailable())
+            restRequest = restRequest.header(HttpHeaders.AUTHORIZATION, "Bearer " + userctx.getToken());
 
         // send identification request to service
         response = restRequest.post(Entity.entity(request,

@@ -310,7 +310,7 @@ public class ProposalTask extends BlockingTask<Object>
 		log.info("Classifying built image...");
 
 		final FileCollection fc = this.newFileCollection(imageurl);
-		final Identification<ClassificationEntry> classification = classifier.getClassification(fc);
+		final Identification<ClassificationEntry> classification = classifier.getClassification(fc, null);
 
 		log.info("Proposing environments...");
 

@@ -152,7 +152,7 @@ public class ClassificationTask extends BlockingTask<Object>
             ClassificationResult response;
 
             IdentificationRequest req = new IdentificationRequest(url, filename);
-            Identification<ClassificationEntry> id = this.imageClassifier.getClassification(req);
+            Identification<ClassificationEntry> id = this.imageClassifier.getClassification(req, request.userCtx);
 
             HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> data = id.getIdentificationData();
             if(data == null)
@@ -195,7 +195,7 @@ public class ClassificationTask extends BlockingTask<Object>
             ClassificationResult response;
 
             IdentificationRequest req = new IdentificationRequest(fc, null);
-            Identification<ClassificationEntry> id = this.imageClassifier.getClassification(req);
+            Identification<ClassificationEntry> id = this.imageClassifier.getClassification(req, request.userCtx);
 
             HashMap<String, Identification.IdentificationDetails<ClassificationEntry>> data = id.getIdentificationData();
             if(data == null)
