@@ -40,6 +40,8 @@ import de.bwl.bwfla.common.services.guacplay.net.TunnelConfig;
 import de.bwl.bwfla.common.services.guacplay.protocol.InstructionBuilder;
 import de.bwl.bwfla.common.services.guacplay.record.SessionRecorder;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
+import de.bwl.bwfla.common.utils.DiskDescription;
+import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.ProcessMonitor;
 import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.emucomp.api.*;
@@ -832,12 +834,16 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 				// upload emulator's output
 				if (this.isOutputAvailable()) {
+					LOG.info("Output is available!");
 					try {
 						this.processEmulatorOutput();
 					}
 					catch (BWFLAException error) {
 						LOG.log(Level.WARNING, "Processing emulator's output failed!", error);
 					}
+				}
+				else{
+					LOG.info("No emulator output available!");
 				}
 
 				// cleanup will be performed later by EmulatorBean.destroy()
@@ -883,6 +889,12 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			// Prepare the connector for guacamole connections
 			{
 				final IThrowingSupplier<GuacTunnel> clientTunnelCtor = () -> {
+					if (emuBeanState.fetch() == EmuCompState.EMULATOR_STOPPED) {
+						final var message = "Attaching client to stopped emulator failed!";
+						LOG.warning(message);
+						throw new IllegalStateException(message);
+					}
+
 					final Runnable waitTask = () -> {
 						try {
 							EmulatorBean.this.attachClientToEmulator();
@@ -946,72 +958,204 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	private boolean isOutputAvailable()
 	{
 		boolean hasOutput = (emuEnvironment.getOutputBindingId() != null && !emuEnvironment.getOutputBindingId().isEmpty());
-		LOG.severe("output is available: " +  hasOutput);
 		return hasOutput;
 	}
 
+	//TODO when should this be used, when getChanged files?
+	private Path getAllFiles(BlobStoreBinding binding, Path cow, FileSystemType fsType) throws BWFLAException {
+		try (final ImageMounter mounter = new ImageMounter(LOG)) {
+			Path output;
+			if( binding.getResourceType() != Binding.ResourceType.ISO) {
+
+                final Path workdir = this.getWorkingDir().resolve("output");
+                try {
+                    Files.createDirectories(workdir);
+                }
+                catch (IOException e)
+                {
+                    throw new BWFLAException("failed creating workdir").setId(this.getComponentId());
+                }
+
+                output = workdir.resolve("output.zip");
+
+                // Mount partition's filesystem
+                final ImageMounter.Mount rawmnt = mounter.mount(cow,
+                        workdir.resolve(cow.getFileName() + ".dd"), binding.getPartitionOffset());
+                final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
+
+                final Path srcdir = fsmnt.getMountPoint();
+                if (emuEnvironment.isLinuxRuntime())
+                    Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
+                else {
+                    Set<String> exclude = new HashSet<>();
+                    exclude.add("uvi.bat");
+                    exclude.add("autorun.inf");
+
+                    Zip32Utils.zip(output.toFile(), srcdir.toFile(), exclude);
+                }
+                return output;
+            }
+			else {
+				throw new BWFLAException("Unsupported binding type").setId(this.getComponentId());
+			}
+		}
+	}
+
+	private Path getChangedFiles(Path cowImage) throws BWFLAException {
+	    List<Path> partitionFiles = new ArrayList<>();
+		QcowOptions qcowOptions = new QcowOptions();
+		try (final ImageMounter mounter = new ImageMounter(LOG)) {
+		    ImageInformation imageInformation = new ImageInformation(cowImage.toString(), LOG);
+            String backingFileId = imageInformation.getBackingFile();
+
+            qcowOptions.setBackingFile(backingFileId);
+
+            final Path workdir = this.getWorkingDir().resolve("output-all");
+            Files.createDirectories(workdir);
+
+            Path lowerImgPath = workdir.resolve("lowerImageLayer.cow");
+            EmulatorUtils.createCowFile(lowerImgPath, qcowOptions);
+
+            ImageMounter.Mount rawmnt = mounter.mount(lowerImgPath, workdir.resolve("lowerImageLayer.dd"));
+            ImageMounter.Mount rawmnt2 = mounter.mount(cowImage, workdir.resolve("upperDir.dd"));
+
+			// load partition table
+			final DiskDescription disk = DiskDescription.read(rawmnt.getTargetImage(), LOG);
+			if (!disk.hasPartitions())
+				throw new BWFLAException("Disk seems to be not partitioned!");
+
+			LOG.info("separating data by partition");
+			for (DiskDescription.Partition partition : disk.getPartitions()) {
+				if (!partition.hasFileSystemType()) {
+					LOG.info("Partition " + partition.getIndex() + " is not formatted, skip");
+					continue;
+				}
+				rawmnt = mounter.remount(rawmnt, partition.getStartOffset(), partition.getSize());
+				rawmnt2 = mounter.remount(rawmnt2, partition.getStartOffset(), partition.getSize());
+
+				FileSystemType fsType;
+				try {
+					fsType = FileSystemType.fromString(partition.getFileSystemType());
+				}
+				catch (IllegalArgumentException e)
+				{
+					LOG.warning("filesystem " + partition.getFileSystemType() + " not yet support. please report.");
+					continue;
+				}
+
+				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("backingFileId.fs"), fsType);
+				final Path lowerDir = fsmnt.getMountPoint();
+
+				final ImageMounter.Mount fsmnt2 = mounter.mount(rawmnt2, workdir.resolve("upperDir.fs"), fsType);
+				final Path upperDir = fsmnt2.getMountPoint();
+
+				final Path outputDir = this.getWorkingDir().resolve("partition-" + partition.getIndex());
+
+				LOG.info("Executing RSYNC to determine changed files...");
+				DeprecatedProcessRunner processRunner = new DeprecatedProcessRunner("rsync");
+				processRunner.addArguments("-armxv"); //, "--progress"); when using --progress, rsync sometimes hangs...
+				processRunner.addArguments("--exclude", "dev");
+				processRunner.addArguments("--exclude", "proc");
+				processRunner.addArguments("--compare-dest=" + lowerDir.toAbsolutePath().toString() + "/",
+						upperDir.toAbsolutePath().toString() + "/",
+						outputDir.toAbsolutePath().toString());
+				processRunner.execute(true);
+				processRunner.cleanup();
+
+				LOG.info("Done with rsync!");
+
+
+				partitionFiles.add(outputDir);
+
+				DeprecatedProcessRunner cleaner = new DeprecatedProcessRunner("find");
+				cleaner.addArguments(outputDir.toAbsolutePath().toString(), "-empty", "-delete");
+				cleaner.execute(true);
+				cleaner.cleanup();
+			}
+
+			Path outputTar = workdir.resolve("output.tgz");
+			DeprecatedProcessRunner tarCollectProc = new DeprecatedProcessRunner("tar");
+			tarCollectProc.addArguments("-czf");
+			tarCollectProc.addArguments(outputTar.toAbsolutePath().toString());
+			tarCollectProc.addArguments("-C", this.getWorkingDir().toAbsolutePath().toString());
+			partitionFiles.forEach(p -> tarCollectProc.addArguments(p.getFileName().toString()));
+			tarCollectProc.execute(true);
+			tarCollectProc.cleanup();
+
+			return outputTar;
+		}
+		catch (BWFLAException  cause) {
+			cause.printStackTrace();
+			throw cause;
+		}
+		catch (IOException ioException)
+        {
+            ioException.printStackTrace();
+            final String message = "IO Exception in getChangedFiles";
+			throw new BWFLAException(message, ioException)
+					.setId(this.getComponentId());
+        }
+	}
+
+
 	private void processEmulatorOutput() throws BWFLAException
 	{
-		LOG.severe("processing emulator output ...");
+		LOG.info("Processing emulator output ...");
+
 		final String bindingId = emuEnvironment.getOutputBindingId();
-		final BlobStoreBinding binding = (BlobStoreBinding) bindings.get(bindingId);
-		final FileSystemType fsType = binding.getFileSystemType();
+		Path outputTar = null;
 
-		final String qcow = bindings.lookup(BindingsManager.toBindingId(bindingId, BindingsManager.EntryType.IMAGE));
+		Binding b = bindings.get(bindingId);
+		if(b == null) {
+			final String message = "Unknown output bindingId " + bindingId;
+			final BWFLAException error = new BWFLAException(message)
+					.setId(this.getComponentId());
 
-		this.unmountBindings();
+			this.result.completeExceptionally(error);
+		}
 
-		final BlobDescription blob = new BlobDescription()
+		try {
+
+			if(emuEnvironment.isLinuxRuntime()){
+
+				for (AbstractDataResource r : emuEnvironment.getAbstractDataResource())
+				{
+					if(r.getId() != null && r.getId().equals("rootfs"))
+					{
+						LOG.info("Linux runtime recognized, processing with rootfs...");
+						final String cowImage = bindings.lookup(BindingsManager.toBindingId("rootfs", BindingsManager.EntryType.IMAGE));
+						this.unmountBindings();
+						outputTar = getChangedFiles(Path.of(cowImage));
+
+					}
+				}
+			}
+
+			else {
+				final String qcow = bindings.lookup(BindingsManager.toBindingId(bindingId, BindingsManager.EntryType.IMAGE));
+				this.unmountBindings();
+				outputTar = getChangedFiles(Path.of(qcow));
+			}
+
+			final BlobDescription blob = new BlobDescription()
 				.setDescription("Output for session " + this.getComponentId())
 				.setNamespace("emulator-outputs")
 				.setName("output");
 
-		try (final ImageMounter mounter = new ImageMounter(LOG)) {
-			BlobHandle handle = null;
-			Path output = null;
-			String type = null;
+			blob.setDataFromFile(outputTar);
+			blob.setType(".tgz");
 
-			if( binding.getResourceType() != Binding.ResourceType.ISO) {
+			// Upload archive to the BlobStore
+			BlobHandle handle = BlobStoreClient.get()
+                    .getBlobStorePort(blobStoreAddressSoap)
+                    .put(blob);
 
-				final Path workdir = this.getWorkingDir().resolve("output");
-				Files.createDirectories(workdir);
-
-				output = workdir.resolve("output.zip");
-				type = ".zip";
-
-				// Mount partition's filesystem
-				final ImageMounter.Mount rawmnt = mounter.mount(Path.of(qcow),
-						workdir.resolve(Path.of(qcow).getFileName() + ".dd"), binding.getPartitionOffset());
-				final ImageMounter.Mount fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), fsType);
-				final Path srcdir = fsmnt.getMountPoint();
-				if (emuEnvironment.isLinuxRuntime())
-					Zip32Utils.zip(output.toFile(), srcdir.resolve(containerOutput).toFile());
-				else {
-					Set<String> exclude = new HashSet<>();
-					exclude.add("uvi.bat");
-					exclude.add("autorun.inf");
-
-					Zip32Utils.zip(output.toFile(), srcdir.toFile(), exclude);
-				}
-
-				blob.setDataFromFile(output);
-				blob.setType(type);
-				// Upload archive to the BlobStore
-				handle = BlobStoreClient.get()
-						.getBlobStorePort(blobStoreAddressSoap)
-						.put(blob);
-			} else {
-				handle = BlobHandle.fromUrl(binding.getUrl());
+            if (handle == null) {
+                throw new BWFLAException("Output result is null").setId(this.getComponentId());
 			}
-
-			if (handle == null) {
-				throw new BWFLAException("Output result is null")
-						.setId(this.getComponentId());
-			}
-
 			this.result.complete(handle);
 		}
-		catch (BWFLAException | IOException cause) {
+		catch (BWFLAException cause) {
 			final String message = "Creation of output.zip failed!";
 			final BWFLAException error = new BWFLAException(message, cause)
 					.setId(this.getComponentId());

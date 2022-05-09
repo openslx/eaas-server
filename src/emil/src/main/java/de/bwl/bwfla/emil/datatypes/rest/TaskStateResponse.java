@@ -46,6 +46,7 @@ public class TaskStateResponse extends EmilResponseType{
 
     public TaskStateResponse(BWFLAException e) {
         super(e);
+        this.isDone = true;
     }
 
     TaskStateResponse() {}
@@ -73,5 +74,9 @@ public class TaskStateResponse extends EmilResponseType{
     public void setObject(JaxbType object)
     {
         this.object = object.jsonValueWithoutRoot(false);
+    }
+
+    public String getObject() {
+        return object;
     }
 }

@@ -81,8 +81,6 @@ import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.emil.datatypes.snapshot.*;
-import de.bwl.bwfla.emil.session.Session;
-import de.bwl.bwfla.emil.session.SessionComponent;
 import de.bwl.bwfla.emil.session.SessionManager;
 import de.bwl.bwfla.emil.tasks.CreateSnapshotTask;
 import de.bwl.bwfla.emil.utils.EventObserver;
@@ -100,7 +98,6 @@ import org.apache.tamaya.inject.api.Config;
 import de.bwl.bwfla.api.eaas.EaasWS;
 import de.bwl.bwfla.api.emucomp.Component;
 import de.bwl.bwfla.api.emucomp.Machine;
-import de.bwl.bwfla.common.datatypes.EaasState;
 import de.bwl.bwfla.common.datatypes.SoftwarePackage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.eaas.client.EaasClient;
@@ -831,6 +828,10 @@ public class Components {
                 conf.getUiOptions().setForwarding_system("HEADLESS");
             }
 
+            if (machineDescription.hasOutput()){
+                EmulationEnvironmentHelper.registerDriveForOutput((MachineConfiguration) chosenEnv, machineDescription.getOutputDriveId());
+            }
+
             final String sessionId = eaas.createSessionWithOptions(chosenEnv.value(false), options);
             if (sessionId == null) {
                 throw new InternalServerErrorException(Response.serverError()
@@ -976,14 +977,14 @@ public class Components {
     public ComponentResponse getComponent(
             @PathParam("componentId") String componentId) {
         try {
-            if (!this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class).getComponentType(componentId)
+            if (!component.getComponentType(componentId)
                     .equals("machine")) {
                 return new ComponentResponse(componentId);
             }
 
             // TODO: find a way to get the correct driveId here
             return new MachineComponentResponse(componentId, new ArrayList<>());
-        } catch (BWFLAException | MalformedURLException e) {
+        } catch (BWFLAException e) {
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
                             + e.getMessage(),
@@ -1121,7 +1122,7 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
         try {
-            String state = this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class).getState(componentId);
+            final String state = component.getState(componentId);
             if (state.equals(ComponentState.OK.toString()) || state.equals(ComponentState.INACTIVE.toString()) || state.equals(ComponentState.READY.toString())) {
                 return new ComponentStateResponse(componentId, state);
             } else if (state.equals(ComponentState.STOPPED.toString()) || state.equals(ComponentState.FAILED.toString())) {
@@ -1132,7 +1133,7 @@ public class Components {
                         .entity("The component associated with your session has failed.")
                         .build());
             }
-        } catch (BWFLAException | MalformedURLException e) {
+        } catch (BWFLAException e) {
             // TODO: 400 if the component id is syntactically wrong
             // TODO: 404 if the component cannot be found
             throw new InternalServerErrorException(Response.serverError()
@@ -1161,9 +1162,8 @@ public class Components {
     @Produces(MediaType.APPLICATION_JSON)
     public Map<String, URI> getControlUrls(@PathParam("componentId") String componentId) {
         try {
-            Component component = this.componentClient.getPort(new URL(eaasGw + "/eaas/ComponentProxy?wsdl"), Component.class);
             return component.getControlUrls(componentId).getEntry().stream().collect(Collectors.toMap(e -> e.getKey(), e -> URI.create(e.getValue())));
-        } catch (BWFLAException | MalformedURLException e) {
+        } catch (BWFLAException e) {
             throw new InternalServerErrorException(
                     "Server has encountered an internal error: "
                             + e.getMessage(),
@@ -1363,9 +1363,19 @@ public class Components {
         return result;
     }
 
+
+    public TaskStateResponse updateTask(TaskStateResponse taskStateResponse) {
+        return taskManager.lookup(taskStateResponse.getTaskId(), true);
+    }
+
     public TaskStateResponse snapshotAsync(String componentId, SnapshotRequest request, UserContext userContext) throws Exception {
          Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
          return new TaskStateResponse(taskManager.submitTask(new CreateSnapshotTask(snapshot, componentId, request, false, userContext)));
+    }
+
+    public SnapshotResponse snapshot(String componentId, SnapshotRequest request, UserContext userContext) throws Exception{
+        Snapshot snapshot = new Snapshot(componentClient.getMachinePort(eaasGw), emilEnvRepo, objects, userSessions);
+        return snapshot.handleSnapshotRequest(componentId, request, false, userContext);
     }
 
     /**

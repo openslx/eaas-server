@@ -74,6 +74,12 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false)
     private LinuxRuntimeContainerReq linuxRuntimeData;
 
+    @XmlElement(required = false, defaultValue = "false")
+    private boolean hasOutput;
+
+    @XmlElement(required = false, defaultValue = "boot")
+    private String outputDriveId;
+
     @XmlElement
     private ArrayList<UserMedium> userMedia;
 
@@ -134,6 +140,22 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     public int getSessionLifetime() {
         return sessionLifetime;
+    }
+
+    public boolean hasOutput() {
+        return hasOutput;
+    }
+
+    public void setHasOutput(boolean hasOutput) {
+        this.hasOutput = hasOutput;
+    }
+
+    public String getOutputDriveId() {
+        return outputDriveId;
+    }
+
+    public void setOutputDriveId(String outputDriveId) {
+        this.outputDriveId = outputDriveId;
     }
 
     @XmlRootElement

@@ -24,4 +24,12 @@ public class SnapshotResponse extends EmilResponseType
     {
         this.envId = envId;
     }
+
+    public String getEnvId() {
+        return envId;
+    }
+
+    public void setEnvId(String envId) {
+        this.envId = envId;
+    }
 }

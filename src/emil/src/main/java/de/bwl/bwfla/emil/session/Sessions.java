@@ -31,9 +31,6 @@ import de.bwl.bwfla.emil.session.rest.SessionResponse;
 import de.bwl.bwfla.emucomp.client.ComponentClient;
 import org.apache.tamaya.inject.api.Config;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
-import javax.enterprise.concurrent.ManagedScheduledExecutorService;
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.servlet.http.HttpServletResponse;
@@ -42,10 +39,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
-import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.TimeUnit;
 
 
 @Path("/sessions")
@@ -55,23 +49,12 @@ public class Sessions
 	@Inject
 	private SessionManager sessions = null;
 
-	@Resource(lookup = "java:jboss/ee/concurrency/scheduler/default")
-	private ManagedScheduledExecutorService scheduler;
-
-	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
-	private ExecutorService executor;
-
 	@Inject
 	private ComponentClient componentClient;
 
 	@Inject
 	@Config(value = "ws.eaasgw")
 	private String eaasGw;
-
-	@Inject
-	@Config("components.client_timeout")
-	private Duration resourceExpirationTimeout;
-
 
 	/* ========================= Public API ========================= */
 
@@ -222,16 +205,5 @@ public class Sessions
 							"Could not acquire group information.", e.getMessage()))
 					.build());
 		}
-	}
-
-
-	/* ========================= Internal Helpers ========================= */
-
-	@PostConstruct
-	private void initialize()
-	{
-		final Runnable trigger = () -> executor.execute(() -> sessions.update(executor));
-		final long delay = resourceExpirationTimeout.toMillis() / 2L;
-		scheduler.scheduleWithFixedDelay(trigger, delay, delay, TimeUnit.MILLISECONDS);
 	}
 }
