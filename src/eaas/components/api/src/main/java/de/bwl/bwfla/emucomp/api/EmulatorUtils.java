@@ -161,13 +161,9 @@ public class EmulatorUtils {
 	public static void convertImage(String source, Path target, ImageInformation.QemuImageFormat fmt, Logger log)
 			throws BWFLAException
 	{
-		// NOTE: our patched qemu-img is relatively old and seems to silently produce
-		//       images with incorrect size when applied to some newer VHD files!
-		//       As a workaround, use upstream qemu-img just for converting.
-
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
-		process.setCommand("/eaas/workarounds/qemu-utils/usr/bin/qemu-img");
+		process.setCommand("qemu-img");
 		process.addArguments("convert");
 		process.addArguments("-O", fmt.toString());
 		process.addArgument(source);
