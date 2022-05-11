@@ -107,7 +107,6 @@ public class EmulatorUtils {
 
 		// we need to check if the subpath is there
 		Path parent = cowPath.getParent();
-		log.severe("checking if " + parent.toString() + " path exists.");
 		if(!Files.exists(parent)) {
 			try {
 				Files.createDirectories(parent);
@@ -122,7 +121,16 @@ public class EmulatorUtils {
 		process.addArguments("create", "-f", "qcow2");
 		if(options != null && options.getBackingFile() != null)
 		{
-			process.addArgument("-o", "backing_file=", options.getBackingFile());
+			final ImageInformation bfinfo;
+			try {
+				bfinfo = new ImageInformation(options.getBackingFile(), log);
+			}
+			catch (Exception error) {
+				throw new BWFLAException("Probing backing file format failed!", error);
+			}
+
+			process.addArguments("-F", bfinfo.getFileFormat().toString());
+			process.addArguments("-b", options.getBackingFile());
 		}
 		process.addArgument(cowPath.toString());
 		if(options != null && options.getSize() != null) {
