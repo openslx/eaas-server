@@ -220,7 +220,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		Path target = targetDir.resolve("thumbnail.jpeg");
 		if(Files.exists(target))
 			return;
-		EmulatorUtils.copyRemoteUrl(resource, target, null);
+		EmulatorUtils.copyRemoteUrl(resource, target, log);
 	}
 
 	void importObjectFile(String objectId, FileCollectionEntry resource) throws BWFLAException
@@ -242,7 +242,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		fileName = strSaveFilename(fileName);
 		Path target = targetDir.resolve(fileName);
 
-		EmulatorUtils.copyRemoteUrl(resource, target, null);
+		EmulatorUtils.copyRemoteUrl(resource, target, log);
 	}
 
 	@Override
