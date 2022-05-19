@@ -385,7 +385,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 			log.warning(" local path url " + url);
 
-			MetsUtil.addFile(m, url, properties);
+			MetsUtil.addFile(m, entry.getId(), url, properties);
 		}
 		return m;
 	}
