@@ -29,10 +29,13 @@ import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import com.openslx.eaas.migration.IMigratable;
+import com.openslx.eaas.migration.MigrationRegistry;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
@@ -51,6 +54,7 @@ import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive;
 @Singleton
 @Startup
 public class ObjectArchiveSingleton
+		implements IMigratable
 {
 	protected static final Logger				LOG	= Logger.getLogger(ObjectArchiveSingleton.class.getName());
 	public static volatile boolean 				confValid = false;
@@ -197,6 +201,18 @@ public class ObjectArchiveSingleton
 		public ObjectArchiveInitException(String message)
 		{
 			super(message);
+		}
+	}
+
+	@Override
+	public void register(@Observes MigrationRegistry migrations) throws Exception
+	{
+		for (final var name : archiveMap.keySet()) {
+			if (name.equals("default"))
+				continue;
+
+			final var archive = archiveMap.get(name);
+			archive.register(migrations);
 		}
 	}
 }

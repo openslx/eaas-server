@@ -23,6 +23,7 @@ import java.nio.file.Path;
 import java.util.List;
 import java.util.stream.Stream;
 
+import com.openslx.eaas.migration.MigrationRegistry;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -64,5 +65,10 @@ public interface DigitalObjectArchive
 
 		final var resource = object.find(resourceId);
 		return (resource != null) ? resource.getUrl() : null;
+	}
+
+	default void register(MigrationRegistry migrations) throws Exception
+	{
+		// Empty!
 	}
 }
