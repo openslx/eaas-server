@@ -88,7 +88,6 @@ public class ObjectFileManifestation {
 			DigitalObjectFileMetadata md = null;
 			if(Files.exists(properties)) {
 				md = DigitalObjectFileMetadata.fromPropertiesFile(properties);
-				log.info("found metadata: " + md);
 			}
 			entries.add(new FileEntry(f, md));
 		}

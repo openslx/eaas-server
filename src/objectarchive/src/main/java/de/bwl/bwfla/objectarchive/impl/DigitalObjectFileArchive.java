@@ -31,12 +31,17 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.migration.MigrationUtils;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
@@ -390,7 +395,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		return m;
 	}
 
-	private void createMetsFiles(String objectId) throws BWFLAException {
+	private void createMetsMetadata(String objectId) throws BWFLAException {
 		FileCollection fc = this.describe(objectId);
 		if (fc == null)
 			throw new BWFLAException("Describing object '" + objectId + "' failed!");
@@ -435,7 +440,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		if(objectId == null)
 			return null;
 
-		log.info("looking for: " + objectId);
+		log.info("Describing object: " + objectId);
 		File topDir = new File(localPath);
 		if(!topDir.exists() || !topDir.isDirectory())
 		{
@@ -599,9 +604,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private MetsObject loadMetsData(String objectId) throws BWFLAException {
 		Path targetDir = resolveMetadatTarget(objectId);
 		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
-		if(!Files.exists(metsPath)) {
-			createMetsFiles(objectId);
-		}
+		if (!Files.exists(metsPath))
+			throw new BWFLAException("METS metadata for object '" + objectId + "' not found!");
+
 		MetsObject mets = new MetsObject(metsPath.toFile());
 		return mets;
 	}
@@ -657,5 +662,50 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	{
 		public FileFilter ISO_FILE_FILTER = new NullFileFilter();
 		public FileFilter FLOPPY_FILE_FILTER = new NullFileFilter();
+	}
+
+	private enum UpdateCounts
+	{
+		PROCESSED,
+		UPDATED,
+		FAILED,
+		__LAST;
+
+		public static MultiCounter counter()
+		{
+			return new MultiCounter(__LAST.ordinal());
+		}
+	}
+
+	public void createMetsFiles(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Predicate<String> filter = (objectId) -> {
+			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
+			return !Files.exists(metsfile);
+		};
+
+		final Consumer<String> creator = (objectId) -> {
+			try {
+				this.createMetsMetadata(objectId);
+				counter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Creating metadata for object '" + objectId + "' failed!", error);
+				counter.increment(UpdateCounts.FAILED);
+			}
+		};
+
+		log.info("Creating metadata for objects in archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.filter(filter)
+				.forEach(creator);
+
+		final var numCreated = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Created metadata for " + numCreated + " object(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numCreated + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Creating object-archive's metadata failed!");
 	}
 }

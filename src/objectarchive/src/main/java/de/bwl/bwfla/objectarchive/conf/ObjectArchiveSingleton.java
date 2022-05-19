@@ -36,6 +36,7 @@ import javax.naming.NamingException;
 
 import com.openslx.eaas.migration.IMigratable;
 import com.openslx.eaas.migration.MigrationRegistry;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
@@ -214,5 +215,35 @@ public class ObjectArchiveSingleton
 			final var archive = archiveMap.get(name);
 			archive.register(migrations);
 		}
+
+		migrations.register("create-mets-objects", this::createMetsObjects);
+	}
+
+	private interface IHandler<T>
+	{
+		void handle(T data) throws Exception;
+	}
+
+	private void execute(IHandler<DigitalObjectArchive> migration) throws Exception
+	{
+		// NOTE: there can be multiple instances of archives,
+		//       execute migration for each of them!
+
+		for (final var name : archiveMap.keySet()) {
+			if (name.equals("default"))
+				continue;
+
+			migration.handle(archiveMap.get(name));
+		}
+	}
+
+	private void createMetsObjects(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).createMetsFiles(mc);
+		};
+
+		this.execute(migration);
 	}
 }
