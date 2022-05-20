@@ -40,6 +40,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -96,16 +97,22 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	private void load()
 	{
+		int numLoaded = 0;
+		int numFailed = 0;
+
 		for(File mets: metaDataDir.listFiles())
 		{
-			log.severe("parsing: " + mets.getAbsolutePath());
 			try {
 				MetsObject obj = new MetsObject(mets);
 				objects.put(obj.getId(), obj);
+				++numLoaded;
 			} catch (BWFLAException e) {
-				e.printStackTrace();
+				log.log(Level.WARNING, "Parsing METS file '" + mets.getAbsolutePath() + "' failed!", e);
+				++numFailed;
 			}
 		}
+
+		log.info("Loaded " + numLoaded + " METS object(s), failed " + numFailed);
 	}
 
 	@Override
