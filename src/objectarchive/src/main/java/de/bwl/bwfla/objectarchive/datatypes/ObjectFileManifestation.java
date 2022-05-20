@@ -1,14 +1,12 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
 import java.io.*;
-import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.logging.Logger;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.Zip32Utils;
 import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.Binding.ResourceType;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive.ObjectFileFilter;
@@ -37,15 +35,6 @@ public class ObjectFileManifestation {
 		for (ResourceType rt : ResourceType.values()) {
 			File subDir = new File(objectDir, rt.value());
 			if (subDir.exists() && subDir.isDirectory()) {
-				if(rt.equals(ResourceType.FILE)) {
-					File zip = new File(objectDir, rt.value() + ".zip");
-					if(!zip.exists()) {
-						log.info("zipping " + subDir);
-						Zip32Utils.zip(zip, subDir);
-					}
-					loadEntries(subDir, objectDir.getName(), rt);
-				}
-				else
 					loadEntries(subDir, objectDir.getName(), rt);
 			} else {
 				// log.info("loading object dir failed: " + objectDir.getModificationScript() + " " + subDir);
