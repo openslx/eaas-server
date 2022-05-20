@@ -282,22 +282,14 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 		try {
 			final Function<Path, String> mapper = (path) -> {
-				try {
-					return new ObjectFileManifestation(objectFileFilter, path.toFile())
-							.getId();
-				}
-				catch (BWFLAException error) {
-					final String name = path.getFileName().toString();
-					log.log(Level.WARNING, "Parsing object '" + name + "' failed!", error);
-					return null;
-				}
+				return path.getFileName()
+						.toString();
 			};
 
 			final DirectoryStream<Path> files = Files.newDirectoryStream(basepath);
 			return StreamSupport.stream(files.spliterator(), false)
 					.filter((path) -> Files.isDirectory(path))
 					.map(mapper)
-					.filter(Objects::nonNull)
 					.onClose(() -> {
 						try {
 							files.close();
