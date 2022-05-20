@@ -26,7 +26,7 @@ import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -411,12 +411,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private void writeMetsFile(Mets m) throws BWFLAException {
 		Path targetDir = resolveMetadatTarget(m.getID());
 		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
-
-		log.warning("local representation");
-		log.warning(m.toString());
-
 		try {
-			Files.write( metsPath, m.toString().getBytes(), StandardOpenOption.CREATE_NEW);
+			Files.write(metsPath, m.toString().getBytes());
+			log.info("Object metadata written to: " + metsPath);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new BWFLAException(e);
@@ -707,5 +704,66 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		log.info("Created metadata for " + numCreated + " object(s), failed " + numFailed);
 		if (!MigrationUtils.acceptable(numCreated + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
 			throw new BWFLAException("Creating object-archive's metadata failed!");
+	}
+
+	public void fixMetsFiles(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Predicate<String> filter = (objectId) -> {
+			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
+			return Files.exists(metsfile);
+		};
+
+		final Consumer<String> fixer = (objectId) -> {
+			try {
+				final var mets = this.loadMetsData(objectId)
+						.getMets();
+
+				final var fsec = mets.getFileSec();
+				if (fsec == null)
+					return;
+
+				final var updatemsgs = new ArrayList<String>();
+				for (final var fgroup : fsec.getFileGrp()) {
+					for (final var file : fgroup.getFile()) {
+						for (final var flocat : file.getFLocat()) {
+							final var oldurl = flocat.getHref();
+							if (oldurl.startsWith(objectId)) {
+								// CASE: <object-id>/<subpath> -> <subpath>
+								final var newurl = oldurl.substring(objectId.length() + 1);
+								flocat.setHref(oldurl.substring(objectId.length() + 1));
+								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
+							}
+						}
+					}
+				}
+
+				if (updatemsgs.isEmpty())
+					return;
+
+				log.info("Updates for object '" + objectId + "':");
+				for (final var msg : updatemsgs)
+					log.info("  " + msg);
+
+				this.writeMetsFile(mets);
+				counter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Fixing metadata for object '" + objectId + "' failed!", error);
+				counter.increment(UpdateCounts.FAILED);
+			}
+		};
+
+		log.info("Fixing metadata for objects in archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.filter(filter)
+				.forEach(fixer);
+
+		final var numFixed = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Fixed metadata for " + numFixed + " object(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numFixed + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Fixing object-archive's metadata failed!");
 	}
 }
