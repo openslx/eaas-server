@@ -799,4 +799,37 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		final var numFailed = counter.get(UpdateCounts.FAILED);
 		log.info("Packed " + numPacked + " object(s), failed " + numFailed);
 	}
+
+	public void cleanupLegacyFiles(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Consumer<String> cleaner = (objectId) -> {
+			final var files = new ArrayList<Path>();
+			final var basedir = Path.of(localPath, objectId);
+			files.add(basedir.resolve("file.zip"));
+			files.add(basedir.resolve("iso").resolve("__import.iso"));
+
+			for (final var file : files) {
+				try {
+					if (Files.deleteIfExists(file)) {
+						log.info("Removed: " + file);
+						counter.increment(UpdateCounts.UPDATED);
+					}
+				}
+				catch (Exception error) {
+					log.log(Level.WARNING, "Removing legacy files for object '" + objectId + "' failed!", error);
+					counter.increment(UpdateCounts.FAILED);
+				}
+			}
+		};
+
+		log.info("Cleaning up object-archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.forEach(cleaner);
+
+		final var numRemoved = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Removed " + numRemoved + " legacy file(s), failed " + numFailed);
+	}
 }

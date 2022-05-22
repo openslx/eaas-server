@@ -219,6 +219,7 @@ public class ObjectArchiveSingleton
 		migrations.register("create-mets-objects", this::createMetsObjects);
 		migrations.register("fix-mets-objects", this::fixMetsObjects);
 		migrations.register("pack-object-files", this::packObjectFiles);
+		migrations.register("cleanup-legacy-object-files", this::cleanupLegacyObjectFiles);
 	}
 
 	private interface IHandler<T>
@@ -264,6 +265,16 @@ public class ObjectArchiveSingleton
 		final IHandler<DigitalObjectArchive> migration = (archive) -> {
 			if (archive instanceof DigitalObjectFileArchive)
 				((DigitalObjectFileArchive) archive).packFilesAsIso(mc);
+		};
+
+		this.execute(migration);
+	}
+
+	private void cleanupLegacyObjectFiles(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).cleanupLegacyFiles(mc);
 		};
 
 		this.execute(migration);
