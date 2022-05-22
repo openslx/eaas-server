@@ -765,4 +765,38 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		if (!MigrationUtils.acceptable(numFixed + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
 			throw new BWFLAException("Fixing object-archive's metadata failed!");
 	}
+
+	public void packFilesAsIso(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Predicate<String> filter = (objectId) -> {
+			final var basedir = Path.of(localPath, objectId);
+			final var files = basedir.resolve(ResourceType.FILE.value());
+			final var iso = basedir.resolve(ResourceType.ISO.value())
+					.resolve(PACKED_FILES_ISO_FILENAME);
+
+			return Files.exists(files) && !Files.exists(iso);
+		};
+
+		final Consumer<String> packer = (objectId) -> {
+			try {
+				this.packFilesAsIso(objectId);
+				counter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Packing files for object '" + objectId + "' failed!", error);
+				counter.increment(UpdateCounts.FAILED);
+			}
+		};
+
+		log.info("Packing object files in archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.filter(filter)
+				.forEach(packer);
+
+		final var numPacked = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Packed " + numPacked + " object(s), failed " + numFailed);
+	}
 }

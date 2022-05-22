@@ -218,6 +218,7 @@ public class ObjectArchiveSingleton
 
 		migrations.register("create-mets-objects", this::createMetsObjects);
 		migrations.register("fix-mets-objects", this::fixMetsObjects);
+		migrations.register("pack-object-files", this::packObjectFiles);
 	}
 
 	private interface IHandler<T>
@@ -253,6 +254,16 @@ public class ObjectArchiveSingleton
 		final IHandler<DigitalObjectArchive> migration = (archive) -> {
 			if (archive instanceof DigitalObjectFileArchive)
 				((DigitalObjectFileArchive) archive).fixMetsFiles(mc);
+		};
+
+		this.execute(migration);
+	}
+
+	private void packObjectFiles(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).packFilesAsIso(mc);
 		};
 
 		this.execute(migration);
