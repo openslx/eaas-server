@@ -36,6 +36,7 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
@@ -43,6 +44,7 @@ import com.openslx.eaas.common.util.MultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.objectarchive.datatypes.*;
@@ -73,9 +75,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private String exportUrlPrefix;
 
 	protected ObjectFileFilter objectFileFilter = new ObjectFileFilter();
-	protected ObjectImportHandle importHandle;
 
 	private static final String METS_MD_FILENAME = "mets.xml";
+	private static final String PACKED_FILES_ISO_FILENAME = "packed-files.iso";
 
 
 	/**
@@ -110,7 +112,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		this.localPath = localPath;
 		this.defaultArchive = defaultArchive;
 		this.exportUrlPrefix = httpExport + URLEncoder.encode(name, StandardCharsets.UTF_8);
-		importHandle = new ObjectImportHandle(localPath);
 		ConfigurationInjection.getConfigurationInjector().configure(this);
 	}
 
@@ -250,6 +251,27 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		EmulatorUtils.copyRemoteUrl(resource, target, log);
 	}
 
+	private void packFilesAsIso(String objectId) throws BWFLAException
+	{
+		final var iso = this.resolveTarget(objectId, ResourceType.ISO)
+				.resolve(PACKED_FILES_ISO_FILENAME)
+				.toFile();
+
+		log.info("Packing files for object '" + objectId + "' as ISO...");
+		try {
+			final var srcdir = this.resolveTarget(objectId, ResourceType.FILE);
+			final var files = Files.list(srcdir)
+					.map(Path::toFile)
+					.collect(Collectors.toList());
+
+			if (!CdromIsoHelper.createIso(iso, files))
+				throw new BWFLAException("Creating ISO from object files failed!");
+		}
+		catch (IOException error) {
+			throw new BWFLAException("Listing object files failed!", error);
+		}
+	}
+
 	@Override
 	public void importObject(String metsdata) throws BWFLAException {
 		MetsObject o = new MetsObject(metsdata);
@@ -269,6 +291,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 		Mets m = fromFileCollection(o.getId(), fc);
 		writeMetsFile(m);
+
+		// NOTE: files can't usually be attached directly to emulators,
+		//       hence we expect them to be packed in an ISO for now!
+		if (fc.contains(ResourceType.FILE))
+			this.packFilesAsIso(o.getId());
 	}
 
 	@Override
@@ -417,7 +444,19 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	{
 		try {
 			final MetsObject mets = this.loadMetsData(objectId);
-			return mets.getFileCollection(null);
+			final FileCollection fc = mets.getFileCollection(null);
+			if (fc.contains(ResourceType.FILE)) {
+				// NOTE: to stay compatible with existing clients, remove
+				//       all files and replace them with a single ISO!
+				fc.files = fc.files.stream()
+						.filter((fce) -> fce.getResourceType() != ResourceType.FILE)
+						.collect(Collectors.toList());
+
+				final var url = "iso/" + PACKED_FILES_ISO_FILENAME;
+				fc.files.add(new FileCollectionEntry(url, Drive.DriveType.CDROM, PACKED_FILES_ISO_FILENAME));
+			}
+
+			return fc;
 		}
 		catch (Exception error) {
 			log.log(Level.WARNING, "Loading object description failed!", error);
@@ -451,7 +490,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			log.log(Level.WARNING, e.getMessage(), e);
 		}
 		
-		DefaultDriveMapper driveMapper = new DefaultDriveMapper(importHandle);
+		DefaultDriveMapper driveMapper = new DefaultDriveMapper();
 		try {
 			return driveMapper.map(null, mf);
 		} catch (BWFLAException e) {
@@ -470,38 +509,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Override
 	public String getName() {
 		return name;
-	}
-	
-	public static class ObjectImportHandle
-	{
-		private final File objectsDir;
-		private final Logger log	= Logger.getLogger(this.getClass().getName());
-		
-		public ObjectImportHandle(String localPath)
-		{
-			this.objectsDir = new File(localPath);
-		}
-		
-		public File getImportFile(String id, ResourceType rt)
-		{
-			Path targetDir = objectsDir.toPath().resolve(id);
-			switch(rt)
-			{
-			case ISO: 
-				// if(!fileName.endsWith("iso"))
-				// 	fileName+=".iso";
-				targetDir = targetDir.resolve("iso");
-				if(!targetDir.toFile().exists())
-					if(!targetDir.toFile().mkdirs())
-					{
-						log.warning("could not create directory: " + targetDir);
-						return null;
-					}
-				return new File(targetDir.toFile(), "__import.iso");
-			default:
-				return null;
-			}
-		}
 	}
 	
 	protected static class NullFileFilter implements FileFilter

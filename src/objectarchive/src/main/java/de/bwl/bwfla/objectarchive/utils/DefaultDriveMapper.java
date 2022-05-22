@@ -4,9 +4,7 @@ import java.io.File;
 import java.util.*;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.emucomp.api.Binding.ResourceType;
-import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive.ObjectImportHandle;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectFileMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.ObjectFileManifestation;
 import de.bwl.bwfla.emucomp.api.Drive;
@@ -15,22 +13,16 @@ import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 
 public class DefaultDriveMapper 
 {
-	final ObjectImportHandle handle;
-	
-	
-	public DefaultDriveMapper(ObjectImportHandle handle)
-	{
-		this.handle = handle; 
-	}
-	
 	private FileCollectionEntry createEntry(Drive.DriveType driveType, String urlPrefix, File outFile) throws BWFLAException
 	{
-		if(driveType == null || outFile == null)
+		if(outFile == null)
 			throw new BWFLAException("unsupported format");
 		
 		FileCollectionEntry fe = new FileCollectionEntry(urlPrefix + "/" + outFile.getName(), driveType, outFile.getName());
 		fe.setFileSize(outFile.length());
 		fe.setLocalAlias(outFile.getName());
+		if (driveType == null)
+			fe.setResourceType(ResourceType.FILE);
 		
 		return fe;
 	}
@@ -64,28 +56,6 @@ public class DefaultDriveMapper
 		return o;
 	}
 	
-	List<ObjectFileManifestation.FileEntry> mapFiles(List<ObjectFileManifestation.FileEntry> flist, String objectId)
-	{
-		List<ObjectFileManifestation.FileEntry> outFiles = new ArrayList<>();
-		File dest = handle.getImportFile(objectId, ResourceType.ISO);
-		if(dest.exists())
-			return outFiles;
-
-		// avoid dependencies
-
-		List<File> fileList = new ArrayList<>();
-		for(ObjectFileManifestation.FileEntry fe : flist)
-		{
-			fileList.add(fe.getFile());
-		}
-
-		if(CdromIsoHelper.createIso(dest, fileList))
-			outFiles.add(new ObjectFileManifestation.FileEntry(dest,null));
-		
-		return outFiles;
-	}
-	
-	
 	List<FileCollectionEntry> mapResource(String urlPrefix, ResourceType rt, ObjectFileManifestation object) throws BWFLAException 
 	{
 		Drive.DriveType driveType = null;
@@ -112,9 +82,8 @@ public class DefaultDriveMapper
 			driveType = Drive.DriveType.FLOPPY;
 			break;
 		case FILE:
-			urlPrefix += "iso";
-			driveType = Drive.DriveType.CDROM;
-			flist = mapFiles(flist, object.getId());
+			urlPrefix += "file";
+			driveType = null;
 			break;
 		case CART:
 			urlPrefix += "cart";

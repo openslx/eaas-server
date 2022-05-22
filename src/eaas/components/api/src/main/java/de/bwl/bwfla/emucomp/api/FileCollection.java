@@ -105,4 +105,14 @@ public class FileCollection extends JaxbType {
 		final var resource = this.find(resourceId);
 		return (resource != null) ? resource.resolve(exportUrlPrefix) : null;
 	}
+
+	public boolean contains(Binding.ResourceType rt)
+	{
+		for (final var resource : files) {
+			if (resource.getResourceType() == rt)
+				return true;
+		}
+
+		return false;
+	}
 }
