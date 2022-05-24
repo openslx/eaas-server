@@ -13,7 +13,7 @@ mkdir .m2 2> /dev/null
 ln -s . "?" 2> /dev/null
 
 docker run --rm -v "$PWD":/root -v "$PWD"/.m2:/root/.m2 \
-  -u "$(id -u):$(id -g)" -e "HOME=/root" -v "$PWD":/src -w /src \
+  -u "$(id -u):$(id -g)" -e "HOME=/root" -v "$PWD"/..:/build -w /build/src \
   -it maven:3-jdk-11 mvn package "$@"
 
 mkdir "$BASEDIR"/deployments 2> /dev/null
