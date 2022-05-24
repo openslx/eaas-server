@@ -10,15 +10,18 @@ public class EaasBuildInfo
 {
 	private static final Properties PROPERTIES = EaasBuildInfo.load("/eaas-version.properties");
 
+	private static final String PROPERTY_COMMIT_ID = "git.commit.id";
+
+
 	public static String getVersion()
 	{
-		return EaasBuildInfo.get("git.commit.id");
+		return EaasBuildInfo.get(PROPERTY_COMMIT_ID);
 	}
 
 	private static String get(String key)
 	{
 		final String value = PROPERTIES.getProperty(key);
-		return (value != null) ? value.toUpperCase() : "UNKNOWN";
+		return (value != null) ? value : "UNKNOWN";
 	}
 
 	private static Properties load(String url)
@@ -28,6 +31,14 @@ public class EaasBuildInfo
 		try (InputStream istream = EaasBuildInfo.class.getClassLoader().getResourceAsStream(url)) {
 			if (istream != null) {
 				properties.load(istream);
+			}
+
+			var commit = properties.getProperty(PROPERTY_COMMIT_ID);
+			if (commit != null) {
+				commit = commit.replace("-false", "")
+						.replace("-true", "-dirty");
+
+				properties.setProperty(PROPERTY_COMMIT_ID, commit.toUpperCase());
 			}
 		}
 		catch (Throwable error) {
