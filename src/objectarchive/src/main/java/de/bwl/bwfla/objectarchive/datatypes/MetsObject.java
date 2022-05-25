@@ -443,6 +443,10 @@ public class MetsObject {
             fce.setResourceType(rt);
             if(of.label != null)
                 fce.setLabel(of.label);
+            else {
+                final int pos = 1 + url.lastIndexOf("/");
+                fce.setLabel(url.substring(pos));
+            }
 
             if(of.filename != null)
                 fce.setLocalAlias(of.filename);
