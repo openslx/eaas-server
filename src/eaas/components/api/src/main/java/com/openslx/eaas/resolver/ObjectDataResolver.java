@@ -39,6 +39,16 @@ public class ObjectDataResolver extends ComponentDataResolver
 		return this.resolve(userctx, kind, ObjectDataResolver.toUrl(fce));
 	}
 
+	public String resolve(String archive, String object, String resource)
+	{
+		return this.resolve(archive, object, resource, null);
+	}
+
+	public String resolve(String archive, String object, String resource, UserContext userctx)
+	{
+		return this.resolve(userctx, kind, archive, object, resource);
+	}
+
 	private static String toUrl(FileCollectionEntry fce)
 	{
 		return fce.getArchive() + "/" + fce.getObjectId() + "/" + fce.getId();
