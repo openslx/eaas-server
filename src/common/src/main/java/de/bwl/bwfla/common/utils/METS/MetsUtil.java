@@ -1,13 +1,13 @@
 package de.bwl.bwfla.common.utils.METS;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import gov.loc.mets.*;
 
 import javax.xml.bind.JAXBException;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.BiFunction;
+
 
 public class MetsUtil {
 
@@ -164,7 +164,13 @@ public class MetsUtil {
     }
 
     public static Mets export(Mets mets, String exportPrefix) {
+        final BiFunction<String, String, String> prefixer = (exportPrefix == null || exportPrefix.isEmpty()) ?
+            null : (id, url) -> exportPrefix + url;
 
+        return MetsUtil.export(mets, prefixer);
+    }
+
+    public static Mets export(Mets mets, BiFunction<String, String, String> prefixer) {
         Mets metsRoot = null;
         try {
             metsRoot = Mets.fromValue(mets.value(), Mets.class);
@@ -181,7 +187,7 @@ public class MetsUtil {
                 .filter(f -> f.getUSE().equals(MetsEaasConstant.FILE_GROUP_OBJECTS.toString()))
                 .findAny();
 
-        if (!digitalObjects.isPresent() || exportPrefix == null || exportPrefix.isEmpty())
+        if (!digitalObjects.isPresent() || prefixer == null)
             return metsRoot;
 
         MetsType.FileSec.FileGrp fileGrp = digitalObjects.get();
@@ -194,7 +200,7 @@ public class MetsUtil {
 
             FileType.FLocat fLocat = locationList.get(0);
             if(!fLocat.getHref().startsWith("http"))
-                fLocat.setHref(exportPrefix + fLocat.getHref());
+                fLocat.setHref(prefixer.apply(ft.getID(), fLocat.getHref()));
         }
 
         return metsRoot;
