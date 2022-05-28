@@ -160,10 +160,10 @@ public class ObjectArchiveSingleton
 		for(DigitalObjectArchive a : archives)
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
-			LOG.info("adding object archive" + a.getName());
+			LOG.info("Adding object archive: " + a.getName());
 			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase(defaultArchive)) {
 				ObjectArchiveSingleton.archiveMap.put(defaultArchive, a);
-				LOG.warning("setting archive " + a.getName() + " as default");
+				LOG.warning("Setting archive '" + a.getName() + "' as default");
 			}
 		}
 
@@ -177,6 +177,13 @@ public class ObjectArchiveSingleton
 				throw new ObjectArchiveInitException("Failed to initialize zero-conf archive!", error);
 			}
 		}
+
+		// always register a default archive!
+		if (!archiveMap.containsKey(defaultArchive))
+			archiveMap.put(defaultArchive, archiveMap.get(ZEROCONF_ARCHIVE_NAME));
+
+		final var archive = archiveMap.get(defaultArchive);
+		LOG.info("Registered default archive: " + defaultArchive + " -> " + archive.getName());
 	}
 
 	public static TaskState submitTask(BlockingTask<Object> task)
