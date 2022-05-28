@@ -41,7 +41,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -85,6 +87,7 @@ public class ObjectArchiveSingleton
 	public static final String tmpArchiveDir = "emil-temp-objects";
 	public static final String tmpArchiveName = "emil-temp-objects";
 	public static final String remoteArchiveName = "Remote Objects";
+	public static final String ZEROCONF_ARCHIVE_NAME = "zero conf";
 
 	public static final String remoteMetsObjects = "metsRemoteMetadata";
 
@@ -164,10 +167,15 @@ public class ObjectArchiveSingleton
 			}
 		}
 
-		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
-		archiveMap.put(_a.getName(), _a);
-		if(!archiveMap.containsKey(defaultArchive)) {
-			ObjectArchiveSingleton.archiveMap.put(defaultArchive, _a);
+		if (!archiveMap.containsKey(ZEROCONF_ARCHIVE_NAME)) {
+			try {
+				LOG.info("Loading zero-conf archive using defaults...");
+				final var zeroconf = new DigitalObjectS3Archive(DigitalObjectS3ArchiveDescriptor.zeroconf());
+				archiveMap.put(zeroconf.getName(), zeroconf);
+			}
+			catch (Exception error) {
+				throw new ObjectArchiveInitException("Failed to initialize zero-conf archive!", error);
+			}
 		}
 	}
 
