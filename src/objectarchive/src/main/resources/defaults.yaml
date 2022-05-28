@@ -6,4 +6,5 @@ objectarchive:
     user_archive_prefix: "user_archive"
     user_archive_enabled: false
     default_archive: "default"
+    temp_directory: "/tmp-storage/imports"
 

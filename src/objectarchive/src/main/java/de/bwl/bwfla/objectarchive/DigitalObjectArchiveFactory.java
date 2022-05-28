@@ -93,7 +93,14 @@ public class DigitalObjectArchiveFactory {
 					log.severe("failed to create DigitalObjectMETSFileArchive " + e.getMessage());
 					return null;
 				}
-				
+
+			case S3:
+				var descriptor = mapper.readValue(jsonString, DigitalObjectS3ArchiveDescriptor.class);
+				if (descriptor == null)
+					return null;
+
+				return new DigitalObjectS3Archive(descriptor);
+
 			default:
 				return null;
 			}

@@ -1,0 +1,9 @@
+{
+    "name": "zero conf",
+    "type": "S3",
+    "defaultArchive": false,
+    "endpoint": "http://minio:9000",
+    "accessKey": "eaas",
+    "secretKey": "eaas-secret-key",
+    "bucket": "object-archive"
+}

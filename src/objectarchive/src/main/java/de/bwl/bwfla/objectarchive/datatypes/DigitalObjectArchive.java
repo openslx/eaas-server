@@ -41,7 +41,7 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
 public interface DigitalObjectArchive
 {
 	Stream<String> getObjectIds();
-	FileCollection getObjectReference(String objectId);
+	FileCollection getObjectReference(String objectId) throws BWFLAException;
 	void importObject(String metsdata) throws BWFLAException;
 	String getName();
 	Path getLocalPath();
