@@ -79,7 +79,7 @@ public class DigitalObjectArchiveFactory {
 				DigitalObjectUserArchiveDescriptor u = mapper.readValue(jsonString, DigitalObjectUserArchiveDescriptor.class);
 				if(u == null)
 					return null;
-				return new DigitalObjectUserArchive(u.getUser());
+				return new DigitalObjectUserArchive(u);
 
 			case METS:
 				DigitalObjectMETSFileArchiveDescriptor m = mapper.readValue(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);

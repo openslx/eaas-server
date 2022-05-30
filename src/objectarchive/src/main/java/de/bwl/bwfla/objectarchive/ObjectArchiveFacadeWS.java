@@ -29,10 +29,13 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectUserArchiveDescriptor;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
 
+import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.ZEROCONF_ARCHIVE_NAME;
 import static de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton.tmpArchiveName;
 
 @Stateless
@@ -257,7 +260,18 @@ public class ObjectArchiveFacadeWS
 	}
 
 	public void registerUserArchive(String userId) throws BWFLAException {
-		ObjectArchiveSingleton.archiveMap.put(userId, new DigitalObjectUserArchive(userId));
+		final var archives = ObjectArchiveSingleton.archiveMap;
+		try {
+			final var zeroconf = archives.get(ZEROCONF_ARCHIVE_NAME);
+			final var s3desc = (zeroconf instanceof DigitalObjectS3Archive) ?
+					((DigitalObjectS3Archive) zeroconf).getDescriptor() : null;
+
+			final var usrdesc = DigitalObjectUserArchiveDescriptor.create(userId, s3desc);
+			archives.put(userId, new DigitalObjectUserArchive(usrdesc));
+		}
+		catch (Exception error) {
+			throw new BWFLAException(error);
+		}
 	}
 
 	private <T> DataHandler toDataHandler(Stream<T> source, Class<T> klass, String name)

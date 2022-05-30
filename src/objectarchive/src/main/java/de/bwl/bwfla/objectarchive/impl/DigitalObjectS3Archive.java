@@ -562,6 +562,11 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 		return -1;
 	}
 
+	public DigitalObjectS3ArchiveDescriptor getDescriptor()
+	{
+		return descriptor;
+	}
+
 
 	// ===== Internal Helpers ===============
 
