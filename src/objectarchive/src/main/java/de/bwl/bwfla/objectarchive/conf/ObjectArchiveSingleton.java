@@ -44,6 +44,7 @@ import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -235,6 +236,7 @@ public class ObjectArchiveSingleton
 		migrations.register("fix-mets-objects", this::fixMetsObjects);
 		migrations.register("pack-object-files", this::packObjectFiles);
 		migrations.register("cleanup-legacy-object-files", this::cleanupLegacyObjectFiles);
+		migrations.register("rename-user-object-archives", this::renameUserArchives);
 	}
 
 	private interface IHandler<T>
@@ -293,5 +295,10 @@ public class ObjectArchiveSingleton
 		};
 
 		this.execute(migration);
+	}
+
+	private void renameUserArchives(MigrationConfig mc) throws Exception
+	{
+		DigitalObjectUserArchive.renameArchives(mc);
 	}
 }

@@ -660,7 +660,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		public FileFilter FLOPPY_FILE_FILTER = new NullFileFilter();
 	}
 
-	private enum UpdateCounts
+	public enum UpdateCounts
 	{
 		PROCESSED,
 		UPDATED,
