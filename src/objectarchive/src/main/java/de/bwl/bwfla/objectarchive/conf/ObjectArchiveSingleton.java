@@ -257,6 +257,10 @@ public class ObjectArchiveSingleton
 			migration.handle(archiveMap.get(name));
 		}
 
+		// execute migration for legacy zero-conf archive (file-based) too
+		if (!(archiveMap.get(ZEROCONF_ARCHIVE_NAME) instanceof DigitalObjectFileArchive))
+			migration.handle(new DigitalObjectFileArchive(ZEROCONF_ARCHIVE_NAME, defaultLocalFilePath, false));
+
 		// NOTE: user-private archives are dynamically registered on-demand, hence
 		//       execute migration on a temporary instance for each known user!
 
