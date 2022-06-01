@@ -45,6 +45,7 @@ import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserFileArchive;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -254,6 +255,16 @@ public class ObjectArchiveSingleton
 				continue;
 
 			migration.handle(archiveMap.get(name));
+		}
+
+		// NOTE: user-private archives are dynamically registered on-demand, hence
+		//       execute migration on a temporary instance for each known user!
+
+		for (final var name : DigitalObjectUserFileArchive.listArchiveNames()) {
+			if (archiveMap.containsKey(name))
+				continue;  // skip registered archives!
+
+			migration.handle(new DigitalObjectUserFileArchive(name));
 		}
 	}
 
