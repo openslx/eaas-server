@@ -18,6 +18,8 @@
 
 package de.bwl.bwfla.objectarchive.impl;
 
+import com.openslx.eaas.migration.MigrationUtils;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.resolver.DataResolvers;
 import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.blobstore.BlobDescription;
@@ -43,6 +45,7 @@ import org.apache.tamaya.inject.ConfigurationInjection;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.inject.Inject;
+import javax.ws.rs.core.MediaType;
 import java.io.ByteArrayInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -65,6 +68,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+
+import static de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive.UpdateCounts;
 
 
 public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchive
@@ -830,5 +835,98 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 			fce.setLocalAlias(name);
 			return fce;
 		}
+	}
+
+
+	public void importLegacyArchive(MigrationConfig mc, Path basedir) throws Exception
+	{
+		final var fcounter = UpdateCounts.counter();
+		final var ocounter = UpdateCounts.counter();
+
+		final Function<Path, Integer> fuploader = (path) -> {
+			final var name = basename + "/" + basedir.relativize(path);
+			final var contentType = (name.endsWith(METS_MD_FILENAME)) ?
+					MediaType.APPLICATION_XML : MediaType.APPLICATION_OCTET_STREAM;
+
+			try {
+				bucket.blob(name)
+						.uploader()
+						.contentType(contentType)
+						.filename(path)
+						.upload();
+
+				log.info("  Uploaded: " + path);
+				fcounter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Uploading legacy object failed!", error);
+				fcounter.increment(UpdateCounts.FAILED);
+				return 0;
+			}
+
+			try {
+				Files.delete(path);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Deleting file failed!", error);
+			}
+
+			return 1;
+		};
+
+		final Function<Path, Integer> ouploader = (opath) -> {
+			// upload each object's file...
+			try (final var paths = Files.walk(opath)) {
+				final var uploaded = paths.filter(Files::isRegularFile)
+						.map(fuploader)
+						.allMatch((v) -> v > 0);
+
+				if (!uploaded) {
+					ocounter.increment(UpdateCounts.FAILED);
+					return 0;
+				}
+
+				ocounter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Uploading object failed!", error);
+				return 0;
+			}
+
+			final var deleter = new DeprecatedProcessRunner("rm")
+					.addArguments("-r", opath.toString())
+					.setLogger(log);
+
+			if (deleter.execute())
+				log.info("Removed directory: " + opath);
+
+			return 1;
+		};
+
+		log.info("Importing legacy objects into '" + this.getName() + "' archive...");
+		try (final var paths = Files.list(basedir)) {
+			final var uploaded = paths.filter(Files::isDirectory)
+					.map(ouploader)
+					.allMatch((v) -> v > 0);
+
+			if (uploaded) {
+				final var deleter = new DeprecatedProcessRunner("rm")
+						.addArguments("-r", basedir.toString())
+						.setLogger(log);
+
+				if (deleter.execute())
+					log.info("Removed directory: " + basedir);
+			}
+		}
+
+		final var numFilesUploaded = fcounter.get(UpdateCounts.UPDATED);
+		final var numFilesFailed = fcounter.get(UpdateCounts.FAILED);
+		log.info("Uploaded " + numFilesUploaded + " file(s), failed " + numFilesFailed);
+
+		final var numImported = ocounter.get(UpdateCounts.UPDATED);
+		final var numFailed = ocounter.get(UpdateCounts.FAILED);
+		log.info("Imported " + numImported + " legacy object(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Importing legacy objects failed!");
 	}
 }

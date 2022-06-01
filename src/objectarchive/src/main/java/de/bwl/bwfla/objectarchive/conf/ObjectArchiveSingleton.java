@@ -20,6 +20,7 @@
 package de.bwl.bwfla.objectarchive.conf;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -42,10 +43,12 @@ import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
+import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectUserArchiveDescriptor;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserFileArchive;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -238,6 +241,7 @@ public class ObjectArchiveSingleton
 		migrations.register("pack-object-files", this::packObjectFiles);
 		migrations.register("cleanup-legacy-object-files", this::cleanupLegacyObjectFiles);
 		migrations.register("rename-user-object-archives", this::renameUserArchives);
+		migrations.register("import-legacy-object-archives-v1", this::importLegacyArchivesV1);
 	}
 
 	private interface IHandler<T>
@@ -315,5 +319,26 @@ public class ObjectArchiveSingleton
 	private void renameUserArchives(MigrationConfig mc) throws Exception
 	{
 		DigitalObjectUserArchive.renameArchives(mc);
+	}
+
+	private void importLegacyArchivesV1(MigrationConfig mc) throws Exception
+	{
+		final var zeroconf = archiveMap.get(ZEROCONF_ARCHIVE_NAME);
+		if (!(zeroconf instanceof DigitalObjectS3Archive))
+			throw new IllegalStateException("S3-based archive '" + ZEROCONF_ARCHIVE_NAME + "' not found!");
+
+		final var s3archive = (DigitalObjectS3Archive) zeroconf;
+		final var usrbasedir = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.userarchive");
+
+		// import file-based zero-conf archive...
+		s3archive.importLegacyArchive(mc, Path.of(defaultLocalFilePath));
+
+		// import all user-private archives...
+		for (final var name : DigitalObjectUserFileArchive.listArchiveNames()) {
+			final var usrdesc = DigitalObjectUserArchiveDescriptor.create(name, s3archive.getDescriptor());
+			final var usrarchive = new DigitalObjectUserArchive(usrdesc);
+			usrarchive.importLegacyArchive(mc, Path.of(usrbasedir, name));
+		}
 	}
 }
