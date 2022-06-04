@@ -127,6 +127,11 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 		this.descriptor = descriptor;
 		this.bucket = blobstore.bucket(descriptor.getBucket());
 		this.basename = DigitalObjectS3Archive.strSaveFilename(descriptor.getName());
+		if (descriptor.getPath() != null) {
+			this.basename = BlobStore.path(descriptor.getPath(), this.basename)
+					.toString();
+		}
+
 		this.driveMapper = new DriveMapper();
 	}
 

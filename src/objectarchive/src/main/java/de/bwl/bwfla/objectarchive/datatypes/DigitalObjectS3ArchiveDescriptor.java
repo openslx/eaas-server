@@ -31,6 +31,7 @@ public class DigitalObjectS3ArchiveDescriptor extends DigitalObjectArchiveDescri
 	private String accessKey;
 	private String secretKey;
 	private String bucket;
+	private String path;
 
 	public DigitalObjectS3ArchiveDescriptor()
 	{
@@ -75,6 +76,16 @@ public class DigitalObjectS3ArchiveDescriptor extends DigitalObjectArchiveDescri
 	public void setBucket(String bucket)
 	{
 		this.bucket = bucket;
+	}
+
+	public String getPath()
+	{
+		return path;
+	}
+
+	public void setPath(String path)
+	{
+		this.path = path;
 	}
 
 

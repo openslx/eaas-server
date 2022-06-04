@@ -20,6 +20,7 @@ public class DigitalObjectUserArchiveDescriptor extends DigitalObjectS3ArchiveDe
         desc.setAccessKey(s3desc.getAccessKey());
         desc.setSecretKey(s3desc.getSecretKey());
         desc.setBucket(s3desc.getBucket());
+        desc.setPath(s3desc.getPath());
         desc.setName(user);
         return desc;
     }
