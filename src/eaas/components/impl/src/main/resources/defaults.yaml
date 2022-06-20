@@ -61,7 +61,7 @@ emucomp:
     curl_proxy: /usr/local/lib/LD_PRELOAD_libcurl.so
     rompath: /eaas/roms
     alsa_card: PCH
-    image_proxy: nginx:82
+    resolver: "http://resolver:8080"
 
 rest:
     imagearchive: "http://eaas:8080/image-archive"

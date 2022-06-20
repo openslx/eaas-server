@@ -135,5 +135,14 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		 return archive.getNameIndexes(backend);
 	}
 
+	public String resolveEmulatorImage(String imgid) throws BWFLAException {
+		return this.resolveImage(EMULATOR_DEFAULT_ARCHIVE, imgid);
+	}
+
+	public String resolveImage(String backend, String imgid) throws BWFLAException {
+		connectArchive();
+		return archive.resolveImage(backend, imgid);
+	}
+
 	public static class ImportNoFinishedException extends Exception {  }
 }

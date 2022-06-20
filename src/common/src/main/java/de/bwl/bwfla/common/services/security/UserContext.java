@@ -5,6 +5,7 @@ import java.util.UUID;
 public class UserContext {
 
     public final static String INVALID_USER = UUID.randomUUID().toString();
+    private String token;
     private String userId;
     private String tenantId;
     private String username;
@@ -55,9 +56,18 @@ public class UserContext {
         this.username = username;
     }
 
+    public String getToken() {
+        return token;
+    }
+
+    public void setToken(String token) {
+        this.token = token;
+    }
+
     @Override
     public UserContext clone() {
         UserContext copy = new UserContext();
+        copy.token = token;
         copy.userId = userId;
         copy.tenantId = tenantId;
         copy.username = username;

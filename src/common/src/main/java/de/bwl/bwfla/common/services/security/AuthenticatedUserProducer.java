@@ -44,6 +44,8 @@ public class AuthenticatedUserProducer {
             return;
         }
 
+        authenticatedUser.setToken(jwt.getToken());
+
         Claim userIdC = jwt.getClaim("sub");
         authenticatedUser.setUserId(userIdC.asString());
         authenticatedUser.setRole(Role.RESTRICTED);

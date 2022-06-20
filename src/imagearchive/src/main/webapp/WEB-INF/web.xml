@@ -15,7 +15,6 @@
   <servlet-name>Image Archive Servlet</servlet-name>
   <url-pattern>/*</url-pattern>
  </servlet-mapping>
-
  <filter>
   <filter-name>ServletAuthenticationFilter</filter-name>
   <filter-class>de.bwl.bwfla.common.services.security.ServletAuthenticationFilter</filter-class>
@@ -31,10 +30,12 @@
   </init-param>
  </filter>
 
+ <!--
  <filter-mapping>
   <filter-name>ServletAuthenticationFilter</filter-name>
   <url-pattern>/*</url-pattern>
   <servlet-name>de.bwl.bwfla.imagearchive.ExportObject</servlet-name>
   <dispatcher>REQUEST</dispatcher>
  </filter-mapping>
+ -->
 </web-app>

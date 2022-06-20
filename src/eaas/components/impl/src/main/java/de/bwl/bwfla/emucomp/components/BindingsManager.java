@@ -19,9 +19,8 @@
 
 package de.bwl.bwfla.emucomp.components;
 
-
+import com.openslx.eaas.resolver.DataResolvers;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.MachineTokenProvider;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
@@ -165,9 +164,17 @@ public class BindingsManager
 		 */
 		if (resource instanceof ImageArchiveBinding)
 		{
-			String proxy = MachineTokenProvider.getAuthenticationProxy();
-			ImageArchiveBinding iab = (ImageArchiveBinding)resource;
-			iab.setUrl(proxy + "/" + componentId + "/" + iab.getImageId());
+			final String location;
+			if ("emucon-rootfs".equals(resource.getId())) {
+				location = DataResolvers.emulators()
+						.resolve((ImageArchiveBinding) resource);
+			}
+			else {
+				location = DataResolvers.images()
+						.resolve(componentId, (ImageArchiveBinding) resource);
+			}
+
+			resource.setUrl(location);
 		}
 
 		if (resource.getId() == null

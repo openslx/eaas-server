@@ -30,8 +30,9 @@ import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportStateV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportTargetV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
+import com.openslx.eaas.resolver.DataResolvers;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.services.security.MachineTokenProvider;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.emucomp.api.AbstractDataResource;
 import de.bwl.bwfla.emucomp.api.BindingDataHandler;
@@ -40,7 +41,6 @@ import de.bwl.bwfla.emucomp.api.EmulationEnvironmentHelper;
 import de.bwl.bwfla.emucomp.api.Environment;
 import de.bwl.bwfla.emucomp.api.ImageArchiveBinding;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration;
-import de.bwl.bwfla.emucomp.api.OciContainerConfiguration;
 
 import javax.ws.rs.NotFoundException;
 import java.util.ArrayList;
@@ -291,7 +291,7 @@ public class EnvironmentsV2
 		}
 	}
 
-	public void replicate(Environment environment, Collection<AbstractDataResource> data, ReplaceOptionsV2 options)
+	public void replicate(Environment environment, Collection<AbstractDataResource> data, UserContext userctxt, ReplaceOptionsV2 options)
 			throws BWFLAException
 	{
 		logger.info("Replicating environment '" + environment.getId() + "'...");
@@ -314,8 +314,10 @@ public class EnvironmentsV2
 					final var binding = (ImageArchiveBinding) adr;
 					if (binding.getUrl() == null) {
 						// FIXME: assume, that we replicate from local archive for now
-						final var proxy = MachineTokenProvider.getAuthenticationProxy();
-						binding.setUrl(proxy + "/unknown/" + binding.getImageId());
+						final var location = DataResolvers.images()
+								.resolve(binding, userctxt);
+
+						binding.setUrl(location);
 					}
 
 					final var request = new ImportRequestV2();

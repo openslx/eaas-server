@@ -997,7 +997,7 @@ public class Components {
         String resolve(String id, ResolveOptionsV2 options) throws BWFLAException;
     }
 
-    private String resolveResource(String resourceId, ResolveOptionsV2 options)
+    private String resolveImage(String resourceId, ResolveOptionsV2 options)
     {
         final var archive = emilEnvRepo.getImageArchive()
                 .api()
@@ -1022,7 +1022,17 @@ public class Components {
         throw new NotFoundException();
     }
 
-    private Response resolveResource(String componentId, String resourceId, AccessMethodV2 method)
+    private String resolveResource(String kind, String resourceId, ResolveOptionsV2 options)
+    {
+        switch (kind) {
+            case "images":
+                return this.resolveImage(resourceId, options);
+            default:
+                throw new BadRequestException();
+        }
+    }
+
+    private Response resolveResource(String componentId, String kind, String resourceId, AccessMethodV2 method)
     {
         // FIXME: currently, components access images already during session
         //        initialization and before we know their component IDs here!
@@ -1036,7 +1046,7 @@ public class Components {
                 .setMethod(method);
 
         try {
-            final var location = this.resolveResource(resourceId, options);
+            final var location = this.resolveResource(kind, resourceId, options);
             LOG.info("Resolving '" + resourceId + "' -> " + method.name() + " " + location);
             return Response.temporaryRedirect(new URI(location))
                     .build();
@@ -1048,21 +1058,21 @@ public class Components {
     }
 
     @GET
-    @Secured(roles={Role.PUBLIC})
-    @Path("/resolve/{componentId}/{resource}")
-    public Response resolveResourceGET(@PathParam("componentId") String componentId,
-                                        @PathParam("resource") String resource)
+    @Path("/{compid}/{kind}/{resource: .+}/url")
+    public Response resolveResourceGET(@PathParam("compid") String compid,
+                                       @PathParam("kind") String kind,
+                                       @PathParam("resource") String resource)
     {
-        return this.resolveResource(componentId, resource, AccessMethodV2.GET);
+        return this.resolveResource(compid, kind, resource, AccessMethodV2.GET);
     }
 
     @HEAD
-    @Secured(roles={Role.PUBLIC})
-    @Path("/resolve/{componentId}/{resource}")
-    public Response resolveResourceHEAD(@PathParam("componentId") String componentId,
+    @Path("/{compid}/{kind}/{resource: .+}/url")
+    public Response resolveResourceHEAD(@PathParam("compid") String compid,
+                                        @PathParam("kind") String kind,
                                         @PathParam("resource") String resource)
     {
-        return this.resolveResource(componentId, resource, AccessMethodV2.HEAD);
+        return this.resolveResource(compid, kind, resource, AccessMethodV2.HEAD);
     }
 
 

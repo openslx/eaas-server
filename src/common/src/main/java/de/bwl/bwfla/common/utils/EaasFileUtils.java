@@ -20,13 +20,10 @@
 package de.bwl.bwfla.common.utils;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -39,9 +36,7 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import de.bwl.bwfla.common.services.security.AuthenticatedUrlConnection;
 import org.apache.commons.io.IOUtils;
-import org.eclipse.persistence.internal.oxm.conversion.Base64;
 
 
 public class EaasFileUtils
@@ -190,13 +185,5 @@ public class EaasFileUtils
 		}
 		
 		return tmpfile;
-	}
-
-	public static InputStream fromUrlToInputSteam(URL url, String requestMethod, String requestProperty, String requestValue) throws IOException {
-		HttpURLConnection connection = AuthenticatedUrlConnection.getConnection(url);
-		connection.setRequestMethod(requestMethod);
-		if (requestProperty != null && requestValue != null)
-			connection.setRequestProperty(requestProperty, requestValue);
-		return connection.getInputStream();
 	}
 }
