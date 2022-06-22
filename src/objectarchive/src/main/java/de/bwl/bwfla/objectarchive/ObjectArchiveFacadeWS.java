@@ -95,6 +95,13 @@ public class ObjectArchiveFacadeWS
 		throw new BWFLAException("Object archive " + archive + " not found");
 	}
 
+	public String resolveObjectResource(String archive, String objectId, String resourceId, String method)
+			throws BWFLAException
+	{
+		return this.getArchive(archive)
+				.resolveObjectResource(objectId, resourceId, method);
+	}
+
 	public @XmlMimeType("application/xml") DataHandler getObjectIds(String archive) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 //		return a.getObjectList();
@@ -117,6 +124,9 @@ public class ObjectArchiveFacadeWS
 			FileCollection fc = a.getObjectReference(id);
 			if(fc == null)
 				throw new BWFLAException("could not find object");
+
+			fc.setArchive(archive);
+			fc.update();
 			return fc.value();
 		} catch (JAXBException e) {
 			throw new BWFLAException(e);

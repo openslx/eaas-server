@@ -1,8 +1,6 @@
 package de.bwl.bwfla.emucomp.api;
 
-import javax.activation.DataHandler;
 import javax.xml.bind.annotation.*;
-import java.math.BigInteger;
 
 @XmlAccessorType(XmlAccessType.FIELD)
 @XmlType(name = "file", namespace="http://bwfla.bwl.de/common/datatypes")
@@ -22,6 +20,12 @@ public class FileCollectionEntry extends Binding implements Comparable<FileColle
 
 	@XmlElement(required = false, namespace="http://bwfla.bwl.de/common/datatypes", defaultValue = "false")
 	private boolean isDefault = false;
+
+	@XmlElement
+	private String archive;
+
+	@XmlElement
+	private String objectId;
 
 	public FileCollectionEntry()
 	{
@@ -79,5 +83,26 @@ public class FileCollectionEntry extends Binding implements Comparable<FileColle
 
 	public void setResourceType(ResourceType resourceType) {
 		this.resourceType = resourceType;
+	}
+
+	public String getArchive() {
+		return archive;
+	}
+
+	public void setArchive(String archive) {
+		this.archive = archive;
+	}
+
+	public String getObjectId() {
+		return objectId;
+	}
+
+	public void setObjectId(String objectId) {
+		this.objectId = objectId;
+	}
+
+	public String resolve(String exportUrlPrefix)
+	{
+		return exportUrlPrefix + "/" + this.getUrl();
 	}
 }

@@ -21,33 +21,38 @@ package de.bwl.bwfla.objectarchive.impl;
 
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.DirectoryStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import javax.inject.Inject;
-
-
+import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.migration.MigrationUtils;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
+import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
 import org.apache.commons.io.FileUtils;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.ConfigurationInjection;
-import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.emucomp.api.Binding.ResourceType;
@@ -67,31 +72,13 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private String name;
 	private String localPath;
 	private boolean defaultArchive;
+	private String exportUrlPrefix;
 
 	protected ObjectFileFilter objectFileFilter = new ObjectFileFilter();
-	protected ObjectImportHandle importHandle;
-
-	@Inject
-	@Config(value="objectarchive.httpexport")
-	public String httpExport;
-
-	@Inject
-	@Config(value="commonconf.serverdatadir")
-	public String serverdatadir;
 
 	private static final String METS_MD_FILENAME = "mets.xml";
+	private static final String PACKED_FILES_ISO_FILENAME = "packed-files.iso";
 
-	private String getExportPrefix()
-	{
-		String exportPrefix;
-		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/";
-		} catch (UnsupportedEncodingException e) {
-			log.log(Level.WARNING, e.getMessage(), e);
-			return null;
-		}
-		return exportPrefix;
-	}
 
 	/**
 	 * Simple ObjectArchive example. Files are organized as follows
@@ -118,10 +105,13 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	protected void init(String name, String localPath, boolean defaultArchive)
 	{
+		final var httpExport = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.httpexport");
+
 		this.name = name;
 		this.localPath = localPath;
 		this.defaultArchive = defaultArchive;
-		importHandle = new ObjectImportHandle(localPath);
+		this.exportUrlPrefix = httpExport + URLEncoder.encode(name, StandardCharsets.UTF_8);
 		ConfigurationInjection.getConfigurationInjector().configure(this);
 	}
 
@@ -139,7 +129,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		}
 
 		Path targetDir = objectDir.toPath().resolve(id);
-		targetDir.resolve("metadata");
 		if(!Files.exists(targetDir)) {
 			try {
 				Files.createDirectories(targetDir);
@@ -217,15 +206,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		if(!Files.exists(target))
 			return null;
 
-		String exportPrefix;
-		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/" + id;
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			log.log(Level.WARNING, e.getMessage(), e);
-			return null;
-		}
-		return exportPrefix + "/thumbnail.jpeg";
+		return "thumbnail.jpeg";
 	}
 
 	public void importObjectThumbnail(FileCollectionEntry resource) throws BWFLAException
@@ -245,7 +226,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		Path target = targetDir.resolve("thumbnail.jpeg");
 		if(Files.exists(target))
 			return;
-		EmulatorUtils.copyRemoteUrl(resource, target, null);
+		EmulatorUtils.copyRemoteUrl(resource, target, log);
 	}
 
 	void importObjectFile(String objectId, FileCollectionEntry resource) throws BWFLAException
@@ -267,7 +248,28 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		fileName = strSaveFilename(fileName);
 		Path target = targetDir.resolve(fileName);
 
-		EmulatorUtils.copyRemoteUrl(resource, target, null);
+		EmulatorUtils.copyRemoteUrl(resource, target, log);
+	}
+
+	private void packFilesAsIso(String objectId) throws BWFLAException
+	{
+		final var iso = this.resolveTarget(objectId, ResourceType.ISO)
+				.resolve(PACKED_FILES_ISO_FILENAME)
+				.toFile();
+
+		log.info("Packing files for object '" + objectId + "' as ISO...");
+		try {
+			final var srcdir = this.resolveTarget(objectId, ResourceType.FILE);
+			final var files = Files.list(srcdir)
+					.map(Path::toFile)
+					.collect(Collectors.toList());
+
+			if (!CdromIsoHelper.createIso(iso, files))
+				throw new BWFLAException("Creating ISO from object files failed!");
+		}
+		catch (IOException error) {
+			throw new BWFLAException("Listing object files failed!", error);
+		}
 	}
 
 	@Override
@@ -289,6 +291,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 		Mets m = fromFileCollection(o.getId(), fc);
 		writeMetsFile(m);
+
+		// NOTE: files can't usually be attached directly to emulators,
+		//       hence we expect them to be packed in an ISO for now!
+		if (fc.contains(ResourceType.FILE))
+			this.packFilesAsIso(o.getId());
 	}
 
 	@Override
@@ -302,22 +309,14 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 		try {
 			final Function<Path, String> mapper = (path) -> {
-				try {
-					return new ObjectFileManifestation(objectFileFilter, path.toFile())
-							.getId();
-				}
-				catch (BWFLAException error) {
-					final String name = path.getFileName().toString();
-					log.log(Level.WARNING, "Parsing object '" + name + "' failed!", error);
-					return null;
-				}
+				return path.getFileName()
+						.toString();
 			};
 
 			final DirectoryStream<Path> files = Files.newDirectoryStream(basepath);
 			return StreamSupport.stream(files.spliterator(), false)
 					.filter((path) -> Files.isDirectory(path))
 					.map(mapper)
-					.filter(Objects::nonNull)
 					.onClose(() -> {
 						try {
 							files.close();
@@ -396,7 +395,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			else
 				throw new BWFLAException("invalid file entry type");
 
-			String url = Paths.get(localPath).relativize(targetDir).toString();
+			String url = this.resolveMetadatTarget(objectId)
+					.relativize(targetDir)
+					.toString();
 
 			properties.fileFmt = entry.getResourceType() != null ? entry.getResourceType().toQID(): null;
 			properties.deviceId = entry.getType() != null ? entry.getType().toQID() : null;
@@ -408,13 +409,20 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 			log.warning(" local path url " + url);
 
-			MetsUtil.addFile(m, url, properties);
+			MetsUtil.addFile(m, entry.getId(), url, properties);
 		}
 		return m;
 	}
 
-	private void createMetsFiles(String objectId) throws BWFLAException {
-		FileCollection fc = getObjectReference(objectId);
+	private void createMetsMetadata(String objectId) throws BWFLAException {
+		FileCollection fc = this.describe(objectId);
+		if (fc == null)
+			throw new BWFLAException("Describing object '" + objectId + "' failed!");
+
+		// HACK: let proper file-IDs be autogenerated during conversion to METS!
+		for (final var fce : fc.files)
+			fce.setId(null);
+
 		Mets m = fromFileCollection(objectId, fc);
 		writeMetsFile(m);
 	}
@@ -422,24 +430,45 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private void writeMetsFile(Mets m) throws BWFLAException {
 		Path targetDir = resolveMetadatTarget(m.getID());
 		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
-
-		log.warning("local representation");
-		log.warning(m.toString());
-
 		try {
-			Files.write( metsPath, m.toString().getBytes(), StandardOpenOption.CREATE_NEW);
+			Files.write(metsPath, m.toString().getBytes());
+			log.info("Object metadata written to: " + metsPath);
 		} catch (IOException e) {
 			e.printStackTrace();
 			throw new BWFLAException(e);
 		}
 	}
 
+	@Override
 	public FileCollection getObjectReference(String objectId)
 	{
+		try {
+			final MetsObject mets = this.loadMetsData(objectId);
+			final FileCollection fc = mets.getFileCollection(null);
+			if (fc.contains(ResourceType.FILE)) {
+				// NOTE: to stay compatible with existing clients, remove
+				//       all files and replace them with a single ISO!
+				fc.files = fc.files.stream()
+						.filter((fce) -> fce.getResourceType() != ResourceType.FILE)
+						.collect(Collectors.toList());
+
+				final var url = "iso/" + PACKED_FILES_ISO_FILENAME;
+				fc.files.add(new FileCollectionEntry(url, Drive.DriveType.CDROM, PACKED_FILES_ISO_FILENAME));
+			}
+
+			return fc;
+		}
+		catch (Exception error) {
+			log.log(Level.WARNING, "Loading object description failed!", error);
+			return null;
+		}
+	}
+
+	private FileCollection describe(String objectId) {
 		if(objectId == null)
 			return null;
 
-		log.info("looking for: " + objectId);
+		log.info("Describing object: " + objectId);
 		File topDir = new File(localPath);
 		if(!topDir.exists() || !topDir.isDirectory())
 		{
@@ -460,18 +489,10 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		} catch (BWFLAException e) {
 			log.log(Level.WARNING, e.getMessage(), e);
 		}
-		String exportPrefix;
-		try {
-			exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8") + "/" + URLEncoder.encode(objectId, "UTF-8");
-		} catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			log.log(Level.WARNING, e.getMessage(), e);
-			return null;
-		}
 		
-		DefaultDriveMapper driveMapper = new DefaultDriveMapper(importHandle);
+		DefaultDriveMapper driveMapper = new DefaultDriveMapper();
 		try {
-			return driveMapper.map(exportPrefix, mf);
+			return driveMapper.map(null, mf);
 		} catch (BWFLAException e) {
 			// TODO Auto-generated catch block
 			log.log(Level.WARNING, e.getMessage(), e);
@@ -488,38 +509,6 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Override
 	public String getName() {
 		return name;
-	}
-	
-	public static class ObjectImportHandle
-	{
-		private final File objectsDir;
-		private final Logger log	= Logger.getLogger(this.getClass().getName());
-		
-		public ObjectImportHandle(String localPath)
-		{
-			this.objectsDir = new File(localPath);
-		}
-		
-		public File getImportFile(String id, ResourceType rt)
-		{
-			Path targetDir = objectsDir.toPath().resolve(id);
-			switch(rt)
-			{
-			case ISO: 
-				// if(!fileName.endsWith("iso"))
-				// 	fileName+=".iso";
-				targetDir = targetDir.resolve("iso");
-				if(!targetDir.toFile().exists())
-					if(!targetDir.toFile().mkdirs())
-					{
-						log.warning("could not create directory: " + targetDir);
-						return null;
-					}
-				return new File(targetDir.toFile(), "__import.iso");
-			default:
-				return null;
-			}
-		}
 	}
 	
 	protected static class NullFileFilter implements FileFilter
@@ -589,8 +578,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Override
 	public DigitalObjectMetadata getMetadata(String objectId) throws BWFLAException {
 
+		// NOTE: METS file URLs need to stay absolute for now!
+		final var metsExportPrefix = exportUrlPrefix + "/" + objectId + "/";
+
 		MetsObject o = loadMetsData(objectId);
-		Mets m = MetsUtil.export(o.getMets(), getExportPrefix());
+		Mets m = MetsUtil.export(o.getMets(), metsExportPrefix);
 		DigitalObjectMetadata md = new DigitalObjectMetadata(m);
 
 		String thumb = null;
@@ -608,9 +600,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	private MetsObject loadMetsData(String objectId) throws BWFLAException {
 		Path targetDir = resolveMetadatTarget(objectId);
 		Path metsPath = targetDir.resolve(METS_MD_FILENAME);
-		if(!Files.exists(metsPath)) {
-			createMetsFiles(objectId);
-		}
+		if (!Files.exists(metsPath))
+			throw new BWFLAException("METS metadata for object '" + objectId + "' not found!");
+
 		MetsObject mets = new MetsObject(metsPath.toFile());
 		return mets;
 	}
@@ -631,6 +623,15 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		return this.getObjectIds()
 				.map(mapper)
 				.filter(Objects::nonNull);
+	}
+
+	@Override
+	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException {
+		final var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
+		if (url == null || url.startsWith("http"))
+			return url;
+
+		return exportUrlPrefix + "/" + objectId + "/" + url;
 	}
 
 	@Override
@@ -657,5 +658,178 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	{
 		public FileFilter ISO_FILE_FILTER = new NullFileFilter();
 		public FileFilter FLOPPY_FILE_FILTER = new NullFileFilter();
+	}
+
+	private enum UpdateCounts
+	{
+		PROCESSED,
+		UPDATED,
+		FAILED,
+		__LAST;
+
+		public static MultiCounter counter()
+		{
+			return new MultiCounter(__LAST.ordinal());
+		}
+	}
+
+	public void createMetsFiles(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Predicate<String> filter = (objectId) -> {
+			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
+			return !Files.exists(metsfile);
+		};
+
+		final Consumer<String> creator = (objectId) -> {
+			try {
+				this.createMetsMetadata(objectId);
+				counter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Creating metadata for object '" + objectId + "' failed!", error);
+				counter.increment(UpdateCounts.FAILED);
+			}
+		};
+
+		log.info("Creating metadata for objects in archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.filter(filter)
+				.forEach(creator);
+
+		final var numCreated = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Created metadata for " + numCreated + " object(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numCreated + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Creating object-archive's metadata failed!");
+	}
+
+	public void fixMetsFiles(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Predicate<String> filter = (objectId) -> {
+			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
+			return Files.exists(metsfile);
+		};
+
+		final Consumer<String> fixer = (objectId) -> {
+			try {
+				final var mets = this.loadMetsData(objectId)
+						.getMets();
+
+				final var fsec = mets.getFileSec();
+				if (fsec == null)
+					return;
+
+				final var updatemsgs = new ArrayList<String>();
+				for (final var fgroup : fsec.getFileGrp()) {
+					for (final var file : fgroup.getFile()) {
+						for (final var flocat : file.getFLocat()) {
+							final var oldurl = flocat.getHref();
+							if (oldurl.startsWith(objectId)) {
+								// CASE: <object-id>/<subpath> -> <subpath>
+								final var newurl = oldurl.substring(objectId.length() + 1);
+								flocat.setHref(oldurl.substring(objectId.length() + 1));
+								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
+							}
+						}
+					}
+				}
+
+				if (updatemsgs.isEmpty())
+					return;
+
+				log.info("Updates for object '" + objectId + "':");
+				for (final var msg : updatemsgs)
+					log.info("  " + msg);
+
+				this.writeMetsFile(mets);
+				counter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Fixing metadata for object '" + objectId + "' failed!", error);
+				counter.increment(UpdateCounts.FAILED);
+			}
+		};
+
+		log.info("Fixing metadata for objects in archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.filter(filter)
+				.forEach(fixer);
+
+		final var numFixed = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Fixed metadata for " + numFixed + " object(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numFixed + numFailed, numFailed, MigrationUtils.getFailureRate(mc)))
+			throw new BWFLAException("Fixing object-archive's metadata failed!");
+	}
+
+	public void packFilesAsIso(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Predicate<String> filter = (objectId) -> {
+			final var basedir = Path.of(localPath, objectId);
+			final var files = basedir.resolve(ResourceType.FILE.value());
+			final var iso = basedir.resolve(ResourceType.ISO.value())
+					.resolve(PACKED_FILES_ISO_FILENAME);
+
+			return Files.exists(files) && !Files.exists(iso);
+		};
+
+		final Consumer<String> packer = (objectId) -> {
+			try {
+				this.packFilesAsIso(objectId);
+				counter.increment(UpdateCounts.UPDATED);
+			}
+			catch (Exception error) {
+				log.log(Level.WARNING, "Packing files for object '" + objectId + "' failed!", error);
+				counter.increment(UpdateCounts.FAILED);
+			}
+		};
+
+		log.info("Packing object files in archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.filter(filter)
+				.forEach(packer);
+
+		final var numPacked = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Packed " + numPacked + " object(s), failed " + numFailed);
+	}
+
+	public void cleanupLegacyFiles(MigrationConfig mc) throws Exception
+	{
+		final var counter = UpdateCounts.counter();
+
+		final Consumer<String> cleaner = (objectId) -> {
+			final var files = new ArrayList<Path>();
+			final var basedir = Path.of(localPath, objectId);
+			files.add(basedir.resolve("file.zip"));
+			files.add(basedir.resolve("iso").resolve("__import.iso"));
+
+			for (final var file : files) {
+				try {
+					if (Files.deleteIfExists(file)) {
+						log.info("Removed: " + file);
+						counter.increment(UpdateCounts.UPDATED);
+					}
+				}
+				catch (Exception error) {
+					log.log(Level.WARNING, "Removing legacy files for object '" + objectId + "' failed!", error);
+					counter.increment(UpdateCounts.FAILED);
+				}
+			}
+		};
+
+		log.info("Cleaning up object-archive '" + this.getName() + "'...");
+		this.getObjectIds()
+				.forEach(cleaner);
+
+		final var numRemoved = counter.get(UpdateCounts.UPDATED);
+		final var numFailed = counter.get(UpdateCounts.FAILED);
+		log.info("Removed " + numRemoved + " legacy file(s), failed " + numFailed);
 	}
 }

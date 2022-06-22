@@ -29,10 +29,14 @@ import java.util.logging.Logger;
 import javax.annotation.PostConstruct;
 import javax.ejb.Singleton;
 import javax.ejb.Startup;
+import javax.enterprise.event.Observes;
 import javax.inject.Inject;
 import javax.naming.InitialContext;
 import javax.naming.NamingException;
 
+import com.openslx.eaas.migration.IMigratable;
+import com.openslx.eaas.migration.MigrationRegistry;
+import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
@@ -51,6 +55,7 @@ import de.bwl.bwfla.objectarchive.impl.DigitalObjectFileArchive;
 @Singleton
 @Startup
 public class ObjectArchiveSingleton
+		implements IMigratable
 {
 	protected static final Logger				LOG	= Logger.getLogger(ObjectArchiveSingleton.class.getName());
 	public static volatile boolean 				confValid = false;
@@ -198,5 +203,80 @@ public class ObjectArchiveSingleton
 		{
 			super(message);
 		}
+	}
+
+	@Override
+	public void register(@Observes MigrationRegistry migrations) throws Exception
+	{
+		for (final var name : archiveMap.keySet()) {
+			if (name.equals("default"))
+				continue;
+
+			final var archive = archiveMap.get(name);
+			archive.register(migrations);
+		}
+
+		migrations.register("create-mets-objects", this::createMetsObjects);
+		migrations.register("fix-mets-objects", this::fixMetsObjects);
+		migrations.register("pack-object-files", this::packObjectFiles);
+		migrations.register("cleanup-legacy-object-files", this::cleanupLegacyObjectFiles);
+	}
+
+	private interface IHandler<T>
+	{
+		void handle(T data) throws Exception;
+	}
+
+	private void execute(IHandler<DigitalObjectArchive> migration) throws Exception
+	{
+		// NOTE: there can be multiple instances of archives,
+		//       execute migration for each of them!
+
+		for (final var name : archiveMap.keySet()) {
+			if (name.equals("default"))
+				continue;
+
+			migration.handle(archiveMap.get(name));
+		}
+	}
+
+	private void createMetsObjects(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).createMetsFiles(mc);
+		};
+
+		this.execute(migration);
+	}
+
+	private void fixMetsObjects(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).fixMetsFiles(mc);
+		};
+
+		this.execute(migration);
+	}
+
+	private void packObjectFiles(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).packFilesAsIso(mc);
+		};
+
+		this.execute(migration);
+	}
+
+	private void cleanupLegacyObjectFiles(MigrationConfig mc) throws Exception
+	{
+		final IHandler<DigitalObjectArchive> migration = (archive) -> {
+			if (archive instanceof DigitalObjectFileArchive)
+				((DigitalObjectFileArchive) archive).cleanupLegacyFiles(mc);
+		};
+
+		this.execute(migration);
 	}
 }

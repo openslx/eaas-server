@@ -48,6 +48,9 @@ import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.HEAD;
+import javax.ws.rs.HttpMethod;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -56,6 +59,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import javax.ws.rs.core.StreamingOutput;
+import java.net.URI;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -409,6 +413,37 @@ public class ObjectRepository extends EmilRest
 						.status(Response.Status.BAD_REQUEST)
 						.entity(new ErrorInformation(error.getMessage()))
 						.build());
+			}
+		}
+
+		@HEAD
+		@Secured(roles = {Role.RESTRICTED})
+		@Path("/{objectId}/resources/{resourceId}/url")
+		public Response resolveHEAD(@PathParam("objectId") String objectId, @PathParam("resourceId") String resourceId)
+		{
+			return this.resolve(objectId, resourceId, HttpMethod.HEAD);
+		}
+
+		@GET
+		@Secured(roles = {Role.RESTRICTED})
+		@Path("/{objectId}/resources/{resourceId}/url")
+		public Response resolveGET(@PathParam("objectId") String objectId, @PathParam("resourceId") String resourceId)
+		{
+			return this.resolve(objectId, resourceId, HttpMethod.GET);
+		}
+
+		private Response resolve(String objectId, String resourceId, String method)
+		{
+			final var objref = objectId + "/" + resourceId;
+			try {
+				final var location = objHelper.resolveObjectResource(archiveId, objectId, resourceId, method);
+				LOG.info("Resolving object '" + objref + "' -> " + method + " " + location);
+				return Response.temporaryRedirect(new URI(location))
+						.build();
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Resolving object '" + objref + "' failed!", error);
+				throw new NotFoundException();
 			}
 		}
 

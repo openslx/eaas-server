@@ -1022,11 +1022,24 @@ public class Components {
         throw new NotFoundException();
     }
 
-    private String resolveResource(String kind, String resourceId, ResolveOptionsV2 options)
+    private String resolveObjectResource(String resourceId, ResolveOptionsV2 options) throws Exception
+    {
+        // Expected: <archive-id>/<object-id>/<resource-id>
+        final var ids = resourceId.split("/");
+        if (ids.length != 3)
+            throw new BadRequestException();
+
+        return objectRepository.helper()
+                .resolveObjectResource(ids[0], ids[1], ids[2], options.method().name());
+    }
+
+    private String resolveResource(String kind, String resourceId, ResolveOptionsV2 options) throws Exception
     {
         switch (kind) {
             case "images":
                 return this.resolveImage(resourceId, options);
+            case "objects":
+                return this.resolveObjectResource(resourceId, options);
             default:
                 throw new BadRequestException();
         }

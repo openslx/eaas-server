@@ -27,21 +27,20 @@ import de.bwl.bwfla.objectarchive.datatypes.*;
 import gov.loc.mets.FileType;
 import gov.loc.mets.Mets;
 import gov.loc.mets.MetsType;
-import org.apache.tamaya.inject.ConfigurationInjection;
-import org.apache.tamaya.inject.api.Config;
+import org.apache.tamaya.ConfigurationProvider;
 
-import javax.inject.Inject;
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.StandardOpenOption;
 import java.util.*;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
@@ -54,12 +53,8 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	final private String name;
 	final private File metaDataDir;
 	final private String dataPath;
+	final private String exportUrlPrefix;
 	private boolean defaultArchive;
-
-	@Inject
-	@Config(value="objectarchive.httpexport")
-	public String httpExport;
-
 	private HashMap<String, MetsObject> objects;
 
 	public DigitalObjectMETSFileArchive(String name, String metaDataPath, String dataPath, boolean defaultArchive) throws BWFLAException {
@@ -72,7 +67,11 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		this.dataPath = dataPath;
 		this.defaultArchive = defaultArchive;
 		this.objects = new HashMap<>();
-		ConfigurationInjection.getConfigurationInjector().configure(this);
+
+		final var httpExport = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.httpexport");
+
+		this.exportUrlPrefix = httpExport + URLEncoder.encode(name, StandardCharsets.UTF_8);
 
 		load();
 	}
@@ -98,16 +97,22 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 	private void load()
 	{
+		int numLoaded = 0;
+		int numFailed = 0;
+
 		for(File mets: metaDataDir.listFiles())
 		{
-			log.severe("parsing: " + mets.getAbsolutePath());
 			try {
 				MetsObject obj = new MetsObject(mets);
 				objects.put(obj.getId(), obj);
+				++numLoaded;
 			} catch (BWFLAException e) {
-				e.printStackTrace();
+				log.log(Level.WARNING, "Parsing METS file '" + mets.getAbsolutePath() + "' failed!", e);
+				++numFailed;
 			}
 		}
+
+		log.info("Loaded " + numLoaded + " METS object(s), failed " + numFailed);
 	}
 
 	@Override
@@ -124,17 +129,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		if(obj == null)
 			return null;
 
-		if(dataPath != null) {
-			try {
-				String exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8");
-				return obj.getFileCollection(exportPrefix);
-			} catch (UnsupportedEncodingException e) {
-				e.printStackTrace();
-				return null;
-			}
-		}
-		else
-			return obj.getFileCollection(null);
+		return obj.getFileCollection(null);
 	}
 
 	@Override
@@ -172,6 +167,15 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	}
 
 	@Override
+	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException {
+		final var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
+		if (url == null || url.startsWith("http"))
+			return url;
+
+		return exportUrlPrefix + "/" + objectId + "/" + url;
+	}
+
+	@Override
 	public void sync() {	
 	}
 
@@ -206,7 +210,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 			jc = JAXBContext.newInstance(Mets.class);
 			Unmarshaller unmarshaller = jc.createUnmarshaller();
 			metsCopy = (Mets) unmarshaller.unmarshal(new StreamSource(new StringReader(metsCopyStr)));
-			String exportPrefix = httpExport + URLEncoder.encode(name, "UTF-8");
+			String exportPrefix = exportUrlPrefix + "/" + id;
 			if (metsCopy.getFileSec() != null) {
 				List<MetsType.FileSec.FileGrp> fileGrpList = metsCopy.getFileSec().getFileGrp();
 				for (MetsType.FileSec.FileGrp fileGrp : fileGrpList) {
@@ -227,7 +231,8 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 					}
 				}
 			}
-		} catch (JAXBException | UnsupportedEncodingException e) {
+		}
+		catch (JAXBException e) {
 			e.printStackTrace();
 		}
 		log.warning(metsCopy.toString());

@@ -177,6 +177,15 @@ public class BindingsManager
 			resource.setUrl(location);
 		}
 
+		// Resolve object-archive's binding URLs!
+		if (resource instanceof FileCollectionEntry)
+		{
+			final var location = DataResolvers.objects()
+					.resolve(componentId, (FileCollectionEntry) resource);
+
+			resource.setUrl(location);
+		}
+
 		if (resource.getId() == null
 				|| resource.getId().isEmpty()
 				|| resource.getUrl() == null

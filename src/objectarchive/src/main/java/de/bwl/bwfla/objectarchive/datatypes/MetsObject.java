@@ -400,12 +400,10 @@ public class MetsObject {
 
     public FileCollection getFileCollection(String exportPrefix)
     {
-        log.severe("get object file collection");
         FileCollection c = new FileCollection(getId());
         c.setLabel(getLabel());
         for(String fileId : objectFiles.keySet())
         {
-            log.severe("adding object: " + fileId);
             ObjectFile of = objectFiles.get(fileId);
             if(of.fileLocations.size() == 0 ) {
                 log.warning("METS ObjectFile " + of.id + " has no file locations");
@@ -441,23 +439,21 @@ public class MetsObject {
                     url = exportPrefix + "/" + url;
             }
 
-
-            log.warning("adding fc: " + url + " of.id" + of.id );
             FileCollectionEntry fce = new FileCollectionEntry(url, t, of.id);
             fce.setResourceType(rt);
             if(of.label != null)
                 fce.setLabel(of.label);
+            else {
+                final int pos = 1 + url.lastIndexOf("/");
+                fce.setLabel(url.substring(pos));
+            }
 
             if(of.filename != null)
                 fce.setLocalAlias(of.filename);
 
             c.files.add(fce);
         }
-        try {
-            log.info(c.value(true));
-        } catch (JAXBException e) {
-            e.printStackTrace();
-        }
+
         return c;
     }
 

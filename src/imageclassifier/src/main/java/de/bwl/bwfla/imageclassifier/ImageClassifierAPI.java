@@ -41,6 +41,10 @@ import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriBuilder;
 import javax.ws.rs.core.UriInfo;
 
+import de.bwl.bwfla.common.services.security.AuthenticatedUser;
+import de.bwl.bwfla.common.services.security.Role;
+import de.bwl.bwfla.common.services.security.Secured;
+import de.bwl.bwfla.common.services.security.UserContext;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.imageclassifier.client.Identification;
 import de.bwl.bwfla.imageclassifier.client.IdentificationRequest;
@@ -63,10 +67,15 @@ public class ImageClassifierAPI
 	@Inject
 	private TaskManager taskmgr;
 
+	@Inject
+	@AuthenticatedUser
+	private UserContext userctx = null;
+
 
 	/** Submit a new histogram task */
 	@POST
 	@Path("/histograms")
+	@Secured(roles = {Role.PUBLIC})
 	@Consumes(IdentificationRequest.MEDIATYPE_AS_JSON)
 	@Produces(IdentificationResponse.MEDIATYPE_AS_JSON)
 	public Response postHistogramRequest(IdentificationRequest request)
@@ -77,6 +86,7 @@ public class ImageClassifierAPI
 	/** Submit a new classification task */
 	@POST
 	@Path("/classifications")
+	@Secured(roles = {Role.PUBLIC})
 	@Consumes(IdentificationRequest.MEDIATYPE_AS_JSON)
 	@Produces(IdentificationResponse.MEDIATYPE_AS_JSON)
 	public Response postClassificationRequest(IdentificationRequest request)
@@ -148,8 +158,9 @@ public class ImageClassifierAPI
 				return ImageClassifierAPI.errorMessageResponse(Status.BAD_REQUEST, "Request parameter missing!");
 
 			// Submit task
+			final UserContext uctx = userctx.clone();
 			final ExecutorService executor = taskmgr.executor();
-			final BaseTask task = (asHistogram) ? new HistogramTask(request, executor) : new ClassificationTask(request, executor);
+			final BaseTask task = (asHistogram) ? new HistogramTask(request, uctx, executor) : new ClassificationTask(request, uctx, executor);
 			final String taskid = taskmgr.submit(task);
 
 			// Generate task's location URLs

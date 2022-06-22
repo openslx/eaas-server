@@ -143,9 +143,10 @@ public class MetsUtil {
         return ft;
     }
 
-    static FileType createFileEntry(String objUrl, String filename) {
+    static FileType createFileEntry(String fileId, String objUrl, String filename) {
 
-        String fileId = "FID-" + UUID.randomUUID().toString();
+        if (fileId == null || fileId.isEmpty())
+            fileId = "FID-" + UUID.randomUUID().toString();
 
         FileType fT = new FileType();
         fT.setID(fileId);
@@ -180,7 +181,7 @@ public class MetsUtil {
                 .filter(f -> f.getUSE().equals(MetsEaasConstant.FILE_GROUP_OBJECTS.toString()))
                 .findAny();
 
-        if (!digitalObjects.isPresent())
+        if (!digitalObjects.isPresent() || exportPrefix == null || exportPrefix.isEmpty())
             return metsRoot;
 
         MetsType.FileSec.FileGrp fileGrp = digitalObjects.get();
@@ -201,6 +202,11 @@ public class MetsUtil {
 
     public static FileType addFile(Mets metsRoot, String url, FileTypeProperties properties)
     {
+        return MetsUtil.addFile(metsRoot, null, url, properties);
+    }
+
+    public static FileType addFile(Mets metsRoot, String id, String url, FileTypeProperties properties)
+    {
         if(metsRoot.getFileSec() == null)
             metsRoot.setFileSec(new MetsType.FileSec());
 
@@ -218,7 +224,7 @@ public class MetsUtil {
             metsRoot.getFileSec().getFileGrp().add(fileGrp);
         }
 
-        FileType ft = createFileEntry(url, properties.filename);
+        FileType ft = createFileEntry(id, url, properties.filename);
         fileGrp.getFile().add(ft);
 
         if(properties.fileSize > 0)

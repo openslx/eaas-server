@@ -23,6 +23,9 @@ public class FileCollection extends JaxbType {
 	public String id;
 
 	@XmlElement
+	private String archive;
+
+	@XmlElement
 	private String label;
 
 	public FileCollection()
@@ -59,11 +62,57 @@ public class FileCollection extends JaxbType {
     	}
     }
 
+	public void update()
+	{
+		for (final var file : files) {
+			file.setArchive(this.archive);
+			file.setObjectId(this.id);
+		}
+	}
+
 	public String getLabel() {
 		return label;
 	}
 
 	public void setLabel(String label) {
 		this.label = label;
+	}
+
+	public String getArchive()
+	{
+		return archive;
+	}
+
+	public void setArchive(String archive)
+	{
+		this.archive = archive;
+	}
+
+	public FileCollectionEntry find(String resourceId)
+	{
+		for (final var resource : files) {
+			if (!resourceId.equalsIgnoreCase(resource.getId()))
+				continue;
+
+			return resource;
+		}
+
+		return null;
+	}
+
+	public String resolve(String exportUrlPrefix, String resourceId)
+	{
+		final var resource = this.find(resourceId);
+		return (resource != null) ? resource.resolve(exportUrlPrefix) : null;
+	}
+
+	public boolean contains(Binding.ResourceType rt)
+	{
+		for (final var resource : files) {
+			if (resource.getResourceType() == rt)
+				return true;
+		}
+
+		return false;
 	}
 }

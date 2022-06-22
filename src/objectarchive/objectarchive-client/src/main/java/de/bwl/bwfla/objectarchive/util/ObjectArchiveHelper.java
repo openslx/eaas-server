@@ -76,7 +76,13 @@ public class ObjectArchiveHelper {
 		if(archive == null)
 			throw new BWFLAException("could not connect to object archive @ " + wsHost);	
 	}
-	
+
+	public String resolveObjectResource(String _archive, String objectId, String resourceId, String method) throws BWFLAException
+	{
+		connectArchive();
+		return archive.resolveObjectResource(_archive, objectId, resourceId, method);
+	}
+
 	public DigitalObjectMetadata getObjectMetadata(String _archive, String id) throws BWFLAException
 	{
 		connectArchive();

@@ -161,7 +161,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	private FileCollectionEntry createFileCollectionEntry(String objectId, DigitalFileContent dfc, DriveType t)
 	{
 		FileCollectionEntry fce = new FileCollectionEntry();
-		fce.setId(objectId);
+		fce.setId(dfc.getId());
 		if(dfc.getFileContentUrl() == null)
 			return null;
 
@@ -177,7 +177,7 @@ public class DigitalObjectPreservicaArchive implements Serializable, DigitalObje
 	private FileCollectionEntry createFileCollectionEntry(String objectId, DigitalFileContent dfc) 
 	{
 			FileCollectionEntry fce = new FileCollectionEntry();
-			fce.setId(objectId);
+			fce.setId(dfc.getId());
 			if(dfc.getFileContentUrl() == null)
 				return null;
 
