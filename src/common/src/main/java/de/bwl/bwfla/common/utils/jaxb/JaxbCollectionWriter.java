@@ -73,7 +73,7 @@ public class JaxbCollectionWriter<T> implements Runnable
 			writer.writeEndDocument();
 			writer.flush();
 		}
-		catch (Exception error) {
+		catch (Throwable error) {
 			log.log(Level.WARNING, "Writing '" + pipe.getName() + "' failed!", error);
 		}
 		finally {
@@ -95,7 +95,7 @@ public class JaxbCollectionWriter<T> implements Runnable
 		try {
 			writer.close();
 		}
-		catch (Exception error) {
+		catch (Throwable error) {
 			log.log(Level.WARNING, "Closing xml-writer for '" + pipe.getName() + "' failed!", error);
 		}
 	}
