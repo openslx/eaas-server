@@ -58,27 +58,29 @@ public class JaxbCollectionWriter<T> implements Runnable
 	@Override
 	public void run()
 	{
-		XMLStreamWriter writer = null;
-
 		try (final OutputStream ostream = pipe.getOutputStream()) {
-			writer = XMLOutputFactory.newFactory()
+			final var writer = XMLOutputFactory.newFactory()
 					.createXMLStreamWriter(ostream);
 
-			writer.writeStartDocument();
-			writer.writeStartElement(pipe.getName());
+			try {
+				writer.writeStartDocument();
+				writer.writeStartElement(pipe.getName());
 
-			source.forEach(new ItemMarshaller<>(writer, klass, log));
+				source.forEach(new ItemMarshaller<>(writer, klass, log));
 
-			writer.writeEndElement();
-			writer.writeEndDocument();
-			writer.flush();
+				writer.writeEndElement();
+				writer.writeEndDocument();
+				writer.flush();
+			}
+			finally {
+				this.close(writer);
+			}
 		}
 		catch (Throwable error) {
 			log.log(Level.WARNING, "Writing '" + pipe.getName() + "' failed!", error);
 		}
 		finally {
 			this.close(source);
-			this.close(writer);
 		}
 	}
 
