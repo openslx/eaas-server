@@ -431,7 +431,8 @@ public class ImportService implements AutoCloseable
 
 				final var srcurl = new URI(source.url());
 				final var image = Path.of(srcurl.getPath());
-				EmulatorUtils.changeBackingFile(image, filename, logger);
+				final var bfinfo = new ImageInformation(info.getBackingFile(), logger);
+				EmulatorUtils.changeBackingFile(image, filename, bfinfo.getFileFormat(), logger);
 			}
 
 			// prepare subtask for importing referenced image-layer...

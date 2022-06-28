@@ -148,12 +148,15 @@ public class EmulatorUtils {
 	}
 
 
-	public static void changeBackingFile(Path image, String backingFile, Logger log) throws BWFLAException {
+	public static void changeBackingFile(Path image, String backingFile, ImageInformation.QemuImageFormat backingFileFormat, Logger log)
+			throws BWFLAException
+	{
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("qemu-img");
 		process.addArgument("rebase");
 		process.addArgument("-u");
+		process.addArguments("-F", backingFileFormat.toString());
 		process.addArguments("-b", backingFile);
 		process.addArgument(image.toString());
 
