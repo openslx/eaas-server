@@ -380,7 +380,14 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 			if (filename == null || filename.isEmpty())
 				filename = entry.getId();
 
-			final var url = entry.getResourceType().value() + "/" + filename;
+			final ResourceType rt;
+			if (entry.getResourceType() != null)
+				rt = entry.getResourceType();
+			else if (entry.getType() != null)
+				rt = entry.getType().toResourceType();
+			else throw new IllegalArgumentException();
+
+			final var url = rt.value() + "/" + filename;
 			MetsUtil.addFile(m, url, properties);
 		}
 

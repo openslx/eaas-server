@@ -163,36 +163,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		if(type == null)
 			return null;
 
-		File objectDir = new File(localPath);
-		if(!objectDir.exists() && !objectDir.isDirectory())
-		{
-			throw new BWFLAException("objectDir " + localPath + " does not exist");
-		}
-
-		Path targetDir = objectDir.toPath().resolve(id);
-		switch(type)
-		{
-			case CDROM:
-				targetDir = targetDir.resolve("iso");
-				break;
-			case FLOPPY:
-				targetDir = targetDir.resolve("floppy");
-				break;
-			case DISK:
-				targetDir = targetDir.resolve("disk");
-				break;
-			case CART:
-				targetDir = targetDir.resolve("cart");
-				break;
-			default:
-				throw new BWFLAException("unsupported type " + type);
-		}
-		if(!targetDir.toFile().exists())
-			if(!targetDir.toFile().mkdirs())
-			{
-				throw new BWFLAException("could not create directory: " + targetDir);
-			}
-		return targetDir;
+		return this.resolveTarget(id, type.toResourceType());
 	}
 
 	public String getThumbnail(String id) throws BWFLAException {
