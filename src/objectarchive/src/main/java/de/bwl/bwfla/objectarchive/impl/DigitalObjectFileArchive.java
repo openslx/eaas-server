@@ -106,8 +106,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	protected void init(String name, String localPath, boolean defaultArchive)
 	{
-		final var httpExport = ConfigurationProvider.getConfiguration()
+		var httpExport = ConfigurationProvider.getConfiguration()
 				.get("objectarchive.httpexport");
+
+		if (!httpExport.endsWith("/"))
+			httpExport += "/";
 
 		this.name = name;
 		this.localPath = localPath;

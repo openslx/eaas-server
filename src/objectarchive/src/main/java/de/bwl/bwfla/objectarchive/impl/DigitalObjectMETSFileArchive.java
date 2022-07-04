@@ -69,8 +69,11 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		this.defaultArchive = defaultArchive;
 		this.objects = new HashMap<>();
 
-		final var httpExport = ConfigurationProvider.getConfiguration()
+		var httpExport = ConfigurationProvider.getConfiguration()
 				.get("objectarchive.httpexport");
+
+		if (!httpExport.endsWith("/"))
+			httpExport += "/";
 
 		this.exportUrlPrefix = httpExport + URLEncoder.encode(name, StandardCharsets.UTF_8);
 
