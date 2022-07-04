@@ -71,6 +71,6 @@ public class DataResolver
 		if (url == null)
 			throw new IllegalArgumentException();
 
-		return url.startsWith("http") || url.startsWith("file");
+		return url.startsWith("http:") || url.startsWith("https:") || url.startsWith("file:");
 	}
 }

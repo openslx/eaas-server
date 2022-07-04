@@ -43,6 +43,7 @@ import java.util.stream.StreamSupport;
 import com.openslx.eaas.common.util.MultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
+import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -599,7 +600,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Override
 	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException {
 		final var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
-		if (url == null || url.startsWith("http"))
+		if (url == null || DataResolver.isAbsoluteUrl(url))
 			return url;
 
 		return exportUrlPrefix + "/" + objectId + "/" + url;

@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.objectarchive.impl;
 
+import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -169,7 +170,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 	@Override
 	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException {
 		final var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
-		if (url == null || url.startsWith("http"))
+		if (url == null || DataResolver.isAbsoluteUrl(url))
 			return url;
 
 		return exportUrlPrefix + "/" + objectId + "/" + url;
@@ -221,7 +222,7 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 						for (FileType.FLocat fLocat : locationList) {
 							if (fLocat.getLOCTYPE() != null && fLocat.getLOCTYPE().equals("URL")) {
 								if (fLocat.getHref() != null) {
-									if (!fLocat.getHref().startsWith("http")) {
+									if (DataResolver.isRelativeUrl(fLocat.getHref())) {
 										fLocat.setHref(exportPrefix + "/" + fLocat.getHref());
 										log.warning("updating location");
 									}

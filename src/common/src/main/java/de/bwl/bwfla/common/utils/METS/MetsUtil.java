@@ -1,5 +1,6 @@
 package de.bwl.bwfla.common.utils.METS;
 
+import de.bwl.bwfla.common.services.net.HttpUtils;
 import gov.loc.mets.*;
 
 import javax.xml.bind.JAXBException;
@@ -199,7 +200,7 @@ public class MetsUtil {
                 continue;
 
             FileType.FLocat fLocat = locationList.get(0);
-            if(!fLocat.getHref().startsWith("http"))
+            if (HttpUtils.isRelativeUrl(fLocat.getHref()))
                 fLocat.setHref(prefixer.apply(ft.getID(), fLocat.getHref()));
         }
 

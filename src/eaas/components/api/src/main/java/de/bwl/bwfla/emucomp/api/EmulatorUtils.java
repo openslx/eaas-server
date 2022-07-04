@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.bwl.bwfla.common.services.net.HttpUtils;
 import de.bwl.bwfla.common.utils.ImageInformation;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -53,7 +54,7 @@ public class EmulatorUtils {
 	public static void copyRemoteUrl(Binding resource, Path dest, Logger log) throws BWFLAException {
 		String resUrl = resource.getUrl();
 		// hack until qemu-img is fixed
-		if (resUrl.startsWith("http") || resUrl.startsWith("https")) {
+		if (HttpUtils.isAbsoluteUrl(resUrl)) {
 			DeprecatedProcessRunner process = new DeprecatedProcessRunner("curl");
 			if(log != null)
 				process.setLogger(log);

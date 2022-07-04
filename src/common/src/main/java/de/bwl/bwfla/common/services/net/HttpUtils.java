@@ -44,6 +44,21 @@ public class HttpUtils
 	private static final String MULTIPART_BOUNDARY = "MULTIPART-BYTE-RANGE";
 
 
+	/** Returns true if given URL is relative */
+	public static boolean isRelativeUrl(String url)
+	{
+		return !HttpUtils.isAbsoluteUrl(url);
+	}
+
+	/** Returns true if given URL is absolute */
+	public static boolean isAbsoluteUrl(String url)
+	{
+		if (url == null)
+			throw new IllegalArgumentException();
+
+		return url.startsWith("http:") || url.startsWith("https:");
+	}
+
 	/** Returns true if the request has a Range header, else false */
 	public static boolean hasRangeHeader(HttpServletRequest request)
 	{

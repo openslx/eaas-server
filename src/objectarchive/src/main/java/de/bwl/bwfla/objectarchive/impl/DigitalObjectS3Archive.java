@@ -20,6 +20,7 @@ package de.bwl.bwfla.objectarchive.impl;
 
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
+import com.openslx.eaas.resolver.DataResolver;
 import com.openslx.eaas.resolver.DataResolvers;
 import de.bwl.bwfla.blobstore.Blob;
 import de.bwl.bwfla.blobstore.BlobDescription;
@@ -547,7 +548,7 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException
 	{
 		var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
-		if (url == null || url.startsWith("http"))
+		if (url == null || DataResolver.isAbsoluteUrl(url))
 			return url;
 
 		url = this.location(objectId) + "/" + url;
