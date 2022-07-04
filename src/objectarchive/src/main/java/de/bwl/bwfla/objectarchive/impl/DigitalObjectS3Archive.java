@@ -297,7 +297,7 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 		}
 		finally {
 			final var deleter = new DeprecatedProcessRunner("rm")
-					.addArguments("-r", tmpdir.toString())
+					.addArguments("-r", "--", tmpdir.toString())
 					.setLogger(log);
 
 			deleter.execute();
@@ -924,7 +924,7 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 
 			if (uploaded) {
 				final var deleter = new DeprecatedProcessRunner("rm")
-						.addArguments("-r", basedir.toString())
+						.addArguments("-r", "--", basedir.toString())
 						.setLogger(log);
 
 				if (deleter.execute())

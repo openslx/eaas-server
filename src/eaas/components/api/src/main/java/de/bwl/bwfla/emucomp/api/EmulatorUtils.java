@@ -159,7 +159,7 @@ public class EmulatorUtils {
 		process.addArgument("-u");
 		process.addArguments("-F", backingFileFormat.toString());
 		process.addArguments("-b", backingFile);
-		process.addArgument(image.toString());
+		process.addArguments("--", image.toString());
 
 		if (!process.execute()) {
 			throw new BWFLAException("qemu-img rebase " + image.toString() + " failed");
