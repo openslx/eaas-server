@@ -137,7 +137,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
     
 	protected final TunnelConfig tunnelConfig = new TunnelConfig();
 
-	protected final EmulatorBeanState emuBeanState = new EmulatorBeanState(EmuCompState.EMULATOR_UNDEFINED);
+	protected final EmulatorBeanState emuBeanState = new EmulatorBeanState(EmuCompState.EMULATOR_UNDEFINED, LOG);
 
 	protected MachineConfiguration emuEnvironment;
 	private String emuNativeConfig;
