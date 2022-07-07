@@ -1146,16 +1146,7 @@ public class Components {
     public ComponentResponse getState(@PathParam("componentId") String componentId) {
         try {
             final String state = component.getState(componentId);
-            if (state.equals(ComponentState.OK.toString()) || state.equals(ComponentState.INACTIVE.toString()) || state.equals(ComponentState.READY.toString())) {
-                return new ComponentStateResponse(componentId, state);
-            } else if (state.equals(ComponentState.STOPPED.toString()) || state.equals(ComponentState.FAILED.toString())) {
-                LOG.fine("emulator is " + state + "!");
-                return new ComponentStateResponse(componentId, state);
-            } else {
-                throw new InternalServerErrorException(Response.serverError()
-                        .entity("The component associated with your session has failed.")
-                        .build());
-            }
+            return new ComponentStateResponse(componentId, state);
         } catch (BWFLAException e) {
             // TODO: 400 if the component id is syntactically wrong
             // TODO: 404 if the component cannot be found
