@@ -41,7 +41,7 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 	private String detachedTitle;
 	private String environmentId = null;
 	
-	protected ComponentState state = ComponentState.OK;
+	protected ComponentState state = ComponentState.RUNNING;
 	private BWFLAException asyncError = null;
 	
 	private Map<String, IConnector> controlConnectors = new ConcurrentHashMap<String, IConnector>();

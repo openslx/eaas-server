@@ -19,7 +19,6 @@
 
 package de.bwl.bwfla.emucomp.api;
 
-import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlEnum;
 import javax.xml.bind.annotation.XmlEnumValue;
 import javax.xml.bind.annotation.XmlType;
@@ -27,14 +26,14 @@ import javax.xml.bind.annotation.XmlType;
 @XmlEnum
 @XmlType(namespace = "http://bwfla.bwl.de/components/datatypes")
 public enum ComponentState {
-    @XmlEnumValue("ok")
-    OK,
+    @XmlEnumValue("initializing")
+    INITIALIZING,
     @XmlEnumValue("inactive")
     INACTIVE,
     @XmlEnumValue("stopped")
     STOPPED,
     @XmlEnumValue("failed")
     FAILED,
-    @XmlEnumValue("ready")
-    READY;
+    @XmlEnumValue("running")
+    RUNNING;
 }

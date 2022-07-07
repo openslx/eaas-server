@@ -278,24 +278,24 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	boolean isHeadlessSupported() { return false; }
 
 	boolean isBeanReady() {
-		return false; // this is the default, if the bean has no internal state
+		return true; // this is the default, if the bean has no internal state
 	}
 
 	@Override
 	public ComponentState getState() throws BWFLAException
 	{
 		switch (this.getEmulatorState()) {
+			case EMULATOR_RUNNING:
+				return (this.isBeanReady()) ? ComponentState.RUNNING : ComponentState.INITIALIZING;
 			case EMULATOR_INACTIVE:
 				return ComponentState.INACTIVE;
 			case EMULATOR_STOPPED:
 				return ComponentState.STOPPED;
 			case EMULATOR_FAILED:
 				return ComponentState.FAILED;
+			default:
+				return ComponentState.INITIALIZING;
 		}
-
-		if (isBeanReady())
-			return ComponentState.READY;
-		return ComponentState.OK;
 	}
 
 	public EmuCompState getEmulatorState()
