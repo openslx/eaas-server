@@ -25,6 +25,7 @@ import java.util.Set;
 
 import javax.activation.DataHandler;
 
+import de.bwl.bwfla.common.datatypes.EmuCompState;
 import de.bwl.bwfla.common.datatypes.ProcessMonitorVID;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
@@ -47,7 +48,7 @@ public interface EmulatorComponent extends ClusterComponent
 	public Set<String> getColdplugableDrives();
 	public Set<String> getHotplugableDrives();
 	
-	public String getEmulatorState();
+	public EmuCompState getEmulatorState();
 
 	/* ==================== EmuCon API ==================== */
 

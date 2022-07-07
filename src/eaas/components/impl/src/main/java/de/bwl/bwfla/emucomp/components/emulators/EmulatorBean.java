@@ -284,26 +284,27 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	@Override
 	public ComponentState getState() throws BWFLAException
 	{
-		String emulatorBeanState = getEmulatorState();
-		// TODO proper state return
-		if(emulatorBeanState.equals(EmuCompState.EMULATOR_INACTIVE.value()))
-			return ComponentState.INACTIVE;
-		if (emulatorBeanState.equals(EmuCompState.EMULATOR_STOPPED.value()))
-			return ComponentState.STOPPED;
-		if (emulatorBeanState.equals(EmuCompState.EMULATOR_FAILED.value()))
-			return ComponentState.FAILED;
+		switch (this.getEmulatorState()) {
+			case EMULATOR_INACTIVE:
+				return ComponentState.INACTIVE;
+			case EMULATOR_STOPPED:
+				return ComponentState.STOPPED;
+			case EMULATOR_FAILED:
+				return ComponentState.FAILED;
+		}
+
 		if (isBeanReady())
 			return ComponentState.READY;
 		return ComponentState.OK;
 	}
 
-	public String getEmulatorState()
+	public EmuCompState getEmulatorState()
 	{
 		final boolean isEmulatorInactive = ctlEvents.poll(EventID.CLIENT_INACTIVE);
 		synchronized (emuBeanState) {
 			if (isEmulatorInactive)
 				emuBeanState.set(EmuCompState.EMULATOR_INACTIVE);
-			return emuBeanState.get().value();
+			return emuBeanState.get();
 		}
 	}
 

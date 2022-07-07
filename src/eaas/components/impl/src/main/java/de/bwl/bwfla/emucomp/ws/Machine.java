@@ -123,11 +123,12 @@ public class Machine
 		final EmulatorComponent emul = nodeManager.getComponentById(componentId, EmulatorComponent.class);
 		return emul.snapshot();
 	}
-	
+
 	public String getEmulatorState(String componentId) throws BWFLAException
 	{
 		final EmulatorComponent emul = nodeManager.getComponentById(componentId, EmulatorComponent.class);
-		return emul.getEmulatorState();
+		return emul.getEmulatorState()
+				.value();
 	}
 
 

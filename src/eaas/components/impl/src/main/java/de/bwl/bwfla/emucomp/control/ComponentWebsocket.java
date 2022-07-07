@@ -45,10 +45,13 @@ public class ComponentWebsocket {
         switch (request) {
         case "getState":
             try {
-                String state = nodeManager.getComponentById(componentId, EmulatorComponent.class).getEmulatorState();
+                final var state = nodeManager.getComponentById(componentId, EmulatorComponent.class)
+                        .getEmulatorState();
+
                 JsonObject response = Json.createObjectBuilder()
-                        .add("state", state)
-                .build();
+                        .add("state", state.value())
+                        .build();
+
                 session.getAsyncRemote().sendText(response.toString());
             } catch (BWFLAException e) {
                 JsonObject response = Json.createObjectBuilder()
