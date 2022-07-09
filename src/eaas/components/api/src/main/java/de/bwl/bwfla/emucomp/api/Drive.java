@@ -344,6 +344,20 @@ public class Drive
             }
         }
 
-
+        public Binding.ResourceType toResourceType()
+        {
+            switch (this) {
+                case CDROM:
+                    return Binding.ResourceType.ISO;
+                case FLOPPY:
+                    return Binding.ResourceType.FLOPPY;
+                case DISK:
+                    return Binding.ResourceType.DISK;
+                case CART:
+                    return Binding.ResourceType.CART;
+                default:
+                    throw new IllegalStateException();
+            }
+        }
     }
 }

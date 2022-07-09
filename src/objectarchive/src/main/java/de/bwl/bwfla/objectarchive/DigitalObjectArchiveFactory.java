@@ -79,7 +79,7 @@ public class DigitalObjectArchiveFactory {
 				DigitalObjectUserArchiveDescriptor u = mapper.readValue(jsonString, DigitalObjectUserArchiveDescriptor.class);
 				if(u == null)
 					return null;
-				return new DigitalObjectUserArchive(u.getUser());
+				return new DigitalObjectUserArchive(u);
 
 			case METS:
 				DigitalObjectMETSFileArchiveDescriptor m = mapper.readValue(jsonString, DigitalObjectMETSFileArchiveDescriptor.class);
@@ -93,7 +93,14 @@ public class DigitalObjectArchiveFactory {
 					log.severe("failed to create DigitalObjectMETSFileArchive " + e.getMessage());
 					return null;
 				}
-				
+
+			case S3:
+				var descriptor = mapper.readValue(jsonString, DigitalObjectS3ArchiveDescriptor.class);
+				if (descriptor == null)
+					return null;
+
+				return new DigitalObjectS3Archive(descriptor);
+
 			default:
 				return null;
 			}

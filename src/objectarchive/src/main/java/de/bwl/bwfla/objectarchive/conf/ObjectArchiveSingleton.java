@@ -20,6 +20,7 @@
 package de.bwl.bwfla.objectarchive.conf;
 
 import java.io.File;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -41,7 +42,13 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.taskmanager.BlockingTask;
 import de.bwl.bwfla.common.taskmanager.TaskInfo;
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
+import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectUserArchiveDescriptor;
 import de.bwl.bwfla.objectarchive.impl.DigitalObjectMETSFileArchive;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectS3Archive;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserArchive;
+import de.bwl.bwfla.objectarchive.impl.DigitalObjectUserFileArchive;
+import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
@@ -85,6 +92,7 @@ public class ObjectArchiveSingleton
 	public static final String tmpArchiveDir = "emil-temp-objects";
 	public static final String tmpArchiveName = "emil-temp-objects";
 	public static final String remoteArchiveName = "Remote Objects";
+	public static final String ZEROCONF_ARCHIVE_NAME = "zero conf";
 
 	public static final String remoteMetsObjects = "metsRemoteMetadata";
 
@@ -157,18 +165,30 @@ public class ObjectArchiveSingleton
 		for(DigitalObjectArchive a : archives)
 		{
 			ObjectArchiveSingleton.archiveMap.put(a.getName(), a);
-			LOG.info("adding object archive" + a.getName());
+			LOG.info("Adding object archive: " + a.getName());
 			if(a.isDefaultArchive() && !a.getName().equalsIgnoreCase(defaultArchive)) {
 				ObjectArchiveSingleton.archiveMap.put(defaultArchive, a);
-				LOG.warning("setting archive " + a.getName() + " as default");
+				LOG.warning("Setting archive '" + a.getName() + "' as default");
 			}
 		}
 
-		DigitalObjectArchive _a = new DigitalObjectFileArchive("zero conf", defaultLocalFilePath, false);
-		archiveMap.put(_a.getName(), _a);
-		if(!archiveMap.containsKey(defaultArchive)) {
-			ObjectArchiveSingleton.archiveMap.put(defaultArchive, _a);
+		if (!archiveMap.containsKey(ZEROCONF_ARCHIVE_NAME)) {
+			try {
+				LOG.info("Loading zero-conf archive using defaults...");
+				final var zeroconf = new DigitalObjectS3Archive(DigitalObjectS3ArchiveDescriptor.zeroconf());
+				archiveMap.put(zeroconf.getName(), zeroconf);
+			}
+			catch (Exception error) {
+				throw new ObjectArchiveInitException("Failed to initialize zero-conf archive!", error);
+			}
 		}
+
+		// always register a default archive!
+		if (!archiveMap.containsKey(defaultArchive))
+			archiveMap.put(defaultArchive, archiveMap.get(ZEROCONF_ARCHIVE_NAME));
+
+		final var archive = archiveMap.get(defaultArchive);
+		LOG.info("Registered default archive: " + defaultArchive + " -> " + archive.getName());
 	}
 
 	public static TaskState submitTask(BlockingTask<Object> task)
@@ -220,6 +240,8 @@ public class ObjectArchiveSingleton
 		migrations.register("fix-mets-objects", this::fixMetsObjects);
 		migrations.register("pack-object-files", this::packObjectFiles);
 		migrations.register("cleanup-legacy-object-files", this::cleanupLegacyObjectFiles);
+		migrations.register("rename-user-object-archives", this::renameUserArchives);
+		migrations.register("import-legacy-object-archives-v1", this::importLegacyArchivesV1);
 	}
 
 	private interface IHandler<T>
@@ -237,6 +259,20 @@ public class ObjectArchiveSingleton
 				continue;
 
 			migration.handle(archiveMap.get(name));
+		}
+
+		// execute migration for legacy zero-conf archive (file-based) too
+		if (!(archiveMap.get(ZEROCONF_ARCHIVE_NAME) instanceof DigitalObjectFileArchive))
+			migration.handle(new DigitalObjectFileArchive(ZEROCONF_ARCHIVE_NAME, defaultLocalFilePath, false));
+
+		// NOTE: user-private archives are dynamically registered on-demand, hence
+		//       execute migration on a temporary instance for each known user!
+
+		for (final var name : DigitalObjectUserFileArchive.listArchiveNames()) {
+			if (archiveMap.containsKey(name))
+				continue;  // skip registered archives!
+
+			migration.handle(new DigitalObjectUserFileArchive(name));
 		}
 	}
 
@@ -278,5 +314,31 @@ public class ObjectArchiveSingleton
 		};
 
 		this.execute(migration);
+	}
+
+	private void renameUserArchives(MigrationConfig mc) throws Exception
+	{
+		DigitalObjectUserArchive.renameArchives(mc);
+	}
+
+	private void importLegacyArchivesV1(MigrationConfig mc) throws Exception
+	{
+		final var zeroconf = archiveMap.get(ZEROCONF_ARCHIVE_NAME);
+		if (!(zeroconf instanceof DigitalObjectS3Archive))
+			throw new IllegalStateException("S3-based archive '" + ZEROCONF_ARCHIVE_NAME + "' not found!");
+
+		final var s3archive = (DigitalObjectS3Archive) zeroconf;
+		final var usrbasedir = ConfigurationProvider.getConfiguration()
+				.get("objectarchive.userarchive");
+
+		// import file-based zero-conf archive...
+		s3archive.importLegacyArchive(mc, Path.of(defaultLocalFilePath));
+
+		// import all user-private archives...
+		for (final var name : DigitalObjectUserFileArchive.listArchiveNames()) {
+			final var usrdesc = DigitalObjectUserArchiveDescriptor.create(name, s3archive.getDescriptor());
+			final var usrarchive = new DigitalObjectUserArchive(usrdesc);
+			usrarchive.importLegacyArchive(mc, Path.of(usrbasedir, name));
+		}
 	}
 }

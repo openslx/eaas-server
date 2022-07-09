@@ -1,18 +1,27 @@
 package de.bwl.bwfla.objectarchive.datatypes;
 
-public class DigitalObjectUserArchiveDescriptor extends DigitalObjectArchiveDescriptor {
+import java.io.IOException;
+
+
+public class DigitalObjectUserArchiveDescriptor extends DigitalObjectS3ArchiveDescriptor {
 
     public DigitalObjectUserArchiveDescriptor() {
         setType(ArchiveType.USER);
     }
 
-    private String user;
+    public static DigitalObjectUserArchiveDescriptor create(String user, DigitalObjectS3ArchiveDescriptor s3desc)
+            throws IOException
+    {
+        if (s3desc == null)
+            s3desc = DigitalObjectS3ArchiveDescriptor.zeroconf();
 
-    public String getUser() {
-        return user;
-    }
-
-    public void setUser(String user) {
-        this.user = user;
+        final var desc = new DigitalObjectUserArchiveDescriptor();
+        desc.setEndpoint(s3desc.getEndpoint());
+        desc.setAccessKey(s3desc.getAccessKey());
+        desc.setSecretKey(s3desc.getSecretKey());
+        desc.setBucket(s3desc.getBucket());
+        desc.setPath(s3desc.getPath());
+        desc.setName(user);
+        return desc;
     }
 }

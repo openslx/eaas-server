@@ -2,6 +2,7 @@ package de.bwl.bwfla.common.utils;
 
 import de.bwl.bwfla.common.datatypes.QemuImage;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.net.HttpUtils;
 
 import javax.xml.bind.JAXBException;
 import java.io.IOException;
@@ -23,7 +24,7 @@ public class ImageInformation {
         if (bf.contains("exportname")) {
             return bf.substring(bf.lastIndexOf('=') + 1);
         }
-        else if (bf.startsWith("http")) {
+        else if (HttpUtils.isAbsoluteUrl(bf)) {
             return bf.substring(bf.lastIndexOf('/') + 1);
         }
         else return bf;

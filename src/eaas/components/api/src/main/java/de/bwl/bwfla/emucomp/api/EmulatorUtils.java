@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import de.bwl.bwfla.common.services.net.HttpUtils;
 import de.bwl.bwfla.common.utils.ImageInformation;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -53,7 +54,7 @@ public class EmulatorUtils {
 	public static void copyRemoteUrl(Binding resource, Path dest, Logger log) throws BWFLAException {
 		String resUrl = resource.getUrl();
 		// hack until qemu-img is fixed
-		if (resUrl.startsWith("http") || resUrl.startsWith("https")) {
+		if (HttpUtils.isAbsoluteUrl(resUrl)) {
 			DeprecatedProcessRunner process = new DeprecatedProcessRunner("curl");
 			if(log != null)
 				process.setLogger(log);
@@ -148,14 +149,17 @@ public class EmulatorUtils {
 	}
 
 
-	public static void changeBackingFile(Path image, String backingFile, Logger log) throws BWFLAException {
+	public static void changeBackingFile(Path image, String backingFile, ImageInformation.QemuImageFormat backingFileFormat, Logger log)
+			throws BWFLAException
+	{
 		DeprecatedProcessRunner process = new DeprecatedProcessRunner();
 		process.setLogger(log);
 		process.setCommand("qemu-img");
 		process.addArgument("rebase");
 		process.addArgument("-u");
+		process.addArguments("-F", backingFileFormat.toString());
 		process.addArguments("-b", backingFile);
-		process.addArgument(image.toString());
+		process.addArguments("--", image.toString());
 
 		if (!process.execute()) {
 			throw new BWFLAException("qemu-img rebase " + image.toString() + " failed");

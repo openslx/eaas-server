@@ -218,8 +218,9 @@ public class ImageHandler
 				log.info("Local backing file reference is up-to-date!");
 			}
 			else {
+				final var bfinfo = new ImageInformation(info.getBackingFile(), log);
 				log.info("Rebasing image: " + image.getAbsolutePath() + " --> " + id);
-				EmulatorUtils.changeBackingFile(image.toPath(), id, log);
+				EmulatorUtils.changeBackingFile(image.toPath(), id, bfinfo.getFileFormat(), log);
 			}
 
 			return id;

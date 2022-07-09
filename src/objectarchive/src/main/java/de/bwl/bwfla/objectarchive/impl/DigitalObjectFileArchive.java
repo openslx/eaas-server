@@ -43,6 +43,7 @@ import java.util.stream.StreamSupport;
 import com.openslx.eaas.common.util.MultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
+import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
@@ -105,8 +106,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	protected void init(String name, String localPath, boolean defaultArchive)
 	{
-		final var httpExport = ConfigurationProvider.getConfiguration()
+		var httpExport = ConfigurationProvider.getConfiguration()
 				.get("objectarchive.httpexport");
+
+		if (!httpExport.endsWith("/"))
+			httpExport += "/";
 
 		this.name = name;
 		this.localPath = localPath;
@@ -163,36 +167,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		if(type == null)
 			return null;
 
-		File objectDir = new File(localPath);
-		if(!objectDir.exists() && !objectDir.isDirectory())
-		{
-			throw new BWFLAException("objectDir " + localPath + " does not exist");
-		}
-
-		Path targetDir = objectDir.toPath().resolve(id);
-		switch(type)
-		{
-			case CDROM:
-				targetDir = targetDir.resolve("iso");
-				break;
-			case FLOPPY:
-				targetDir = targetDir.resolve("floppy");
-				break;
-			case DISK:
-				targetDir = targetDir.resolve("disk");
-				break;
-			case CART:
-				targetDir = targetDir.resolve("cart");
-				break;
-			default:
-				throw new BWFLAException("unsupported type " + type);
-		}
-		if(!targetDir.toFile().exists())
-			if(!targetDir.toFile().mkdirs())
-			{
-				throw new BWFLAException("could not create directory: " + targetDir);
-			}
-		return targetDir;
+		return this.resolveTarget(id, type.toResourceType());
 	}
 
 	public String getThumbnail(String id) throws BWFLAException {
@@ -628,7 +603,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	@Override
 	public String resolveObjectResource(String objectId, String resourceId, String method) throws BWFLAException {
 		final var url = DigitalObjectArchive.super.resolveObjectResource(objectId, resourceId, method);
-		if (url == null || url.startsWith("http"))
+		if (url == null || DataResolver.isAbsoluteUrl(url))
 			return url;
 
 		return exportUrlPrefix + "/" + objectId + "/" + url;
@@ -660,7 +635,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		public FileFilter FLOPPY_FILE_FILTER = new NullFileFilter();
 	}
 
-	private enum UpdateCounts
+	public enum UpdateCounts
 	{
 		PROCESSED,
 		UPDATED,
