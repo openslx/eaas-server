@@ -116,14 +116,14 @@ public abstract class ContainerBean extends EaasComponentBean implements Contain
 	{
 		final ContainerState state = conBeanState.fetch();
 		switch (state) {
+			case RUNNING:
+				return ComponentState.RUNNING;
 			case FAILED:
 				return ComponentState.FAILED;
-
 			case STOPPED:
 				return ComponentState.STOPPED;
-
 			default:
-				return ComponentState.OK;
+				return ComponentState.INITIALIZING;
 		}
 	}
 

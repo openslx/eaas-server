@@ -49,10 +49,7 @@ public enum EmuCompState
 	EMULATOR_STOPPED("stopped"),
 	
 	@XmlEnumValue("failed")
-	EMULATOR_FAILED("failed"),
-	
-	@XmlEnumValue("client_fault")
-	EMULATOR_CLIENT_FAULT("client_fault");
+	EMULATOR_FAILED("failed");
 	
     private final String value;
 
