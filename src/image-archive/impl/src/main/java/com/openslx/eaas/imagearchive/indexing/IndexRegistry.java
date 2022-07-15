@@ -25,6 +25,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.indexing.impl.AliasingIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.CheckpointIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ContainerIndex;
+import com.openslx.eaas.imagearchive.indexing.impl.EmulatorIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImageIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.indexing.impl.MachineIndex;
@@ -111,6 +112,11 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		return this.lookup(BlobKind.EMULATOR_METADATA, MetaDataIndex.class);
 	}
 
+	public EmulatorIndex emulators()
+	{
+		return this.lookup(BlobKind.EMULATOR, EmulatorIndex.class);
+	}
+
 	public TemplateIndex templates()
 	{
 		return this.lookup(BlobKind.TEMPLATE, TemplateIndex.class);
@@ -158,6 +164,7 @@ public class IndexRegistry extends AbstractRegistry<BlobIndex<?>>
 		registry.insert(new MachineIndex(fetcher));
 		registry.insert(new TemplateIndex(fetcher));
 		registry.insert(new CheckpointIndex(fetcher));
+		registry.insert(new EmulatorIndex(fetcher));
 		registry.insert(new ImageIndex(fetcher));
 		registry.insert(new RomIndex(fetcher));
 		registry.insert(new ImportIndex());
