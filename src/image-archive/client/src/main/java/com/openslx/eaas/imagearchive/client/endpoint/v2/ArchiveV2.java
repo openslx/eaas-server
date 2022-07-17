@@ -33,6 +33,7 @@ public class ArchiveV2
 	private final MachinesV2 machines;
 	private final TemplatesV2 templates;
 	private final CheckpointsV2 checkpoints;
+	private final EmulatorsV2 emulators;
 	private final ImagesV2 images;
 	private final RomsV2 roms;
 	private final ImportsV2 imports;
@@ -50,6 +51,7 @@ public class ArchiveV2
 		this.machines = new MachinesV2(api.machines());
 		this.templates = new TemplatesV2(api.templates());
 		this.checkpoints = new CheckpointsV2(api.checkpoints());
+		this.emulators = new EmulatorsV2(api.emulators());
 		this.images = new ImagesV2(api.images());
 		this.roms = new RomsV2(api.roms());
 		this.imports = new ImportsV2(api.imports());
@@ -83,6 +85,11 @@ public class ArchiveV2
 	public CheckpointsV2 checkpoints()
 	{
 		return checkpoints;
+	}
+
+	public EmulatorsV2 emulators()
+	{
+		return emulators;
 	}
 
 	public ImagesV2 images()

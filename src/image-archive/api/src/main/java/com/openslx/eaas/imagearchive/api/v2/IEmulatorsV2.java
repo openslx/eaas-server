@@ -19,42 +19,18 @@
 
 package com.openslx.eaas.imagearchive.api.v2;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
+import com.openslx.eaas.imagearchive.api.v2.common.IListable;
+import com.openslx.eaas.imagearchive.api.v2.common.IReadable;
+import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
+
+import java.io.InputStream;
 
 
-public interface IArchiveV2
+public interface IEmulatorsV2 extends IListable,
+		IReadable<InputStream>,
+		IWritable<InputStream>,
+		IDeletable
 {
-	@Path("/aliases")
-	IAliasesV2 aliases();
-
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
-
-	@Path("/containers")
-	IContainersV2 containers();
-
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/emulators")
-	IEmulatorsV2 emulators();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	// Empty!
 }

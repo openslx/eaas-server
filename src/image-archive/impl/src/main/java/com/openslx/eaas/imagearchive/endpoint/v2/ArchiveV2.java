@@ -24,6 +24,7 @@ import com.openslx.eaas.imagearchive.api.v2.IAliasesV2;
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.ICheckpointsV2;
 import com.openslx.eaas.imagearchive.api.v2.IContainersV2;
+import com.openslx.eaas.imagearchive.api.v2.IEmulatorsV2;
 import com.openslx.eaas.imagearchive.api.v2.IImagesV2;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.IMachinesV2;
@@ -55,6 +56,9 @@ public class ArchiveV2 implements IArchiveV2
 
 	@Inject
 	private CheckpointsV2 checkpoints;
+
+	@Inject
+	private EmulatorsV2 emulators;
 
 	@Inject
 	private ImagesV2 images;
@@ -99,6 +103,12 @@ public class ArchiveV2 implements IArchiveV2
 	public ICheckpointsV2 checkpoints()
 	{
 		return checkpoints;
+	}
+
+	@Override
+	public IEmulatorsV2 emulators()
+	{
+		return emulators;
 	}
 
 	@Override
