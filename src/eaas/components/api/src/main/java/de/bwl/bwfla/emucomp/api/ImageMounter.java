@@ -20,6 +20,7 @@
 package de.bwl.bwfla.emucomp.api;
 
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.net.HttpUtils;
 import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.EaasFileUtils;
 import org.apache.tamaya.ConfigurationProvider;
@@ -40,7 +41,7 @@ import java.util.logging.Logger;
 public class ImageMounter implements AutoCloseable
 {
 	private final Logger log;
-	private final Map<Path, Mount> mounts;
+	private final Map<String, Mount> mounts;
 	private final Set<Path> workdirs;
 
 	public static final long OFFSET_MIN_BOUND = 0L;
@@ -61,7 +62,7 @@ public class ImageMounter implements AutoCloseable
 	}
 
 	/** Look up mounted image by path. */
-	public Mount lookup(Path image)
+	public Mount lookup(String image)
 	{
 		return mounts.get(image);
 	}
@@ -69,17 +70,36 @@ public class ImageMounter implements AutoCloseable
 	/** Mount image at mountpoint. */
 	public Mount mount(Path image, Path mountpoint) throws BWFLAException, IllegalArgumentException
 	{
+		return this.mount(image.toString(), mountpoint);
+	}
+
+	/** Mount image at mountpoint. */
+	public Mount mount(String image, Path mountpoint) throws BWFLAException, IllegalArgumentException
+	{
 		return this.mount(image, mountpoint, new MountOptions());
 	}
 
 	/** Mount image, beginning at offset, at specified mountpoint. */
 	public Mount mount(Path image, Path mountpoint, long offset) throws BWFLAException, IllegalArgumentException
 	{
+		return this.mount(image.toString(), mountpoint, offset);
+	}
+
+	/** Mount image, beginning at offset, at specified mountpoint. */
+	public Mount mount(String image, Path mountpoint, long offset) throws BWFLAException, IllegalArgumentException
+	{
 		return this.mount(image, mountpoint, offset, SIZE_MIN_BOUND);
 	}
 
 	/** Mount image of given size, beginning at offset, at specified mountpoint. */
 	public Mount mount(Path image, Path mountpoint, long offset, long size)
+			throws BWFLAException, IllegalArgumentException
+	{
+		return this.mount(image.toString(), mountpoint, offset, size);
+	}
+
+	/** Mount image of given size, beginning at offset, at specified mountpoint. */
+	public Mount mount(String image, Path mountpoint, long offset, long size)
 			throws BWFLAException, IllegalArgumentException
 	{
 		this.check(offset, OFFSET_MIN_BOUND, "offset");
@@ -96,13 +116,17 @@ public class ImageMounter implements AutoCloseable
 	public Mount mount(Path image, Path mountpoint, MountOptions options)
 			throws BWFLAException, IllegalArgumentException
 	{
+		return this.mount(image.toString(), mountpoint, options);
+	}
+
+	/** Mount image at mountpoint with options. */
+	public Mount mount(String image, Path mountpoint, MountOptions options)
+			throws BWFLAException, IllegalArgumentException
+	{
 		this.check(image);
 
-		final DeprecatedProcessRunner process = nbdMount(image.toString(), mountpoint, options, log);
-
-
-
-		final Mount mount = new Mount(image, mountpoint, mountpoint, process);
+		final DeprecatedProcessRunner process = ImageMounter.nbdMount(image, mountpoint, options, log);
+		final Mount mount = new Mount(image, mountpoint.toString(), mountpoint, process);
 		this.register(mount);
 		return mount;
 	}
@@ -111,7 +135,7 @@ public class ImageMounter implements AutoCloseable
 	public Mount mount(Path image, Path mountpoint, FileSystemType fstype)
 			throws BWFLAException, IllegalArgumentException
 	{
-		this.check(image);
+		this.check(image.toString());
 		DeprecatedProcessRunner process = null;
 		try {
 			process = mountFileSystem(image, mountpoint, fstype, log);
@@ -120,7 +144,7 @@ public class ImageMounter implements AutoCloseable
 			throw new BWFLAException(error);
 		}
 
-		final Mount mount = new Mount(image, mountpoint, process);
+		final Mount mount = new Mount(image.toString(), mountpoint, process);
 		this.register(mount);
 		return mount;
 	}
@@ -129,7 +153,8 @@ public class ImageMounter implements AutoCloseable
 	public Mount mount(Mount mount, Path mountpoint, FileSystemType fstype)
 			throws BWFLAException, IllegalArgumentException
 	{
-		return this.mount(mount.getTargetImage(), mountpoint, fstype);
+		final var image = Path.of(mount.getTargetImage());
+		return this.mount(image, mountpoint, fstype);
 	}
 
 	/**
@@ -165,7 +190,7 @@ public class ImageMounter implements AutoCloseable
 	{
 		this.check(mount);
 
-		final Path image = mount.getSourceImage();
+		final String image = mount.getSourceImage();
 		final Path mountpoint = mount.getMountPoint();
 		if (!this.unmount(mount, false))
 			throw new BWFLAException("Unmounting image failed!");
@@ -250,16 +275,16 @@ public class ImageMounter implements AutoCloseable
 	{
 		private ImageMounter mounter;
 		private Path mountpoint;
-		private Path source;
-		private Path target;
+		private String source;
+		private String target;
 		private DeprecatedProcessRunner process;
 
-		private Mount(Path image, Path mountpoint, DeprecatedProcessRunner process)
+		private Mount(String image, Path mountpoint, DeprecatedProcessRunner process)
 		{
 			this(image, image, mountpoint, process);
 		}
 
-		private Mount(Path source, Path target, Path mountpoint, DeprecatedProcessRunner process)
+		private Mount(String source, String target, Path mountpoint, DeprecatedProcessRunner process)
 		{
 			this.mountpoint = mountpoint;
 			this.source = source;
@@ -268,7 +293,7 @@ public class ImageMounter implements AutoCloseable
 		}
 
 		/** Get image's source path. */
-		public Path getSourceImage()
+		public String getSourceImage()
 		{
 			return source;
 		}
@@ -277,7 +302,7 @@ public class ImageMounter implements AutoCloseable
 		 * Get image's target path, which can point to the source-image or
 		 * its logical raw-representation's subpath, produced by xmount.
 		 */
-		public Path getTargetImage()
+		public String getTargetImage()
 		{
 			return target;
 		}
@@ -341,7 +366,7 @@ public class ImageMounter implements AutoCloseable
 			this.process = null;
 		}
 
-		private Path id()
+		private String id()
 		{
 			return source;
 		}
@@ -403,13 +428,13 @@ public class ImageMounter implements AutoCloseable
 
 	// ===== Internal Helpers ==============================
 
-	private void check(Path image) throws BWFLAException
+	private void check(String image) throws BWFLAException
 	{
 		final Mount mount = mounts.get(image);
 		if (mount == null)
 			return;
 
-		final String message = "Image '" + image.toString() + "' seems to be already mounted"
+		final String message = "Image '" + image + "' seems to be already mounted"
 				+ " at '" + mount.getMountPoint().toString() + "'!";
 
 		throw new BWFLAException(message);
@@ -476,19 +501,33 @@ public class ImageMounter implements AutoCloseable
 		return unmounted;
 	}
 
-	private static DeprecatedProcessRunner nbdMount(String imagePath, Path mountpoint, MountOptions options, Logger log) throws BWFLAException {
-		DeprecatedProcessRunner process = new DeprecatedProcessRunner("sudo");
-		process.addArgument("/libexec/fuseqemu/fuseqemu");
-		process.addArgument(imagePath);
-		process.addArgument(mountpoint.toAbsolutePath().toString());
-		process.addArguments(options.getArgs());
-		process.addArgument("--");
-		process.addArguments("-o", "allow_root");
-		process.addArgument("-f");
+	private static DeprecatedProcessRunner nbdMount(String image, Path mountpoint, MountOptions options, Logger log) throws BWFLAException {
+		final var process = new DeprecatedProcessRunner("sudo")
+				.addArgument("/libexec/fuseqemu/fuseqemu")
+				.addArguments(options.getArgs());
 
+		if (HttpUtils.isAbsoluteUrl(image)) {
+			final var driver = image.substring(0, image.indexOf(":"));
+
+			// looks like a remote image, so read-only mount is possible!
+			process.addArgument("--read-only");
+			process.addArgument("-o--read-only");
+			process.addArgument("-o--image-opts");
+			process.addArgument("--");
+			process.addArgument("file.driver=")
+					.addArgValues(driver, ",file.url=", image);
+		}
+		else {
+			// looks like a local file image!
+			process.addArgument("--");
+			process.addArgument(image);
+		}
+
+		process.addArgument(mountpoint.toAbsolutePath().toString());
+		process.addArguments("-o", "allow_root");
+		process.setLogger(log);
 		if (!process.start()) {
-			throw new BWFLAException("Error mounting " + imagePath
-					+ ". See log output for more information (maybe).");
+			throw new BWFLAException("Mounting image '" + image + "' failed!");
 		}
 
 		for(int _try = 0; _try < 60; _try++) {
@@ -501,7 +540,7 @@ public class ImageMounter implements AutoCloseable
 		process.kill();
 		process.cleanup();
 
-		throw new BWFLAException("mount failed");
+		throw new BWFLAException("Mounting image '" + image + "' failed!");
 	}
 
 	private static DeprecatedProcessRunner mountFileSystem(Path device, Path dest, FileSystemType fsType, Logger log)

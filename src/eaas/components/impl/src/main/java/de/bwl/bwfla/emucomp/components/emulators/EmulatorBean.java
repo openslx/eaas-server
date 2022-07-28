@@ -1021,7 +1021,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
             ImageMounter.Mount rawmnt2 = mounter.mount(cowImage, workdir.resolve("upperDir.dd"));
 
 			// load partition table
-			final DiskDescription disk = DiskDescription.read(rawmnt.getTargetImage(), LOG);
+			final DiskDescription disk = DiskDescription.read(Path.of(rawmnt.getTargetImage()), LOG);
 			if (!disk.hasPartitions())
 				throw new BWFLAException("Disk seems to be not partitioned!");
 
