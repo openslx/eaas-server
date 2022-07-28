@@ -14,7 +14,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		super(wsHost);
 	}
 
-	// replace hardcoded EMULATOR_DEFAULT_ARCHIVE with something nicer
+	@Deprecated
 	private static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
 	public List<ImageGeneralizationPatchDescription> getImageGeneralizationPatches() throws BWFLAException {
@@ -75,6 +75,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		archive.deleteNameIndexesEntry(backend, id, version);
 	}
 
+	@Deprecated
 	public class ImportImageHandle {
 		private final String sessionId;
 		private final ImageType type;
@@ -118,6 +119,7 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		}
 	}
 
+	@Deprecated
 	public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
 		connectArchive();
 		return archive.extractMetadata(EMULATOR_DEFAULT_ARCHIVE, imageId);
@@ -135,10 +137,12 @@ public class EnvironmentsAdapter extends ImageArchiveWSClient {
 		 return archive.getNameIndexes(backend);
 	}
 
+	@Deprecated
 	public String resolveEmulatorImage(String imgid) throws BWFLAException {
 		return this.resolveImage(EMULATOR_DEFAULT_ARCHIVE, imgid);
 	}
 
+	@Deprecated
 	public String resolveImage(String backend, String imgid) throws BWFLAException {
 		connectArchive();
 		return archive.resolveImage(backend, imgid);

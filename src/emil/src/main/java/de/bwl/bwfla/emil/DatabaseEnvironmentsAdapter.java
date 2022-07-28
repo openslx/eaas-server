@@ -46,6 +46,7 @@ public class DatabaseEnvironmentsAdapter {
         environmentsAdapter.setDefaultEnvironment(osId, envId);
     }
 
+    @Deprecated
     public static final String EMULATOR_DEFAULT_ARCHIVE = "emulators";
 
     @Deprecated
@@ -73,6 +74,7 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.getNameIndexes();
     }
 
+    @Deprecated
     public EmulatorMetadata extractMetadata(String imageId) throws BWFLAException {
         return environmentsAdapter.extractMetadata(imageId);
     }
@@ -81,6 +83,7 @@ public class DatabaseEnvironmentsAdapter {
         return environmentsAdapter.getDefaultEnvironments("default");
     }
 
+    @Deprecated
     public String resolveEmulatorImage(String imgid) throws BWFLAException {
         return environmentsAdapter.resolveEmulatorImage(imgid);
     }
