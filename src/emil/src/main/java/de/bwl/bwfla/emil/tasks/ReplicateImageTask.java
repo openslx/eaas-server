@@ -139,7 +139,7 @@ public class ReplicateImageTask extends BlockingTask<Object>
                 ImportEmulatorRequest importEmulatorRequest = new ImportEmulatorRequest();
                 importEmulatorRequest.setImageUrl(containerImage.getContainerUrl());
                 importEmulatorRequest.setMetadata(containerImage.getMetadata());
-                ImportEmulatorUtil.doImport(importEmulatorRequest, emulatorMetaHelper, request.environmentHelper);
+                ImportEmulatorUtil.execute(importEmulatorRequest, emulatorMetaHelper, request.imagearchive.api(), log);
             }
 
         }

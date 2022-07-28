@@ -29,37 +29,12 @@ import de.bwl.bwfla.emil.tasks.ImportEmulatorTask;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emil.tasks.ImportContainerTask;
 import de.bwl.bwfla.emucomp.api.*;
-import de.bwl.bwfla.objectarchive.util.ObjectArchiveHelper;
-import org.apache.tamaya.inject.api.Config;
 
 @Path("EmilContainerData")
 @ApplicationScoped
 public class EmilContainerData extends EmilRest {
 
-    @Inject
-    private DatabaseEnvironmentsAdapter envHelper;
-
     private List<DataSource> handlers = new ArrayList<>();
-
-    @Inject
-    @Config(value = "rest.blobstore")
-    String blobStoreRestAddress;
-
-    @Inject
-    @Config(value = "ws.imagebuilder")
-    String imageBuilderAddress;
-
-    @Inject
-    @Config(value = "ws.blobstore")
-    private String blobStoreWsAddress;
-
-    @Inject
-    @Config("emil.inputpathtodelete")
-    private String inputPathToDelete = null;
-
-    @Inject
-    @Config("emil.dockerTmpBuildFiles")
-    private String dockerTmpBuildFiles = null;
 
     @Inject
     private TaskManager taskManager;
@@ -71,15 +46,12 @@ public class EmilContainerData extends EmilRest {
 	@AuthenticatedUser
 	private UserContext authenticatedUser = null;
 
-    private ObjectArchiveHelper objHelper;
-
     private EmulatorMetaHelperV2 emuMetaHelper;
 
     protected static final Logger LOG = Logger.getLogger("eaas/containerData");
 
     @PostConstruct
     private void initialize() {
-        objHelper = new ObjectArchiveHelper(objectArchive);
         emuMetaHelper = new EmulatorMetaHelperV2(emilEnvRepo.getImageArchive(), LOG);
     }
 
@@ -293,6 +265,8 @@ public class EmilContainerData extends EmilRest {
     @Consumes(MediaType.APPLICATION_JSON)
     @Produces(MediaType.APPLICATION_JSON)
     public TaskStateResponse importEmulator(ImportEmulatorRequest req) {
-        return new TaskStateResponse(taskManager.submitTask(new ImportEmulatorTask(req, emuMetaHelper, envHelper)));
+        final var imagearchive = emilEnvRepo.getImageArchive();
+        final var task = new ImportEmulatorTask(req, emuMetaHelper, imagearchive.api(), LOG);
+        return new TaskStateResponse(taskManager.submitTask(task));
     }
 }
