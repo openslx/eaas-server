@@ -1505,6 +1505,7 @@ public class EnvironmentRepository extends EmilRest
 		migrations.register("import-legacy-image-index", this::importLegacyImageIndex);
 		migrations.register("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
 		migrations.register("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
+		migrations.register("import-legacy-emulator-archive-v1", this::importLegacyEmulatorArchiveV1);
 	}
 
 	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException
@@ -1848,5 +1849,87 @@ public class EnvironmentRepository extends EmilRest
 		LOG.info("Imported " + numImported + " " + kind + "(s), failed " + numFailed);
 		if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
 			throw new BWFLAException("Importing legacy " + kind + "s failed!");
+	}
+
+	private void importLegacyEmulatorArchiveV1(MigrationConfig mc) throws Exception
+	{
+		for (int i = 0; true; ++i) {
+			final var prefix = ConfigHelpers.toListKey("imagearchive.backends", i, ".");
+			final var config = ConfigHelpers.filter(ConfigurationProvider.getConfiguration(), prefix);
+			final var name = config.get("name");
+			if (name == null)
+				break;
+
+			if (!name.equals("emulators"))
+				continue;
+
+			final var counter = ImportCounts.counter();
+			final var maxFailureRate = MigrationUtils.getFailureRate(mc);
+			final var basedir = Paths.get(config.get("basepath"))
+					.resolve("images");
+
+			LOG.info("Importing legacy emulator-archive...");
+			this.importLegacyEmulatorImagesV1(basedir, "base", counter);
+
+			final var numImported = counter.get(ImportCounts.IMPORTED);
+			final var numFailed = counter.get(ImportCounts.FAILED);
+			LOG.info("Imported " + numImported + " emulator-image(s), failed " + numFailed);
+			if (!MigrationUtils.acceptable(numImported + numFailed, numFailed, maxFailureRate))
+				throw new BWFLAException("Importing legacy emulato-images failed!");
+		}
+	}
+
+	private void importLegacyEmulatorImagesV1(java.nio.file.Path basedir, String kind, MultiCounter counter)
+			throws Exception
+	{
+		final var srcdir = basedir.resolve(kind);
+		if (!Files.exists(srcdir)) {
+			LOG.info("No " + kind + "-images found!");
+			return;
+		}
+
+		final var images = imagearchive.api()
+				.v2()
+				.emulators();
+
+		final Consumer<java.nio.file.Path> importer = (file) -> {
+			final var id = file.getFileName().toString();
+			// first, update backing file's URL in-place
+			try {
+				final var info = new ImageInformation(file.toString(), LOG);
+				if (info.hasBackingFile()) {
+					final var backingFileUrl = info.getBackingFile();
+					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
+					if (!backingFileUrl.equals(backingImageId)) {
+						final var bfinfo = new ImageInformation(backingFileUrl, LOG);
+						LOG.info("Rebasing emulator-image: " + id + " --> " + backingImageId);
+						EmulatorUtils.changeBackingFile(file, backingImageId, bfinfo.getFileFormat(), LOG);
+					}
+				}
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Rebasing emulator-image '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+				return;
+			}
+
+			// then, import (possibly rebased) image directly
+			try (final var image = Files.newInputStream(file)) {
+				images.replace(id, image);
+				counter.increment(ImportCounts.IMPORTED);
+				LOG.info("Imported emulator-image '" + id + "'");
+
+				Files.delete(file);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Importing emulator-image '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+			}
+		};
+
+		try (final var files = Files.list(srcdir)) {
+			files.filter((file) -> !Files.isDirectory(file))
+					.forEach(importer);
+		}
 	}
 }
