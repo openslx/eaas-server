@@ -17,44 +17,24 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package com.openslx.eaas.imagearchive.api.v2;
+package com.openslx.eaas.imagearchive.indexing.impl;
 
-import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
+import com.openslx.eaas.imagearchive.BlobKind;
+import com.openslx.eaas.imagearchive.indexing.BlobDescriptor;
+import com.openslx.eaas.imagearchive.indexing.BlobIndex;
+import com.openslx.eaas.imagearchive.indexing.BlobIngestors;
+import com.openslx.eaas.imagearchive.indexing.MetaFetcher;
 
 
-public interface IArchiveV2
+public class EmulatorIndex extends BlobIndex<EmulatorIndex.Record>
 {
-	@Path("/aliases")
-	IAliasesV2 aliases();
+	public static class Record extends BlobDescriptor
+	{
+		// Empty!
+	}
 
-	@Path("/metadata/{kind}")
-	IMetaDataV2 metadata(@PathParam("kind") String kind);
-
-	@Path("/containers")
-	IContainersV2 containers();
-
-	@Path("/machines")
-	IMachinesV2 machines();
-
-	@Path("/templates")
-	ITemplatesV2 templates();
-
-	@Path("/checkpoints")
-	ICheckpointsV2 checkpoints();
-
-	@Path("/emulators")
-	IEmulatorsV2 emulators();
-
-	@Path("/images")
-	IImagesV2 images();
-
-	@Path("/roms")
-	IRomsV2 roms();
-
-	@Path("/imports")
-	IImportsV2 imports();
-
-	@Path("/storage")
-	IStorageV2 storage();
+	public EmulatorIndex(MetaFetcher fetcher)
+	{
+		super(BlobKind.EMULATOR, Record.class, Record::index, BlobIngestors.descriptors(Record::new), fetcher);
+	}
 }

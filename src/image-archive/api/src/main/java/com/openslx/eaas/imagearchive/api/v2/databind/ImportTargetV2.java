@@ -76,6 +76,7 @@ public class ImportTargetV2
 	public enum Kind
 	{
 		CHECKPOINT,
+		EMULATOR,
 		IMAGE,
 		ROM;
 
@@ -92,6 +93,8 @@ public class ImportTargetV2
 			switch (kind) {
 				case "checkpoint":
 					return CHECKPOINT;
+				case "emulator":
+					return EMULATOR;
 				case "image":
 					return IMAGE;
 				case "rom":

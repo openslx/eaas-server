@@ -25,6 +25,7 @@ import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.service.impl.AliasingService;
 import com.openslx.eaas.imagearchive.service.impl.CheckpointService;
 import com.openslx.eaas.imagearchive.service.impl.ContainerService;
+import com.openslx.eaas.imagearchive.service.impl.EmulatorService;
 import com.openslx.eaas.imagearchive.service.impl.ImageService;
 import com.openslx.eaas.imagearchive.service.impl.ImportService;
 import com.openslx.eaas.imagearchive.service.impl.MachineService;
@@ -69,6 +70,11 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 	public MetaDataService emulatorMetaData()
 	{
 		return this.lookup(BlobKind.EMULATOR_METADATA, MetaDataService.class);
+	}
+
+	public EmulatorService emulators()
+	{
+		return this.lookup(BlobKind.EMULATOR, EmulatorService.class);
 	}
 
 	public TemplateService templates()
@@ -125,6 +131,7 @@ public class ServiceRegistry extends AbstractRegistry<AbstractService<?>>
 		registry.insert(MachineService.create(backend, remover));
 		registry.insert(TemplateService.create(backend, remover));
 		registry.insert(CheckpointService.create(backend, remover));
+		registry.insert(EmulatorService.create(backend, remover));
 		registry.insert(ImageService.create(backend, remover));
 		registry.insert(RomService.create(backend, remover));
 		registry.insert(ImportService.create(backend));

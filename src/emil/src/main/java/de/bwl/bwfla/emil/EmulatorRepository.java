@@ -22,6 +22,8 @@ package de.bwl.bwfla.emil;
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.ImageArchiveMappers;
+import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
+import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
@@ -35,7 +37,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.ws.rs.GET;
 import javax.ws.rs.HEAD;
-import javax.ws.rs.HttpMethod;
 import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -44,6 +45,7 @@ import javax.ws.rs.Produces;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 
 
@@ -53,9 +55,6 @@ public class EmulatorRepository extends EmilRest
 {
 	@Inject
 	private EmilEnvironmentRepository emilEnvRepo = null;
-
-	@Inject
-	private DatabaseEnvironmentsAdapter emuImageArchive = null;
 
 	private ImageArchiveClient imagearchive = null;
 	private EmulatorMetaHelperV2 emuMetaHelper = null;
@@ -109,21 +108,28 @@ public class EmulatorRepository extends EmilRest
 		@Path("/{imgid}/url")
 		public Response resolveHEAD(@PathParam("imgid") String imgid)
 		{
-			return this.resolve(imgid, HttpMethod.HEAD);
+			return this.resolve(imgid, AccessMethodV2.HEAD);
 		}
 
 		@GET
 		@Path("/{imgid}/url")
 		public Response resolveGET(@PathParam("imgid") String imgid)
 		{
-			return this.resolve(imgid, HttpMethod.GET);
+			return this.resolve(imgid, AccessMethodV2.GET);
 		}
 
-		private Response resolve(String imgid, String method)
+		private Response resolve(String imgid, AccessMethodV2 method)
 		{
 			try {
-				// TODO: replace legacy emulator-archive!
-				final var location = emuImageArchive.resolveEmulatorImage(imgid);
+				final var options = new ResolveOptionsV2()
+						.setLifetime(1L, TimeUnit.HOURS)
+						.setMethod(method);
+
+				final var location = imagearchive.api()
+						.v2()
+						.emulators()
+						.resolve(imgid, options);
+
 				if (location == null || location.isEmpty())
 					throw new NotFoundException();
 

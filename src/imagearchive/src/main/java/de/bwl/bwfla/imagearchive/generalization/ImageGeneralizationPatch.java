@@ -93,7 +93,7 @@ public class ImageGeneralizationPatch {
 			mounter.addWorkingDirectory(workdir);
 			// Mount image and try to find available partitions...
 			ImageMounter.Mount rawmnt = mounter.mount(image, workdir.resolve(image.getFileName() + ".fuse"));
-			final DiskDescription disk = DiskDescription.read(rawmnt.getTargetImage(), log);
+			final DiskDescription disk = DiskDescription.read(Path.of(rawmnt.getTargetImage()), log);
 			if (!disk.hasPartitions())
 				throw new BWFLAException("Disk seems to be not partitioned!");
 

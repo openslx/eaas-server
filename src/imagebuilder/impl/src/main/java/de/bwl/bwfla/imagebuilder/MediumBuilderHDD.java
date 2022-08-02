@@ -113,7 +113,7 @@ public class MediumBuilderHDD extends MediumBuilder
 			if (description.getPartitionTableType() != PartitionTableType.NONE) {
 				final int offset = description.getPartitionOffset();
 				final String fstype = description.getFileSystemType().name();
-				this.partition(description.getPartitionTableType(), rawmnt.getTargetImage(), fstype, offset, log);
+				this.partition(description.getPartitionTableType(), Path.of(rawmnt.getTargetImage()), fstype, offset, log);
 
 				// Re-mount partition only
 				rawmnt = rawmnt.remount(offset);
@@ -121,7 +121,7 @@ public class MediumBuilderHDD extends MediumBuilder
 
 			// Prepare filesystem on the partition
 			final FileSystemType fstype = description.getFileSystemType();
-			this.makefs(fstype, rawmnt.getTargetImage(), description.getLabel(), log);
+			this.makefs(fstype, Path.of(rawmnt.getTargetImage()), description.getLabel(), log);
 
 			rawmnt.sync();
 
