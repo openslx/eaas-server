@@ -135,10 +135,17 @@ public class ImageMounter implements AutoCloseable
 	public Mount mount(Path image, Path mountpoint, FileSystemType fstype)
 			throws BWFLAException, IllegalArgumentException
 	{
+		return this.mount(image, mountpoint, fstype, false);
+	}
+
+	/** Mount image's filesystem at mountpoint. */
+	public Mount mount(Path image, Path mountpoint, FileSystemType fstype, boolean readonly)
+			throws BWFLAException, IllegalArgumentException
+	{
 		this.check(image.toString());
 		DeprecatedProcessRunner process = null;
 		try {
-			process = mountFileSystem(image, mountpoint, fstype, log);
+			process = mountFileSystem(image, mountpoint, fstype, readonly, log);
 		}
 		catch (IOException error) {
 			throw new BWFLAException(error);
@@ -153,8 +160,15 @@ public class ImageMounter implements AutoCloseable
 	public Mount mount(Mount mount, Path mountpoint, FileSystemType fstype)
 			throws BWFLAException, IllegalArgumentException
 	{
+		return this.mount(mount, mountpoint, fstype, false);
+	}
+
+	/** Mount image's filesystem at mountpoint. */
+	public Mount mount(Mount mount, Path mountpoint, FileSystemType fstype, boolean readonly)
+			throws BWFLAException, IllegalArgumentException
+	{
 		final var image = Path.of(mount.getTargetImage());
-		return this.mount(image, mountpoint, fstype);
+		return this.mount(image, mountpoint, fstype, readonly);
 	}
 
 	/**
@@ -543,7 +557,7 @@ public class ImageMounter implements AutoCloseable
 		throw new BWFLAException("Mounting image '" + image + "' failed!");
 	}
 
-	private static DeprecatedProcessRunner mountFileSystem(Path device, Path dest, FileSystemType fsType, Logger log)
+	private static DeprecatedProcessRunner mountFileSystem(Path device, Path dest, FileSystemType fsType, boolean readonly, Logger log)
 			throws BWFLAException, IOException
 	{
 		if (!Files.exists(dest)) {
@@ -553,12 +567,11 @@ public class ImageMounter implements AutoCloseable
 
 		switch (fsType) {
 			case NTFS:
-				return ntfsMount(device, dest, null, log);
-
+				final var options = (readonly) ? "ro" : null;
+				return ntfsMount(device, dest, options, log);
 
 			default:
-				return lklMount(device, dest, fsType.toString().toLowerCase(), log, false);
-
+				return lklMount(device, dest, fsType.toString().toLowerCase(), log, readonly);
 		}
 	}
 
@@ -570,7 +583,7 @@ public class ImageMounter implements AutoCloseable
 				.setLogger(log);
 
 		if (options != null)
-			process.addArgument(options);
+			process.addArgValues(",", options);
 
 		process.addArgument(src.toString());
 		process.addArgument(dst.toString());
