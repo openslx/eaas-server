@@ -95,7 +95,7 @@ public class ImportEmulatorUtil {
             mounter.addWorkingDirectory(workdir);
 
             final var rawmnt = mounter.mount(imageurl, workdir.resolve("raw"));
-            final var fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4);
+            final var fsmnt = mounter.mount(rawmnt, workdir.resolve("fs"), FileSystemType.EXT4, true);
             if (!Files.exists(fsmnt.getMountPoint())) {
                 throw new BWFLAException("Can't find filesystem mount, looks like an invalid emulator image!");
             }
