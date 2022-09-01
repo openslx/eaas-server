@@ -2319,7 +2319,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	{
 		LOG.info("Waiting for path '" + path.toString() +"'...");
 
-		final int timeout = 60000;  // in ms
+		final int timeout = 180000;  // in ms
 		final int waittime = 1000;  // in ms
 		for (int numretries = timeout / waittime; numretries > 0; --numretries) {
 			if (Files.exists(path)) {
