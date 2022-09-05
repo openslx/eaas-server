@@ -36,6 +36,7 @@ import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
 import javax.ws.rs.InternalServerErrorException;
+import javax.ws.rs.NotFoundException;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
@@ -216,20 +217,9 @@ public class Networks {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
     public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
-        try {
-            Session session = sessions.get(id);
-            if(session == null || !(session instanceof NetworkSession))
-                throw new BWFLAException("session not found " + id);
-
-            final String switchId = ((NetworkSession) session).getSwitchId();
-            this.addComponent(session, switchId, component);
-        }
-        catch (BWFLAException error) {
-            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation("Could not add component to group!", error.getMessage()))
-                    .build());
-        }
-
+        final Session session = this.lookup(id);
+        final String switchId = ((NetworkSession) session).getSwitchId();
+        this.addComponent(session, switchId, component);
         response.setStatus(Response.Status.OK.getStatusCode());
     }
 
@@ -238,20 +228,9 @@ public class Networks {
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
     public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
-        try {
-            Session session = sessions.get(id);
-            if(session == null || !(session instanceof NetworkSession))
-                throw new BWFLAException("session not found " + id);
-
-            final String switchId = ((NetworkSession) session).getSwitchId();
-            this.addComponent(session, switchId, component, false);
-        }
-        catch (BWFLAException error) {
-            throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorInformation("Could not add component to group!", error.getMessage()))
-                    .build());
-        }
-
+        final Session session = this.lookup(id);
+        final String switchId = ((NetworkSession) session).getSwitchId();
+        this.addComponent(session, switchId, component, false);
         response.setStatus(Response.Status.OK.getStatusCode());
     }
 
@@ -259,13 +238,7 @@ public class Networks {
     @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}/disconnect")
     public void disconnectComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
-        Session session = sessions.get(id);
-        if(session == null || !(session instanceof NetworkSession))
-        {
-            LOG.severe("disconnectComponent: session not found " + id);
-            return;
-        }
-
+        final Session session = this.lookup(id);
         final String switchId = ((NetworkSession) session).getSwitchId();
         try {
             this.disconnectComponent(session, switchId, componentId);
@@ -286,13 +259,7 @@ public class Networks {
     @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}")
     public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
-        Session session = sessions.get(id);
-        if(session == null || !(session instanceof NetworkSession))
-        {
-            LOG.severe("removeComponent: session not found " + id);
-            return;
-        }
-
+        final Session session = this.lookup(id);
         final String switchId = ((NetworkSession) session).getSwitchId();
         this.removeComponent(session, switchId, componentId);
         response.setStatus(Response.Status.OK.getStatusCode());
@@ -305,10 +272,7 @@ public class Networks {
     public Response wsConnection(@PathParam("id") String id)
     {
         try {
-            Session session = sessions.get(id);
-            if(session == null || !(session instanceof NetworkSession))
-                throw new BWFLAException("session not found " + id);
-
+            final Session session = this.lookup(id);
             final String switchId = ((NetworkSession) session).getSwitchId();
             String link = componentClient.getNetworkSwitchPort(eaasGw).wsConnect(switchId);
             final JsonObject json = Json.createObjectBuilder()
@@ -405,5 +369,14 @@ public class Networks {
     private Map<String, URI> getControlUrls(String componentId) throws BWFLAException {
         return ComponentClient.controlUrlsToMap(componentClient.getComponentPort(eaasGw)
                 .getControlUrls(componentId));
+    }
+
+    private Session lookup(String id) throws NotFoundException
+    {
+        final Session session = sessions.get(id);
+        if (session == null || !(session instanceof NetworkSession))
+            throw new NotFoundException("Network not found: " + id);
+
+        return session;
     }
 }
