@@ -24,6 +24,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.enterprise.context.ApplicationScoped;
@@ -88,7 +89,7 @@ public class Networks {
     @Config(value = "emil.retain_session")
     private String retain_session;
 
-    protected final static Logger LOG = Logger.getLogger(Networks.class.getName());
+    protected final static Logger LOG = Logger.getLogger("NETWORKS");
 
     @POST
     @Secured(roles = {Role.PUBLIC})
@@ -202,12 +203,13 @@ public class Networks {
             for (NetworkRequest.ComponentSpec component : networkRequest.getComponents()) {
                 this.addComponent(session, switchId, component);
             }
-            
+
+            LOG.info("Created network '" + session.id() + "'");
             response.setStatus(Response.Status.CREATED.getStatusCode());
             return networkResponse;
         }
         catch (Exception error) {
-            error.printStackTrace();
+            LOG.log(Level.WARNING, "Creating network failed!", error);
             throw Components.newInternalError(error);
         }
     }
@@ -245,7 +247,7 @@ public class Networks {
         }
         catch (BWFLAException e)
         {
-            e.printStackTrace();
+            LOG.log(Level.WARNING, "Disconnecting component '" + componentId + "' from network '" + id + "' failed!", e);
             throw new ServerErrorException(Response
                     .status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ErrorInformation(
@@ -282,7 +284,7 @@ public class Networks {
 
             return Emil.createResponse(Response.Status.OK, json.toString());
         } catch (BWFLAException e) {
-            e.printStackTrace();
+            LOG.log(Level.WARNING, "Connecting to network '" + id + "' failed!", e);
             throw new ServerErrorException(Response
                     .status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ErrorInformation(
@@ -330,9 +332,14 @@ public class Networks {
             if (addToGroup) {
                 session.components()
                         .add(new SessionComponent(component.getComponentId()));
+
+                LOG.info("Added component '" + component.getComponentId() + "' to network '" + session.id() + "'");
             }
 
+            LOG.info("Connected component '" + component.getComponentId() + "' to network '" + session.id() + "'");
+
         } catch (BWFLAException error) {
+            LOG.log(Level.WARNING, "Connecting component '" + component.getComponentId() + "' to network '" + session.id() + "' failed!", error);
             throw new ServerErrorException(Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity(new ErrorInformation("Could not acquire group information.", error.getMessage()))
                     .build());
@@ -353,16 +360,18 @@ public class Networks {
                     .getValue().toString();
 
             componentClient.getNetworkSwitchPort(eaasGw).disconnect(switchId, ethurl);
+            LOG.info("Disconnected component '" + componentId + "' from network '" + session.id() + "'");
     }
 
     private void removeComponent(Session session, String switchId, String componentId)  {
         try {
             disconnectComponent(session, switchId, componentId);
             sessions.remove(session.id(), componentId);
+            LOG.info("Removed component '" + componentId + "' from network '" + session.id() + "'");
         }
         catch (BWFLAException error) {
            // we must not throw here in most cases, since the disconnect may already has happened
-            error.printStackTrace();
+            LOG.log(Level.WARNING, "Removing component '" + componentId + "' from network '" + session.id() + "' failed!", error);
         }
     }
 
