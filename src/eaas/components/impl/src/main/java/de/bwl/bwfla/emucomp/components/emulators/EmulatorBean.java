@@ -772,6 +772,7 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				final String rootfs = bindings.lookup(BindingsManager.toBindingId(EMUCON_ROOTFS_BINDING_ID, BindingsManager.EntryType.FS_MOUNT));
 				final Path path = Paths.get(rootfs, "tmp", "xpra-started");
 				this.waitUntilPathExists(path, EmuCompState.EMULATOR_BUSY);
+				this.waitUntilPathExists(this.getXpraSocketPath(), EmuCompState.EMULATOR_BUSY);
 			}
 		}
 		else if (this.isSdlBackendEnabled()) {
