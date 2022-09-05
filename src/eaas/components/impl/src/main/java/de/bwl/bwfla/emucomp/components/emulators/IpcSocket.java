@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
@@ -90,11 +91,44 @@ public class IpcSocket
 	/** Connects to an existing domain-socket using the specified name. */
 	public static IpcSocket connect(String sockname, Type socktype) throws IOException
 	{
+		return IpcSocket.connect(sockname, socktype, 120, TimeUnit.SECONDS);
+	}
+
+	/** Connects to an existing domain-socket using the specified name. */
+	public static IpcSocket connect(String sockname, Type socktype, long timeout, TimeUnit timeunit) throws IOException
+	{
 		IpcSocket socket = null;
 		try {
 			final int sockfd = SocketAPI.socket(SocketAPI.AF_UNIX, SocketAPI.socktype(socktype), 0);
 			sockaddr_un addr = new sockaddr_un(SocketAPI.AF_UNIX, sockname);
-			SocketAPI.connect(sockfd, addr, sockaddr_un.length());
+
+			final long waittime = 1000L;  // in ms
+			long numretries = timeunit.toMillis(timeout) / waittime;
+			LastErrorException error = null;
+			do {
+				try {
+					SocketAPI.connect(sockfd, addr, sockaddr_un.length());
+					error = null;
+					break;
+				}
+				catch (LastErrorException exception) {
+					// try one more time!
+					error = exception;
+				}
+
+				try {
+					Thread.sleep(waittime);
+				}
+				catch (Exception exception) {
+					// Ignore it!
+				}
+
+				--numretries;
+			}
+			while (numretries > 0);
+
+			if (error != null)
+				throw error;
 
 			final int msgsize = IpcSocket.getBufferSize(sockfd);
 			socket = new IpcSocket(sockname, socktype, sockfd, msgsize, false);
