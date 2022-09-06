@@ -14,3 +14,5 @@ remote="$1"
 
 rsync -zv --progress --rsync-path="sudo rsync" -- src/ear/target/eaas-server.ear "$remote:/eaas-home/deployments/"
 ssh -- "$remote" sudo systemctl restart eaas
+
+printf '\nssh %s\nhttps://%s\n' "$remote" "${remote##*@}"
