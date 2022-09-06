@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emucomp.components.emulators;
 
+import com.openslx.eaas.common.util.RuncStateInformation;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.util.EmulatorMetaHelperV2;
 import com.openslx.eaas.imagearchive.databind.EmulatorMetaData;
@@ -52,6 +53,7 @@ import de.bwl.bwfla.emucomp.components.EaasComponentBean;
 import de.bwl.bwfla.emucomp.components.Tail;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.EventID;
 import de.bwl.bwfla.emucomp.components.emulators.IpcDefs.MessageType;
+import de.bwl.bwfla.emucomp.control.IPCWebsocketProxy;
 import de.bwl.bwfla.emucomp.control.connectors.*;
 import de.bwl.bwfla.emucomp.xpra.IAudioStreamer;
 import de.bwl.bwfla.emucomp.xpra.PulseAudioStreamer;
@@ -623,6 +625,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 			}
 		}
 
+		String xprasockInContainer = null;
+
 		if (this.isContainerModeEnabled()) {
 			LOG.info("Container-mode enabled. Emulator will be started inside of a container!");
 
@@ -707,7 +711,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				cgen.addArguments("--", "/usr/bin/emucon-init", "--networks-dir", conNetDir);
 				if (this.isXpraBackendEnabled()) {
 					final String xprasock = this.getXpraSocketPath().toString();
-					cgen.addArguments("--xpra-socket", hostPathReplacer.apply(xprasock));
+					xprasockInContainer = hostPathReplacer.apply(xprasock);
+					cgen.addArguments("--xpra-socket", xprasockInContainer);
 				}
 
 				if (this.isPulseAudioEnabled()) {
@@ -774,6 +779,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				this.waitUntilPathExists(path, EmuCompState.EMULATOR_BUSY);
 				this.waitUntilPathExists(this.getXpraSocketPath(), EmuCompState.EMULATOR_BUSY);
 			}
+			RuncStateInformation info = RuncStateInformation.getRuncStateInformationForComponent(this.getComponentId());
+			IPCWebsocketProxy.wait(Path.of(xprasockInContainer), Path.of("/proc", info.getPid()));
 		}
 		else if (this.isSdlBackendEnabled()) {
 			if (emuEnvironment.hasCheckpointBindingId()) {
