@@ -20,7 +20,13 @@ public abstract class IPCWebsocketProxy {
     protected PingSender pingSender;
     protected String componentId;
 
+
     public static void wait(Path path) throws BWFLAException
+    {
+        wait(path, Path.of("/proc"));
+    }
+
+    public static void wait(Path path, Path procfsPath) throws BWFLAException
     {
         log.info("Waiting for socket to become ready...");
 
@@ -32,7 +38,7 @@ public abstract class IPCWebsocketProxy {
             runner.setCommand("awk");
             runner.addArgument("BEGIN {e=1} $8==sock && $4==\"00010000\" {e=0; exit} END {exit e}");
             runner.addArgument("sock=" + path.toString());
-            runner.addArgument("/proc/net/unix");
+            runner.addArgument(procfsPath.resolve("net/unix").toString());
             if (runner.execute(false)) {
                 log.info("socket seems to be ready now");
                 return;
