@@ -1,5 +1,5 @@
 objectarchive:
-    objectarchiveconfdir: /home/bwfla/.bwFLA
+    objectarchiveconfdir: /home/bwfla/.bwFLA/object-archives
     httpexport: http://eaas:8080/objectarchive/
     default_local_file_path: /home/bwfla/objects
     userarchive: /home/bwfla/server-data/users
