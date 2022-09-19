@@ -60,6 +60,7 @@ import javax.xml.bind.annotation.XmlElement;
 
 import com.openslx.eaas.imagearchive.api.v2.common.ResolveOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.AccessMethodV2;
+import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.api.blobstore.BlobStore;
 import de.bwl.bwfla.api.eaas.OutOfResourcesException_Exception;
 import de.bwl.bwfla.api.eaas.QuotaExceededException_Exception;
@@ -1035,6 +1036,7 @@ public class Components {
 
     private String resolveResource(String kind, String resourceId, ResolveOptionsV2 options) throws Exception
     {
+        resourceId = DataResolver.decode(resourceId);
         switch (kind) {
             case "images":
                 return this.resolveImage(resourceId, options);
