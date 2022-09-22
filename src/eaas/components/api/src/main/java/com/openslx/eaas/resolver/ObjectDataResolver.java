@@ -31,12 +31,12 @@ public class ObjectDataResolver extends ComponentDataResolver
 
 	public String resolve(String component, FileCollectionEntry fce)
 	{
-		return this.resolve(component, ObjectDataResolver.toUrl(fce));
+		return this.resolve(component, fce.getArchive(), fce.getObjectId(), fce.getId());
 	}
 
 	public String resolve(FileCollectionEntry fce, UserContext userctx)
 	{
-		return this.resolve(userctx, kind, ObjectDataResolver.toUrl(fce));
+		return this.resolve(fce.getArchive(), fce.getObjectId(), fce.getId(), userctx);
 	}
 
 	public String resolve(String archive, String object, String resource)
@@ -47,10 +47,5 @@ public class ObjectDataResolver extends ComponentDataResolver
 	public String resolve(String archive, String object, String resource, UserContext userctx)
 	{
 		return this.resolve(userctx, kind, archive, object, resource);
-	}
-
-	private static String toUrl(FileCollectionEntry fce)
-	{
-		return fce.getArchive() + "/" + fce.getObjectId() + "/" + fce.getId();
 	}
 }

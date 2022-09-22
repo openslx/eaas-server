@@ -20,6 +20,7 @@
 package de.bwl.bwfla.emil;
 
 import com.openslx.eaas.common.databind.DataUtils;
+import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.services.rest.ErrorInformation;
@@ -226,7 +227,7 @@ public class ObjectRepository extends EmilRest
 		@Path("/{archiveId}/objects")
 		public Objects objects(@PathParam("archiveId") String archiveId)
 		{
-			return new Objects(archiveId);
+			return new Objects(DataResolver.decode(archiveId));
 		}
 
 		@POST

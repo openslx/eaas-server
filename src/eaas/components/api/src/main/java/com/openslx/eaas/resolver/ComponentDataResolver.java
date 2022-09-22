@@ -18,6 +18,8 @@
 
 package com.openslx.eaas.resolver;
 
+import de.bwl.bwfla.common.services.security.UserContext;
+
 
 public class ComponentDataResolver extends DataResolver
 {
@@ -38,8 +40,13 @@ public class ComponentDataResolver extends DataResolver
 		this.kind = kind;
 	}
 
-	public String resolve(String component, String resource)
+	public String resolve(String component, String... resource)
 	{
-		return this.resolve(null, "components", component, kind, resource);
+		final var subpaths = new String[3 + resource.length];
+		subpaths[0] = "components";
+		subpaths[1] = component;
+		subpaths[2] = kind;
+		System.arraycopy(resource, 0, subpaths, 3, resource.length);
+		return this.resolve((UserContext) null, subpaths);
 	}
 }

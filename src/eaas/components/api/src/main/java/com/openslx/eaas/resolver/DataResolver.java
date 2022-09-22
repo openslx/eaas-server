@@ -21,6 +21,10 @@ package com.openslx.eaas.resolver;
 import de.bwl.bwfla.common.services.security.UserContext;
 import org.apache.tamaya.ConfigurationProvider;
 
+import java.net.URLDecoder;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 
 public class DataResolver
 {
@@ -48,11 +52,22 @@ public class DataResolver
 		}
 
 		for (final var subpath : subpaths) {
+			final var encpath = DataResolver.encode(subpath);
 			location.append("/")
-					.append(subpath);
+					.append(encpath);
 		}
 
 		return location.toString();
+	}
+
+	public static String encode(String path)
+	{
+		return URLEncoder.encode(path, StandardCharsets.UTF_8);
+	}
+
+	public static String decode(String path)
+	{
+		return URLDecoder.decode(path, StandardCharsets.UTF_8);
 	}
 
 	public static String getDefaultEndpoint()
