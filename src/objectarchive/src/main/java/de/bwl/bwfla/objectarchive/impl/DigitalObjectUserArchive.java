@@ -51,6 +51,11 @@ public class DigitalObjectUserArchive extends DigitalObjectS3Archive
             }
         };
 
+        if (!Files.exists(basedir)) {
+            log.info("No private object-archives found!");
+            return;
+        }
+
         log.info("Renaming private object-archives...");
         try (final var dirs = Files.list(basedir)) {
             dirs.forEach(renamer);
