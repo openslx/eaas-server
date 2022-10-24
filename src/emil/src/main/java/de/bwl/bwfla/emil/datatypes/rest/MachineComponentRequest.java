@@ -19,14 +19,16 @@
 
 package de.bwl.bwfla.emil.datatypes.rest;
 
+import com.fasterxml.jackson.annotation.JsonSubTypes;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
-import de.bwl.bwfla.emucomp.api.Binding;
 import de.bwl.bwfla.emucomp.api.MediumType;
 
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
 import javax.xml.bind.annotation.XmlRootElement;
+import javax.xml.bind.annotation.XmlSeeAlso;
 import javax.xml.bind.annotation.XmlType;
 import java.util.ArrayList;
 
@@ -82,6 +84,9 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
     @XmlElement
     private ArrayList<UserMedium> userMedia;
+
+    @XmlElement
+    private ArrayList<Drive> drives;
 
     public String getEnvironment() {
         return environment;
@@ -158,9 +163,87 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         this.outputDriveId = outputDriveId;
     }
 
+    public ArrayList<Drive> getDrives() {
+        if (drives == null)
+            drives = new ArrayList<>();
+        return drives;
+    }
+
+
+    @JsonTypeInfo(
+            use = JsonTypeInfo.Id.NAME,
+            include = JsonTypeInfo.As.PROPERTY,
+            property = "kind")
+    @JsonSubTypes({
+            @JsonSubTypes.Type(value = ImageDataSource.class, name = "image"),
+            @JsonSubTypes.Type(value = ObjectDataSource.class, name = "object"),
+            @JsonSubTypes.Type(value = SoftwareDataSource.class, name = "software"),
+            @JsonSubTypes.Type(value = UserMedium.class, name = "user-medium")
+    })
     @XmlRootElement
     @XmlAccessorType(XmlAccessType.NONE)
-    public static class UserMedium extends JaxbType
+    @XmlSeeAlso({
+            ObjectDataSource.class,
+            SoftwareDataSource.class,
+            ImageDataSource.class,
+            UserMedium.class
+    })
+    public static class DriveDataSource extends JaxbType
+    {
+        @XmlElement(required = true)
+        private String kind;
+
+        public String getKind() {
+            return kind;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class ImageDataSource extends DriveDataSource
+    {
+        @XmlElement(required = true)
+        private String id;
+
+        public String getId() {
+            return id;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class ObjectDataSource extends DriveDataSource
+    {
+        @XmlElement(required = true)
+        private String id;
+
+        @XmlElement(required = true)
+        private String archive;
+
+        public String getId() {
+            return id;
+        }
+
+        public String getArchive() {
+            return archive;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class SoftwareDataSource extends DriveDataSource
+    {
+        @XmlElement(required = true)
+        private String id;
+
+        public String getId() {
+            return id;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class UserMedium extends DriveDataSource
     {
         @XmlElement(name = "mediumType")
         private MediumType mediumType;
@@ -181,6 +264,32 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
 
         public String getName() {
             return name;
+        }
+    }
+
+    @XmlRootElement
+    @XmlAccessorType(XmlAccessType.NONE)
+    public static class Drive extends JaxbType
+    {
+        @XmlElement(required = true)
+        private String id;
+
+        @XmlElement(required = true)
+        private DriveDataSource data;
+
+        @XmlElement
+        private boolean bootable;
+
+        public String getId() {
+            return id;
+        }
+
+        public DriveDataSource getData() {
+            return data;
+        }
+
+        public boolean isBootable() {
+            return bootable;
         }
     }
 }
