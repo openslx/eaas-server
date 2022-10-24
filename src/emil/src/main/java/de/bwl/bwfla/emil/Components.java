@@ -781,6 +781,9 @@ public class Components {
                 connectMedia(config, uMedia);
             }
 
+            for (MachineComponentRequest.Drive drive : machineDescription.getDrives())
+                this.assignDriveData(config, drive);
+
             Integer driveId = null;
             // hack: we need to initialize the user archive:
             objectRepository.archives().list();
@@ -899,6 +902,57 @@ public class Components {
         }
     }
 
+    private void assignDriveData(MachineConfiguration env, MachineComponentRequest.Drive drive)
+            throws BWFLAException
+    {
+        final var data = drive.getData();
+        if (data == null)
+            throw new BadRequestException();
+
+        AbstractDataResource resource = null;
+        if (data instanceof MachineComponentRequest.ImageDataSource) {
+            final var source = (MachineComponentRequest.ImageDataSource) data;
+            final var binding = new ImageArchiveBinding();
+            binding.setImageId(source.getId());
+            binding.setId(source.getId());
+            resource = binding;
+        }
+        else if (data instanceof MachineComponentRequest.ObjectDataSource) {
+            final var source = (MachineComponentRequest.ObjectDataSource) data;
+            final var binding = new ObjectArchiveBinding();
+            binding.setArchive(source.getArchive());
+            binding.setObjectId(source.getId());
+            binding.setId(source.getId());
+            resource = binding;
+        }
+        else if (data instanceof MachineComponentRequest.SoftwareDataSource) {
+            final var source = (MachineComponentRequest.SoftwareDataSource) data;
+            final var software = this.getSoftwarePackage(source.getId());
+            final var binding = new ObjectArchiveBinding();
+            binding.setArchive(software.getArchive());
+            binding.setObjectId(software.getObjectId());
+            binding.setId(software.getObjectId());
+            resource = binding;
+        }
+        else if (data instanceof MachineComponentRequest.UserMedium) {
+            final var source = (MachineComponentRequest.UserMedium) data;
+            if (source.getMediumType() != MediumType.CDROM && source.getMediumType() != MediumType.HDD)
+                throw new BadRequestException("User media not supported: " + source.getMediumType());
+
+            final BlobStoreBinding binding = new BlobStoreBinding();
+            binding.setId(UUID.randomUUID().toString());
+            binding.setUrl(source.getUrl());
+            binding.setLocalAlias(source.getName());
+            resource = binding;
+        }
+        else {
+            LOG.warning("Unknown drive data-source: " + data.getClass().getName());
+            throw new BadRequestException();
+        }
+
+        this.assignBindingToDrive(env, resource, drive.getId());
+    }
+
     protected SoftwarePackage getSoftwarePackage(String softwareId)
             throws BWFLAException {
         // Start with object ID referenced by the passed software ID.
@@ -950,6 +1004,25 @@ public class Components {
     {
         config.getAbstractDataResource().add(binding);
         return EmulationEnvironmentHelper.registerDrive(config, binding.getId(), null, drive);
+    }
+
+    protected void assignBindingToDrive(MachineConfiguration config, AbstractDataResource data, String driveId)
+            throws BWFLAException
+    {
+        config.getAbstractDataResource()
+                .add(data);
+
+        String subres = null;
+        if (data instanceof ObjectArchiveBinding) {
+            final var binding = (ObjectArchiveBinding) data;
+            final var fc = objectRepository.helper()
+                    .getObjectReference(binding.getArchive(), binding.getObjectId());
+
+            subres = fc.getDefaultEntry().getId();
+        }
+
+        // FIXME: ID could be arbitrary string!
+        EmulationEnvironmentHelper.registerDrive(config, data.getId(), subres, Integer.parseInt(driveId));
     }
 
     protected Drive.DriveType toDriveType(MediumType medium)
