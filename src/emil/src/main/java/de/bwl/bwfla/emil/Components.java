@@ -776,6 +776,7 @@ public class Components {
                 }
             }
 
+            // TODO: remove this deprecated code!
             for(MachineComponentRequest.UserMedium uMedia : machineDescription.getUserMedia())
             {
                 connectMedia(config, uMedia);
@@ -877,6 +878,7 @@ public class Components {
         }
     }
 
+    @Deprecated
     private void connectMedia(MachineConfiguration env, MachineComponentRequest.UserMedium userMedium) throws BWFLAException {
         if(userMedium.getMediumType() != MediumType.CDROM && userMedium.getMediumType() != MediumType.HDD)
         {

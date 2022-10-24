@@ -82,6 +82,7 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
     @XmlElement(required = false, defaultValue = "boot")
     private String outputDriveId;
 
+    @Deprecated
     @XmlElement
     private ArrayList<UserMedium> userMedia;
 
@@ -133,6 +134,7 @@ public class MachineComponentRequest extends ComponentWithExternalFilesRequest {
         return nic;
     }
 
+    @Deprecated
     public ArrayList<UserMedium> getUserMedia() {
         if(userMedia == null)
             userMedia = new ArrayList<>();
