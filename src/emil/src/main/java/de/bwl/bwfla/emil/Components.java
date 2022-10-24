@@ -915,6 +915,19 @@ public class Components {
         return software;
     }
 
+    private String resolveObjectArchive(String archiveId)
+    {
+        if(userArchiveEnabled && (archiveId == null || archiveId.equals("default")))
+        {
+            if(authenticatedUser == null || authenticatedUser.getUserId() == null)
+                archiveId = "default";
+            else
+                archiveId = authenticatedUser.getUserId();
+        }
+
+        return archiveId;
+    }
+
     protected int addObjectToEnvironment(Environment chosenEnv, String archiveId, String objectId)
             throws BWFLAException, JAXBException {
 
@@ -924,14 +937,7 @@ public class Components {
             return EmulationEnvironmentHelper.getDriveId((MachineConfiguration)chosenEnv, objectId);
         }
 
-        if(userArchiveEnabled && (archiveId == null || archiveId.equals("default")))
-        {
-            if(authenticatedUser == null || authenticatedUser.getUserId() == null)
-                archiveId = "default";
-            else
-                archiveId = authenticatedUser.getUserId();
-        }
-
+        archiveId = this.resolveObjectArchive(archiveId);
         FileCollection fc = objects.getFileCollection(archiveId, objectId);
         ObjectArchiveBinding binding = new ObjectArchiveBinding(objectArchive, archiveId, objectId);
 
