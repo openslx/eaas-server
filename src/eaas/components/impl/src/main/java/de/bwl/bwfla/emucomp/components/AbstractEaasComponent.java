@@ -144,6 +144,9 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 	}
 
 	public void setEventSink(EventSink sink) {
+		if (this.hasEventSink())
+			this.esink.close();
+
 		this.esink = sink;
 	}
 
@@ -153,5 +156,10 @@ public abstract class AbstractEaasComponent implements ClusterComponent
 
 	public boolean hasEventSink() {
 		return (esink != null);
+	}
+
+	@Override
+	public void destroy() {
+		this.setEventSink(null);
 	}
 }

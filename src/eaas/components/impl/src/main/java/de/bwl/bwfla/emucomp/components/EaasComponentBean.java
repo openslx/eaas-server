@@ -127,5 +127,8 @@ public abstract class EaasComponentBean extends AbstractEaasComponent
 		// Delete temp dirs
 		deleteTmpDirs(bindingDir);
 		deleteTmpDirs(workdir);
+
+		// Destroy base class!
+		super.destroy();
 	}
 }
