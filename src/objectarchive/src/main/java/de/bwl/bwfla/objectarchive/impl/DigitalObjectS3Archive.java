@@ -380,6 +380,7 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 			var filename = entry.getLocalAlias();
 			if (filename == null || filename.isEmpty())
 				filename = entry.getId();
+			filename = DigitalObjectS3Archive.strSaveFilename(filename);
 
 			final ResourceType rt;
 			if (entry.getResourceType() != null)
