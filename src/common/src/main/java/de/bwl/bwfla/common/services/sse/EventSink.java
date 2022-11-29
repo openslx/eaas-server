@@ -49,7 +49,8 @@ public class EventSink
 
 	public void close()
 	{
-		sink.close();
+		if (sink != null)
+			sink.close();
 	}
 
 	public boolean isClosed()
@@ -59,6 +60,7 @@ public class EventSink
 
 	public void reset(SseEventSink sink, Sse sse)
 	{
+		this.close();
 		this.sink = sink;
 		this.sse = sse;
 	}
