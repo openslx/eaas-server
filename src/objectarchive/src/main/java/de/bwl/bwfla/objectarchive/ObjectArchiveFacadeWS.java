@@ -146,6 +146,11 @@ public class ObjectArchiveFacadeWS
 		a.delete(id);
 	}
 
+	public void updateLabel(String archive, String id, String label) throws BWFLAException{
+		DigitalObjectArchive a =  getArchive(archive);
+		a.updateLabel(id, label);
+	}
+
 	public DigitalObjectMetadata getObjectMetadata(String archive, String id) throws BWFLAException {
 		DigitalObjectArchive a = getArchive(archive);
 		return a.getMetadata(id);

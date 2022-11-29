@@ -30,6 +30,8 @@ import de.bwl.bwfla.emil.datatypes.rest.MediaDescriptionResponse;
 import de.bwl.bwfla.emil.datatypes.rest.ObjectArchivesResponse;
 import de.bwl.bwfla.emil.datatypes.rest.SyncObjectRequest;
 import de.bwl.bwfla.emil.datatypes.rest.TaskStateResponse;
+import de.bwl.bwfla.emil.datatypes.rest.ChangeObjectLabelRequest;
+
 import de.bwl.bwfla.common.services.security.AuthenticatedUser;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
@@ -49,6 +51,7 @@ import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
 import javax.ws.rs.GET;
+import javax.ws.rs.PUT;
 import javax.ws.rs.HEAD;
 import javax.ws.rs.HttpMethod;
 import javax.ws.rs.NotFoundException;
@@ -114,7 +117,7 @@ public class ObjectRepository extends EmilRest
 	}
 
 	@PostConstruct
-    private void initialize()
+	private void initialize()
 	{
 		try {
 			objHelper = new ObjectArchiveHelper(objectArchive);
@@ -394,6 +397,23 @@ public class ObjectRepository extends EmilRest
 			catch (BWFLAException error) {
 				return new MediaDescriptionResponse(new BWFLAException(error));
 			}
+		}
+
+		@PUT
+		@Path("/{objectId}/label")
+		@Secured(roles = {Role.RESTRICTED})
+		@Consumes(MediaType.APPLICATION_JSON)
+		public Response putChangeLabel(ChangeObjectLabelRequest req, @PathParam("objectId") String objectId)
+		{
+			LOG.info("Changing label for '" + objectId + "'...");
+			try {
+				objHelper.updateObjectLabel(archiveId, objectId, req.getLabel());
+			}
+			catch (BWFLAException e) {
+				throw new RuntimeException(e);
+			}
+			return Response.ok().build();
+
 		}
 
 		@DELETE

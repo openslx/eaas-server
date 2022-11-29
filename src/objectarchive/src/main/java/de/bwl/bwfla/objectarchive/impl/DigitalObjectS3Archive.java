@@ -427,6 +427,15 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 	}
 
 	@Override
+	public void updateLabel(String objectId, String newLabel) throws BWFLAException
+	{
+		log.info("Updating label for object " + objectId + " to '" + newLabel + "'.");
+		var mo = loadMetsData(objectId);
+		mo.setLabel(newLabel);
+		writeMetsFile(mo.getMets());
+	}
+
+	@Override
 	public FileCollection getObjectReference(String objectId)
 	{
 		try {

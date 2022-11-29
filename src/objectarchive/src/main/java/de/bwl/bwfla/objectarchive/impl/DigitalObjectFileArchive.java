@@ -274,6 +274,15 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	}
 
 	@Override
+	public void updateLabel(String objectId, String newLabel) throws BWFLAException
+	{
+		log.info("Updating label for object " + objectId + " to '" + newLabel + "'");
+		var mo = loadMetsData(objectId);
+		mo.setLabel(newLabel);
+		writeMetsFile(mo.getMets());
+	}
+
+	@Override
 	public Stream<String> getObjectIds()
 	{
 		final Path basepath = this.getLocalPath();

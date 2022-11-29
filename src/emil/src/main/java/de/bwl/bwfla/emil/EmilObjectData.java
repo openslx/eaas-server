@@ -110,6 +110,19 @@ public class EmilObjectData extends EmilRest {
 	}
 
 	@Secured(roles = {Role.RESTRICTED})
+	@PUT
+	@Path("/{objectArchive}/{objectId}/label")
+	@Produces(MediaType.APPLICATION_JSON)
+	@Consumes(MediaType.APPLICATION_JSON)
+	public Response mediaDescription(ChangeObjectLabelRequest req, @PathParam("objectId") String objectId,
+													 @PathParam("objectArchive") String archiveId)
+	{
+		return objrepo.archives()
+				.objects(archiveId)
+				.putChangeLabel(req, objectId);
+	}
+
+	@Secured(roles = {Role.RESTRICTED})
 	@GET
 	@Path("/archives")
 	@Produces(MediaType.APPLICATION_JSON)
