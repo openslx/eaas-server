@@ -99,6 +99,14 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 		objects.put(o.getId(), o);
 	}
 
+	@Override
+	public void updateLabel(String objectId, String newLabel) throws BWFLAException
+	{
+		var mets = objects.get(objectId);
+		mets.setLabel(newLabel);
+		importObject(mets.toString());
+	}
+
 	private void load()
 	{
 		int numLoaded = 0;

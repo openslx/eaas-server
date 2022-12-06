@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
+import java.util.Arrays;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -271,6 +272,15 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		//       hence we expect them to be packed in an ISO for now!
 		if (fc.contains(ResourceType.FILE))
 			this.packFilesAsIso(o.getId());
+	}
+
+	@Override
+	public void updateLabel(String objectId, String newLabel) throws BWFLAException
+	{
+		log.info("Updating label for object " + objectId + " to '" + newLabel + "'");
+		var mo = loadMetsData(objectId);
+		mo.setLabel(newLabel);
+		writeMetsFile(mo.getMets());
 	}
 
 	@Override
@@ -703,10 +713,40 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 					for (final var file : fgroup.getFile()) {
 						for (final var flocat : file.getFLocat()) {
 							final var oldurl = flocat.getHref();
+							var newurl = oldurl;
+
 							if (oldurl.startsWith(objectId)) {
 								// CASE: <object-id>/<subpath> -> <subpath>
-								final var newurl = oldurl.substring(objectId.length() + 1);
-								flocat.setHref(oldurl.substring(objectId.length() + 1));
+								newurl = oldurl.substring(objectId.length() + 1);
+							}
+
+							var filePath = Path.of(localPath, objectId, newurl);
+
+							// CASE: file not found via URL
+							if (!Files.exists(filePath)){
+								// NOTE: some legacy METS URLs can contain URL unsafe chars (e.g. " ").
+								//       Fix metadata according to stored filename in such cases!
+								updatemsgs.add("File '" + filePath + "' is specified in the METS file, but can't be found...");
+								final List<String> replacements = Arrays.asList("", "-");
+								boolean success = false;
+								for (var replacement : replacements){
+									updatemsgs.add("Trying '" + replacement + "' as replacement for ' ' (empty space)...");
+									newurl = newurl.replace(" ", replacement);
+									filePath = Path.of(localPath, objectId, newurl);
+									if (Files.exists(filePath)){
+										updatemsgs.add("File '" + filePath + "' found after replacement!");
+										success = true;
+										break;
+									}
+								}
+
+								if (!success){
+									throw new RuntimeException("File was not found after trying all replacements!");
+								}
+							}
+
+							if (!newurl.equals(oldurl)){
+								flocat.setHref(newurl);
 								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
 							}
 						}

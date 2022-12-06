@@ -62,6 +62,10 @@ public class MetsObject {
         return metsRoot.getLabel1();
     }
 
+    public void setLabel(String newLabel) {
+        metsRoot.setLabel1(newLabel);
+    }
+
     public String toString() {
         return metsRoot.toString();
     }

@@ -380,6 +380,7 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 			var filename = entry.getLocalAlias();
 			if (filename == null || filename.isEmpty())
 				filename = entry.getId();
+			filename = DigitalObjectS3Archive.strSaveFilename(filename);
 
 			final ResourceType rt;
 			if (entry.getResourceType() != null)
@@ -423,6 +424,15 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 				.upload();
 
 		log.info("Object metadata uploaded to: " + blob.name());
+	}
+
+	@Override
+	public void updateLabel(String objectId, String newLabel) throws BWFLAException
+	{
+		log.info("Updating label for object " + objectId + " to '" + newLabel + "'.");
+		var mo = loadMetsData(objectId);
+		mo.setLabel(newLabel);
+		writeMetsFile(mo.getMets());
 	}
 
 	@Override

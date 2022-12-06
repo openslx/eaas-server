@@ -89,6 +89,11 @@ public class ObjectArchiveHelper {
 		return archive.getObjectMetadata(_archive, id);
 	}
 
+	public void updateObjectLabel(String _archive, String id, String newLabel) throws BWFLAException
+	{
+		connectArchive();
+		archive.updateLabel(_archive, id, newLabel);
+	}
 
 	public Stream<DigitalObjectMetadata> getObjectMetadata(String _archive) throws BWFLAException
 	{

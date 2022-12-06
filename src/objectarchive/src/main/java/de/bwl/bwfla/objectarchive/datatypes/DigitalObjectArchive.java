@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import com.openslx.eaas.migration.MigrationRegistry;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.common.services.guacplay.util.NotImplementedException;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 
@@ -70,5 +71,10 @@ public interface DigitalObjectArchive
 	default void register(MigrationRegistry migrations) throws Exception
 	{
 		// Empty!
+	}
+
+	default void updateLabel(String objectId, String newLabel) throws BWFLAException
+	{
+		throw new NotImplementedException("This archive does not support updating the label.");
 	}
 }
