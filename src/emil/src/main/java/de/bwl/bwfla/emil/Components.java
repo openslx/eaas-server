@@ -1762,6 +1762,9 @@ public class Components {
             for (EventObserver observer : observers)
                 observer.stop();
 
+            if (this.hasEventSink())
+                esink.close();
+
 //             if(request.getUserContext() != null && request instanceof MachineComponentRequest)
 //            {
 //                MachineComponentRequest machineRequest = (MachineComponentRequest)request;
@@ -1807,6 +1810,9 @@ public class Components {
 
         public void setEventSink(SseEventSink sink, Sse sse)
         {
+            if (this.hasEventSink())
+                esink.close();
+
             this.esink = new EventSink(sink, sse);
 
             final Consumer<InboundSseEvent> forwarder = (input) -> {
