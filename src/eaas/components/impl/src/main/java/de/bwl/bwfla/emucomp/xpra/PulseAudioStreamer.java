@@ -37,6 +37,7 @@ import javax.json.Json;
 import javax.json.JsonObject;
 import javax.json.JsonReader;
 import java.io.StringReader;
+import java.lang.ref.WeakReference;
 import java.nio.file.Path;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -225,8 +226,15 @@ public class PulseAudioStreamer implements IAudioStreamer
 		final WebRTCBin webrtc = new WebRTCBin("webrtc");
 		webrtc.setStunServer("stun://stun.l.google.com:19302");
 
+		final var pipelineWeakRef = new WeakReference<>(pipeline);
+		final var webrtcWeakRef = new WeakReference<>(webrtc);
+
 		final CREATE_OFFER onOfferCreated = (offer) -> {
-			webrtc.setLocalDescription(offer);
+			final var webrtcLocalRef = webrtcWeakRef.get();
+			if (webrtcLocalRef == null)
+				return;
+
+			webrtcLocalRef.setLocalDescription(offer);
 
 			final SdpData sdp = new SdpData(SdpData.Types.OFFER, offer.getSDPMessage().toString());
 			final ControlMessage<SdpData> message = ControlMessage.wrap(sdp);
@@ -240,9 +248,17 @@ public class PulseAudioStreamer implements IAudioStreamer
 		};
 
 		final ON_NEGOTIATION_NEEDED onNegotiationNeeded = (elem) -> {
+			final var pipelineLocalRef = pipelineWeakRef.get();
+			if (pipelineLocalRef == null)
+				return;
+
+			final var webrtcLocalRef = webrtcWeakRef.get();
+			if (webrtcLocalRef == null)
+				return;
+
 			log.info("Negotiation needed, waiting for pipeline to start playing...");
 
-			while (!pipeline.isPlaying()) {
+			while (!pipelineLocalRef.isPlaying()) {
 				try {
 					Thread.sleep(1000L);
 				}
@@ -252,7 +268,7 @@ public class PulseAudioStreamer implements IAudioStreamer
 			}
 
 			log.info("Creating SDP-offer...");
-			webrtc.createOffer(onOfferCreated);
+			webrtcLocalRef.createOffer(onOfferCreated);
 		};
 
 		final ON_ICE_CANDIDATE onIceCandidate = (sdpMLineIndex, candidate) -> {
