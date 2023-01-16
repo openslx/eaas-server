@@ -60,7 +60,8 @@
 		<maven.plugin.cxf.java2ws.version>${cxf.version}</maven.plugin.cxf.java2ws.version>
 		<maven.plugin.cxf.codegen.version>${cxf.version}</maven.plugin.cxf.codegen.version>
 		<wildfly.mavenplugin.version>1.1.0.Alpha10</wildfly.mavenplugin.version>
-		<enunciate.version>2.13.0</enunciate.version>
+		<enunciate.version>2.12.1</enunciate.version>
+		<enunciate-openapi.version>1.1.5</enunciate-openapi.version>
 	</properties>
 
 	<profiles>
@@ -256,6 +257,11 @@
 							<groupId>com.webcohesion.enunciate</groupId>
 							<artifactId>enunciate-swagger</artifactId>
 							<version>${enunciate.version}</version>
+						</dependency>
+						<dependency>
+							<groupId>dk.jyskebank.tooling.enunciate</groupId>
+							<artifactId>enunciate-openapi</artifactId>
+							<version>${enunciate-openapi.version}</version>
 						</dependency>
 					</dependencies>
 				</plugin>
