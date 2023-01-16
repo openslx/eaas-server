@@ -24,6 +24,34 @@
 					</execution>
 				</executions>
 			</plugin>
+		   <plugin>
+				<groupId>cz.habarta.typescript-generator</groupId>
+				<artifactId>typescript-generator-maven-plugin</artifactId>
+				<version>3.1.1185</version>
+				<executions>
+					<execution>
+						<id>generate</id>
+						<goals>
+							<goal>generate</goal>
+						</goals>
+						<phase>process-classes</phase>
+					</execution>
+				</executions>
+				<configuration>
+					<jsonLibrary>jackson2</jsonLibrary>
+					<generateJaxrsApplicationClient>true</generateJaxrsApplicationClient>
+					<extensions>
+						<extension>cz.habarta.typescript.generator.ext.AxiosClientExtension</extension>
+					</extensions>
+					<outputFileType>implementationFile</outputFileType>
+					<classPatterns>de.bwl.bwfla.**</classPatterns>
+					<!-- <classesFromAutomaticJaxrsApplication>true</classesFromAutomaticJaxrsApplication> -->
+					<mapPackagesToNamespaces>false</mapPackagesToNamespaces>
+					<customTypeNamingFunction>function(name, simpleName) { return name.replace(/\./g, "_"); }</customTypeNamingFunction>
+					<outputKind>module</outputKind>
+					<!-- <loggingLevel>Debug</loggingLevel> -->
+				</configuration>
+			</plugin>
 		</plugins>
 	</build>
 	<dependencies>
