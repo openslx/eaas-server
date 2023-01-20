@@ -564,6 +564,10 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		// Collect garbage
 		System.gc();
+		try {
+			Thread.sleep(1000);
+		} catch (InterruptedException e) {}
+		System.gc();
 	}
 
 

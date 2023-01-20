@@ -162,12 +162,6 @@ public class PulseAudioStreamer implements IAudioStreamer
 			pipeline.remove(audio);
 			webrtc.close();
 			audio.close();
-
-			// NOTE: explicitly dispose pipline's bus too,
-			//       since it does not happen automatically!
-			pipeline.getBus()
-					.close();
-
 			pipeline.close();
 			closed = true;
 			log.info("Closed audio streamer");
@@ -217,7 +211,6 @@ public class PulseAudioStreamer implements IAudioStreamer
 		bus.connect(onError);
 		bus.connect(onWarning);
 		bus.connect(onInfo);
-		bus.close();
 		return pipeline;
 	}
 

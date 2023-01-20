@@ -23,7 +23,7 @@
 		<jakarta.xml.bind.version>2.3.3</jakarta.xml.bind.version>
 		<jakarta.xml.ws.version>2.3.3</jakarta.xml.ws.version>
 		<jakarta.jws.version>2.1.0</jakarta.jws.version>
-		<jna.version>4.2.2</jna.version>
+		<jna.version>5.13.0</jna.version>
 		<commons.io.version>2.5</commons.io.version>
 		<commons.collections.version>3.2.2</commons.collections.version>
 		<commons.vfs2.version>2.1</commons.vfs2.version>
