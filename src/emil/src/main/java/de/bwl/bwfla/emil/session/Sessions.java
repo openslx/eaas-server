@@ -73,10 +73,9 @@ public class Sessions
 	@DELETE
 	@Path("/{id}")
 	@Secured(roles = {Role.RESTRICTED})
-	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
+	public void delete(@PathParam("id") String id)
 	{
 		sessions.remove(id);
-		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
 //	@POST
@@ -92,10 +91,9 @@ public class Sessions
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/resources")
-	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
+	public void removeResources(@PathParam("id") String id, List<String> resources)
 	{
 		sessions.remove(id, resources);
-		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
 //	@GET
