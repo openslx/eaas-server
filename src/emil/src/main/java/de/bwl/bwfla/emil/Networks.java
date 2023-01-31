@@ -31,7 +31,6 @@ import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
 import javax.json.Json;
 import javax.json.JsonObject;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.BadRequestException;
 import javax.ws.rs.Consumes;
 import javax.ws.rs.DELETE;
@@ -43,10 +42,10 @@ import javax.ws.rs.Path;
 import javax.ws.rs.PathParam;
 import javax.ws.rs.Produces;
 import javax.ws.rs.ServerErrorException;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 
+import com.webcohesion.enunciate.metadata.rs.TypeHint;
 import de.bwl.bwfla.common.services.security.Role;
 import de.bwl.bwfla.common.services.security.Secured;
 import de.bwl.bwfla.common.utils.NetworkUtils;
@@ -95,7 +94,8 @@ public class Networks {
     @Secured(roles = {Role.PUBLIC})
     @Consumes({ MediaType.APPLICATION_JSON })
     @Produces(MediaType.APPLICATION_JSON)
-    public NetworkResponse createNetwork(NetworkRequest networkRequest, @Context final HttpServletResponse response) {
+    @TypeHint(NetworkResponse.class)
+    public Response createNetwork(NetworkRequest networkRequest) {
         if (networkRequest.getComponents() == null) {
             throw new BadRequestException(
                     Response.status(Response.Status.BAD_REQUEST)
@@ -205,8 +205,9 @@ public class Networks {
             }
 
             LOG.info("Created network '" + session.id() + "'");
-            response.setStatus(Response.Status.CREATED.getStatusCode());
-            return networkResponse;
+            return Response.status(Response.Status.CREATED)
+                    .entity(networkResponse)
+                    .build();
         }
         catch (Exception error) {
             LOG.log(Level.WARNING, "Creating network failed!", error);
@@ -218,28 +219,26 @@ public class Networks {
     @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/components")
-    public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
+    public void addComponent(@PathParam("id") String id, NetworkRequest.ComponentSpec component) {
         final Session session = this.lookup(id);
         final String switchId = ((NetworkSession) session).getSwitchId();
         this.addComponent(session, switchId, component);
-        response.setStatus(Response.Status.OK.getStatusCode());
     }
 
     @POST
     @Secured(roles = {Role.PUBLIC})
     @Consumes(MediaType.APPLICATION_JSON)
     @Path("/{id}/addComponentToSwitch")
-    public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component, @Context final HttpServletResponse response) {
+    public void addComponentToSwitch(@PathParam("id") String id, NetworkRequest.ComponentSpec component) {
         final Session session = this.lookup(id);
         final String switchId = ((NetworkSession) session).getSwitchId();
         this.addComponent(session, switchId, component, false);
-        response.setStatus(Response.Status.OK.getStatusCode());
     }
 
     @POST
     @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}/disconnect")
-    public void disconnectComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
+    public void disconnectComponent(@PathParam("id") String id, @PathParam("componentId") String componentId) {
         final Session session = this.lookup(id);
         final String switchId = ((NetworkSession) session).getSwitchId();
         try {
@@ -254,17 +253,15 @@ public class Networks {
                             "Could not disconnect component: " + componentId , e.getMessage()))
                     .build());
         }
-        response.setStatus(Response.Status.OK.getStatusCode());
     }
 
     @DELETE
     @Secured(roles = {Role.RESTRICTED})
     @Path("/{id}/components/{componentId}")
-    public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId, @Context final HttpServletResponse response) {
+    public void removeComponent(@PathParam("id") String id, @PathParam("componentId") String componentId) {
         final Session session = this.lookup(id);
         final String switchId = ((NetworkSession) session).getSwitchId();
         this.removeComponent(session, switchId, componentId);
-        response.setStatus(Response.Status.OK.getStatusCode());
     }
 
     @GET
