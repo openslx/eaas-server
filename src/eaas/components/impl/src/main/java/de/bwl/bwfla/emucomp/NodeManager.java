@@ -24,6 +24,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.logging.Level;
 
 import javax.annotation.Resource;
@@ -70,6 +71,8 @@ public class NodeManager {
     @Inject
     @Config("components.timeout")
     protected Duration componentExpirationTimeout;
+
+    private final AtomicBoolean isGcTriggered = new AtomicBoolean(false);
     
     
     // TODO: does it make sense to do something for @PreDestroy?
@@ -141,8 +144,10 @@ public class NodeManager {
      */
     public void releaseComponent(String componentId) {
         AbstractEaasComponent component = components.remove(componentId);
-        if (component != null)
+        if (component != null) {
             component.destroy();
+            this.triggerGarbageCollection();
+        }
     }
 
     /**
@@ -236,6 +241,12 @@ public class NodeManager {
         this.releaseComponent(componentId);
     }
 
+    private void triggerGarbageCollection()
+    {
+        if (!isGcTriggered.getAndSet(true))
+            executor.execute(new GarbageCollectionRunner());
+    }
+
     private static long timestamp()
     {
         return System.currentTimeMillis();
@@ -269,6 +280,37 @@ public class NodeManager {
                 // Since scheduler tasks should complete quickly and this.onComponentTimeout()
                 // can take longer, submit a new task to an unscheduled executor for it.
                 executor.execute(() -> NodeManager.this.onComponentTimeout(component.getComponentId()));
+            }
+        }
+    }
+
+    private class GarbageCollectionRunner implements Runnable
+    {
+        @Override
+        public void run()
+        {
+            this.sleep(500L);
+
+            log.info("Trigger garbage-collection...");
+            isGcTriggered.set(false);
+
+            // HACK: certain dependencies (e.g. GStreamer bindings) seem to
+            //       require multiple GC runs to properly release resources!
+
+            System.gc();
+            this.sleep(250L);
+            System.gc();
+
+            log.info("Finished garbage-collection");
+        }
+
+        private void sleep(long timeout)
+        {
+            try {
+                Thread.sleep(timeout);
+            }
+            catch (Exception error) {
+                // Ignore it!
             }
         }
     }

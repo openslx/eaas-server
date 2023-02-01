@@ -561,9 +561,6 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 
 		// Destroy base class!
 		super.destroy();
-
-		// Collect garbage
-		System.gc();
 	}
 
 
