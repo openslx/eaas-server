@@ -343,9 +343,6 @@ public abstract class ContainerBean extends EaasComponentBean implements Contain
 
 		// Destroy base class!
 		super.destroy();
-
-		// Collect garbage
-		System.gc();
 	}
 
 
