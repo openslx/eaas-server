@@ -33,9 +33,7 @@ import org.apache.tamaya.inject.api.Config;
 
 import javax.enterprise.context.ApplicationScoped;
 import javax.inject.Inject;
-import javax.servlet.http.HttpServletResponse;
 import javax.ws.rs.*;
-import javax.ws.rs.core.Context;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.net.URI;
@@ -73,10 +71,9 @@ public class Sessions
 	@DELETE
 	@Path("/{id}")
 	@Secured(roles = {Role.RESTRICTED})
-	public void delete(@PathParam("id") String id, @Context final HttpServletResponse response)
+	public void delete(@PathParam("id") String id)
 	{
 		sessions.remove(id);
-		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
 //	@POST
@@ -92,10 +89,9 @@ public class Sessions
 	@Consumes(MediaType.APPLICATION_JSON)
 	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/resources")
-	public void removeResources(@PathParam("id") String id, List<String> resources, @Context final HttpServletResponse response)
+	public void removeResources(@PathParam("id") String id, List<String> resources)
 	{
 		sessions.remove(id, resources);
-		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
 //	@GET
@@ -124,10 +120,9 @@ public class Sessions
 	@Produces(MediaType.APPLICATION_JSON)
 	@Secured(roles = {Role.PUBLIC})
 	@Path("/{id}/detach")
-	public void setLifetime(@PathParam("id") String id, DetachRequest request, @Context final HttpServletResponse response)
+	public void setLifetime(@PathParam("id") String id, DetachRequest request)
 	{
 		sessions.setLifetime(id, request.getLifetime(), request.getLifetimeUnit(), request.getSessionName(), request.getComponentTitle());
-		response.setStatus(Response.Status.OK.getStatusCode());
 	}
 
 	@POST
