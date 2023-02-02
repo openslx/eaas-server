@@ -1267,13 +1267,9 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 				ctlMsgWriter.send(emuCtlSocketName);
 
 				// Give emulator a chance to shutdown cleanly
-				for (int i = 0; i < 10; ++i) {
-					if (runner.isProcessFinished()) {
-						LOG.info("Emulator " + emuProcessId + " stopped.");
-						return;
-					}
-
-					Thread.sleep(500);
+				if (runner.waitUntilFinished(5, TimeUnit.SECONDS)) {
+					LOG.info("Emulator " + emuProcessId + " stopped.");
+					return;
 				}
 			}
 		}
