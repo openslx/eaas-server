@@ -1259,7 +1259,11 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 	void stopProcessRunner(DeprecatedProcessRunner runner)
 	{
 		final int emuProcessId = runner.getProcessId();
-		LOG.info("Stopping emulator " + emuProcessId + "...");
+		final var emuContainerId = this.getContainerId();
+		if (this.isContainerModeEnabled())
+			LOG.info("Stopping emulator " + emuProcessId + " in container " + emuContainerId + "...");
+		else LOG.info("Stopping emulator " + emuProcessId + "...");
+
 		try {
 			if (this.isSdlBackendEnabled()) {
 				// Send termination message
@@ -1280,8 +1284,8 @@ public abstract class EmulatorBean extends EaasComponentBean implements Emulator
 		if (this.isContainerModeEnabled()) {
 			final var killer = new DeprecatedProcessRunner();
 			final var cmds = new ArrayList<List<String>>(2);
-			cmds.add(List.of("runc", "kill", this.getContainerId(), "TERM"));
-			cmds.add(List.of("runc", "kill", "-a", this.getContainerId(), "KILL"));
+			cmds.add(List.of("runc", "kill", emuContainerId, "TERM"));
+			cmds.add(List.of("runc", "kill", "-a", emuContainerId, "KILL"));
 			for (final var args : cmds) {
 				killer.setCommand("sudo");
 				killer.addArguments(args);
