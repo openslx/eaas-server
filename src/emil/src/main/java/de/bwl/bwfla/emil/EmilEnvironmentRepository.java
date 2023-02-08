@@ -779,7 +779,7 @@ public class EmilEnvironmentRepository implements IMigratable
 
 		LOG.info("Importing environments from directory '" + directory + "'...");
 		importHelper.importFromFolder(directory)
-				.forEach((colname, entries) -> entries.forEach(importer));
+				.forEach((colname, entries) -> entries.parallelStream().forEach(importer));
 
 		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
 				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
