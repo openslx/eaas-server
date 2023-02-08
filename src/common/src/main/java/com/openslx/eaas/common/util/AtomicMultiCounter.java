@@ -18,45 +18,57 @@
 
 package com.openslx.eaas.common.util;
 
+import java.util.concurrent.atomic.AtomicInteger;
 
-public abstract class MultiCounter
+
+public class AtomicMultiCounter extends MultiCounter
 {
-	public abstract void reset();
+	private final AtomicInteger[] values;
+
+	public AtomicMultiCounter(int length)
+	{
+		this.values = new AtomicInteger[length];
+		for (int i = 0; i < length; ++i)
+			this.values[i] = new AtomicInteger(0);
+	}
+
+	@Override
+	public void reset()
+	{
+		for (var value : values)
+			value.set(0);
+	}
 
 
 	// ===== Positional Access ===============
 
-	public abstract int get(int i);
-	public abstract void set(int i, int value);
-	public abstract void update(int i, int delta);
-	public abstract void increment(int i);
-	public abstract void decrement(int i);
-
-
-	// ===== Named Access ===============
-
-	public int get(Enum<?> name)
+	@Override
+	public int get(int i)
 	{
-		return this.get(name.ordinal());
+		return values[i].get();
 	}
 
-	public void set(Enum<?> name, int value)
+	@Override
+	public void set(int i, int value)
 	{
-		this.set(name.ordinal(), value);
+		values[i].set(value);
 	}
 
-	public void update(Enum<?> name, int delta)
+	@Override
+	public void update(int i, int delta)
 	{
-		this.update(name.ordinal(), delta);
+		values[i].addAndGet(delta);
 	}
 
-	public void increment(Enum<?> name)
+	@Override
+	public void increment(int i)
 	{
-		this.increment(name.ordinal());
+		values[i].incrementAndGet();
 	}
 
-	public void decrement(Enum<?> name)
+	@Override
+	public void decrement(int i)
 	{
-		this.decrement(name.ordinal());
+		values[i].decrementAndGet();
 	}
 }

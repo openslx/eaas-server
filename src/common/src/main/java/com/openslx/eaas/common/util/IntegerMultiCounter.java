@@ -18,45 +18,54 @@
 
 package com.openslx.eaas.common.util;
 
+import java.util.Arrays;
 
-public abstract class MultiCounter
+
+public class IntegerMultiCounter extends MultiCounter
 {
-	public abstract void reset();
+	private final int[] values;
+
+	public IntegerMultiCounter(int length)
+	{
+		this.values = new int[length];
+	}
+
+	@Override
+	public void reset()
+	{
+		Arrays.fill(values, 0);
+	}
 
 
 	// ===== Positional Access ===============
 
-	public abstract int get(int i);
-	public abstract void set(int i, int value);
-	public abstract void update(int i, int delta);
-	public abstract void increment(int i);
-	public abstract void decrement(int i);
-
-
-	// ===== Named Access ===============
-
-	public int get(Enum<?> name)
+	@Override
+	public int get(int i)
 	{
-		return this.get(name.ordinal());
+		return values[i];
 	}
 
-	public void set(Enum<?> name, int value)
+	@Override
+	public void set(int i, int value)
 	{
-		this.set(name.ordinal(), value);
+		values[i] = value;
 	}
 
-	public void update(Enum<?> name, int delta)
+	@Override
+	public void update(int i, int delta)
 	{
-		this.update(name.ordinal(), delta);
+		values[i] += delta;
 	}
 
-	public void increment(Enum<?> name)
+	@Override
+	public void increment(int i)
 	{
-		this.increment(name.ordinal());
+		++values[i];
 	}
 
-	public void decrement(Enum<?> name)
+	@Override
+	public void decrement(int i)
 	{
-		this.decrement(name.ordinal());
+		--values[i];
 	}
 }

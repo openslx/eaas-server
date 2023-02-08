@@ -41,7 +41,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.common.util.AtomicMultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.resolver.DataResolver;
@@ -652,9 +652,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		FAILED,
 		__LAST;
 
-		public static MultiCounter counter()
+		public static AtomicMultiCounter counter()
 		{
-			return new MultiCounter(__LAST.ordinal());
+			return new AtomicMultiCounter(__LAST.ordinal());
 		}
 	}
 

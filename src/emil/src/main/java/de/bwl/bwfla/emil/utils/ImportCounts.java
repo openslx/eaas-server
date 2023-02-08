@@ -1,6 +1,6 @@
 package de.bwl.bwfla.emil.utils;
 
-import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.common.util.AtomicMultiCounter;
 
 
 public enum ImportCounts
@@ -9,8 +9,8 @@ public enum ImportCounts
 	FAILED,
 	__LAST;
 
-	public static MultiCounter counter()
+	public static AtomicMultiCounter counter()
 	{
-		return new MultiCounter(__LAST.ordinal());
+		return new AtomicMultiCounter(__LAST.ordinal());
 	}
 }
