@@ -41,6 +41,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
 import com.openslx.eaas.common.util.AtomicMultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
@@ -49,6 +50,7 @@ import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
+import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
@@ -679,9 +681,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Creating metadata for objects in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(creator);
+		ParallelProcessors.consumer(filter, creator)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numCreated = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
