@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -663,7 +664,7 @@ public class EmilEnvironmentRepository implements IMigratable
 		migrations.register("create-absent-emil-environments", this::createAbsentEmilEnvironments);
 	}
 
-	private void createAbsentEmilEnvironments(MigrationConfig mc) throws BWFLAException
+	private void createAbsentEmilEnvironments(MigrationConfig mc) throws Exception
 	{
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
@@ -747,10 +748,11 @@ public class EmilEnvironmentRepository implements IMigratable
 						.environments()
 						.fetch(options);
 
+				final Function<Environment, Integer> mapper = (env) -> importer.apply(location, env);
+
 				try (environments) {
-					counter += environments.stream()
-							.map((env) -> importer.apply(location, env))
-							.reduce(0, Integer::sum);
+					counter += ParallelProcessors.reducer(mapper, Integer::sum)
+							.reduce(0, environments.iterator(), executor);
 				}
 			}
 		}
