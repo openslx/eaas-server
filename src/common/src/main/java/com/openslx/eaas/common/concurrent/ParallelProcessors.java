@@ -18,7 +18,9 @@
 
 package com.openslx.eaas.common.concurrent;
 
+import java.util.function.BinaryOperator;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 
@@ -32,5 +34,15 @@ public class ParallelProcessors
 	public static <T> ParallelConsumer<T> consumer(Predicate<T> filter, Consumer<T> consumer)
 	{
 		return new ParallelConsumer<>(filter, consumer);
+	}
+
+	public static <T,R> ParallelReducer<T,R> reducer(Function<T,R> mapper, BinaryOperator<R> reducer)
+	{
+		return new ParallelReducer<>((v) -> true, mapper, reducer);
+	}
+
+	public static <T,R> ParallelReducer<T,R> reducer(Predicate<T> filter, Function<T,R> mapper, BinaryOperator<R> reducer)
+	{
+		return new ParallelReducer<>(filter, mapper, reducer);
 	}
 }
