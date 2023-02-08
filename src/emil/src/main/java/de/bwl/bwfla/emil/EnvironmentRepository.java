@@ -1940,9 +1940,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 }
