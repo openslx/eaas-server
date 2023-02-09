@@ -18,6 +18,7 @@
 
 package de.bwl.bwfla.objectarchive.impl;
 
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.resolver.DataResolver;
@@ -37,6 +38,7 @@ import de.bwl.bwfla.emucomp.api.Drive;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
+import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectArchive;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectFileMetadata;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
@@ -897,7 +899,7 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 			return 1;
 		};
 
-		final Function<Path, Integer> ouploader = (opath) -> {
+		final Function<Path, Boolean> ouploader = (opath) -> {
 			// upload each object's file...
 			try (final var paths = Files.walk(opath)) {
 				final var uploaded = paths.filter(Files::isRegularFile)
@@ -906,14 +908,14 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 
 				if (!uploaded) {
 					ocounter.increment(UpdateCounts.FAILED);
-					return 0;
+					return false;
 				}
 
 				ocounter.increment(UpdateCounts.UPDATED);
 			}
 			catch (Exception error) {
 				log.log(Level.WARNING, "Uploading object failed!", error);
-				return 0;
+				return false;
 			}
 
 			final var deleter = new DeprecatedProcessRunner("rm")
@@ -923,14 +925,13 @@ public class DigitalObjectS3Archive implements Serializable, DigitalObjectArchiv
 			if (deleter.execute())
 				log.info("Removed directory: " + opath);
 
-			return 1;
+			return true;
 		};
 
 		log.info("Importing legacy objects into '" + this.getName() + "' archive...");
 		try (final var paths = Files.list(basedir)) {
-			final var uploaded = paths.filter(Files::isDirectory)
-					.map(ouploader)
-					.allMatch((v) -> v > 0);
+			final var uploaded = ParallelProcessors.reducer(Files::isDirectory, ouploader, Boolean::logicalAnd)
+					.reduce(true, paths, ObjectArchiveSingleton.executor());
 
 			if (uploaded) {
 				final var deleter = new DeprecatedProcessRunner("rm")
