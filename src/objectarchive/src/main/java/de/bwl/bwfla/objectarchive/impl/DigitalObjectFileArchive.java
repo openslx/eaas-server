@@ -842,8 +842,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Cleaning up object-archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.forEach(cleaner);
+		ParallelProcessors.consumer(cleaner)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numRemoved = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
