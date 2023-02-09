@@ -694,6 +694,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
 		final var counter = UpdateCounts.counter();
+		final var guard = new Object();
 
 		final Predicate<String> filter = (objectId) -> {
 			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
@@ -757,9 +758,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 				if (updatemsgs.isEmpty())
 					return;
 
-				log.info("Updates for object '" + objectId + "':");
-				for (final var msg : updatemsgs)
-					log.info("  " + msg);
+				synchronized (guard) {
+					log.info("Updates for object '" + objectId + "':");
+					for (final var msg : updatemsgs)
+						log.info("  " + msg);
+				}
 
 				this.writeMetsFile(mets);
 				counter.increment(UpdateCounts.UPDATED);
@@ -771,9 +774,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Fixing metadata for objects in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(fixer);
+		ParallelProcessors.consumer(filter, fixer)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numFixed = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
