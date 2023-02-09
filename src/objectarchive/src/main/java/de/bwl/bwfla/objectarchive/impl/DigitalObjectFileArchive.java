@@ -809,9 +809,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Packing object files in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(packer);
+		ParallelProcessors.consumer(filter, packer)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numPacked = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
