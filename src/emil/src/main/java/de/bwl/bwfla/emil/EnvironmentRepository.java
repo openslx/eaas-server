@@ -1914,9 +1914,9 @@ public class EnvironmentRepository extends EmilRest
 					final var backingFileUrl = info.getBackingFile();
 					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
 					if (!backingFileUrl.equals(backingImageId)) {
-						final var bfinfo = new ImageInformation(backingFileUrl, LOG);
+						final var backingFileFormat = info.getBackingFileFormat();
 						LOG.info("Rebasing emulator-image: " + id + " --> " + backingImageId);
-						EmulatorUtils.changeBackingFile(file, backingImageId, bfinfo.getFileFormat(), LOG);
+						EmulatorUtils.changeBackingFile(file, backingImageId, backingFileFormat, LOG);
 					}
 				}
 			}
