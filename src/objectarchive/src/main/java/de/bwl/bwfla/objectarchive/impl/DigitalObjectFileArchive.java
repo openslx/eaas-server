@@ -41,7 +41,8 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 
-import com.openslx.eaas.common.util.MultiCounter;
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
+import com.openslx.eaas.common.util.AtomicMultiCounter;
 import com.openslx.eaas.migration.MigrationUtils;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import com.openslx.eaas.resolver.DataResolver;
@@ -49,6 +50,7 @@ import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
+import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
@@ -652,9 +654,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		FAILED,
 		__LAST;
 
-		public static MultiCounter counter()
+		public static AtomicMultiCounter counter()
 		{
-			return new MultiCounter(__LAST.ordinal());
+			return new AtomicMultiCounter(__LAST.ordinal());
 		}
 	}
 
@@ -679,9 +681,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Creating metadata for objects in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(creator);
+		ParallelProcessors.consumer(filter, creator)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numCreated = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
@@ -693,6 +694,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
 		final var counter = UpdateCounts.counter();
+		final var guard = new Object();
 
 		final Predicate<String> filter = (objectId) -> {
 			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
@@ -756,9 +758,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 				if (updatemsgs.isEmpty())
 					return;
 
-				log.info("Updates for object '" + objectId + "':");
-				for (final var msg : updatemsgs)
-					log.info("  " + msg);
+				synchronized (guard) {
+					log.info("Updates for object '" + objectId + "':");
+					for (final var msg : updatemsgs)
+						log.info("  " + msg);
+				}
 
 				this.writeMetsFile(mets);
 				counter.increment(UpdateCounts.UPDATED);
@@ -770,9 +774,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Fixing metadata for objects in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(fixer);
+		ParallelProcessors.consumer(filter, fixer)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numFixed = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
@@ -806,9 +809,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Packing object files in archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.filter(filter)
-				.forEach(packer);
+		ParallelProcessors.consumer(filter, packer)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numPacked = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);
@@ -840,8 +842,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		};
 
 		log.info("Cleaning up object-archive '" + this.getName() + "'...");
-		this.getObjectIds()
-				.forEach(cleaner);
+		ParallelProcessors.consumer(cleaner)
+				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
 
 		final var numRemoved = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);

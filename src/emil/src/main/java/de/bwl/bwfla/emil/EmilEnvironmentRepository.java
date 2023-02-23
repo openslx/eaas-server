@@ -8,12 +8,15 @@ import java.nio.file.Paths;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
 import java.util.function.BiFunction;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
 import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.ImageArchiveMappers;
 import com.openslx.eaas.imagearchive.api.v2.common.CountOptionsV2;
@@ -41,6 +44,7 @@ import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
 import javax.annotation.PreDestroy;
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -91,6 +95,9 @@ public class EmilEnvironmentRepository implements IMigratable
 
 	@Inject
 	private ObjectClassification classification;
+
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
 
 	/** Mapper for parsed JSON to emil-environment */
 	private final ImageArchiveMappers.FromJsonTree<EmilEnvironment> ENVIRONMENT_MAPPER
@@ -657,7 +664,7 @@ public class EmilEnvironmentRepository implements IMigratable
 		migrations.register("create-absent-emil-environments", this::createAbsentEmilEnvironments);
 	}
 
-	private void createAbsentEmilEnvironments(MigrationConfig mc) throws BWFLAException
+	private void createAbsentEmilEnvironments(MigrationConfig mc) throws Exception
 	{
 		final BiFunction<String, Environment, Integer> importer = (archive, env) -> {
 			try {
@@ -741,10 +748,11 @@ public class EmilEnvironmentRepository implements IMigratable
 						.environments()
 						.fetch(options);
 
+				final Function<Environment, Integer> mapper = (env) -> importer.apply(location, env);
+
 				try (environments) {
-					counter += environments.stream()
-							.map((env) -> importer.apply(location, env))
-							.reduce(0, Integer::sum);
+					counter += ParallelProcessors.reducer(mapper, Integer::sum)
+							.reduce(0, environments.iterator(), executor);
 				}
 			}
 		}
@@ -779,7 +787,7 @@ public class EmilEnvironmentRepository implements IMigratable
 
 		LOG.info("Importing environments from directory '" + directory + "'...");
 		importHelper.importFromFolder(directory)
-				.forEach((colname, entries) -> entries.forEach(importer));
+				.forEach((colname, entries) -> entries.parallelStream().forEach(importer));
 
 		final var message = "Imported " + counter.get(ImportCounts.IMPORTED)
 				+ " environment(s), failed " + counter.get(ImportCounts.FAILED);
@@ -843,7 +851,9 @@ public class EmilEnvironmentRepository implements IMigratable
 		for (var collection : db.getCollections()) {
 			final var values = db.find(collection, filter, "type");
 			try (values) {
-				values.forEach(importer);
+				ParallelProcessors.consumer(importer)
+						.consume(values, executor);
+
 				db.drop(collection);
 			}
 		}

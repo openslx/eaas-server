@@ -24,6 +24,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -101,6 +102,16 @@ public class ObjectArchiveSingleton
 	class AsyncIoTaskManager extends de.bwl.bwfla.common.taskmanager.TaskManager<Object> {
 		public AsyncIoTaskManager() throws NamingException {
 			super("OBJECT-ARCHIVE-TASKS", InitialContext.doLookup("java:jboss/ee/concurrency/executor/io"));
+		}
+	}
+
+	private static final ExecutorService executor;
+	static {
+		try {
+			executor = InitialContext.doLookup("java:jboss/ee/concurrency/executor/io");
+		}
+		catch (Exception error) {
+			throw new IllegalStateException(error);
 		}
 	}
 
@@ -189,6 +200,11 @@ public class ObjectArchiveSingleton
 
 		final var archive = archiveMap.get(defaultArchive);
 		LOG.info("Registered default archive: " + defaultArchive + " -> " + archive.getName());
+	}
+
+	public static ExecutorService executor()
+	{
+		return executor;
 	}
 
 	public static TaskState submitTask(BlockingTask<Object> task)

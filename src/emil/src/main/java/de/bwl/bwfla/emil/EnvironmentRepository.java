@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.emil;
 
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
 import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.common.databind.Streamable;
 import com.openslx.eaas.common.util.MultiCounter;
@@ -76,6 +77,7 @@ import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.api.Config;
 
 import javax.annotation.PostConstruct;
+import javax.annotation.Resource;
 import javax.enterprise.context.ApplicationScoped;
 import javax.enterprise.event.Observes;
 import javax.inject.Inject;
@@ -96,7 +98,9 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
+import java.util.function.Predicate;
 import java.util.logging.Level;
 import java.util.stream.Stream;
 
@@ -126,6 +130,9 @@ public class EnvironmentRepository extends EmilRest
 
 	@Inject
 	private TaskManager taskManager = null;
+
+	@Resource(lookup = "java:jboss/ee/concurrency/executor/io")
+	private ExecutorService executor;
 
 	@Inject
 	@AuthenticatedUser
@@ -1709,9 +1716,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 
@@ -1791,9 +1800,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 
@@ -1839,9 +1850,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter,importer)
+					.consume(files, executor);
 		}
 
 		final var numImported = counter.get(ImportCounts.IMPORTED);
@@ -1927,9 +1940,11 @@ public class EnvironmentRepository extends EmilRest
 			}
 		};
 
+		final Predicate<java.nio.file.Path> filter = (file) -> !Files.isDirectory(file);
+
 		try (final var files = Files.list(srcdir)) {
-			files.filter((file) -> !Files.isDirectory(file))
-					.forEach(importer);
+			ParallelProcessors.consumer(filter, importer)
+					.consume(files, executor);
 		}
 	}
 }

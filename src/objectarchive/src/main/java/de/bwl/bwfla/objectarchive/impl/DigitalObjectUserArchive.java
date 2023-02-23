@@ -1,7 +1,9 @@
 package de.bwl.bwfla.objectarchive.impl;
 
+import com.openslx.eaas.common.concurrent.ParallelProcessors;
 import com.openslx.eaas.migration.config.MigrationConfig;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
+import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.DigitalObjectS3ArchiveDescriptor;
 import org.apache.tamaya.ConfigurationProvider;
 
@@ -58,7 +60,8 @@ public class DigitalObjectUserArchive extends DigitalObjectS3Archive
 
         log.info("Renaming private object-archives...");
         try (final var dirs = Files.list(basedir)) {
-            dirs.forEach(renamer);
+            ParallelProcessors.consumer(renamer)
+                    .consume(dirs, ObjectArchiveSingleton.executor());
         }
 
         final var numRenamed = counter.get(UpdateCounts.UPDATED);
