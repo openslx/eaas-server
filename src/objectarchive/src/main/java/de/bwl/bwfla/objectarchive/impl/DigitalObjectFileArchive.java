@@ -27,6 +27,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
@@ -54,6 +55,7 @@ import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
+import gov.loc.mets.MetsType;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.ConfigurationInjection;
@@ -691,8 +693,14 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			throw new BWFLAException("Creating object-archive's metadata failed!");
 	}
 
+	private interface MetsFixer<T>
+	{
+		void apply(T value) throws Exception;
+	}
+
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
+		final var digitalObjectsGroupName = "DIGITAL OBJECTS";
 		final var counter = UpdateCounts.counter();
 		final var guard = new Object();
 
@@ -711,7 +719,8 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 					return;
 
 				final var updatemsgs = new ArrayList<String>();
-				for (final var fgroup : fsec.getFileGrp()) {
+
+				final MetsFixer<MetsType.FileSec.FileGrp> digitalObjectsGroupFixer = (fgroup) -> {
 					for (final var file : fgroup.getFile()) {
 						for (final var flocat : file.getFLocat()) {
 							final var oldurl = flocat.getHref();
@@ -753,6 +762,14 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 							}
 						}
 					}
+				};
+
+				final var fgfixers = new HashMap<String, MetsFixer<MetsType.FileSec.FileGrp>>();
+				fgfixers.put(digitalObjectsGroupName, digitalObjectsGroupFixer);
+				for (final var fgroup : fsec.getFileGrp()) {
+					final var fgfixer = fgfixers.get(fgroup.getUSE());
+					if (fgfixer != null)
+						fgfixer.apply(fgroup);
 				}
 
 				if (updatemsgs.isEmpty())
