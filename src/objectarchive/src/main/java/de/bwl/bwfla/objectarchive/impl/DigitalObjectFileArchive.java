@@ -27,12 +27,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Arrays;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -709,18 +711,40 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			return Files.exists(metsfile);
 		};
 
+		final BiFunction<MetsType.FileSec, String, MetsType.FileSec.FileGrp> fgfinder = (fsec, fgname) -> {
+			final var fgroups = (fsec != null) ? fsec.getFileGrp() : Collections.<MetsType.FileSec.FileGrp>emptyList();
+			for (final var fgroup : fgroups) {
+				if (fgname.equals(fgroup.getUSE()))
+					return fgroup;
+			}
+
+			return null;
+		};
+
 		final Consumer<String> fixer = (objectId) -> {
 			try {
 				final var mets = this.loadMetsData(objectId)
 						.getMets();
 
-				final var fsec = mets.getFileSec();
-				if (fsec == null)
-					return;
+				var fsec = mets.getFileSec();
+				if (fsec == null) {
+					// add an empty file-section!
+					fsec = new MetsType.FileSec();
+					mets.setFileSec(fsec);
+				}
+
+				if (fgfinder.apply(fsec, digitalObjectsGroupName) == null) {
+					// add an empty file-group!
+					final var fgroup = new MetsType.FileSec.FileGrp();
+					fgroup.setUSE(digitalObjectsGroupName);
+					fsec.getFileGrp()
+							.add(fgroup);
+				}
 
 				final var updatemsgs = new ArrayList<String>();
 
 				final MetsFixer<MetsType.FileSec.FileGrp> digitalObjectsGroupFixer = (fgroup) -> {
+					final var files = fgroup.getFile();
 					for (final var file : fgroup.getFile()) {
 						for (final var flocat : file.getFLocat()) {
 							final var oldurl = flocat.getHref();
@@ -761,6 +785,22 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
 							}
 						}
+					}
+
+					if (files.isEmpty()) {
+						// no files referenced in metadata, check storage content
+						final var fc = this.describe(objectId);
+						for (final var fce : fc.files)
+							fce.setId(null);
+
+						// NOTE: returned METS here should correctly describe referenced files!
+						final var newmets = this.fromFileCollection(objectId, fc);
+						final var newfgroup = fgfinder.apply(newmets.getFileSec(), digitalObjectsGroupName);
+						if (newfgroup == null)
+							throw new IllegalStateException("File group '" + digitalObjectsGroupName + "' is not found!");
+
+						files.addAll(newfgroup.getFile());
+						updatemsgs.add("Re-created file-section from storage!");
 					}
 				};
 
