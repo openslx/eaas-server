@@ -745,10 +745,19 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 				final MetsFixer<MetsType.FileSec.FileGrp> digitalObjectsGroupFixer = (fgroup) -> {
 					final var files = fgroup.getFile();
-					for (final var file : fgroup.getFile()) {
-						for (final var flocat : file.getFLocat()) {
+					for (final var fit = files.iterator(); fit.hasNext();) {
+						final var flocations = fit.next().getFLocat();
+						for (final var flit = flocations.iterator(); flit.hasNext();) {
+							final var flocat = flit.next();
 							final var oldurl = flocat.getHref();
 							var newurl = oldurl;
+
+							if (oldurl.endsWith("__import.iso")) {
+								// CASE: legacy "__import.iso" is referenced directly
+								updatemsgs.add("Removed legacy '__import.iso' reference!");
+								flit.remove();
+								continue;
+							}
 
 							if (oldurl.startsWith(objectId)) {
 								// CASE: <object-id>/<subpath> -> <subpath>
@@ -785,6 +794,9 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
 							}
 						}
+
+						if (flocations.isEmpty())
+							fit.remove();
 					}
 
 					if (files.isEmpty()) {
