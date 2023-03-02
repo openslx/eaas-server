@@ -20,6 +20,7 @@
 package de.bwl.bwfla.eaas.cluster.config.util;
 
 
+import com.openslx.eaas.common.config.util.MemoryUnitParser;
 import org.apache.tamaya.ConfigException;
 import org.apache.tamaya.Configuration;
 
