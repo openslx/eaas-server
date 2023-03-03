@@ -58,6 +58,9 @@ public class Blob extends TaskExecutor
 	private final String bucket;
 	private final String blob;
 
+	/** Max. number of upload parts supported */
+	private static final long UPLOAD_PART_COUNT_LIMIT = 10000;
+
 	/** Default upload part-size */
 	private static final long DEFAULT_UPLOAD_PART_SIZE;
 	static {
@@ -421,6 +424,13 @@ public class Blob extends TaskExecutor
 					minio.uploadObject(args);
 				}
 				else {
+					if (size > 0L) {
+						// let minio choose part-size if part-count limit is exceeded!
+						final var partcount = 1L + size / partsize;
+						if (partcount > UPLOAD_PART_COUNT_LIMIT)
+							partsize = -1L;
+					}
+
 					final var args = PutObjectArgs.builder()
 							.stream(stream, size, partsize)
 							.bucket(self.bucket())
