@@ -19,7 +19,8 @@
 
 package de.bwl.bwfla.common.utils.jaxb;
 
-import javax.xml.bind.JAXBContext;
+import com.openslx.eaas.common.databind.DataUtils;
+
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.stream.XMLInputFactory;
@@ -48,8 +49,8 @@ public class JaxbCollectionReader<T> implements Iterator<T>, AutoCloseable
 		this.log = log;
 		this.name = name;
 		this.klass = klass;
-		this.unmarshaller = JAXBContext.newInstance(klass)
-				.createUnmarshaller();
+		this.unmarshaller = DataUtils.xml()
+				.unmarshaller(klass);
 
 		this.reader = XMLInputFactory.newFactory()
 				.createXMLStreamReader(source);
