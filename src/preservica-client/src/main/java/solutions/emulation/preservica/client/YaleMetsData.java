@@ -1,14 +1,13 @@
 package solutions.emulation.preservica.client;
 
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import gov.loc.mets.*;
 import org.w3c.dom.Element;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import java.io.File;
-import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -152,10 +151,10 @@ public class YaleMetsData {
         if (!metsFile.exists())
             throw new BWFLAException("METS file not found: " + metsFile);
 
-        JAXBContext jc = null;
         try {
-            jc = JAXBContext.newInstance(Mets.class);
-            Unmarshaller unmarshaller = jc.createUnmarshaller();
+            final Unmarshaller unmarshaller = DataUtils.xml()
+                    .unmarshaller(Mets.class);
+
             this.metsRoot = (Mets) unmarshaller.unmarshal(metsFile);
         } catch (JAXBException e) {
             throw new BWFLAException(e);
@@ -165,10 +164,10 @@ public class YaleMetsData {
     }
 
     public YaleMetsData(Element element) throws BWFLAException {
-        JAXBContext jc = null;
         try {
-            jc = JAXBContext.newInstance(Mets.class);
-            Unmarshaller unmarshaller = jc.createUnmarshaller();
+            final Unmarshaller unmarshaller = DataUtils.xml()
+                    .unmarshaller(Mets.class);
+
             this.metsRoot = (Mets) unmarshaller.unmarshal(element);
         } catch (JAXBException e) {
             throw new BWFLAException(e);
