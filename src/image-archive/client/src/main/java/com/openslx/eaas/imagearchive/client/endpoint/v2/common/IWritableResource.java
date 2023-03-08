@@ -19,11 +19,15 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
+import com.openslx.eaas.common.util.CurlTool;
+import com.openslx.eaas.common.util.JaxRsUtils;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
 import com.openslx.eaas.imagearchive.api.v2.common.InsertOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.ReplaceOptionsV2;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 
+import javax.ws.rs.core.MediaType;
 import java.util.function.Function;
 
 
@@ -38,8 +42,25 @@ public interface IWritableResource<T>
 
 	default String insert(T value, InsertOptionsV2 options) throws BWFLAException
 	{
-		return this.api()
-				.insert(value, options);
+		final var context = this.context();
+		final var curl = new CurlTool(context.logger())
+				.url(context.endpoint())
+				.authorization(context.token())
+				.accept(MediaType.APPLICATION_JSON);
+
+		if (options != null) {
+			curl.headers(options.toHeaderParams());
+			curl.query(options.toQueryParams());
+		}
+
+		final CurlTool.ResponseBodyHandler<String> handler = (payload) -> {
+			final var bytes = payload.readAllBytes();
+			return new String(bytes);
+		};
+
+		try (curl) {
+			return curl.post(value, handler);
+		}
 	}
 
 	default <U> String insert(U value, Function<U,T> mapper) throws BWFLAException
@@ -59,8 +80,20 @@ public interface IWritableResource<T>
 
 	default void replace(String id, T value, ReplaceOptionsV2 options) throws BWFLAException
 	{
-		this.api()
-				.replace(id, value, options);
+		final var context = this.context();
+		final var endpoint = JaxRsUtils.join(context.endpoint(), id);
+		final var curl = new CurlTool(context.logger())
+				.url(endpoint)
+				.authorization(context.token());
+
+		if (options != null) {
+			curl.headers(options.toHeaderParams());
+			curl.query(options.toQueryParams());
+		}
+
+		try (curl) {
+			curl.put(value);
+		}
 	}
 
 	default <U> void replace(String id, U value, Function<U,T> mapper) throws BWFLAException
@@ -77,4 +110,5 @@ public interface IWritableResource<T>
 	// ===== Internal Helpers ==============================
 
 	IWritable<T> api();
+	ImageArchiveClient.Context context();
 }
