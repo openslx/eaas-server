@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.service.impl;
 
+import com.openslx.eaas.common.util.CurlTool;
 import com.openslx.eaas.imagearchive.ArchiveBackend;
 import com.openslx.eaas.imagearchive.BlobKind;
 import com.openslx.eaas.imagearchive.config.ImporterConfig;
@@ -31,7 +32,6 @@ import com.openslx.eaas.imagearchive.databind.ImportTask;
 import com.openslx.eaas.imagearchive.indexing.impl.ImportIndex;
 import com.openslx.eaas.imagearchive.service.BlobService;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
-import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.ImageInformation;
 import de.bwl.bwfla.common.utils.TaskStack;
 import de.bwl.bwfla.emucomp.api.EmulatorUtils;
@@ -357,31 +357,20 @@ public class ImportService implements AutoCloseable
 
 			cleanups.push("orig-import-image", () -> Files.deleteIfExists(outfile));
 
-			final var process = new DeprecatedProcessRunner()
-					.setLogger(logger)
-					.setCommand("curl")
-					.addArgument("--fail")
-					.addArgument("--globoff")
-					.addArgument("--silent")
-					.addArgument("--show-error")
-					.addArgument("--location");
-
 			final var source = record.task().source();
 			final var headers = source.headers();
-			if (headers != null) {
-				headers.forEach((name, value) -> {
-					process.addArgument("--header");
-					process.addArgument(name + ": " + value);
-				});
+			final var curl = new CurlTool(logger)
+					.url(source.url());
+
+			if (headers != null)
+				curl.headers(headers);
+
+			try (curl) {
+				curl.get(outfile);
 			}
-
-			final var downloaded = process.addArgument("--output")
-					.addArgument(outfile.toString())
-					.addArgument(source.url())
-					.execute();
-
-			if (!downloaded)
+			catch (Exception error) {
 				throw new BWFLAException("Downloading remote image failed!");
+			}
 
 			return outfile;
 		}
@@ -597,43 +586,22 @@ public class ImportService implements AutoCloseable
 		}
 
 		private void webdata(URI uri, ImportSource source, ImportTarget target)
-				throws BWFLAException, IOException
+				throws BWFLAException
 		{
-			final var process = new DeprecatedProcessRunner()
-					.setLogger(logger)
-					.setCommand("curl")
-					.addArgument("--fail")
-					.addArgument("--globoff")
-					.addArgument("--silent")
-					.addArgument("--show-error")
-					.addArgument("--location");
+			final var curl = new CurlTool(logger)
+					.url(uri.toString());
 
 			final var headers = source.headers();
-			if (headers != null) {
-				headers.forEach((name, value) -> {
-					process.addArgument("--header");
-					process.addArgument(name + ": " + value);
-				});
-			}
+			if (headers != null)
+				curl.headers(headers);
 
-			// let curl write to stdout!
-			process.addArgument("--output")
-					.addArgument("-")
-					.addArgument(uri.toString());
+			final CurlTool.ResponseBodyHandler<Void> handler = (data) -> {
+				this.upload(target, data, -1L);
+				return null;
+			};
 
-			try {
-				if (!process.start(false))
-					throw new BWFLAException("Starting download failed!");
-
-				try (final var data = process.getStdOutStream()) {
-					this.upload(target, data, -1L);
-				}
-
-				process.waitUntilFinished();
-				process.printStdErr();
-			}
-			finally {
-				process.cleanup();
+			try (curl) {
+				curl.get(handler);
 			}
 		}
 
