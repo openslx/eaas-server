@@ -71,6 +71,13 @@ public class BasicOptionsV2<T extends BasicOptionsV2<T>>
 		return headers;
 	}
 
+	public Map<String, String> toQueryParams()
+	{
+		final var query = new HashMap<String, String>();
+		JaxRsUtils.extractQueryParams(this, query);
+		return query;
+	}
+
 
 	public static class UserInfo
 	{
