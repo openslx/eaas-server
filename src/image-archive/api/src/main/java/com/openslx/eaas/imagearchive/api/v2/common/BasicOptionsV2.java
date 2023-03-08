@@ -22,9 +22,12 @@ package com.openslx.eaas.imagearchive.api.v2.common;
 import com.fasterxml.jackson.annotation.JsonGetter;
 import com.fasterxml.jackson.annotation.JsonSetter;
 import com.openslx.eaas.common.databind.DataUtils;
+import com.openslx.eaas.common.util.JaxRsUtils;
 
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.QueryParam;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class BasicOptionsV2<T extends BasicOptionsV2<T>>
@@ -59,6 +62,13 @@ public class BasicOptionsV2<T extends BasicOptionsV2<T>>
 			userinfo = new UserInfo();
 
 		return userinfo;
+	}
+
+	public Map<String, String> toHeaderParams()
+	{
+		final var headers = new HashMap<String, String>();
+		JaxRsUtils.extractHeaderParams(this, headers);
+		return headers;
 	}
 
 
