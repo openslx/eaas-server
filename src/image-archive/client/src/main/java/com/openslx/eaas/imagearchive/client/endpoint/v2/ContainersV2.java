@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IContainersV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
@@ -26,9 +27,9 @@ import de.bwl.bwfla.emucomp.api.ContainerConfiguration;
 
 public class ContainersV2 extends RemoteResourceRWM<ContainerConfiguration, IContainersV2>
 {
-	public ContainersV2(IContainersV2 api)
+	public ContainersV2(ImageArchiveClient.Context context, IContainersV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 
 	@Override

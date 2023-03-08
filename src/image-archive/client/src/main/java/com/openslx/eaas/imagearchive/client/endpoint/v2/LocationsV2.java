@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.ILocationsV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResource;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -27,9 +28,9 @@ import de.bwl.bwfla.common.exceptions.BWFLAException;
 
 public class LocationsV2 extends RemoteResource<ILocationsV2>
 {
-	public LocationsV2(ILocationsV2 api)
+	public LocationsV2(ImageArchiveClient.Context context, ILocationsV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 
 	public boolean exists(String id)

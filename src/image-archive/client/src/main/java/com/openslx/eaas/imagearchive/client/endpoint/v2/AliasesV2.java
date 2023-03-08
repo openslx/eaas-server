@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IAliasesV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
 
@@ -27,8 +28,8 @@ import java.util.Set;
 
 public class AliasesV2 extends RemoteResourceRW<Set<String>, IAliasesV2>
 {
-	public AliasesV2(IAliasesV2 api)
+	public AliasesV2(ImageArchiveClient.Context context, IAliasesV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 }

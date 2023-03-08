@@ -29,16 +29,18 @@ import org.eclipse.microprofile.rest.client.RestClientBuilder;
 import javax.ws.rs.client.ClientRequestContext;
 import javax.ws.rs.client.ClientRequestFilter;
 import javax.ws.rs.core.HttpHeaders;
+import javax.ws.rs.core.UriBuilder;
 import java.io.Closeable;
 import java.io.IOException;
 import java.net.URL;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 
 public class ImageArchiveClient implements Closeable
 {
-	private final Logger logger;
+	private final Context context;
 	private final ImageArchiveApi proxy;
 	private final ImageArchive api;
 
@@ -50,7 +52,7 @@ public class ImageArchiveClient implements Closeable
 
 	public Logger logger()
 	{
-		return logger;
+		return context.logger();
 	}
 
 	@Override
@@ -103,35 +105,141 @@ public class ImageArchiveClient implements Closeable
 		throw new IllegalStateException("Connecting to image-archive failed!");
 	}
 
+	public static class Context
+	{
+		private UriBuilder endpoint;
+		private MachineToken token;
+		private Logger logger;
+
+
+		private Context(String endpoint)
+		{
+			if (endpoint == null)
+				throw new IllegalArgumentException();
+
+			this.endpoint = UriBuilder.fromUri(endpoint);
+		}
+
+		private Context(Context other)
+		{
+			this.endpoint = other.endpoint.clone();
+			this.token = other.token;
+			this.logger = other.logger;
+		}
+
+		public String endpoint(Object... params)
+		{
+			if (params == null)
+				return endpoint.toTemplate();
+
+			return endpoint.build(params)
+					.toString();
+		}
+
+		public String endpoint(Map<String, Object> params)
+		{
+			return endpoint.buildFromMap(params)
+					.toString();
+		}
+
+		public Context setToken(MachineToken token)
+		{
+			this.token = token;
+			return this;
+		}
+
+		public String token()
+		{
+			return (token != null) ? token.get() : null;
+		}
+
+		public Context setLogger(Logger logger)
+		{
+			this.logger = logger;
+			return this;
+		}
+
+		public Logger logger()
+		{
+			return logger;
+		}
+
+		public <T> Context resolve(Class<T> clazz)
+		{
+			endpoint = endpoint.path(clazz);
+			return this;
+		}
+
+		public <T> Context resolve(Class<T> clazz, String methodname)
+		{
+			endpoint = endpoint.path(clazz, methodname);
+			return this;
+		}
+
+		public Context resolve(String... subpaths)
+		{
+			if (subpaths == null || subpaths.length == 0)
+				throw new IllegalArgumentException();
+
+			for (final var subpath : subpaths)
+				endpoint = endpoint.path(subpath);
+
+			return this;
+		}
+
+		public Context resolve(String name, Object value)
+		{
+			endpoint = endpoint.resolveTemplate(name, value);
+			return this;
+		}
+
+		public Context resolve(Map<String, Object> values)
+		{
+			endpoint = endpoint.resolveTemplates(values);
+			return this;
+		}
+
+		@Override
+		public Context clone()
+		{
+			return new Context(this);
+		}
+	}
+
 
 	// ===== Internal Helpers ===============
 
-	private ImageArchiveClient(ImageArchiveApi proxy, Logger logger)
+	private ImageArchiveClient(Context context, ImageArchiveApi proxy)
 	{
-		this.logger = logger;
+		this.context = context;
 		this.proxy = proxy;
-		this.api = new ImageArchive(proxy, logger);
+		this.api = new ImageArchive(context, proxy);
 	}
 
 	private static ImageArchiveClient connect(String endpoint, Logger logger) throws Exception
 	{
 		logger.info("Connecting to image-archive at '" + endpoint + "'...");
+		final var token = MachineTokenProvider.getInternalToken();
 		final var proxy = RestClientBuilder.newBuilder()
 				.baseUrl(new URL(endpoint))
-				.register(new AuthFilter())
+				.register(new AuthFilter(token))
 				.build(ImageArchiveApi.class);
 
+		final var context = new Context(endpoint)
+				.setLogger(logger)
+				.setToken(token);
+
 		logger.info("Connected to image-archive at '" + endpoint + "'");
-		return new ImageArchiveClient(proxy, logger);
+		return new ImageArchiveClient(context, proxy);
 	}
 
 	private static class AuthFilter implements ClientRequestFilter
 	{
 		private final MachineToken token;
 
-		private AuthFilter()
+		public AuthFilter(MachineToken token)
 		{
-			this.token = MachineTokenProvider.getInternalToken();
+			this.token = token;
 		}
 
 		@Override

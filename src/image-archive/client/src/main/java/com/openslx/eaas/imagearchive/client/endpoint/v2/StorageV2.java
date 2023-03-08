@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IStorageV2;
 
 
@@ -27,10 +28,10 @@ public class StorageV2
 	private final LocationsV2 locations;
 	private final IndexesV2 indexes;
 
-	public StorageV2(IStorageV2 api)
+	public StorageV2(ImageArchiveClient.Context context, IStorageV2 api)
 	{
-		this.locations = new LocationsV2(api.locations());
-		this.indexes = new IndexesV2(api.indexes());
+		this.locations = new LocationsV2(StorageV2.resolve(context, "locations"), api.locations());
+		this.indexes = new IndexesV2(StorageV2.resolve(context, "indexes"), api.indexes());
 	}
 
 
@@ -44,5 +45,14 @@ public class StorageV2
 	public IndexesV2 indexes()
 	{
 		return indexes;
+	}
+
+
+	// ===== Internal Helpers ====================
+
+	private static ImageArchiveClient.Context resolve(ImageArchiveClient.Context context, String methodname)
+	{
+		return context.clone()
+				.resolve(IStorageV2.class, methodname);
 	}
 }

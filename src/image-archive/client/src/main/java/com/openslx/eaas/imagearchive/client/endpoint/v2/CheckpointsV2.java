@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.ICheckpointsV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
 
@@ -27,8 +28,8 @@ import java.io.InputStream;
 
 public class CheckpointsV2 extends RemoteResourceRW<InputStream, ICheckpointsV2>
 {
-	public CheckpointsV2(ICheckpointsV2 api)
+	public CheckpointsV2(ImageArchiveClient.Context context, ICheckpointsV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 }

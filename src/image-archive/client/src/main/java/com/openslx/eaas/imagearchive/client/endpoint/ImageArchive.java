@@ -19,19 +19,22 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.ImageArchiveApi;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.ArchiveV2;
-
-import java.util.logging.Logger;
 
 
 public class ImageArchive
 {
 	private final ArchiveV2 v2;
 
-	public ImageArchive(ImageArchiveApi api, Logger logger)
+	public ImageArchive(ImageArchiveClient.Context context, ImageArchiveApi api)
 	{
-		this.v2 = new ArchiveV2(api.v2(), logger);
+		final var subctx = context.clone()
+				.resolve(ImageArchiveApi.class)
+				.resolve(ImageArchiveApi.class, "v2");
+
+		this.v2 = new ArchiveV2(subctx, api.v2());
 	}
 
 
