@@ -19,11 +19,12 @@
 package com.openslx.eaas.migration;
 
 import com.openslx.eaas.migration.config.MigrationConfig;
+import org.apache.tamaya.ConfigurationProvider;
 
 
 public class MigrationUtils
 {
-	public static final float DEFAULT_FAILURE_RATE = 0.25F;
+	public static final float DEFAULT_FAILURE_RATE = MigrationUtils.getDefaultFailureRate();
 
 	/** Look up migration's acceptable failure-rate */
 	public static float getFailureRate(MigrationConfig config)
@@ -45,5 +46,16 @@ public class MigrationUtils
 	{
 		final float threshold = maxFailureRate * ((float) numTotal);
 		return (float) numFailures <= threshold;
+	}
+
+
+	// ===== Internal Helpers ====================
+
+	private static float getDefaultFailureRate()
+	{
+		final var value = ConfigurationProvider.getConfiguration()
+				.get("migration.failure_rate");
+
+		return (value == null) ? 0.0F : Float.parseFloat(value);
 	}
 }
