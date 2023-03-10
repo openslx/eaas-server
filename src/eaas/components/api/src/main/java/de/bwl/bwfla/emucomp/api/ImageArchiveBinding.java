@@ -1,6 +1,5 @@
 package de.bwl.bwfla.emucomp.api;
 
-import de.bwl.bwfla.common.exceptions.BWFLAException;
 import de.bwl.bwfla.common.utils.jaxb.JaxbType;
 
 import javax.xml.bind.JAXBException;
@@ -11,14 +10,11 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 
 @XmlAccessorType(XmlAccessType.FIELD)
-@XmlType(name = "imageArchiveBinding", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = { "urlPrefix",
+@XmlType(name = "imageArchiveBinding", namespace = "http://bwfla.bwl.de/common/datatypes", propOrder = {
 		"imageId", "type", "fileSystemType", "backendName" })
 @XmlRootElement(namespace = "http://bwfla.bwl.de/common/datatypes")
 public class ImageArchiveBinding extends Binding
 {
-	@Deprecated
-	protected String urlPrefix = null;
-
 	@XmlElement(namespace = "http://bwfla.bwl.de/common/datatypes", required = true)
 	protected String backendName;
 
@@ -34,7 +30,6 @@ public class ImageArchiveBinding extends Binding
 	public ImageArchiveBinding()
 	{
 		backendName = null;
-		urlPrefix = null;
 		imageId = null;
 		type = null;
 		fileSystemType = null;
@@ -48,7 +43,6 @@ public class ImageArchiveBinding extends Binding
 	public ImageArchiveBinding(String backend, String imageId, String type, String fileSystemType)
 	{
 		this.backendName = backend;
-		this.urlPrefix = null;
 		this.imageId = imageId;
 		this.type = type;
 		this.fileSystemType = fileSystemType;
@@ -57,7 +51,6 @@ public class ImageArchiveBinding extends Binding
 	public void copy(ImageArchiveBinding b)
 	{
 		this.backendName = b.backendName;
-		this.urlPrefix = b.urlPrefix;
 		this.imageId = b.imageId;
 		this.type = b.type;
 		this.fileSystemType = b.fileSystemType;
@@ -71,9 +64,6 @@ public class ImageArchiveBinding extends Binding
 
 		if (other.backendName != null)
 			this.backendName = other.backendName;
-
-		if (other.urlPrefix != null)
-			this.urlPrefix = other.urlPrefix;
 
 		if (other.imageId != null)
 			this.imageId = other.imageId;
