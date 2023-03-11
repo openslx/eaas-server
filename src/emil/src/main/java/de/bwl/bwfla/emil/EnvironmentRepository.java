@@ -92,6 +92,7 @@ import javax.ws.rs.core.Response;
 import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.StreamingOutput;
 import java.io.File;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.StringWriter;
 import java.net.MalformedURLException;
@@ -102,6 +103,7 @@ import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
 import java.util.logging.Level;
@@ -1512,11 +1514,101 @@ public class EnvironmentRepository extends EmilRest
 	@Override
 	public void register(@Observes MigrationRegistry migrations) throws Exception
 	{
+		migrations.register("remove-published-duplicates-from-legacy-image-archive-v1", this::removePublishedDuplicatesFromLegacyImageArchiveV1);
 		migrations.register("rebase-legacy-images-v1", this::rebaseLegacyImagesV1);
 		migrations.register("import-legacy-image-index", this::importLegacyImageIndex);
 		migrations.register("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
 		migrations.register("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
 		migrations.register("import-legacy-emulator-archive-v1", this::importLegacyEmulatorArchiveV1);
+	}
+
+	private void removePublishedDuplicatesFromLegacyImageArchiveV1(MigrationConfig mc) throws Exception
+	{
+		class LegacyImageArchive
+		{
+			private final String name;
+			private final Map<String, java.nio.file.Path> images;
+			private final Map<String, java.nio.file.Path> metadata;
+
+			public LegacyImageArchive(String name)
+			{
+				this.name = name;
+				this.images = new HashMap<>();
+				this.metadata = new HashMap<>();
+			}
+
+			public boolean remove(String id, Map<String, java.nio.file.Path> entries) throws IOException
+			{
+				final var path = entries.remove(id);
+				if (path == null)
+					return false;
+
+				final var result = Files.deleteIfExists(path);
+				if (result)
+					LOG.info("Removed duplicate at: " + path);
+
+				return result;
+			}
+		}
+
+		final var archives = new HashMap<String, LegacyImageArchive>();
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
+			final var name = config.get("name");
+			if (name.contentEquals("emulators"))
+				continue;
+
+			final var basedir = Paths.get(config.get("basepath"));
+			final var archive = new LegacyImageArchive(name);
+
+			LOG.info("Listing entries in legacy image-archive (" + name + ")...");
+			for (final var kind : LegacyImageArchiveUtils.ImageKind.values()) {
+				LegacyImageArchiveUtils.list(basedir.resolve("meta-data"), kind, archive.metadata);
+				LegacyImageArchiveUtils.list(basedir.resolve("images"), kind, archive.images);
+			}
+
+			archives.put(name, archive);
+		}
+
+		final var counter = ImportCounts.counter();
+
+		final BiConsumer<String, java.nio.file.Path> metadataDuplicateRemover = (id, path) -> {
+			for (final var archive : archives.values()) {
+				try {
+					if (archive.remove(id, archive.metadata))
+						counter.increment(ImportCounts.IMPORTED);
+				}
+				catch (Exception error) {
+					LOG.log(Level.WARNING, "Removing metadata duplicate of '" + id + "' failed!", error);
+					counter.increment(ImportCounts.FAILED);
+				}
+			}
+		};
+
+		final BiConsumer<String, java.nio.file.Path> imageDuplicateRemover = (id, path) -> {
+			for (final var archive : archives.values()) {
+				try {
+					if (archive.remove(id, archive.images))
+						counter.increment(ImportCounts.IMPORTED);
+				}
+				catch (Exception error) {
+					LOG.log(Level.WARNING, "Removing image duplicate of '" + id + "' failed!", error);
+					counter.increment(ImportCounts.FAILED);
+				}
+			}
+		};
+
+		LOG.info("Removing published duplicates in legacy image-archive...");
+		final var publicImageArchive = archives.remove("public");
+		publicImageArchive.metadata.forEach(metadataDuplicateRemover);
+		publicImageArchive.images.forEach(imageDuplicateRemover);
+
+		final var numRemoved = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		final var maxFailureRate = MigrationUtils.getFailureRate(mc);
+		LOG.info("Removed " + numRemoved + " duplicate(s), failed " + numFailed);
+		if (!MigrationUtils.acceptable(numRemoved + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Removing published duplicates failed!");
 	}
 
 	private void rebaseLegacyImagesV1(MigrationConfig mc) throws Exception
