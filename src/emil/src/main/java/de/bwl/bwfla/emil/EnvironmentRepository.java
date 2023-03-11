@@ -69,6 +69,7 @@ import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emil.utils.ImportCounts;
 import de.bwl.bwfla.emil.utils.LegacyImageArchiveConfigIterator;
+import de.bwl.bwfla.emil.utils.LegacyImageArchiveUtils;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
@@ -99,6 +100,7 @@ import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.function.Consumer;
 import java.util.function.Predicate;
@@ -1510,10 +1512,56 @@ public class EnvironmentRepository extends EmilRest
 	@Override
 	public void register(@Observes MigrationRegistry migrations) throws Exception
 	{
+		migrations.register("rebase-legacy-images-v1", this::rebaseLegacyImagesV1);
 		migrations.register("import-legacy-image-index", this::importLegacyImageIndex);
 		migrations.register("import-legacy-emulator-index", this::importLegacyEmulatorIndex);
 		migrations.register("import-legacy-image-archive-v1", this::importLegacyImageArchiveV1);
 		migrations.register("import-legacy-emulator-archive-v1", this::importLegacyEmulatorArchiveV1);
+	}
+
+	private void rebaseLegacyImagesV1(MigrationConfig mc) throws Exception
+	{
+		final var images = new HashMap<String, java.nio.file.Path>();
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
+			final var name = config.get("name");
+			final var basedir = Paths.get(config.get("basepath"), "images");
+			LOG.info("Listing images in legacy image-archive (" + name + ")...");
+			for (final var kind : LegacyImageArchiveUtils.ImageKind.values())
+				LegacyImageArchiveUtils.list(basedir, kind, images);
+		}
+
+		// bfmap: image-id -> backing-file-id
+		final var bfmap = new ConcurrentHashMap<String, String>();
+		final var failedImageIds = new HashSet<String>();
+		final var counter = ImportCounts.counter();
+
+		final Consumer<String> rebaser = (id) -> {
+			try {
+				LegacyImageArchiveUtils.fixBackingFileRef(id, images, bfmap, LOG);
+				counter.increment(ImportCounts.IMPORTED);
+			}
+			catch (Exception error) {
+				LOG.log(Level.WARNING, "Rebasing image '" + id + "' failed!", error);
+				counter.increment(ImportCounts.FAILED);
+				failedImageIds.add(id);
+			}
+		};
+
+		LOG.info("Rebasing images in legacy image-archive...");
+		final var imageids = images.keySet();
+		ParallelProcessors.consumer(rebaser)
+				.consume(imageids.iterator(), executor);
+
+		final var numRebased = counter.get(ImportCounts.IMPORTED);
+		final var numFailed = counter.get(ImportCounts.FAILED);
+		final var maxFailureRate = MigrationUtils.getFailureRate(mc);
+		LOG.info("Rebased " + numRebased + " image(s), failed " + numFailed);
+		if (!failedImageIds.isEmpty())
+			LOG.warning(LegacyImageArchiveUtils.summarize(bfmap, failedImageIds));
+
+		if (!MigrationUtils.acceptable(numRebased + numFailed, numFailed, maxFailureRate))
+			throw new BWFLAException("Rebasing legacy images failed!");
 	}
 
 	private void importLegacyImageIndex(MigrationConfig mc) throws BWFLAException
@@ -1764,21 +1812,19 @@ public class EnvironmentRepository extends EmilRest
 
 		final Consumer<java.nio.file.Path> importer = (file) -> {
 			final var id = file.getFileName().toString();
-			// first, update backing file's URL in-place
+			// first, check backing file reference
 			try {
 				final var info = new ImageInformation(file.toString(), LOG);
 				if (info.hasBackingFile()) {
 					final var backingFileUrl = info.getBackingFile();
 					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
-					if (!backingFileUrl.equals(backingImageId)) {
-						final var backingFileFormat = info.getBackingFileFormat();
-						LOG.info("Rebasing image: " + id + " --> " + backingImageId);
-						EmulatorUtils.changeBackingFile(file, backingImageId, backingFileFormat, LOG);
-					}
+					final var backingFileFormat = info.getBackingFileFormat();
+					assert backingFileUrl.equals(backingImageId);
+					assert backingFileFormat != null;
 				}
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Rebasing image '" + id + "' failed!", error);
+				LOG.log(Level.WARNING, "Backing file reference for image '" + id + "' is invalid!", error);
 				counter.increment(ImportCounts.FAILED);
 				return;
 			}
@@ -1900,21 +1946,19 @@ public class EnvironmentRepository extends EmilRest
 
 		final Consumer<java.nio.file.Path> importer = (file) -> {
 			final var id = file.getFileName().toString();
-			// first, update backing file's URL in-place
+			// first, check backing file reference
 			try {
 				final var info = new ImageInformation(file.toString(), LOG);
 				if (info.hasBackingFile()) {
 					final var backingFileUrl = info.getBackingFile();
 					final var backingImageId = ImageInformation.getBackingImageId(backingFileUrl);
-					if (!backingFileUrl.equals(backingImageId)) {
-						final var backingFileFormat = info.getBackingFileFormat();
-						LOG.info("Rebasing emulator-image: " + id + " --> " + backingImageId);
-						EmulatorUtils.changeBackingFile(file, backingImageId, backingFileFormat, LOG);
-					}
+					final var backingFileFormat = info.getBackingFileFormat();
+					assert backingFileUrl.equals(backingImageId);
+					assert backingFileFormat != null;
 				}
 			}
 			catch (Exception error) {
-				LOG.log(Level.WARNING, "Rebasing emulator-image '" + id + "' failed!", error);
+				LOG.log(Level.WARNING, "Backing file reference for emulator-image '" + id + "' is invalid!", error);
 				counter.increment(ImportCounts.FAILED);
 				return;
 			}
