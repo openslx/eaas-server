@@ -68,6 +68,7 @@ import de.bwl.bwfla.emil.tasks.ImportImageTask;
 import de.bwl.bwfla.emil.tasks.ImportImageTask.ImportImageTaskRequest;
 import de.bwl.bwfla.emil.tasks.ReplicateImageTask;
 import de.bwl.bwfla.emil.utils.ImportCounts;
+import de.bwl.bwfla.emil.utils.LegacyImageArchiveConfigIterator;
 import de.bwl.bwfla.emil.utils.TaskManager;
 import de.bwl.bwfla.emucomp.api.*;
 import de.bwl.bwfla.emucomp.api.MachineConfiguration.NativeConfig;
@@ -1623,13 +1624,9 @@ public class EnvironmentRepository extends EmilRest
 
 	private void importLegacyImageArchiveV1(MigrationConfig mc) throws Exception
 	{
-		for (int i = 0; true; ++i) {
-			final var prefix = ConfigHelpers.toListKey("imagearchive.backends", i, ".");
-			final var config = ConfigHelpers.filter(ConfigurationProvider.getConfiguration(), prefix);
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
 			final var name = config.get("name");
-			if (name == null)
-				break;
-
 			if (name.equals("emulators"))
 				continue;
 
@@ -1866,13 +1863,9 @@ public class EnvironmentRepository extends EmilRest
 
 	private void importLegacyEmulatorArchiveV1(MigrationConfig mc) throws Exception
 	{
-		for (int i = 0; true; ++i) {
-			final var prefix = ConfigHelpers.toListKey("imagearchive.backends", i, ".");
-			final var config = ConfigHelpers.filter(ConfigurationProvider.getConfiguration(), prefix);
+		for (var iterator = new LegacyImageArchiveConfigIterator(); iterator.hasNext();) {
+			final var config = iterator.next();
 			final var name = config.get("name");
-			if (name == null)
-				break;
-
 			if (!name.equals("emulators"))
 				continue;
 
