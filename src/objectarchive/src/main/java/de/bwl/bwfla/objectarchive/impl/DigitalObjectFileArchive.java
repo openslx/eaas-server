@@ -832,6 +832,18 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 						fgfixer.apply(fgroup);
 				}
 
+				if (objectId.contains(" ")) {
+					// some legacy objects may contain spaces in IDs!
+					final var newObjectId = objectId.replace(' ', '-');
+					mets.setID(newObjectId);
+
+					final var oldpath = Path.of(localPath, objectId);
+					final var newpath = Path.of(localPath, newObjectId);
+					Files.move(oldpath, newpath);
+
+					updatemsgs.add("Object-ID: '" + objectId + "' -> " + newObjectId);
+				}
+
 				if (updatemsgs.isEmpty())
 					return;
 
