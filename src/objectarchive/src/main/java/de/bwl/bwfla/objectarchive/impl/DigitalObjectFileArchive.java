@@ -71,6 +71,8 @@ import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.utils.DefaultDriveMapper;
 
+import static de.bwl.bwfla.common.utils.METS.MetsUtil.MetsEaasConstant.FILE_GROUP_OBJECTS;
+
 
 // FIXME: this class should be implemented in a style of a "Builder" pattern
 public class DigitalObjectFileArchive implements Serializable, DigitalObjectArchive
@@ -703,7 +705,7 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
-		final var digitalObjectsGroupName = "DIGITAL OBJECTS";
+		final var digitalObjectsGroupName = FILE_GROUP_OBJECTS.toString();
 		final var objectIdsToRemove = new ArrayList<String>();
 		final var counter = UpdateCounts.counter();
 		final var guard = new Object();

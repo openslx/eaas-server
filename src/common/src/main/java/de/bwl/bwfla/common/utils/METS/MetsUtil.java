@@ -12,7 +12,7 @@ import java.util.function.BiFunction;
 
 public class MetsUtil {
 
-    private enum MetsEaasConstant {
+    public enum MetsEaasConstant {
         FILE_GROUP_OBJECTS("DIGITAL OBJECTS");
 
         private final String label;
