@@ -20,6 +20,7 @@
 package de.bwl.bwfla.blobstore;
 
 
+import com.openslx.eaas.common.config.util.MemoryUnitParser;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
 import io.minio.ComposeObjectArgs;
 import io.minio.ComposeSource;
@@ -37,6 +38,7 @@ import io.minio.SetObjectTagsArgs;
 import io.minio.StatObjectArgs;
 import io.minio.UploadObjectArgs;
 import io.minio.http.Method;
+import org.apache.tamaya.ConfigurationProvider;
 
 import java.io.InputStream;
 import java.nio.file.Path;
@@ -56,6 +58,18 @@ public class Blob extends TaskExecutor
 	private final String bucket;
 	private final String blob;
 
+	/** Max. number of upload parts supported */
+	private static final long UPLOAD_PART_COUNT_LIMIT = 10000;
+
+	/** Default upload part-size */
+	private static final long DEFAULT_UPLOAD_PART_SIZE;
+	static {
+		final var muparser = new MemoryUnitParser();
+		final var psvalue = ConfigurationProvider.getConfiguration()
+				.get("blobstore.uploader.partsize");
+
+		DEFAULT_UPLOAD_PART_SIZE = muparser.parse(psvalue);
+	}
 
 	/** Blob's blobstore */
 	public BlobStore storage()
@@ -218,6 +232,12 @@ public class Blob extends TaskExecutor
 		return new CopySourceBuilder();
 	}
 
+	/** Return default upload part-size */
+	public static long getDefaultUploadPartSize()
+	{
+		return DEFAULT_UPLOAD_PART_SIZE;
+	}
+
 
 	public enum AccessMethod
 	{
@@ -338,12 +358,13 @@ public class Blob extends TaskExecutor
 		private Path filename;
 		private InputStream stream;
 		private long size;
+		private long partsize;
 		private String contentType;
 
 
 		private Uploader()
 		{
-			// Empty!
+			this.partsize = DEFAULT_UPLOAD_PART_SIZE;
 		}
 
 		/** Specify file to be uploaded as content */
@@ -366,6 +387,13 @@ public class Blob extends TaskExecutor
 			this.stream = stream;
 			this.size = size;
 			this.filename = null;
+			return this;
+		}
+
+		/** Override default part-size */
+		public Uploader partsize(long size)
+		{
+			this.partsize = size;
 			return this;
 		}
 
@@ -396,8 +424,15 @@ public class Blob extends TaskExecutor
 					minio.uploadObject(args);
 				}
 				else {
+					if (size > 0L) {
+						// let minio choose part-size if part-count limit is exceeded!
+						final var partcount = 1L + size / partsize;
+						if (partcount > UPLOAD_PART_COUNT_LIMIT)
+							partsize = -1L;
+					}
+
 					final var args = PutObjectArgs.builder()
-							.stream(stream, size, 128L*1024L*1024L)
+							.stream(stream, size, partsize)
 							.bucket(self.bucket())
 							.object(self.name())
 							.contentType(contentType)

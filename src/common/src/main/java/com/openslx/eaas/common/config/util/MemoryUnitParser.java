@@ -17,7 +17,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  */
 
-package de.bwl.bwfla.eaas.cluster.config.util;
+package com.openslx.eaas.common.config.util;
 
 import java.util.HashMap;
 import java.util.Map;
