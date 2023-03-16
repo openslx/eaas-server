@@ -46,18 +46,8 @@ import javax.xml.transform.stream.StreamSource;
 public abstract class JaxbType {
     public static <T extends JaxbType> T fromValue(String value, Class<T> klass) throws JAXBException
     {
-        return JaxbType.from(new StreamSource(new StringReader(value)), klass);
-    }
-
-    public static <T extends JaxbType> T from(StreamSource source, Class<T> clazz) throws JAXBException
-    {
-        final var unmarshaller = JAXBContext.newInstance(clazz)
-                .createUnmarshaller();
-
-        // TODO: does validation still works correctly?
-        final T result = clazz.cast(unmarshaller.unmarshal(source));
-        JaxbValidator.validate(result);
-        return result;
+        return DataUtils.xml()
+                .read(value, klass);
     }
 
     public static <T extends JaxbType> T from(InputStream source, Class<T> clazz) throws Exception
@@ -79,7 +69,8 @@ public abstract class JaxbType {
 
     public static <T extends JaxbType> T fromXml(InputStream source, Class<T> clazz) throws JAXBException
     {
-        return JaxbType.from(new StreamSource(source), clazz);
+        return DataUtils.xml()
+                .read(source, clazz);
     }
 
     public static <T extends JaxbType> T fromJson(InputStream source, Class<T> clazz) throws Exception
@@ -180,12 +171,8 @@ public abstract class JaxbType {
      *             string representation
      */
     public String value(final boolean prettyPrint) throws JAXBException {
-        JAXBContext jc = JAXBContext.newInstance(this.getClass());
-        Marshaller marshaller = jc.createMarshaller();
-        marshaller.setProperty(Marshaller.JAXB_FORMATTED_OUTPUT, prettyPrint);
-        StringWriter w = new StringWriter();
-        marshaller.marshal(this, w);
-        return w.toString();
+        return DataUtils.xml()
+                .write(this);
     }
 
 
@@ -244,7 +231,7 @@ public abstract class JaxbType {
         try {
             return this.value(true);
         } catch (JAXBException e) {
-            return "Error converting JAXB type to string: " + e.getMessage();
+            throw new RuntimeException(e);
         }
     }
 }

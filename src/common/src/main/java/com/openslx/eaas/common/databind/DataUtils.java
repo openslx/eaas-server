@@ -27,10 +27,16 @@ public class DataUtils
 		return JSON;
 	}
 
+	public static XmlDataUtils xml()
+	{
+		return XML;
+	}
+
 
 	// ===== Internal Helpers ==============================
 
 	private static final JsonDataUtils JSON = new JsonDataUtils();
+	private static final XmlDataUtils XML = new XmlDataUtils();
 
 	private DataUtils()
 	{

@@ -19,10 +19,10 @@
 
 package de.bwl.bwfla.common.utils.jaxb;
 
+import com.openslx.eaas.common.databind.DataUtils;
 import de.bwl.bwfla.common.utils.PipedDataSource;
 
 import javax.activation.DataHandler;
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Marshaller;
 import javax.xml.stream.XMLOutputFactory;
@@ -126,8 +126,8 @@ public class JaxbCollectionWriter<T> implements Runnable
 			this.writer = writer;
 			this.log = log;
 
-			this.marshaller = JAXBContext.newInstance(klass)
-					.createMarshaller();
+			this.marshaller = DataUtils.xml()
+					.marshaller(klass, false);
 
 			marshaller.setProperty(Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
 		}

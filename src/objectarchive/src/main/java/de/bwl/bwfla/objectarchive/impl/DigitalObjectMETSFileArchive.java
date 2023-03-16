@@ -19,6 +19,7 @@
 
 package de.bwl.bwfla.objectarchive.impl;
 
+import com.openslx.eaas.common.databind.DataUtils;
 import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.exceptions.BWFLAException;
@@ -30,10 +31,7 @@ import gov.loc.mets.Mets;
 import gov.loc.mets.MetsType;
 import org.apache.tamaya.ConfigurationProvider;
 
-import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.transform.stream.StreamSource;
 import java.io.*;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
@@ -216,12 +214,10 @@ public class DigitalObjectMETSFileArchive implements Serializable, DigitalObject
 
 		// hard copy!
 		Mets metsCopy = null;
-		JAXBContext jc = null;
 		try {
 			String metsCopyStr = metsOrig.value();
-			jc = JAXBContext.newInstance(Mets.class);
-			Unmarshaller unmarshaller = jc.createUnmarshaller();
-			metsCopy = (Mets) unmarshaller.unmarshal(new StreamSource(new StringReader(metsCopyStr)));
+			metsCopy = DataUtils.xml()
+					.read(metsCopyStr, Mets.class);
 			String exportPrefix = exportUrlPrefix + "/" + id;
 			if (metsCopy.getFileSec() != null) {
 				List<MetsType.FileSec.FileGrp> fileGrpList = metsCopy.getFileSec().getFileGrp();
