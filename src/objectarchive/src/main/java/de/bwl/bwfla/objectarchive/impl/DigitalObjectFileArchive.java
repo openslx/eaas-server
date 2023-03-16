@@ -27,11 +27,14 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.Arrays;
+import java.util.function.BiFunction;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -54,6 +57,7 @@ import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.*;
 
 import gov.loc.mets.Mets;
+import gov.loc.mets.MetsType;
 import org.apache.commons.io.FileUtils;
 import org.apache.tamaya.ConfigurationProvider;
 import org.apache.tamaya.inject.ConfigurationInjection;
@@ -691,8 +695,14 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			throw new BWFLAException("Creating object-archive's metadata failed!");
 	}
 
+	private interface MetsFixer<T>
+	{
+		void apply(T value) throws Exception;
+	}
+
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
+		final var digitalObjectsGroupName = "DIGITAL OBJECTS";
 		final var counter = UpdateCounts.counter();
 		final var guard = new Object();
 
@@ -701,21 +711,53 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 			return Files.exists(metsfile);
 		};
 
+		final BiFunction<MetsType.FileSec, String, MetsType.FileSec.FileGrp> fgfinder = (fsec, fgname) -> {
+			final var fgroups = (fsec != null) ? fsec.getFileGrp() : Collections.<MetsType.FileSec.FileGrp>emptyList();
+			for (final var fgroup : fgroups) {
+				if (fgname.equals(fgroup.getUSE()))
+					return fgroup;
+			}
+
+			return null;
+		};
+
 		final Consumer<String> fixer = (objectId) -> {
 			try {
 				final var mets = this.loadMetsData(objectId)
 						.getMets();
 
-				final var fsec = mets.getFileSec();
-				if (fsec == null)
-					return;
+				var fsec = mets.getFileSec();
+				if (fsec == null) {
+					// add an empty file-section!
+					fsec = new MetsType.FileSec();
+					mets.setFileSec(fsec);
+				}
+
+				if (fgfinder.apply(fsec, digitalObjectsGroupName) == null) {
+					// add an empty file-group!
+					final var fgroup = new MetsType.FileSec.FileGrp();
+					fgroup.setUSE(digitalObjectsGroupName);
+					fsec.getFileGrp()
+							.add(fgroup);
+				}
 
 				final var updatemsgs = new ArrayList<String>();
-				for (final var fgroup : fsec.getFileGrp()) {
-					for (final var file : fgroup.getFile()) {
-						for (final var flocat : file.getFLocat()) {
+
+				final MetsFixer<MetsType.FileSec.FileGrp> digitalObjectsGroupFixer = (fgroup) -> {
+					final var files = fgroup.getFile();
+					for (final var fit = files.iterator(); fit.hasNext();) {
+						final var flocations = fit.next().getFLocat();
+						for (final var flit = flocations.iterator(); flit.hasNext();) {
+							final var flocat = flit.next();
 							final var oldurl = flocat.getHref();
 							var newurl = oldurl;
+
+							if (oldurl.endsWith("__import.iso")) {
+								// CASE: legacy "__import.iso" is referenced directly
+								updatemsgs.add("Removed legacy '__import.iso' reference!");
+								flit.remove();
+								continue;
+							}
 
 							if (oldurl.startsWith(objectId)) {
 								// CASE: <object-id>/<subpath> -> <subpath>
@@ -752,7 +794,34 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 								updatemsgs.add("FLocat-URL: " + oldurl + " -> " + flocat.getHref());
 							}
 						}
+
+						if (flocations.isEmpty())
+							fit.remove();
 					}
+
+					if (files.isEmpty()) {
+						// no files referenced in metadata, check storage content
+						final var fc = this.describe(objectId);
+						for (final var fce : fc.files)
+							fce.setId(null);
+
+						// NOTE: returned METS here should correctly describe referenced files!
+						final var newmets = this.fromFileCollection(objectId, fc);
+						final var newfgroup = fgfinder.apply(newmets.getFileSec(), digitalObjectsGroupName);
+						if (newfgroup == null)
+							throw new IllegalStateException("File group '" + digitalObjectsGroupName + "' is not found!");
+
+						files.addAll(newfgroup.getFile());
+						updatemsgs.add("Re-created file-section from storage!");
+					}
+				};
+
+				final var fgfixers = new HashMap<String, MetsFixer<MetsType.FileSec.FileGrp>>();
+				fgfixers.put(digitalObjectsGroupName, digitalObjectsGroupFixer);
+				for (final var fgroup : fsec.getFileGrp()) {
+					final var fgfixer = fgfixers.get(fgroup.getUSE());
+					if (fgfixer != null)
+						fgfixer.apply(fgroup);
 				}
 
 				if (updatemsgs.isEmpty())

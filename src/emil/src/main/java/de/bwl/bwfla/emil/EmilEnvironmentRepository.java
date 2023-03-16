@@ -704,15 +704,17 @@ public class EmilEnvironmentRepository implements IMigratable
 					ee.setOs("n.a.");
 					ee.setDescription("imported base environment");
 
-					if(authenticatedUser != null && authenticatedUser.getUserId() != null)
-					{
-						EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
-						owner.setUsername(authenticatedUser.getUserId());
+					// FIXME: no user-context exists at server startup!
+//					if(authenticatedUser != null && authenticatedUser.getUserId() != null)
+//					{
+//						EmilEnvironmentOwner owner = new EmilEnvironmentOwner();
+//						owner.setUsername(authenticatedUser.getUserId());
+//
+//						EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
+//						permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
+//						ee.setPermissions(permissions);
+//					}
 
-						EmilEnvironmentPermissions permissions = new EmilEnvironmentPermissions();
-						permissions.setUser(EmilEnvironmentPermissions.Permissions.READ);
-						ee.setPermissions(permissions);
-					}
 					save(ee, false);
 					LOG.info("Created emil-environment for machine '" + env.getId() + "'");
 					return 1;

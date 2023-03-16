@@ -19,6 +19,7 @@ import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class MetsObject {
@@ -163,15 +164,15 @@ public class MetsObject {
                         objectFiles.put(of.id, of);
                         // log.info(of.toString());
                     }
-                    catch (MetsObjectMetadataException e)
-                    {
-                        log.warning("caught exception " + e.getMessage());
+                    catch (MetsObjectMetadataException error) {
+                        final var message = "Processing METS with ID '" + this.getId() + "' failed!";
+                        log.log(Level.WARNING, message, error);
                     }
                 }
             }
         }
         else
-            log.warning("no files section found");
+            log.warning("No files found for METS with ID '" + this.getId() + "'!");
 
         // extracting Wikidata information
         List<MdSecType> dmdList = metsRoot.getDmdSec();

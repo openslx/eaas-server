@@ -30,6 +30,10 @@ public class QemuImage extends JaxbType {
     @XmlElement(name = "backing-filename")
     private String backingFile;
 
+    @JsonProperty("backing-filename-format")
+    @XmlElement(name = "backing-filename-format")
+    private String backingFileFormat;
+
     @JsonProperty("full-backing-filename")
     @XmlElement(name = "full-backing-filename")
     private String fullBackingName;
@@ -64,6 +68,14 @@ public class QemuImage extends JaxbType {
 
     public void setBackingFile(String backingFile) {
         this.backingFile = backingFile;
+    }
+
+    public String getBackingFileFormat() {
+        return backingFileFormat;
+    }
+
+    public void setBackingFileFormat(String format) {
+        this.backingFileFormat = format;
     }
 
     public String getFullBackingName() {

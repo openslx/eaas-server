@@ -60,6 +60,11 @@ public class ImageInformation {
         return QemuImageFormat.valueOf(imageInfo.getFormat().toUpperCase());
     }
 
+    public QemuImageFormat getBackingFileFormat() {
+        final var bfformat = imageInfo.getBackingFileFormat();
+        return (bfformat != null) ? QemuImageFormat.valueOf(bfformat.toUpperCase()) : null;
+    }
+
     public enum QemuImageFormat{
         // OPTIMIZATION: formats should be declared in frequency-descending order
         //               (e.g. most common first, followed by less common ones)
