@@ -99,7 +99,7 @@ public class ImageHandler
 		this.handleClient = (config.isHandleConfigured()) ? new HandleClient() : null;
 
 		cleanTmpFiles();
-		resolveLocalBackingFiles();
+		//resolveLocalBackingFiles();
 	}
 
 	public void lock(String id)

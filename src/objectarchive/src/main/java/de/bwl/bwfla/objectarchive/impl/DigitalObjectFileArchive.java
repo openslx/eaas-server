@@ -52,6 +52,7 @@ import com.openslx.eaas.resolver.DataResolver;
 import de.bwl.bwfla.common.datatypes.DigitalObjectMetadata;
 import de.bwl.bwfla.common.services.container.helpers.CdromIsoHelper;
 import de.bwl.bwfla.common.taskmanager.TaskState;
+import de.bwl.bwfla.common.utils.DeprecatedProcessRunner;
 import de.bwl.bwfla.common.utils.METS.MetsUtil;
 import de.bwl.bwfla.objectarchive.conf.ObjectArchiveSingleton;
 import de.bwl.bwfla.objectarchive.datatypes.*;
@@ -69,6 +70,8 @@ import de.bwl.bwfla.emucomp.api.EmulatorUtils;
 import de.bwl.bwfla.emucomp.api.FileCollection;
 import de.bwl.bwfla.emucomp.api.FileCollectionEntry;
 import de.bwl.bwfla.objectarchive.utils.DefaultDriveMapper;
+
+import static de.bwl.bwfla.common.utils.METS.MetsUtil.MetsEaasConstant.FILE_GROUP_OBJECTS;
 
 
 // FIXME: this class should be implemented in a style of a "Builder" pattern
@@ -702,9 +705,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 
 	public void fixMetsFiles(MigrationConfig mc) throws Exception
 	{
-		final var digitalObjectsGroupName = "DIGITAL OBJECTS";
+		final var digitalObjectsGroupName = FILE_GROUP_OBJECTS.toString();
+		final var objectIdsToRemove = new ArrayList<String>();
 		final var counter = UpdateCounts.counter();
 		final var guard = new Object();
+
 
 		final Predicate<String> filter = (objectId) -> {
 			final var metsfile = Path.of(localPath, objectId, METS_MD_FILENAME);
@@ -808,8 +813,11 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 						// NOTE: returned METS here should correctly describe referenced files!
 						final var newmets = this.fromFileCollection(objectId, fc);
 						final var newfgroup = fgfinder.apply(newmets.getFileSec(), digitalObjectsGroupName);
-						if (newfgroup == null)
-							throw new IllegalStateException("File group '" + digitalObjectsGroupName + "' is not found!");
+						if (newfgroup == null) {
+							log.warning("No file-entries found for object '" + objectId + "'!");
+							objectIdsToRemove.add(objectId);
+							return;
+						}
 
 						files.addAll(newfgroup.getFile());
 						updatemsgs.add("Re-created file-section from storage!");
@@ -822,6 +830,18 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 					final var fgfixer = fgfixers.get(fgroup.getUSE());
 					if (fgfixer != null)
 						fgfixer.apply(fgroup);
+				}
+
+				if (objectId.contains(" ")) {
+					// some legacy objects may contain spaces in IDs!
+					final var newObjectId = objectId.replace(' ', '-');
+					mets.setID(newObjectId);
+
+					final var oldpath = Path.of(localPath, objectId);
+					final var newpath = Path.of(localPath, newObjectId);
+					Files.move(oldpath, newpath);
+
+					updatemsgs.add("Object-ID: '" + objectId + "' -> " + newObjectId);
 				}
 
 				if (updatemsgs.isEmpty())
@@ -845,6 +865,24 @@ public class DigitalObjectFileArchive implements Serializable, DigitalObjectArch
 		log.info("Fixing metadata for objects in archive '" + this.getName() + "'...");
 		ParallelProcessors.consumer(filter, fixer)
 				.consume(this.getObjectIds(), ObjectArchiveSingleton.executor());
+
+		if (!objectIdsToRemove.isEmpty()) {
+			log.info("Removing empty objects in archive '" + this.getName() + "'...");
+			final var deleter = new DeprecatedProcessRunner()
+					.setLogger(log);
+
+			objectIdsToRemove.forEach((objectId) -> {
+				final var path = Path.of(localPath, objectId);
+				final var removed = deleter.setCommand("rm")
+						.addArguments("-r", "\"" + path + "\"")
+						.execute();
+
+				if (removed)
+					log.info("Removed: " + path);
+			});
+
+			log.info("Removed " + objectIdsToRemove.size() + " empty object(s)");
+		}
 
 		final var numFixed = counter.get(UpdateCounts.UPDATED);
 		final var numFailed = counter.get(UpdateCounts.FAILED);

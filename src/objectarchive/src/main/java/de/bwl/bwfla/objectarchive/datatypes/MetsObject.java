@@ -20,6 +20,9 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import static de.bwl.bwfla.common.utils.METS.MetsUtil.MetsEaasConstant.FILE_GROUP_OBJECTS;
+
+
 public class MetsObject {
 
     protected final Logger log = Logger.getLogger(this.getClass().getName());
@@ -147,6 +150,9 @@ public class MetsObject {
         if (metsRoot.getFileSec() != null) {
             List<MetsType.FileSec.FileGrp> fileGrpList = metsRoot.getFileSec().getFileGrp();
             for (MetsType.FileSec.FileGrp fileGrp : fileGrpList) {
+                if (!fileGrp.getUSE().equals(FILE_GROUP_OBJECTS.toString()))
+                    continue;  // skip all other file-groups for now!
+
                 for (FileType file : fileGrp.getFile()) {
                     try {
                         ObjectFile of = new ObjectFile();
@@ -232,7 +238,7 @@ public class MetsObject {
             }
         }
         if(of.fileType == null && of.mediumType == null)
-            throw new MetsObjectMetadataException("Unknown file format/mediaType...");
+            throw new MetsObjectMetadataException("Unknown file format/media-type for file '" + file.getID() + "'...");
     }
 
     /*
