@@ -20,6 +20,7 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.openslx.eaas.common.databind.Streamable;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IImportsV2;
 import com.openslx.eaas.imagearchive.api.v2.common.FetchOptionsV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.ImportRequestV2;
@@ -39,9 +40,9 @@ import java.util.concurrent.TimeoutException;
 public class ImportsV2 extends RemoteResource<IImportsV2>
 		implements IListableResource, IReadableResource<ImportStatusV2>, IDeletableResource
 {
-	public ImportsV2(IImportsV2 api)
+	public ImportsV2(ImageArchiveClient.Context context, IImportsV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 
 

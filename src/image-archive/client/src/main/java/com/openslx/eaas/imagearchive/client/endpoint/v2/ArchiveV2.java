@@ -19,15 +19,16 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IArchiveV2;
 import com.openslx.eaas.imagearchive.api.v2.databind.MetaDataKindV2;
 
-import java.util.logging.Logger;
+import java.util.HashMap;
+import java.util.Map;
 
 
 public class ArchiveV2
 {
-	private final IArchiveV2 api;
 	private final AliasesV2 aliases;
 	private final ContainersV2 containers;
 	private final MachinesV2 machines;
@@ -42,21 +43,30 @@ public class ArchiveV2
 	// virtual endpoints
 	private final EnvironmentsV2 environments;
 
+	// parameterized endpoints
+	private final Map<String, MetaDataV2> metadata;
 
-	public ArchiveV2(IArchiveV2 api, Logger logger)
+	public ArchiveV2(ImageArchiveClient.Context context, IArchiveV2 api)
 	{
-		this.api = api;
-		this.aliases = new AliasesV2(api.aliases());
-		this.containers = new ContainersV2(api.containers());
-		this.machines = new MachinesV2(api.machines());
-		this.templates = new TemplatesV2(api.templates());
-		this.checkpoints = new CheckpointsV2(api.checkpoints());
-		this.emulators = new EmulatorsV2(api.emulators());
-		this.images = new ImagesV2(api.images());
-		this.roms = new RomsV2(api.roms());
-		this.imports = new ImportsV2(api.imports());
-		this.storage = new StorageV2(api.storage());
-		this.environments = new EnvironmentsV2(this, logger);
+		this.aliases = new AliasesV2(ArchiveV2.resolve(context, "aliases"), api.aliases());
+		this.containers = new ContainersV2(ArchiveV2.resolve(context, "containers"), api.containers());
+		this.machines = new MachinesV2(ArchiveV2.resolve(context, "machines"), api.machines());
+		this.templates = new TemplatesV2(ArchiveV2.resolve(context, "templates"), api.templates());
+		this.checkpoints = new CheckpointsV2(ArchiveV2.resolve(context, "checkpoints"), api.checkpoints());
+		this.emulators = new EmulatorsV2(ArchiveV2.resolve(context, "emulators"), api.emulators());
+		this.images = new ImagesV2(ArchiveV2.resolve(context, "images"), api.images());
+		this.roms = new RomsV2(ArchiveV2.resolve(context, "roms"), api.roms());
+		this.imports = new ImportsV2(ArchiveV2.resolve(context, "imports"), api.imports());
+		this.storage = new StorageV2(ArchiveV2.resolve(context, "storage"), api.storage());
+		this.environments = new EnvironmentsV2(this, context.logger());
+
+		this.metadata = new HashMap<>();
+		for (final var kind : MetaDataKindV2.values()) {
+			final var subctx = ArchiveV2.resolve(context, "metadata")
+					.resolve("kind", kind.value());
+
+			metadata.put(kind.value(), new MetaDataV2(subctx, api.metadata(kind.value())));
+		}
 	}
 
 
@@ -124,6 +134,19 @@ public class ArchiveV2
 
 	public MetaDataV2 metadata(String kind)
 	{
-		return new MetaDataV2(api.metadata(kind));
+		final var api = metadata.get(kind);
+		if (api == null)
+			throw new IllegalArgumentException();
+
+		return api;
+	}
+
+
+	// ===== Internal Helpers ====================
+
+	private static ImageArchiveClient.Context resolve(ImageArchiveClient.Context context, String methodname)
+	{
+		return context.clone()
+				.resolve(IArchiveV2.class, methodname);
 	}
 }

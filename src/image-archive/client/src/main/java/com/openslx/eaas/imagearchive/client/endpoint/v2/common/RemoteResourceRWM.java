@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.common.IDeletable;
 import com.openslx.eaas.imagearchive.api.v2.common.IListable;
 import com.openslx.eaas.imagearchive.api.v2.common.IManyReadable;
@@ -28,8 +29,8 @@ import com.openslx.eaas.imagearchive.api.v2.common.IWritable;
 public abstract class RemoteResourceRWM<T, A extends IListable & IManyReadable<T> & IWritable<T> & IDeletable>
 		extends RemoteResourceRW<T, A> implements IManyReadableResource<T>
 {
-	protected RemoteResourceRWM(A api)
+	protected RemoteResourceRWM(ImageArchiveClient.Context context, A api)
 	{
-		super(api);
+		super(context, api);
 	}
 }

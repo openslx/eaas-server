@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IRomsV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRW;
 
@@ -27,8 +28,8 @@ import java.io.InputStream;
 
 public class RomsV2 extends RemoteResourceRW<InputStream, IRomsV2>
 {
-	public RomsV2(IRomsV2 api)
+	public RomsV2(ImageArchiveClient.Context context, IRomsV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 }

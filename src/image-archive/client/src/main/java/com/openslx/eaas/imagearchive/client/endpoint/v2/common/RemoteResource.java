@@ -19,18 +19,27 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2.common;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
+
 
 public class RemoteResource<A>
 {
+	protected final ImageArchiveClient.Context context;
 	protected final A api;
 
-	protected RemoteResource(A api)
+	protected RemoteResource(ImageArchiveClient.Context context, A api)
 	{
+		this.context = context;
 		this.api = api;
 	}
 
 	public A api()
 	{
 		return api;
+	}
+
+	public ImageArchiveClient.Context context()
+	{
+		return context;
 	}
 }

@@ -20,15 +20,16 @@
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.IMetaDataV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 
 
 public class MetaDataV2 extends RemoteResourceRWM<JsonNode, IMetaDataV2>
 {
-	public MetaDataV2(IMetaDataV2 api)
+	public MetaDataV2(ImageArchiveClient.Context context, IMetaDataV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 
 	@Override

@@ -19,6 +19,7 @@
 
 package com.openslx.eaas.imagearchive.client.endpoint.v2;
 
+import com.openslx.eaas.imagearchive.ImageArchiveClient;
 import com.openslx.eaas.imagearchive.api.v2.ITemplatesV2;
 import com.openslx.eaas.imagearchive.client.endpoint.v2.common.RemoteResourceRWM;
 import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
@@ -26,9 +27,9 @@ import de.bwl.bwfla.emucomp.api.MachineConfigurationTemplate;
 
 public class TemplatesV2 extends RemoteResourceRWM<MachineConfigurationTemplate, ITemplatesV2>
 {
-	public TemplatesV2(ITemplatesV2 api)
+	public TemplatesV2(ImageArchiveClient.Context context, ITemplatesV2 api)
 	{
-		super(api);
+		super(context, api);
 	}
 
 	@Override
